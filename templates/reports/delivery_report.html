@@ -827,7 +827,7 @@
         </thead>
 
         <tbody>
-         {% for o in s.rows %}
+{% for o in s.rows %}
   {% if o.status == "RETURNED" %}
     <tr class="row-returned" data-report-status="RETURNED">
   {% elif o.status == "DELIVERED" or o.status == "DONE" %}
@@ -880,6 +880,7 @@
     <td colspan="19" class="empty-box">No data</td>
   </tr>
 {% endfor %}
+</tbody>
 
   <div class="export-footer">
     Thank you for supporting DS Express.

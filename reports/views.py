@@ -22,9 +22,9 @@ from .services import (
     classify_row,
     calc_totals,
     get_shipper_name,
+    report_money,
 )
 from .update_excel import export_update_template_xlsx
-
 
 def apply_keyword_filter(rows, keyword):
     if not keyword:
@@ -105,13 +105,19 @@ def build_top_summary(rows, seller_count=0):
 
 def enrich_report_rows(rows):
     """
-    Add runtime-only helper for template display.
+    Add runtime-only helpers for template display.
     Does not save to DB.
     """
     for o in rows:
         o.report_shipper_name = get_shipper_name(o)
-    return rows
 
+        money = report_money(o)
+        o.report_delivery_fee = money["delivery_fee"]
+        o.report_additional_fee = money["additional_fee"]
+        o.report_total_fee = money["total_fee"]
+        o.report_cod = money["cod"]
+
+    return rows
 
 @login_required
 def delivery_report(request):

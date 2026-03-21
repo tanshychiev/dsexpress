@@ -1,5 +1,7 @@
 from collections import OrderedDict
 from datetime import datetime, time
+from decimal import Decimal
+
 
 DONE_STATUSES = {"DELIVERED", "DONE"}
 RETURNED_STATUSES = {"RETURNED"}
@@ -87,16 +89,16 @@ def report_money(order):
 
     if t in ("pending", "done_return"):
         return {
-            "cod": 0.0,
-            "delivery_fee": 0.0,
-            "additional_fee": 0.0,
-            "total_fee": 0.0,
+            "cod": Decimal("0.00"),
+            "delivery_fee": Decimal("0.00"),
+            "additional_fee": Decimal("0.00"),
+            "total_fee": Decimal("0.00"),
         }
 
-    delivery_fee = float(getattr(order, "delivery_fee", 0) or 0)
-    additional_fee = float(getattr(order, "additional_fee", 0) or 0)
-    total_fee = delivery_fee + additional_fee
-    cod = float(getattr(order, "cod", 0) or 0)
+    delivery_fee = Decimal(str(getattr(order, "delivery_fee", 0) or 0)).quantize(Decimal("0.00"))
+    additional_fee = Decimal(str(getattr(order, "additional_fee", 0) or 0)).quantize(Decimal("0.00"))
+    total_fee = (delivery_fee + additional_fee).quantize(Decimal("0.00"))
+    cod = Decimal(str(getattr(order, "cod", 0) or 0)).quantize(Decimal("0.00"))
 
     return {
         "cod": cod,
@@ -211,13 +213,13 @@ def group_by_seller(rows):
 
 
 def calc_totals(rows):
-    total_cod = 0.0
-    total_fee = 0.0
+    total_cod = Decimal("0.00")
+    total_fee = Decimal("0.00")
 
     for o in rows:
         m = report_money(o)
-        total_cod += float(m["cod"])
-        total_fee += float(m["total_fee"])
+        total_cod += Decimal(str(m["cod"] or 0))
+        total_fee += Decimal(str(m["total_fee"] or 0))
 
-    pay = total_cod - total_fee
+    pay = (total_cod - total_fee).quantize(Decimal("0.00"))
     return total_cod, total_fee, pay

@@ -827,98 +827,58 @@
         </thead>
 
         <tbody>
-          {% for o in s.rows %}
-            {% if o.status == "RETURNED" %}
-              <tr class="row-returned" data-report-status="RETURNED">
-            {% elif o.status == "DELIVERED" or o.status == "DONE" %}
-              <tr data-report-status="DONE">
-            {% else %}
-              <tr class="row-pending" data-report-status="PENDING">
-            {% endif %}
+         {% for o in s.rows %}
+  {% if o.status == "RETURNED" %}
+    <tr class="row-returned" data-report-status="RETURNED">
+  {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+    <tr data-report-status="DONE">
+  {% else %}
+    <tr class="row-pending" data-report-status="PENDING">
+  {% endif %}
 
-              <td class="center">{{ forloop.counter }}</td>
-              <td>{{ o.seller_order_code|default_if_none:"" }}</td>
-              <td>{{ o.tracking_no|default_if_none:"" }}</td>
+    <td class="center">{{ forloop.counter }}</td>
+    <td>{{ o.seller_order_code|default_if_none:"" }}</td>
+    <td>{{ o.tracking_no|default_if_none:"" }}</td>
 
-              <td>
-                {% if o.seller_name %}
-                  {{ o.seller_name }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
+    <td>
+      {% if o.seller_name %}
+        {{ o.seller_name }}
+      {% else %}
+        -
+      {% endif %}
+    </td>
 
-              <td class="center">{{ o.created_at|date:"Y-m-d" }}</td>
-              <td class="center">{{ o.done_at|date:"Y-m-d" }}</td>
-              <td>{{ o.receiver_address|default_if_none:"" }}</td>
-              <td class="export-col-hide">{{ o.product_desc|default_if_none:"" }}</td>
-              <td class="center export-col-hide">{{ o.quantity|default_if_none:"" }}</td>
-              <td>{{ o.receiver_phone|default_if_none:"" }}</td>
-              <td>{{ o.receiver_name|default_if_none:"" }}</td>
-              <td class="num">{{ o.price|default_if_none:"" }}</td>
+    <td class="center">{{ o.created_at|date:"Y-m-d" }}</td>
+    <td class="center">{{ o.done_at|date:"Y-m-d" }}</td>
+    <td>{{ o.receiver_address|default_if_none:"" }}</td>
+    <td class="export-col-hide">{{ o.product_desc|default_if_none:"" }}</td>
+    <td class="center export-col-hide">{{ o.quantity|default_if_none:"" }}</td>
+    <td>{{ o.receiver_phone|default_if_none:"" }}</td>
+    <td>{{ o.receiver_name|default_if_none:"" }}</td>
+    <td class="num">{{ o.price|default_if_none:"" }}</td>
 
-              {% if o.status == "RETURNED" %}
-                <td class="num export-col-hide">0.00</td>
-                <td class="num export-col-hide">0.00</td>
-                <td class="num">0.00</td>
-                <td class="num">0.00</td>
-                <td>
-                  <span class="status-badge status-returned">RETURNED</span>
-                </td>
-              {% elif o.status == "DELIVERED" or o.status == "DONE" %}
-                <td class="num export-col-hide">{{ o.delivery_fee|default_if_none:"" }}</td>
-                <td class="num export-col-hide">{{ o.additional_fee|default_if_none:"" }}</td>
-                <td class="num">{{ o.delivery_fee|add:o.additional_fee }}</td>
-                <td class="num">{{ o.cod|default_if_none:"" }}</td>
-                <td>
-                  <span class="status-badge status-done">DONE</span>
-                </td>
-              {% else %}
-                <td class="num export-col-hide">0.00</td>
-                <td class="num export-col-hide">0.00</td>
-                <td class="num">0.00</td>
-                <td class="num">0.00</td>
-                <td>
-                  <span class="status-badge status-pending">PENDING</span>
-                </td>
-              {% endif %}
+    <td class="num export-col-hide">{{ o.report_delivery_fee|floatformat:2 }}</td>
+    <td class="num export-col-hide">{{ o.report_additional_fee|floatformat:2 }}</td>
+    <td class="num">{{ o.report_total_fee|floatformat:2 }}</td>
+    <td class="num">{{ o.report_cod|floatformat:2 }}</td>
 
-              <td>
-                {% if o.delivery_shipper %}
-                  {{ o.delivery_shipper.name }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
+    <td>
+      {% if o.status == "RETURNED" %}
+        <span class="status-badge status-returned">RETURNED</span>
+      {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+        <span class="status-badge status-done">DONE</span>
+      {% else %}
+        <span class="status-badge status-pending">PENDING</span>
+      {% endif %}
+    </td>
 
-              <td>{{ o.reason|default_if_none:"" }}</td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="19" class="empty-box">No data</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="totals-box">
-      <div class="totals-inner">
-        <div class="totals-row">
-          <span><strong>COD :</strong></span>
-          <span>{{ s.total_cod|floatformat:2 }}</span>
-        </div>
-        <div class="totals-row">
-          <span><strong>FEE :</strong></span>
-          <span>{{ s.total_fee|floatformat:2 }}</span>
-        </div>
-        <div class="totals-row">
-          <span><strong>PAY :</strong></span>
-          <span>{{ s.pay|floatformat:2 }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
+    <td>{{ o.report_shipper_name|default:"-" }}</td>
+    <td>{{ o.reason|default_if_none:"" }}</td>
+  </tr>
+{% empty %}
+  <tr>
+    <td colspan="19" class="empty-box">No data</td>
+  </tr>
 {% endfor %}
 
   <div class="export-footer">

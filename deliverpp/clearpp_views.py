@@ -131,22 +131,8 @@ def _pick_cod_for_item(it: PPDeliveryItem) -> Decimal:
     if not o:
         return Decimal("0.00")
 
-    real_cod = _get_order_cod(o)
-    snap = getattr(it, "cod_snapshot", None)
-
-    if snap is None:
-        return real_cod
-
-    try:
-        snap_dec = Decimal(str(snap or "0")).quantize(Decimal("0.00"))
-    except Exception:
-        snap_dec = Decimal("0.00")
-
-    if snap_dec == Decimal("0.00") and real_cod != Decimal("0.00"):
-        return real_cod
-
-    return snap_dec
-
+    # Always use LIVE order COD
+    return _get_order_cod(o)
 
 def _ui_state(batch: PPDeliveryBatch, stage1_done: bool, stage2_done: bool) -> Tuple[str, str]:
     if batch.status == PPDeliveryBatch.STATUS_CANCELLED:

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .wrap{max-width:1200px;margin:0 auto;padding:16px;}
+  .card{background:#fff;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.06);padding:18px;margin-bottom:18px;}
+  .title{font-size:22px;font-weight:800;margin:0 0 8px;}
+  .btn{display:inline-block;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;border:0}
+  .btn-outline{background:#fff;border:1px solid #cbd5e1;color:#0f172a}
+  table{width:100%;border-collapse:collapse}
+  th{background:#0f172a;color:#fff;text-align:left;padding:10px;font-size:13px}
+  td{padding:10px;border-bottom:1px solid #e2e8f0;vertical-align:top;font-size:13px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .box{border-radius:12px;padding:10px;border:1px solid #e2e8f0}
+  .before{background:#fff7ed}
+  .after{background:#ecfeff}
+  .box h4{margin:0 0 6px;font-size:13px}
+  .muted{color:#64748b;font-size:13px}
+</style>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="title">Batch {{ batch.id }} - {{ batch.filename }}</div>
+    <div class="muted">Created at: {{ batch.created_at }}</div>
+    <div style="margin-top:10px;">
+      <a class="btn btn-outline" href="{% url 'bulk_update' %}">Back</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="title">Updated Rows (Before → After)</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:90px;">Order ID</th>
+          <th style="width:160px;">Tracking (locked)</th>
+          <th style="width:140px;">Status (locked)</th>
+          <th>Before</th>
+          <th>After</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in page_obj.object_list %}
+        {% with r=it.row b=it.before a=it.after %}
+        <tr>
+          <td>{{ r.order_id }}</td>
+          <td>{{ r.tracking_no }}</td>
+          <td>{{ r.status }}</td>
+
+          <td>
+            <div class="grid">
+              <div class="box before">
+                <h4>Customer / Order</h4>
+                Seller: {{ b.seller_name }}<br>
+                Order Code: {{ b.order_code }}<br>
+                Product: {{ b.product_desc }}<br>
+                Qty: {{ b.qty }}
+              </div>
+              <div class="box before">
+                <h4>Money</h4>
+                Price: {{ b.price }}<br>
+                COD: {{ b.cod }}<br>
+                Delivery: {{ b.delivery_fee }}<br>
+                Additional: {{ b.additional_fee }}<br>
+                Province: {{ b.province_fee }}
+              </div>
+              <div class="box before">
+                <h4>Receiver</h4>
+                Name: {{ b.receiver_name }}<br>
+                Phone: {{ b.receiver_phone }}<br>
+                Address: {{ b.receiver_address }}
+              </div>
+              <div class="box before">
+                <h4>Notes</h4>
+                Remark: {{ b.remark }}<br>
+                Reason: {{ b.reason }}
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <div class="grid">
+              <div class="box after">
+                <h4>Customer / Order</h4>
+                Seller: {{ a.seller_name }}<br>
+                Order Code: {{ a.order_code }}<br>
+                Product: {{ a.product_desc }}<br>
+                Qty: {{ a.qty }}
+              </div>
+              <div class="box after">
+                <h4>Money</h4>
+                Price: {{ a.price }}<br>
+                COD: {{ a.cod }}<br>
+                Delivery: {{ a.delivery_fee }}<br>
+                Additional: {{ a.additional_fee }}<br>
+                Province: {{ a.province_fee }}
+              </div>
+              <div class="box after">
+                <h4>Receiver</h4>
+                Name: {{ a.receiver_name }}<br>
+                Phone: {{ a.receiver_phone }}<br>
+                Address: {{ a.receiver_address }}
+              </div>
+              <div class="box after">
+                <h4>Notes</h4>
+                Remark: {{ a.remark }}<br>
+                Reason: {{ a.reason }}
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="5">No updated rows in this batch.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div style="margin-top:12px;">
+      {% if page_obj.has_previous %}
+        <a class="btn btn-outline" href="?{{ params }}&page={{ page_obj.previous_page_number }}">Prev</a>
+      {% endif %}
+      <span style="margin:0 10px;">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a class="btn btn-outline" href="?{{ params }}&page={{ page_obj.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+{% endblock %}

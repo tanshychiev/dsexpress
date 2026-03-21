@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+  /* ===== Page layout (full width, left aligned) ===== */
+  .page-wrap{
+    width: 100%;
+    padding: 18px 22px;
+  }
+
+  .page-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .page-title{
+    margin:0;
+    font-size:22px;
+    font-weight:800;
+    color:#0f172a;
+  }
+
+  /* ===== Card (full content width) ===== */
+  .card{
+    width: 100%;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:16px;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.06);
+  }
+
+  /* ===== Grid ===== */
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  @media (max-width: 900px){
+    .grid2{grid-template-columns:1fr;}
+  }
+
+  .row{margin-top:12px}
+  label{
+    display:block;
+    font-weight:700;
+    font-size:13px;
+    color:#0f172a;
+    margin-bottom:6px;
+  }
+  .hint{
+    font-size:12px;
+    color:#64748b;
+    margin-top:6px;
+  }
+  input, textarea{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    outline:none;
+    background:#fff;
+  }
+  input:focus, textarea:focus{
+    border-color:#0f766e;
+    box-shadow:0 0 0 3px rgba(15,118,110,0.12);
+  }
+  textarea{min-height:96px;resize:vertical}
+
+  /* ===== Errors ===== */
+  .errbox{
+    background:#fff1f2;
+    border:1px solid #fecdd3;
+    color:#9f1239;
+    padding:10px 12px;
+    border-radius:12px;
+    margin-bottom:12px;
+  }
+  .errbox ul{margin:0;padding-left:18px}
+
+  /* ===== Buttons ===== */
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 14px;
+    border-radius:10px;
+    border:1px solid #d1d5db;
+    background:#fff;
+    color:#0f172a;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    text-decoration:none;
+    white-space:nowrap;
+  }
+  .btn:hover{background:#f8fafc}
+  .btn-primary{
+    background:#0f766e;
+    color:#fff;
+    border-color:#0f766e;
+  }
+  .btn-primary:hover{filter:brightness(0.95)}
+
+  /* ===== Shop dropdown (absolute overlay) ===== */
+  .shop-wrap{
+    position: relative; /* important for absolute dropdown */
+  }
+  .dropdown{
+    display:none;
+    position:absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow: 0 12px 30px rgba(15,23,42,0.12);
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .dd-item{
+    padding:10px 12px;
+    cursor:pointer;
+    border-top:1px solid #f1f5f9;
+    font-size:13px;
+  }
+  .dd-item:hover{background:#f8fafc}
+  .dd-muted{color:#64748b;font-size:12px;margin-left:6px}
+
+  /* ===== Footer buttons ===== */
+  .btns{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:16px;
+    padding-top:12px;
+    border-top:1px solid #f1f5f9;
+  }
+</style>
+
+<div class="page-wrap">
+  <div class="page-head">
+    <h2 class="page-title">Create Order</h2>
+    <a class="btn" href="{% url 'seller_create' %}">+ Create new shop</a>
+  </div>
+
+  <div class="card">
+    {% if errors %}
+      <div class="errbox">
+        <ul>
+          {% for e in errors %}
+            <li>{{ e }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <form method="post" autocomplete="off">
+      {% csrf_token %}
+
+      <!-- Row 1: Shop select -->
+      <div class="row shop-wrap">
+        <label>Shop (Select)</label>
+        <!-- display input (NOT posted as seller id) -->
+        <input
+          id="seller_search"
+          name="seller_search_display"
+          type="text"
+          placeholder="Type shop name / code / phone..."
+          value=""
+        />
+        <div class="hint">Type to search. Click a shop from the list.</div>
+
+        <!-- hidden real seller id posted to backend -->
+        <input type="hidden" name="seller" id="seller_id" value="{{ selected_seller_id|default:'' }}">
+
+        <!-- dropdown -->
+        <div id="seller_dropdown" class="dropdown"></div>
+      </div>
+
+      <div class="grid2 row">
+        <!-- Row 2: Order Code + Seller Name (optional) -->
+        <div>
+          <label>Order Code (optional)</label>
+          <input name="seller_order_code" value="{{ form_data.seller_order_code|default:'' }}" placeholder="ex: SO-001" />
+        </div>
+        <div>
+          <label>Seller Name (optional)</label>
+          <input name="seller_name" value="{{ form_data.seller_name|default:'' }}" placeholder="ex: My Shop Name" />
+        </div>
+
+        <!-- Row 3: Product name + Quantity -->
+        <div>
+          <label>Product Name</label>
+          <input name="product_desc" value="{{ form_data.product_desc|default:'' }}" placeholder="ex: Shoes" />
+        </div>
+        <div>
+          <label>Quantity</label>
+          <input name="quantity" value="{{ form_data.quantity|default:'1' }}" />
+        </div>
+
+      
+        <!-- Row 4: Address + Phone -->
+        <div>
+          <label>Address</label>
+          <input name="receiver_address" value="{{ form_data.receiver_address|default:'' }}" placeholder="Receiver address" />
+        </div>
+        <div>
+          <label>Phone number</label>
+          <input name="receiver_phone" value="{{ form_data.receiver_phone|default:'' }}" placeholder="012xxxxxx" />
+        </div>
+
+        <!-- Row 5: Receiver Name full width -->
+        <div style="grid-column:1 / -1;">
+          <label>Receiver Name</label>
+          <input name="receiver_name" value="{{ form_data.receiver_name|default:'' }}" placeholder="Receiver name" />
+        </div>
+         <!-- Row 6: COD + PRICE -->
+        <div>
+          <label>COD ($)</label>
+          <input name="cod" value="{{ form_data.cod|default:'0' }}" />
+        </div>
+        <div>
+          <label>PRICE ($)</label>
+          <input name="price" value="{{ form_data.price|default:'0' }}" />
+        </div>
+
+        <!-- Row 7: Delivery Fee + Additional Fee -->
+        <div>
+          <label>Delivery Fee ($)</label>
+          <input name="delivery_fee" value="{{ form_data.delivery_fee|default:'0' }}" />
+        </div>
+        <div>
+          <label>Additional Fee ($)</label>
+          <input name="additional_fee" value="{{ form_data.additional_fee|default:'0' }}" />
+        </div>
+        <!-- Row 8: Remark + Reason -->
+        <div>
+          <label>Remark</label>
+          <textarea name="remark" placeholder="Remark...">{{ form_data.remark|default:'' }}</textarea>
+        </div>
+        <div>
+          <label>Reason</label>
+          <textarea name="reason" placeholder="Reason...">{{ form_data.reason|default:'' }}</textarea>
+        </div>
+      </div>
+
+      <div class="btns">
+        <a class="btn" href="{% url 'order_list' %}">Cancel</a>
+        <button class="btn btn-primary" type="submit">Create Order</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  const input  = document.getElementById("seller_search");
+  const hidden = document.getElementById("seller_id");
+  const box    = document.getElementById("seller_dropdown");
+
+  let timer = null;
+
+  function hideBox(){
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
+
+  function normalizeResponse(data){
+    // Supports: [{...}]  OR  {items:[...]}
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.items)) return data.items;
+    return [];
+  }
+
+  function renderItems(items){
+    if(!items || items.length === 0){
+      hideBox();
+      return;
+    }
+    box.innerHTML = "";
+    items.forEach(it => {
+      const div = document.createElement("div");
+      div.className = "dd-item";
+
+      const code  = String(it.code  || "").trim();
+      const name  = String(it.name  || "").trim();
+      const phone = String(it.phone || "").trim();
+
+      div.innerHTML = `<b>${code}</b> - ${name} <span class="dd-muted">${phone}</span>`;
+
+      div.addEventListener("click", () => {
+        input.value = `${code} - ${name}`.trim();
+        hidden.value = it.id; // ✅ important: seller id posted
+        hideBox();
+      });
+
+      box.appendChild(div);
+    });
+    box.style.display = "block";
+  }
+
+  async function fetchJson(url){
+    const res = await fetch(url, {headers: {"Accept":"application/json"}});
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  }
+
+  async function searchSeller(q){
+    hidden.value = ""; // force reselect if typing
+    const qq = (q || "").trim();
+
+    if(qq.length < 1){
+      hideBox();
+      return;
+    }
+
+    // Try correct global endpoint first, then fallback
+    const urls = [
+      `/api/sellers/autocomplete/?q=${encodeURIComponent(qq)}`,
+      `/orders/api/sellers/autocomplete/?q=${encodeURIComponent(qq)}`
+    ];
+
+    for (const url of urls){
+      try{
+        const data = await fetchJson(url);
+        const items = normalizeResponse(data);
+        renderItems(items);
+        return;
+      }catch(e){
+        // try next url
+      }
+    }
+
+    hideBox();
+  }
+
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => searchSeller(input.value), 120);
+  });
+
+  document.addEventListener("click", (e) => {
+    if(!box.contains(e.target) && e.target !== input){
+      hideBox();
+    }
+  });
+})();
+</script>
+{% endblock %}

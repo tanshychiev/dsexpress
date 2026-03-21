@@ -1,0 +1,285 @@
+:root{
+  --ds-primary: #219a68;
+  --ds-primary-dark: #177a56;
+  --ds-soft-green: #dceee7;
+  --ds-bg: #f5f6f5;
+  --ds-card: #ffffff;
+  --ds-text: #545454;
+  --ds-muted: #8c8c8c;
+  --ds-shadow: 0 10px 24px rgba(0,0,0,0.08);
+}
+
+*{
+  box-sizing: border-box;
+}
+
+html, body{
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body{
+  background: var(--ds-bg);
+  font-family: Arial, sans-serif;
+}
+
+.portal-header,
+.portal-footer,
+footer{
+  display: none !important;
+}
+
+main{
+  padding: 0 !important;
+  background: var(--ds-bg);
+}
+
+.history-app{
+  min-height: 100vh;
+  background: var(--ds-bg);
+}
+
+.history-phone{
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--ds-bg);
+}
+
+.history-header{
+  background: linear-gradient(180deg, var(--ds-primary) 0%, var(--ds-primary-dark) 100%);
+  color: #fff;
+  padding: 16px 16px 22px;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+}
+
+.history-header-top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-icon{
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-decoration: none;
+  font-size: 22px;
+}
+
+.history-brand{
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.history-logo{
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.history-brand h1{
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.history-body{
+  padding: 16px;
+}
+
+.history-list{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.history-card{
+  background: #fff;
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: var(--ds-shadow);
+}
+
+.history-card-top{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.history-card-top h3{
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: var(--ds-text);
+}
+
+.history-card-top p{
+  margin: 0;
+  font-size: 12px;
+  color: var(--ds-muted);
+}
+
+.status-badge{
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-pending{
+  background: #fff3cd;
+  color: #8a6d1d;
+}
+
+.status-accepted{
+  background: #d9f7e8;
+  color: #177a56;
+}
+
+.status-cancelled{
+  background: #fde2e2;
+  color: #b42318;
+}
+
+.history-info-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.info-box{
+  background: #f8f8f8;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.full-box{
+  margin-bottom: 10px;
+}
+
+.info-box span{
+  display: block;
+  font-size: 12px;
+  color: var(--ds-muted);
+  margin-bottom: 6px;
+}
+
+.info-box strong{
+  display: block;
+  font-size: 14px;
+  color: var(--ds-text);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.timeline-row{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.time-card{
+  background: var(--ds-soft-green);
+  border-radius: 16px;
+  padding: 12px;
+  text-align: center;
+}
+
+.time-card span{
+  display: block;
+  font-size: 12px;
+  color: #5e6b66;
+  margin-bottom: 6px;
+}
+
+.time-card strong{
+  display: block;
+  font-size: 14px;
+  color: var(--ds-text);
+  margin-bottom: 4px;
+}
+
+.time-card p{
+  margin: 0;
+  font-size: 12px;
+  color: #5e6b66;
+}
+
+.time-sep{
+  font-size: 18px;
+  color: var(--ds-primary-dark);
+  font-weight: 800;
+}
+
+.empty-history{
+  text-align: center;
+  padding: 50px 20px;
+}
+
+.empty-icon{
+  font-size: 44px;
+  margin-bottom: 12px;
+}
+
+.empty-history h3{
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: var(--ds-text);
+}
+
+.empty-history p{
+  margin: 0 0 18px;
+  font-size: 14px;
+  color: var(--ds-muted);
+}
+
+.new-booking-btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--ds-primary) 0%, var(--ds-primary-dark) 100%);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+@media (max-width: 380px){
+  .history-info-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-row{
+    grid-template-columns: 1fr;
+  }
+
+  .time-sep{
+    display: none;
+  }
+}

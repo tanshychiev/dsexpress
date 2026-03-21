@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Shipper Commission Report{% endblock %}
+{% block page_title %}Shipper Commission Report{% endblock %}
+{% block page_subtitle %}Daily Shipper Commission{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <form method="get" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+    <input type="hidden" name="search" value="1">
+
+    <div style="min-width:180px;">
+      <div class="label">Date From</div>
+      <input class="input" type="date" name="date_from" value="{{ date_from }}">
+    </div>
+
+    <div style="min-width:180px;">
+      <div class="label">Date To</div>
+      <input class="input" type="date" name="date_to" value="{{ date_to }}">
+    </div>
+
+    <button class="btn" type="submit" name="action" value="show" style="height:40px;">Show</button>
+
+    {% if searched %}
+      <button class="btn btn-green" type="submit" name="action" value="excel" style="height:40px;">Download Excel</button>
+
+      <a
+        class="btn btn-red"
+        style="height:40px;display:inline-flex;align-items:center;text-decoration:none;"
+        href="{% url 'shipper_commission_report_pdf' %}?search=1&date_from={{ date_from }}&date_to={{ date_to }}"
+      >
+        Download PDF
+      </a>
+    {% endif %}
+  </form>
+
+  {% if searched %}
+    <div style="margin-top:20px;text-align:center;">
+      <div style="font-size:30px;font-weight:900;line-height:1.2;">Delivery Commission Report</div>
+      <div style="font-size:14px;opacity:.8;">
+        From {{ date_from|default:"-" }} To {{ date_to|default:"-" }}
+      </div>
+      <div style="font-size:13px;opacity:.75;margin-top:4px;">
+        Rule: from 11th done pc per day × 1500៛
+      </div>
+    </div>
+
+    {% for grp in report.shipper_groups %}
+      <div class="shipper-title">{{ grp.shipper_name }}</div>
+
+      <div style="overflow:auto;">
+        <table class="ds-table commission-table">
+          <colgroup>
+            <col style="width:70px;">
+            <col style="width:150px;">
+            <col style="width:150px;">
+            <col style="width:160px;">
+            <col style="width:140px;">
+            <col style="width:150px;">
+            <col style="width:140px;">
+            <col style="width:150px;">
+          </colgroup>
+
+          <thead>
+            <tr>
+              <th style="text-align:center;">#</th>
+              <th style="text-align:center;">Date</th>
+              <th style="text-align:right;">Morning Assign</th>
+              <th style="text-align:right;">Afternoon Assign</th>
+              <th style="text-align:right;">Done Morning</th>
+              <th style="text-align:right;">Done Afternoon</th>
+              <th style="text-align:right;">Total Done PC</th>
+              <th style="text-align:right;">Commission (៛)</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for r in grp.rows %}
+              <tr class="{% if r.is_all_zero %}all-zero-row{% endif %}">
+                <td style="text-align:center;">{{ forloop.counter }}</td>
+                <td style="text-align:center;">{{ r.date|date:"Y-m-d" }}</td>
+
+                <td class="num {% if r.morning_assign == 0 %}zero-cell{% endif %}">
+                  {{ r.morning_assign }}
+                </td>
+
+                <td class="num {% if r.afternoon_assign == 0 %}zero-cell{% endif %}">
+                  {{ r.afternoon_assign }}
+                </td>
+
+                <td class="num">{{ r.done_morning }}</td>
+                <td class="num">{{ r.done_afternoon }}</td>
+                <td class="num"><b>{{ r.total_done_pc }}</b></td>
+                <td class="num"><b>{{ r.commission_khr }}</b></td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8" style="text-align:center;opacity:.7;">No data.</td>
+              </tr>
+            {% endfor %}
+
+            <tr class="total-row">
+              <td style="text-align:center;">-</td>
+              <td><b>Total</b></td>
+              <td class="num"><b>{{ grp.shipper_total.morning_assign }}</b></td>
+              <td class="num"><b>{{ grp.shipper_total.afternoon_assign }}</b></td>
+              <td class="num"><b>{{ grp.shipper_total.done_morning }}</b></td>
+              <td class="num"><b>{{ grp.shipper_total.done_afternoon }}</b></td>
+              <td class="num"><b>{{ grp.shipper_total.total_done_pc }}</b></td>
+              <td class="num"><b>{{ grp.shipper_total.commission_khr }}</b></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% empty %}
+      <div style="margin-top:20px;text-align:center;opacity:.7;">No data.</div>
+    {% endfor %}
+
+    <div class="shipper-title">Grand Total</div>
+
+    <div style="overflow:auto;">
+      <table class="ds-table commission-table">
+        <colgroup>
+          <col style="width:180px;">
+          <col style="width:150px;">
+          <col style="width:160px;">
+          <col style="width:140px;">
+          <col style="width:150px;">
+          <col style="width:140px;">
+          <col style="width:150px;">
+        </colgroup>
+
+        <thead>
+          <tr>
+            <th style="text-align:left;">Summary</th>
+            <th style="text-align:right;">Morning Assign</th>
+            <th style="text-align:right;">Afternoon Assign</th>
+            <th style="text-align:right;">Done Morning</th>
+            <th style="text-align:right;">Done Afternoon</th>
+            <th style="text-align:right;">Total Done PC</th>
+            <th style="text-align:right;">Commission (៛)</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr class="total-row">
+            <td><b>Grand Total</b></td>
+            <td class="num"><b>{{ report.grand_total.morning_assign }}</b></td>
+            <td class="num"><b>{{ report.grand_total.afternoon_assign }}</b></td>
+            <td class="num"><b>{{ report.grand_total.done_morning }}</b></td>
+            <td class="num"><b>{{ report.grand_total.done_afternoon }}</b></td>
+            <td class="num"><b>{{ report.grand_total.total_done_pc }}</b></td>
+            <td class="num"><b>{{ report.grand_total.commission_khr }}</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+  .label{
+    font-size:12px;
+    opacity:.7;
+    margin-bottom:6px;
+  }
+
+  .input{
+    height:40px;
+    width:100%;
+    padding:8px 10px;
+    border-radius:12px;
+    border:1px solid #e6e6e6;
+    background:#fff;
+  }
+
+  .btn{
+    padding:10px 16px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  .btn-green{
+    background:#15803d;
+    border-color:#15803d;
+    color:#fff;
+  }
+
+  .btn-red{
+    background:#dc2626;
+    border-color:#dc2626;
+    color:#fff;
+  }
+
+  .shipper-title{
+    margin-top:26px;
+    margin-bottom:10px;
+    padding:10px 14px;
+    font-size:24px;
+    font-weight:900;
+    text-align:left;
+    background:#eef4ff;
+    border:1px solid #cfdcff;
+    border-radius:14px;
+  }
+
+  .commission-table{
+    width:100%;
+    min-width:1120px;
+    margin-top:8px;
+    table-layout:fixed;
+  }
+
+  .commission-table th,
+  .commission-table td{
+    border:1px solid #111 !important;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    vertical-align:middle;
+  }
+
+  .num{
+    text-align:right;
+    white-space:nowrap;
+  }
+
+  .total-row{
+    background:#fafafa;
+  }
+
+  .zero-cell{
+    background:#fff1f1 !important;
+    color:#c00000;
+    font-weight:900;
+  }
+
+  .all-zero-row td{
+    background:#fff1f1 !important;
+    color:#c00000;
+    font-weight:800;
+  }
+</style>
+{% endblock %}

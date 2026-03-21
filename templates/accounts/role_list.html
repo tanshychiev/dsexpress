@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block page_title %}Roles{% endblock %}
+{% block page_subtitle %}Manage role permissions{% endblock %}
+
+{% block content %}
+<style>
+  .page-wrap{padding:20px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 10px 24px rgba(15,23,42,.06);overflow:hidden}
+  .card-head{padding:18px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .title{margin:0;font-size:22px;font-weight:900;color:#0f172a}
+  .sub{margin:4px 0 0;font-size:13px;color:#64748b}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .search-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .search-input{width:240px;max-width:75vw;padding:12px 14px;border-radius:12px;border:1px solid #d0d7de;font-size:14px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:12px;text-decoration:none;font-size:14px;font-weight:800;border:1px solid #d0d7de;background:#fff;color:#0f172a;cursor:pointer}
+  .btn-primary{background:#0f766e;color:#fff;border-color:#0f766e}
+  .table-wrap{overflow:auto}
+  table{width:100%;border-collapse:collapse;min-width:760px}
+  th{background:#0f172a;color:#fff;font-size:12px;text-transform:uppercase;padding:12px;text-align:left}
+  td{padding:12px;border-bottom:1px solid #eef2f7;font-size:14px;color:#0f172a;vertical-align:top}
+  .empty{padding:24px;text-align:center;color:#64748b;font-weight:700}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .perm-preview{color:#475569;font-size:13px;line-height:1.5}
+</style>
+
+<div class="page-wrap">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h1 class="title">Roles</h1>
+        <p class="sub">Manage role permissions</p>
+      </div>
+
+      <div class="toolbar">
+        <form method="get" class="search-form">
+          <input
+            type="text"
+            name="q"
+            value="{{ q|default:'' }}"
+            placeholder="Search role..."
+            class="search-input"
+          >
+          <button class="btn" type="submit">Search</button>
+          <a class="btn" href="{% url 'role_list' %}">Clear</a>
+        </form>
+
+        <a class="btn" href="{% url 'user_list' %}">Users</a>
+        <a class="btn btn-primary" href="{% url 'role_create' %}">+ Create Role</a>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Permissions</th>
+            <th style="width:220px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for role in page_obj %}
+          <tr>
+            <td><strong>{{ role.name }}</strong></td>
+            <td class="perm-preview">
+              {% with perms=role.permissions.all %}
+                {% if perms %}
+                  {{ perms|length }} permission{{ perms|length|pluralize }}
+                {% else %}
+                  No permissions
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>
+              <div class="actions">
+                <a class="btn" href="{% url 'role_edit' role.id %}">Edit</a>
+                <a class="btn" href="{% url 'role_delete' role.id %}">Delete</a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="empty">No roles found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

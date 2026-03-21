@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .wrap{
+    width:100%;
+    padding:18px 22px;
+  }
+
+  .card{
+    width:100%;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:18px;
+    box-shadow:0 10px 28px rgba(15,23,42,.06);
+  }
+
+  .top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+
+  .title{
+    margin:0;
+    font-size:22px;
+    font-weight:900;
+    color:#0f172a;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .tick{
+    width:18px;
+    height:18px;
+    border-radius:4px;
+    background:#22c55e;
+    display:inline-block;
+  }
+
+  .top-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .summary{
+    display:grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap:12px;
+    margin-bottom:16px;
+  }
+
+  @media (max-width: 1100px){
+    .summary{grid-template-columns: repeat(2, minmax(0, 1fr));}
+  }
+
+  @media (max-width: 700px){
+    .summary{grid-template-columns: 1fr;}
+  }
+
+  .summary-box{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:14px;
+    background:#f8fafc;
+  }
+
+  .summary-label{
+    font-size:12px;
+    font-weight:900;
+    color:#64748b;
+    margin-bottom:6px;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+  }
+
+  .summary-value{
+    font-size:18px;
+    font-weight:900;
+    color:#0f172a;
+    word-break:break-word;
+  }
+
+  .summary-value.mono{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .summary-value.green{
+    color:#0f766e;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+
+  @media (max-width: 900px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  .section{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    background:#fff;
+    overflow:hidden;
+  }
+
+  .section-head{
+    padding:12px 14px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+    font-size:14px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .section-body{
+    padding:12px 14px;
+  }
+
+  .info-table{
+    display:grid;
+    grid-template-columns: 150px 1fr;
+    gap:10px 12px;
+  }
+
+  @media (max-width: 640px){
+    .info-table{
+      grid-template-columns: 1fr;
+      gap:6px;
+    }
+  }
+
+  .k{
+    font-weight:800;
+    color:#334155;
+  }
+
+  .v{
+    color:#111827;
+    word-break:break-word;
+  }
+
+  .badge{
+    display:inline-block;
+    padding:5px 10px;
+    border-radius:999px;
+    border:1px solid #e5e7eb;
+    background:#f8fafc;
+    font-size:12px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .badge-green{
+    background:#f0fdf4;
+    border-color:#bbf7d0;
+    color:#166534;
+  }
+
+  .badge-blue{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+    color:#1d4ed8;
+  }
+
+  .badge-orange{
+    background:#fff7ed;
+    border-color:#fed7aa;
+    color:#c2410c;
+  }
+
+  .badge-red{
+    background:#fef2f2;
+    border-color:#fecaca;
+    color:#b91c1c;
+  }
+
+  .text-block{
+    width:100%;
+    min-height:90px;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    padding:10px 12px;
+    background:#f8fafc;
+    color:#111827;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+
+  .btn-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:16px;
+  }
+
+  .btn{
+    padding:10px 14px;
+    border-radius:10px;
+    border:1px solid #d1d5db;
+    background:#fff;
+    text-decoration:none;
+    font-weight:800;
+    font-size:13px;
+    color:#0f172a;
+    display:inline-block;
+  }
+
+  .btn:hover{
+    background:#f8fafc;
+  }
+
+  .btn-primary{
+    background:#0f766e;
+    border-color:#0f766e;
+    color:#fff;
+  }
+
+  .btn-primary:hover{
+    background:#115e59;
+  }
+
+  .btn-danger{
+    background:#ef4444;
+    border-color:#ef4444;
+    color:#fff;
+  }
+
+  .btn-danger:hover{
+    background:#dc2626;
+  }
+
+  .log-card{
+    margin-top:16px;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    overflow:hidden;
+    background:#fff;
+  }
+
+  .log-head{
+    padding:12px 14px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+    font-size:14px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .log-table-wrap{
+    overflow:auto;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:850px;
+  }
+
+  th, td{
+    padding:10px 12px;
+    border-bottom:1px solid #eef2f7;
+    text-align:left;
+    vertical-align:top;
+    font-size:13px;
+  }
+
+  th{
+    background:#fff;
+    color:#0f172a;
+    font-weight:900;
+  }
+
+  .muted{
+    color:#64748b;
+  }
+
+  .empty{
+    text-align:center;
+    color:#64748b;
+    padding:20px 12px;
+    font-weight:700;
+  }
+</style>
+
+<div class="wrap">
+  <div class="card">
+
+    <div class="top">
+      <h2 class="title">
+        <span class="tick"></span>
+        Order Created
+      </h2>
+
+      <div class="top-actions">
+        <a class="btn" href="{% url 'order_list' %}">Back to Orders</a>
+        <a class="btn" href="{% url 'audit_log_list' %}">Audit Logs</a>
+      </div>
+    </div>
+
+    <!-- TOP SUMMARY -->
+    <div class="summary">
+      <div class="summary-box">
+        <div class="summary-label">Tracking</div>
+        <div class="summary-value mono">{{ order.tracking_no }}</div>
+      </div>
+
+      <div class="summary-box">
+        <div class="summary-label">Status</div>
+        <div class="summary-value">
+          <span class="badge">{{ order.get_status_display }}</span>
+        </div>
+      </div>
+
+      <div class="summary-box">
+        <div class="summary-label">COD</div>
+        <div class="summary-value green">${{ order.cod }}</div>
+      </div>
+
+      <div class="summary-box">
+        <div class="summary-label">Shop</div>
+        <div class="summary-value">{{ order.seller.name }}</div>
+      </div>
+    </div>
+
+    <!-- MAIN INFO -->
+    <div class="grid">
+      <div class="section">
+        <div class="section-head">Order Information</div>
+        <div class="section-body">
+          <div class="info-table">
+            <div class="k">Order Code</div>
+            <div class="v">{{ order.seller_order_code|default:"-" }}</div>
+
+            <div class="k">Seller Name</div>
+            <div class="v">{{ order.seller_name|default:"-" }}</div>
+
+            <div class="k">Product</div>
+            <div class="v">{{ order.product_desc|default:"-" }}</div>
+
+            <div class="k">Qty</div>
+            <div class="v">{{ order.quantity }}</div>
+
+            <div class="k">Price</div>
+            <div class="v">${{ order.price }}</div>
+
+            <div class="k">Delivery Fee</div>
+            <div class="v">${{ order.delivery_fee }}</div>
+
+            <div class="k">Additional Fee</div>
+            <div class="v">${{ order.additional_fee }}</div>
+
+            <div class="k">Province Fee</div>
+            <div class="v">${{ order.province_fee }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">Receiver Information</div>
+        <div class="section-body">
+          <div class="info-table">
+            <div class="k">Name</div>
+            <div class="v">{{ order.receiver_name|default:"-" }}</div>
+
+            <div class="k">Phone</div>
+            <div class="v">{{ order.receiver_phone|default:"-" }}</div>
+
+            <div class="k">Address</div>
+            <div class="v">{{ order.receiver_address|default:"-" }}</div>
+
+            <div class="k">Printed</div>
+            <div class="v">{{ order.print_count|default:0 }}</div>
+
+            <div class="k">Created At</div>
+            <div class="v">
+              {% if order.created_at %}{{ order.created_at|date:"Y-m-d h:i A" }}{% else %}-{% endif %}
+            </div>
+
+            <div class="k">Updated At</div>
+            <div class="v">
+              {% if order.updated_at %}{{ order.updated_at|date:"Y-m-d h:i A" }}{% else %}-{% endif %}
+            </div>
+
+            <div class="k">Deleted</div>
+            <div class="v">
+              {% if order.is_deleted %}
+                <span class="badge badge-red">Yes</span>
+              {% else %}
+                <span class="badge badge-green">No</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REMARK / REASON -->
+    <div class="grid" style="margin-top:16px;">
+      <div class="section">
+        <div class="section-head">Remark</div>
+        <div class="section-body">
+          <div class="text-block">{{ order.remark|default_if_none:"" }}</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">Reason</div>
+        <div class="section-body">
+          <div class="text-block">{{ order.reason|default_if_none:"" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUTTONS -->
+    <div class="btn-row">
+      <a class="btn btn-primary" href="{% url 'order_label' order.id %}">Print Label</a>
+      <a class="btn" href="{% url 'order_edit' order.id %}">Edit Order</a>
+      <a class="btn" href="{% url 'create_order' %}">Create New Order</a>
+      <a class="btn" href="{% url 'order_detail' order.id %}">Order Detail</a>
+      <a class="btn btn-danger" href="{% url 'order_delete' order.id %}">Delete Order</a>
+    </div>
+
+    <!-- ACTIVITY TIMELINE -->
+    <div class="log-card">
+      <div class="log-head">Order Activity Timeline</div>
+      <div class="log-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:170px;">Time</th>
+              <th style="width:140px;">User</th>
+              <th style="width:130px;">Action</th>
+              <th style="width:140px;">Shipper</th>
+              <th style="width:120px;">Old Status</th>
+              <th style="width:120px;">New Status</th>
+              <th>Reason / Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in activities %}
+            <tr>
+              <td>{{ a.created_at|date:"Y-m-d h:i A" }}</td>
+              <td>
+                {% if a.actor %}
+                  {{ a.actor.get_full_name|default:a.actor.username }}
+                {% else %}
+                  <span class="muted">System</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if a.action == "create" %}
+                  <span class="badge badge-green">Create</span>
+                {% elif a.action == "edit" %}
+                  <span class="badge badge-blue">Edit</span>
+                {% elif a.action == "assign" %}
+                  <span class="badge badge-orange">Assign</span>
+                {% elif a.action == "delivered" %}
+                  <span class="badge badge-green">Delivered</span>
+                {% elif a.action == "inbound" %}
+                  <span class="badge badge-blue">Inbound</span>
+                {% elif a.action == "out_for_delivery" %}
+                  <span class="badge badge-orange">Out For Delivery</span>
+                {% elif a.action == "void" %}
+                  <span class="badge badge-red">Void</span>
+                {% else %}
+                  <span class="badge">{{ a.action }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if a.shipper %}
+                  {{ a.shipper.name }}
+                {% else %}
+                  <span class="muted">-</span>
+                {% endif %}
+              </td>
+              <td>{{ a.old_status|default:"-" }}</td>
+              <td>{{ a.new_status|default:"-" }}</td>
+              <td>{{ a.note|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="empty">No activity history yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AUDIT LOGS -->
+    <div class="log-card">
+      <div class="log-head">Audit Logs</div>
+      <div class="log-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:170px;">Time</th>
+              <th style="width:140px;">User</th>
+              <th style="width:120px;">Action</th>
+              <th style="width:120px;">Field</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td>{{ log.created_at|date:"Y-m-d h:i A" }}</td>
+              <td>
+                {% if log.created_by %}
+                  {{ log.created_by.get_full_name|default:log.created_by.username }}
+                {% else %}
+                  <span class="muted">System</span>
+                {% endif %}
+              </td>
+              <td>{{ log.action }}</td>
+              <td>{{ log.field_name|default:"-" }}</td>
+              <td>{{ log.note|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="empty">No audit logs yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

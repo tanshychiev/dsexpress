@@ -1,0 +1,323 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}DS Express{% endblock %}</title>
+
+  <link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}">
+  {% block extra_css %}{% endblock %}
+
+  <style>
+    body{
+      position:relative;
+      overflow-x:hidden;
+      background:
+        radial-gradient(circle at top left, rgba(35,184,119,.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(22,154,101,.08), transparent 24%),
+        linear-gradient(180deg,#f4fbf7 0%, #eef6f1 45%, #f7faf8 100%);
+      min-height:100vh;
+    }
+
+    .portal-bg{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+    }
+
+    .bg-bubble,
+    .bg-parcel{
+      position:absolute;
+      display:block;
+      pointer-events:none;
+      user-select:none;
+    }
+
+    .bg-bubble{
+      border-radius:50%;
+      filter:blur(1px);
+      opacity:.35;
+      animation:floatBubble linear infinite;
+    }
+
+    .bubble-1{
+      width:140px;
+      height:140px;
+      left:-20px;
+      top:10%;
+      background:radial-gradient(circle at 30% 30%, rgba(64,211,141,.28), rgba(64,211,141,.05) 70%, transparent 72%);
+      animation-duration:18s;
+    }
+
+    .bubble-2{
+      width:100px;
+      height:100px;
+      right:6%;
+      top:18%;
+      background:radial-gradient(circle at 35% 35%, rgba(54,191,126,.24), rgba(54,191,126,.04) 70%, transparent 72%);
+      animation-duration:14s;
+      animation-delay:-4s;
+    }
+
+    .bubble-3{
+      width:180px;
+      height:180px;
+      left:8%;
+      bottom:12%;
+      background:radial-gradient(circle at 30% 30%, rgba(29,167,108,.16), rgba(29,167,108,.03) 72%, transparent 75%);
+      animation-duration:21s;
+      animation-delay:-7s;
+    }
+
+    .bubble-4{
+      width:120px;
+      height:120px;
+      right:-10px;
+      bottom:20%;
+      background:radial-gradient(circle at 35% 35%, rgba(79,217,150,.18), rgba(79,217,150,.03) 70%, transparent 72%);
+      animation-duration:17s;
+      animation-delay:-2s;
+    }
+
+    .bubble-5{
+      width:70px;
+      height:70px;
+      left:50%;
+      top:38%;
+      background:radial-gradient(circle at 35% 35%, rgba(43,190,120,.18), rgba(43,190,120,.03) 70%, transparent 72%);
+      animation-duration:12s;
+      animation-delay:-5s;
+    }
+
+    .bubble-6{
+      width:90px;
+      height:90px;
+      left:72%;
+      bottom:8%;
+      background:radial-gradient(circle at 35% 35%, rgba(61,194,130,.18), rgba(61,194,130,.03) 70%, transparent 72%);
+      animation-duration:16s;
+      animation-delay:-8s;
+    }
+
+    .bg-parcel{
+      font-size:22px;
+      opacity:.14;
+      animation:floatParcel linear infinite;
+    }
+
+    .parcel-1{
+      left:6%;
+      top:22%;
+      animation-duration:20s;
+    }
+
+    .parcel-2{
+      right:9%;
+      top:52%;
+      font-size:26px;
+      animation-duration:17s;
+      animation-delay:-6s;
+    }
+
+    .parcel-3{
+      left:16%;
+      bottom:14%;
+      font-size:20px;
+      animation-duration:23s;
+      animation-delay:-10s;
+    }
+
+    .parcel-4{
+      right:20%;
+      bottom:24%;
+      font-size:18px;
+      animation-duration:19s;
+      animation-delay:-3s;
+    }
+
+    .parcel-5{
+      left:62%;
+      top:14%;
+      font-size:24px;
+      animation-duration:15s;
+      animation-delay:-8s;
+    }
+
+    @keyframes floatBubble{
+      0%{
+        transform:translate3d(0,0,0) scale(1);
+      }
+      25%{
+        transform:translate3d(10px,-18px,0) scale(1.04);
+      }
+      50%{
+        transform:translate3d(-6px,-32px,0) scale(.98);
+      }
+      75%{
+        transform:translate3d(12px,-14px,0) scale(1.03);
+      }
+      100%{
+        transform:translate3d(0,0,0) scale(1);
+      }
+    }
+
+    @keyframes floatParcel{
+      0%{
+        transform:translate3d(0,0,0) rotate(0deg);
+      }
+      20%{
+        transform:translate3d(8px,-18px,0) rotate(6deg);
+      }
+      40%{
+        transform:translate3d(-8px,-34px,0) rotate(-5deg);
+      }
+      60%{
+        transform:translate3d(10px,-18px,0) rotate(4deg);
+      }
+      80%{
+        transform:translate3d(-4px,-8px,0) rotate(-3deg);
+      }
+      100%{
+        transform:translate3d(0,0,0) rotate(0deg);
+      }
+    }
+
+    .portal-header,
+    .portal-main,
+    .site-footer{
+      position:relative;
+      z-index:1;
+    }
+
+    .portal-main{
+      min-height:calc(100vh - 180px);
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .bg-bubble,
+      .bg-parcel{
+        animation:none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="portal-bg" aria-hidden="true">
+  <span class="bg-bubble bubble-1"></span>
+  <span class="bg-bubble bubble-2"></span>
+  <span class="bg-bubble bubble-3"></span>
+  <span class="bg-bubble bubble-4"></span>
+  <span class="bg-bubble bubble-5"></span>
+  <span class="bg-bubble bubble-6"></span>
+
+  <span class="bg-parcel parcel-1">📦</span>
+  <span class="bg-parcel parcel-2">📦</span>
+  <span class="bg-parcel parcel-3">📦</span>
+  <span class="bg-parcel parcel-4">📦</span>
+  <span class="bg-parcel parcel-5">📦</span>
+</div>
+
+<header class="portal-header">
+  <div class="portal-container header-inner">
+    <a href="{% url 'portal:home' %}" class="brand">
+      <span class="logo">DS</span>
+      <span>DS Express</span>
+    </a>
+
+    <nav class="top-nav">
+      <a href="{% url 'portal:home' %}">Home</a>
+      <a href="{% url 'portal:booking_public' %}">Request Pickup</a>
+
+      {% if request.user.is_authenticated %}
+        <a href="{% url 'portal:dashboard' %}">Dashboard</a>
+        <a href="{% url 'portal:change_password' %}">Change Password</a>
+        <a href="{% url 'portal:logout' %}">Logout</a>
+      {% else %}
+        <a href="{% url 'portal:login' %}">Seller Login</a>
+      {% endif %}
+    </nav>
+
+    <button class="menu-toggle" type="button" id="menuToggle" aria-label="Open menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="{% url 'portal:home' %}">Home</a>
+    <a href="{% url 'portal:booking_public' %}">Book a Pickup</a>
+
+    {% if request.user.is_authenticated %}
+      <a href="{% url 'portal:dashboard' %}">Dashboard</a>
+      <a href="{% url 'portal:change_password' %}">Change Password</a>
+      <a href="{% url 'portal:logout' %}">Logout</a>
+    {% else %}
+      <a href="{% url 'portal:login' %}">Seller Portal</a>
+    {% endif %}
+  </div>
+</header>
+
+<main class="portal-main">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="portal-container footer-inner">
+    <div class="footer-brand">
+      <div class="footer-logo">DS</div>
+      <div>
+        <div class="footer-title">DS Express</div>
+        <div class="footer-sub">Fast COD delivery for modern businesses</div>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a href="{% url 'portal:booking_public' %}">Book a Pickup</a>
+      <a href="{% url 'portal:login' %}">Seller Portal</a>
+    </div>
+  </div>
+</footer>
+
+<script src="{% static 'customerportal/js/portal.js' %}"></script>
+
+{% if request.user.is_authenticated %}
+<script>
+(function () {
+  const INACTIVITY_LIMIT = 5 * 60 * 1000;
+  let inactivityTimer = null;
+
+  function logoutNow() {
+    alert("Your session expired after 5 minutes of inactivity. Please sign in again.");
+    window.location.href = "{% url 'portal:logout' %}";
+  }
+
+  function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(logoutNow, INACTIVITY_LIMIT);
+  }
+
+  [
+    "load",
+    "mousemove",
+    "mousedown",
+    "click",
+    "scroll",
+    "keypress",
+    "touchstart"
+  ].forEach(function (eventName) {
+    document.addEventListener(eventName, resetInactivityTimer, true);
+  });
+
+  resetInactivityTimer();
+})();
+</script>
+{% endif %}
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

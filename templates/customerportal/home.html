@@ -1,0 +1,332 @@
+{% extends "customerportal/base.html" %}
+{% load static %}
+{% block title %}DS Express{% endblock %}
+
+{% block content %}
+
+<section class="ds-hero">
+  <div class="portal-container">
+    <div class="ds-hero-grid">
+      <div class="ds-hero-copy reveal">
+        <div class="ds-kicker">SMART DELIVERY FLOW</div>
+
+        <h1>Delivery That Moves As Fast As Your Business</h1>
+
+        <p class="ds-hero-text">
+          DS Express helps sellers manage pickup, delivery, and COD with a smoother workflow,
+          faster updates, and clearer visibility across Phnom Penh.
+        </p>
+
+        <div class="ds-hero-actions hero-main-actions">
+          <a href="{% url 'portal:booking_public' %}" class="ds-btn ds-btn-primary ds-btn-large">
+            Request Pickup
+          </a>
+          <a href="{% url 'portal:login' %}" class="ds-btn ds-btn-secondary ds-btn-large">
+            Seller Login
+          </a>
+        </div>
+
+        <div class="ds-mini-points">
+          <div class="ds-mini-point">Fast pickup flow</div>
+          <div class="ds-mini-point">Reliable delivery updates</div>
+          <div class="ds-mini-point">Cleaner COD visibility</div>
+        </div>
+      </div>
+
+      <div class="ds-hero-visual reveal">
+        <div class="ds-visual-shell">
+          <div class="ds-visual-blob"></div>
+
+          <div class="ds-phone-card">
+            <div class="ds-phone-top">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+
+            <div class="ds-phone-screen">
+              <div class="screen-stat-card">
+                <div class="screen-stat-label">Today Orders</div>
+                <div class="screen-stat-value">128</div>
+              </div>
+
+              <div class="screen-grid">
+                <div class="screen-small-box">
+                  <span class="small-label">Pending</span>
+                  <strong>24</strong>
+                </div>
+                <div class="screen-small-box">
+                  <span class="small-label">Delivered</span>
+                  <strong>87</strong>
+                </div>
+              </div>
+
+              <div class="screen-list">
+                <div class="screen-row">
+                  <span class="screen-badge green">Pickup Confirmed</span>
+                  <span class="screen-amount">12 PC</span>
+                </div>
+                <div class="screen-row">
+                  <span class="screen-badge soft">Out for Delivery</span>
+                  <span class="screen-amount">$124</span>
+                </div>
+                <div class="screen-row">
+                  <span class="screen-badge gold">COD Updated</span>
+                  <span class="screen-amount">$392</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ds-floating-card float-one">Pickup confirmed</div>
+          <div class="ds-floating-card float-two">COD updated</div>
+          <div class="ds-floating-card float-three">Fast dispatch</div>
+
+          <div class="ds-rider-wrap" id="riderMove">
+  <img src="{% static 'img/motobik.png' %}" alt="Delivery rider" class="ds-rider-img">
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="ds-section ds-section-white" id="featureSection">
+  <div class="portal-container">
+    <div class="ds-section-intro">
+      <div class="ds-kicker">WHY DS EXPRESS</div>
+      <h2>Built Around Real Seller Needs</h2>
+      <p>
+        From the first pickup request to the final COD update, DS Express is built around the
+        real pace of daily business. Less manual follow-up. More clarity. Better flow.
+      </p>
+    </div>
+
+    <div class="ds-feature-band">
+      <div class="ds-feature-box feature-scroll-box">
+        <div class="feature-icon">⚡</div>
+        <h3>Fast response</h3>
+        <p>Quick coordination for daily pickup and dispatch flow.</p>
+      </div>
+
+      <div class="ds-feature-box feature-scroll-box">
+        <div class="feature-icon">📍</div>
+        <h3>Clearer tracking</h3>
+        <p>Know where orders are moving with better status visibility.</p>
+      </div>
+
+      <div class="ds-feature-box feature-scroll-box">
+        <div class="feature-icon">💵</div>
+        <h3>COD clarity</h3>
+        <p>Follow COD movement and delivery outcomes with more confidence.</p>
+      </div>
+
+      <div class="ds-feature-box feature-scroll-box">
+        <div class="feature-icon">🔁</div>
+        <h3>Daily repeat flow</h3>
+        <p>Designed for sellers who send parcels every day.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="ds-section ds-section-soft" id="servicesSection">
+  <div class="portal-container">
+    <div class="ds-section-intro center">
+      <div class="ds-kicker">WHAT WE HELP YOU DO</div>
+      <h2>Core services for growing businesses</h2>
+      <p>
+        DS Express focuses on the operational flow that matters most for modern sellers.
+      </p>
+    </div>
+
+    <div class="ds-services-grid">
+      <div class="ds-service-card">
+        <div class="service-top-mark"></div>
+        <div class="service-inner service-scroll-item">
+          <div class="service-icon-wrap">📦</div>
+          <h3>Pickup coordination</h3>
+          <p>
+            Submit pickup requests quickly and keep daily shipment flow moving with less friction.
+          </p>
+        </div>
+      </div>
+
+      <div class="ds-service-card">
+        <div class="service-top-mark"></div>
+        <div class="service-inner service-scroll-item">
+          <div class="service-icon-wrap">🚚</div>
+          <h3>Last-mile delivery</h3>
+          <p>
+            Reliable Phnom Penh delivery service built for speed, consistency, and daily operations.
+          </p>
+        </div>
+      </div>
+
+      <div class="ds-service-card">
+        <div class="service-top-mark"></div>
+        <div class="service-inner service-scroll-item">
+          <div class="service-icon-wrap">📊</div>
+          <h3>COD visibility</h3>
+          <p>
+            See order outcomes and COD flow more clearly through a better seller-facing experience.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="ds-section ds-section-metrics" id="metricsSection">
+  <div class="portal-container">
+    <div class="ds-metrics-grid">
+
+      <div class="ds-metrics-copy">
+        <div class="ds-kicker ds-kicker-light">DAILY PERFORMANCE</div>
+        <h2>Built on delivery discipline and real operational pace</h2>
+        <p>
+          Numbers matter, but consistency matters more. DS Express is designed
+          to help businesses move faster with better visibility and stronger
+          daily execution.
+        </p>
+      </div>
+
+      <div class="ds-metrics-cards">
+        <div class="metric-card metric-fly">
+          <div class="metric-number">98%</div>
+          <div class="metric-title">Delivery handling success</div>
+          <div class="metric-text">
+            Strong day-to-day execution across active delivery operations.
+          </div>
+        </div>
+
+        <div class="metric-card metric-fly">
+          <div class="metric-number">1M+</div>
+          <div class="metric-title">Parcels processed</div>
+          <div class="metric-text">
+            Built through repeat seller flow and consistent daily movement.
+          </div>
+        </div>
+
+        <div class="metric-card metric-fly">
+          <div class="metric-number">100%</div>
+          <div class="metric-title">Focus on COD discipline</div>
+          <div class="metric-text">
+            Cleaner COD follow-up helps support seller cash flow confidence.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="ds-section ds-section-white seller-roll-section">
+  <div class="portal-container">
+
+    <div class="ds-section-intro center">
+      <div class="ds-kicker">BRANDS THAT MOVE WITH DS</div>
+      <h2>Trusted by growing businesses</h2>
+      <p>
+        From emerging sellers to established brands, businesses rely on DS Express to keep orders
+        moving with speed and confidence.
+      </p>
+    </div>
+
+    <div class="seller-marquee-wrap">
+      <div class="seller-marquee-track">
+        <div class="seller-chip">J1 Store</div>
+        <div class="seller-chip">Labut Cambodia</div>
+        <div class="seller-chip">Starek Co.Ltd</div>
+        <div class="seller-chip">UBra Cambodia</div>
+        <div class="seller-chip">Kplus</div>
+        <div class="seller-chip">NIRON CUSTOM</div>
+        <div class="seller-chip">BUBU PET STORE</div>
+        <div class="seller-chip">PPF Yummy Co.Ltd</div>
+        <div class="seller-chip">MAXBIT Co.Ltd</div>
+        <div class="seller-chip">H.A.G Clothing</div>
+
+        <div class="seller-chip">J1 Store</div>
+        <div class="seller-chip">Labut Cambodia</div>
+        <div class="seller-chip">Starek Co.Ltd</div>
+        <div class="seller-chip">UBra Cambodia</div>
+        <div class="seller-chip">Kplus</div>
+        <div class="seller-chip">NIRON CUSTOM</div>
+        <div class="seller-chip">BUBU PET STORE</div>
+        <div class="seller-chip">PPF Yummy Co.Ltd</div>
+        <div class="seller-chip">MAXBIT Co.Ltd</div>
+         <div class="seller-chip">H.A.G Clothing</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="ds-section ds-contact-section" id="contactSection">
+  <div class="portal-container">
+    <div class="ds-contact-card">
+
+      <div class="ds-contact-left">
+        <div class="ds-kicker">CONTACT US</div>
+
+        <h2 id="contactTypingTitle" data-text="Talk to the DS Express team"></h2>
+
+        <p class="contact-fade-text">
+          Reach out for booking, partnership, support, or seller account setup.
+        </p>
+      </div>
+
+      <div class="ds-contact-links">
+        <a class="contact-link-card contact-fly" href="tel:012345678">
+          <span class="contact-icon">📞</span>
+          <div>
+            <strong>Phone</strong>
+            <span>012 345 678</span>
+          </div>
+        </a>
+
+        <a class="contact-link-card contact-fly" href="https://t.me/dsexpress" target="_blank" rel="noopener noreferrer">
+          <span class="contact-icon">✈️</span>
+          <div>
+            <strong>Telegram</strong>
+            <span>@dsexpress</span>
+          </div>
+        </a>
+
+        <a class="contact-link-card contact-fly" href="https://facebook.com/dsexpress" target="_blank" rel="noopener noreferrer">
+          <span class="contact-icon">Ⓕ</span>
+          <div>
+            <strong>Facebook</strong>
+            <span>DS Express</span>
+          </div>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="ds-section ds-cta-section" id="finalCtaSection">
+  <div class="portal-container">
+    <div class="ds-cta-card cta-fly">
+      <div>
+        <div class="ds-kicker">START WITH DS</div>
+        <h2>Ready to simplify your delivery flow?</h2>
+        <p>
+          Book a pickup or log in to your seller portal to start moving orders with DS Express.
+        </p>
+      </div>
+
+      <div class="ds-hero-actions hero-main-actions">
+        <a href="{% url 'portal:booking_public' %}" class="ds-btn ds-btn-primary ds-btn-large">
+          Request Pickup
+        </a>
+        <a href="{% url 'portal:login' %}" class="ds-btn ds-btn-secondary ds-btn-large">
+          Seller Login
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

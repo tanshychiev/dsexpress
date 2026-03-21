@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Clear Delivery PP{% endblock %}
+{% block page_title %}Clear Delivery PP{% endblock %}
+{% block page_subtitle %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;min-height:calc(100vh - 140px);">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:900;font-size:18px;">Clear Delivery PP</div>
+      <div style="opacity:.7;font-size:12px;">Search Deliver PP batches and clear step-by-step.</div>
+    </div>
+    <a class="btn btn-ghost" href="{% url 'clearpp_settings' %}">System Settings</a>
+  </div>
+
+  <form method="get" style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+    <input type="hidden" name="show" value="1" />
+
+    <div>
+      <div style="font-size:12px;opacity:.7;">Assign Date</div>
+      <input type="date" name="assign_date" value="{{ assign_date }}" class="input" />
+    </div>
+
+    <div>
+      <div style="font-size:12px;opacity:.7;">Shipper</div>
+      <select name="shipper_id" class="input">
+        <option value="">All</option>
+        {% for s in shippers %}
+          <option value="{{ s.id }}" {% if shipper_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
+            {{ s.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <div style="font-size:12px;opacity:.7;">Batch Search</div>
+      <input name="batch_id" value="{{ batch_id }}" class="input" placeholder="Batch id / remark" />
+    </div>
+
+    <div>
+      <div style="font-size:12px;opacity:.7;">Status</div>
+      <select name="status" class="input">
+        <option value="">All</option>
+        <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+        <option value="DONE" {% if status == "DONE" %}selected{% endif %}>Done</option>
+        <option value="CANCEL" {% if status == "CANCEL" %}selected{% endif %}>Cancel</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Search</button>
+    <a class="btn btn-ghost" href="{% url 'clearpp_list' %}">Reset</a>
+  </form>
+
+  <div style="margin-top:10px;opacity:.75;font-size:12px;">
+    Rate: <b>{{ settings_obj.usd_to_khr_rate }}</b> KHR/USD • Tolerance: <b>{{ settings_obj.balance_tolerance_khr }}</b> KHR
+  </div>
+
+  {% if not show %}
+    <div style="margin-top:28px;text-align:center;opacity:.7;padding:40px;border:1px dashed #e7e7e7;border-radius:16px;">
+      Select filters then click <b>Search</b>.
+    </div>
+  {% else %}
+
+    <div style="margin-top:14px;overflow:auto;">
+      <table class="table" style="width:100%;min-width:1000px;">
+        <thead>
+          <tr>
+            <th style="text-align:center;width:60px;">N</th>
+            <th>Batch</th>
+            <th>Shipper</th>
+            <th style="text-align:center;">Batch Status</th>
+            <th style="text-align:center;">Total PC</th>
+            <th style="text-align:center;">Clear State</th>
+            <th style="text-align:center;">Cleared By</th>
+            <th style="text-align:center;width:120px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td style="text-align:center;">{{ forloop.counter }}</td>
+              <td><b class="mono">{{ r.batch.code }}</b></td>
+              <td>{{ r.batch.shipper.name|default:"-" }}</td>
+
+              <td style="text-align:center;">
+                <span class="pp-state
+                  {% if r.batch_status == 'DONE' %}pp-green
+                  {% elif r.batch_status == 'CANCEL' %}pp-red
+                  {% else %}pp-yellow{% endif %}">
+                  {{ r.batch_status }}
+                </span>
+              </td>
+
+              <td style="text-align:center;"><b>{{ r.batch.total_pc }}</b></td>
+
+              <td style="text-align:center;">
+                <span class="pp-state pp-{{ r.color }}">{{ r.label }}</span>
+              </td>
+
+              <td style="text-align:center;">{{ r.staff_name }}</td>
+
+              <td style="text-align:center;">
+                <a class="btn btn-ghost" href="{% url 'clearpp_detail' r.batch.id %}">Open</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" style="text-align:center;opacity:.7;padding:20px;">No batches found</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  {% endif %}
+</div>
+
+<style>
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .pp-state{
+    padding:4px 10px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:11px;
+    display:inline-block;
+  }
+  .pp-yellow{background:#fff7cc;color:#92400e;}
+  .pp-blue{background:#dbeafe;color:#1e40af;}
+  .pp-green{background:#dcfce7;color:#166534;}
+  .pp-red{background:#ffe4e6;color:#9f1239;}
+</style>
+{% endblock %}

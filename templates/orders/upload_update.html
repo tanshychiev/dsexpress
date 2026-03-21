@@ -1,0 +1,51 @@
+{% extends "base.html" %} {% block title %}Bulk Update - DS Express{% endblock
+%} {% block page_title %}Bulk Update Orders{% endblock %} {% block page_subtitle
+%}Download → Edit → Upload update by Order ID{% endblock %} {% block content %}
+<div class="card">
+  {% if message %}
+  <div
+    style="
+      padding: 10px;
+      border-radius: 12px;
+      background: #ecfdf3;
+      border: 1px solid rgba(31, 175, 58, 0.25);
+    "
+  >
+    {{message}}
+  </div>
+  {% endif %} {% if errors %}
+  <div
+    style="
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      background: #fef3f2;
+      border: 1px solid rgba(217, 45, 32, 0.25);
+    "
+  >
+    <b>Errors:</b>
+    <ul>
+      {% for e in errors %}
+      <li>{{e}}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <h3 style="margin-top: 14px">1) Download Update Template (Filtered)</h3>
+  <p style="color: #667085">
+    Go back to Orders page, filter by date/sender/phone/status, then download
+    update template.
+  </p>
+  <a class="link-action" href="/">Go to Orders</a>
+
+  <h3 style="margin-top: 18px">2) Upload Updated CSV</h3>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="file" accept=".csv" required />
+    <button class="btn-primary" type="submit" style="margin-left: 10px">
+      Upload Update
+    </button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DS Express • Staff Login</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,Arial,sans-serif;
+      color:#0f172a;
+      background:
+        radial-gradient(circle at top left, rgba(16,185,129,.22), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(20,184,166,.16), transparent 28%),
+        linear-gradient(135deg, #eef5f4 0%, #dfe9e7 45%, #edf2f7 100%);
+      overflow:hidden;
+    }
+
+    .bg-shape{
+      position:absolute;
+      border-radius:999px;
+      filter:blur(10px);
+      opacity:.55;
+      pointer-events:none;
+    }
+    .bg-1{
+      width:360px;height:360px;
+      background:rgba(16,185,129,.18);
+      top:-100px;left:-80px;
+    }
+    .bg-2{
+      width:280px;height:280px;
+      background:rgba(13,148,136,.14);
+      right:-60px;top:90px;
+    }
+    .bg-3{
+      width:320px;height:320px;
+      background:rgba(59,130,246,.10);
+      bottom:-100px;left:20%;
+    }
+
+    .page{
+      min-height:100vh;
+      display:grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      position:relative;
+      z-index:1;
+    }
+
+    .hero{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      padding:60px 72px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-bottom:28px;
+    }
+
+    .brand-badge{
+      width:56px;
+      height:56px;
+      border-radius:18px;
+      background:linear-gradient(135deg,#16a34a,#0f766e);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:22px;
+      font-weight:900;
+      box-shadow:0 16px 34px rgba(15,118,110,.25);
+    }
+
+    .brand-text h1{
+      margin:0;
+      font-size:24px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+
+    .brand-text p{
+      margin:4px 0 0;
+      color:#475569;
+      font-size:13px;
+      font-weight:600;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      background:rgba(255,255,255,.65);
+      border:1px solid rgba(148,163,184,.22);
+      color:#0f766e;
+      padding:8px 14px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      margin-bottom:18px;
+      backdrop-filter:blur(8px);
+    }
+
+    .eyebrow::before{
+      content:"";
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:#10b981;
+      box-shadow:0 0 0 6px rgba(16,185,129,.12);
+    }
+
+    .hero-title{
+      margin:0;
+      font-size:50px;
+      line-height:1.06;
+      font-weight:900;
+      max-width:560px;
+      letter-spacing:-1px;
+    }
+
+    .hero-title .accent{
+      color:#0f766e;
+    }
+
+    .hero-desc{
+      margin:18px 0 0;
+      max-width:560px;
+      font-size:16px;
+      line-height:1.7;
+      color:#475569;
+    }
+
+    .feature-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:16px;
+      margin-top:34px;
+      max-width:720px;
+    }
+
+    .feature{
+      background:rgba(255,255,255,.58);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:22px;
+      padding:18px 16px;
+      backdrop-filter:blur(10px);
+      box-shadow:0 18px 35px rgba(15,23,42,.05);
+    }
+
+    .feature-icon{
+      width:40px;
+      height:40px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+      margin-bottom:12px;
+      background:linear-gradient(135deg,#dcfce7,#ccfbf1);
+    }
+
+    .feature h3{
+      margin:0 0 6px;
+      font-size:15px;
+      font-weight:800;
+    }
+
+    .feature p{
+      margin:0;
+      font-size:13px;
+      line-height:1.55;
+      color:#64748b;
+    }
+
+    .panel{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:38px;
+    }
+
+    .login-card{
+      width:100%;
+      max-width:430px;
+      background:rgba(255,255,255,.72);
+      border:1px solid rgba(226,232,240,.9);
+      border-radius:30px;
+      padding:30px 30px 26px;
+      backdrop-filter:blur(18px);
+      box-shadow:0 24px 55px rgba(15,23,42,.12);
+    }
+
+    .card-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+    }
+
+    .mini-brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .mini-logo{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      background:linear-gradient(135deg,#16a34a,#0f766e);
+      color:#fff;
+      font-weight:900;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 10px 22px rgba(15,118,110,.22);
+    }
+
+    .mini-brand span{
+      display:block;
+      font-size:12px;
+      color:#64748b;
+      font-weight:700;
+    }
+
+    .mini-brand strong{
+      display:block;
+      font-size:16px;
+      color:#0f172a;
+    }
+
+    .status-pill{
+      padding:8px 12px;
+      border-radius:999px;
+      background:#ecfdf5;
+      color:#047857;
+      font-size:12px;
+      font-weight:800;
+      border:1px solid #bbf7d0;
+    }
+
+    .login-title{
+      margin:10px 0 6px;
+      font-size:29px;
+      font-weight:900;
+      letter-spacing:-.5px;
+      color:#0f172a;
+    }
+
+    .login-sub{
+      margin:0 0 22px;
+      font-size:14px;
+      line-height:1.6;
+      color:#64748b;
+    }
+
+    .err{
+      background:#fef2f2;
+      border:1px solid #fecaca;
+      color:#b91c1c;
+      padding:12px 14px;
+      border-radius:14px;
+      margin-bottom:16px;
+      font-size:13px;
+      line-height:1.5;
+      font-weight:700;
+    }
+
+    .field{
+      margin-bottom:16px;
+    }
+
+    .field label{
+      display:block;
+      margin-bottom:8px;
+      font-size:12px;
+      color:#334155;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+
+    .input-wrap{
+      position:relative;
+    }
+
+    .input-icon{
+      position:absolute;
+      left:14px;
+      top:50%;
+      transform:translateY(-50%);
+      font-size:15px;
+      opacity:.7;
+    }
+
+    .field input{
+      width:100%;
+      padding:14px 14px 14px 42px;
+      border:1px solid #cbd5e1;
+      border-radius:15px;
+      background:rgba(248,250,252,.86);
+      font-size:14px;
+      outline:none;
+      transition:.2s ease;
+      color:#0f172a;
+    }
+
+    .field input:focus{
+      border-color:#14b8a6;
+      box-shadow:0 0 0 4px rgba(20,184,166,.12);
+      background:#fff;
+    }
+
+    .field-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin:4px 0 18px;
+      gap:12px;
+    }
+
+    .remember{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      color:#475569;
+      font-weight:600;
+    }
+
+    .remember input{
+      width:16px;
+      height:16px;
+      accent-color:#0f766e;
+    }
+
+    .note{
+      font-size:12px;
+      color:#64748b;
+      text-align:right;
+    }
+
+    .submit-btn{
+      width:100%;
+      border:0;
+      border-radius:16px;
+      padding:15px 16px;
+      background:linear-gradient(135deg,#0f766e,#0f9f88);
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:0 18px 30px rgba(15,118,110,.22);
+      transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+
+    .submit-btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 22px 34px rgba(15,118,110,.28);
+    }
+
+    .submit-btn:active{
+      transform:translateY(0);
+    }
+
+    .bottom-strip{
+      margin-top:18px;
+      padding-top:16px;
+      border-top:1px solid rgba(226,232,240,.9);
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-size:12px;
+      color:#64748b;
+      font-weight:700;
+    }
+
+    .bottom-strip span strong{
+      color:#0f172a;
+    }
+
+    @media (max-width: 1100px){
+      .page{
+        grid-template-columns:1fr;
+      }
+      .hero{
+        display:none;
+      }
+      .panel{
+        min-height:100vh;
+      }
+    }
+
+    @media (max-width: 560px){
+      .panel{
+        padding:18px;
+      }
+      .login-card{
+        padding:22px 18px 20px;
+        border-radius:24px;
+      }
+      .login-title{
+        font-size:24px;
+      }
+      .field-row,
+      .bottom-strip{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-shape bg-1"></div>
+  <div class="bg-shape bg-2"></div>
+  <div class="bg-shape bg-3"></div>
+
+  <div class="page">
+    <section class="hero">
+      <div class="brand">
+        <div class="brand-badge">DS</div>
+        <div class="brand-text">
+          <h1>DS Express</h1>
+          <p>Management System</p>
+        </div>
+      </div>
+
+      <div class="eyebrow">Internal Operations Access</div>
+
+      <h2 class="hero-title">
+        Smarter control for <span class="accent">orders, delivery, reports,</span> and daily operations.
+      </h2>
+
+      <p class="hero-desc">
+        Secure staff access to your DS Express internal workflow. Manage parcel flow,
+        import orders, monitor shipper activity, and keep COD operations organized in one place.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature">
+          <div class="feature-icon">📦</div>
+          <h3>Order Control</h3>
+          <p>Create, import, update, and monitor parcel activity faster.</p>
+        </div>
+
+        <div class="feature">
+          <div class="feature-icon">🚚</div>
+          <h3>Delivery Ops</h3>
+          <p>Handle province, PP, and return workflows with clearer tracking.</p>
+        </div>
+
+        <div class="feature">
+          <div class="feature-icon">📊</div>
+          <h3>Reports & COD</h3>
+          <p>Track performance, delivery results, and COD movement in one system.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="login-card">
+        <div class="card-top">
+          <div class="mini-brand">
+            <div class="mini-logo">DS</div>
+            <div>
+              <strong>DS Express</strong>
+              <span>Staff Access</span>
+            </div>
+          </div>
+          <div class="status-pill">Secure Login</div>
+        </div>
+
+        <h1 class="login-title">Welcome back</h1>
+        <p class="login-sub">
+          Sign in to continue to the internal DS Express management system.
+        </p>
+
+        {% if form.non_field_errors %}
+          <div class="err">{{ form.non_field_errors }}</div>
+        {% elif form.errors %}
+          <div class="err">Username or password is wrong.</div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="field">
+            <label for="id_username">Username</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              {{ form.username }}
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="id_password">Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              {{ form.password }}
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label class="remember">
+              <input type="checkbox">
+              <span>Keep me signed in</span>
+            </label>
+            <div class="note">DS Express staff only</div>
+          </div>
+
+          <button type="submit" class="submit-btn">Login to System</button>
+        </form>
+
+        <div class="bottom-strip">
+          <span>Module: <strong>Internal System</strong></span>
+          <span>Status: <strong>Active</strong></span>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

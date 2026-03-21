@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Province Batch Print</title>
+
+    <style>
+        body {
+            font-family: Arial, "Khmer OS", sans-serif;
+            font-size: 14px;
+            margin: 20px;
+        }
+
+        h2 {
+            margin-bottom: 6px;
+            font-size: 20px;
+        }
+
+        .meta {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .meta strong {
+            display: inline-block;
+            width: 110px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th, td {
+            border: 1px solid #444;
+            padding: 8px 10px;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f2f2f2;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .total {
+            margin-top: 12px;
+            font-weight: bold;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>Deliver to Province - PV-{{ batch.id }}</h2>
+
+<div class="meta">
+    <div><strong>Status:</strong> {{ batch.status }}</div>
+    <div><strong>Shipper:</strong> {{ batch.shipper.name|default:"-" }}</div>
+    <div>
+        <strong>Assigned at:</strong>
+        {% if batch.assigned_at %}
+            {{ batch.assigned_at|date:"Y-m-d H:i" }}
+        {% else %}
+            -
+        {% endif %}
+    </div>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th style="width:40px;" class="center">N</th>
+            <th style="width:150px;">Tracking</th>
+            <th style="width:150px;">Seller</th>
+            <th>Receiver Address</th>
+            <th style="width:130px;">Customer</th>
+            <th style="width:120px;">Phone</th>
+            <th style="width:90px;" class="right">Price</th>
+            <th style="width:90px;" class="right">COD</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for it in items %}
+        <tr>
+            <td class="center">{{ forloop.counter }}</td>
+            <td>{{ it.order.tracking_no }}</td>
+            <td>{{ it.order.seller.name|default:"-" }}</td>
+
+            <!-- ✅ FIXED Receiver Address -->
+            <td>
+                {% if it.order.receiver_location %}
+                    {{ it.order.receiver_location }}
+                {% elif it.order.receiver_address %}
+                    {{ it.order.receiver_address }}
+                {% elif it.order.address %}
+                    {{ it.order.address }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>
+                {% if it.order.customer_name %}
+                    {{ it.order.customer_name }}
+                {% elif it.order.receiver_name %}
+                    {{ it.order.receiver_name }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>
+                {% if it.order.customer_phone %}
+                    {{ it.order.customer_phone }}
+                {% elif it.order.receiver_phone %}
+                    {{ it.order.receiver_phone }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td class="right">
+                {{ it.order.price|default:"0.00" }}
+            </td>
+
+            <td class="right">
+                {{ it.order.cod|default:"0.00" }}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="8" class="center">No orders in this batch.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="total">
+    Total Orders: {{ items|length }}
+</div>
+
+<script>
+    window.onload = function() {
+        window.print();
+    };
+</script>
+
+</body>
+</html>

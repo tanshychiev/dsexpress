@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Deleted Orders{% endblock %}
+{% block page_title %}Deleted Orders{% endblock %}
+
+{% block content %}
+<style>
+  .wrap{padding:18px 22px;}
+  .card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:18px;
+    box-shadow:0 10px 28px rgba(15,23,42,.06);
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .title{
+    margin:0;
+    font-size:20px;
+    font-weight:900;
+    color:#0f172a;
+  }
+  .sub{
+    color:#64748b;
+    font-size:13px;
+    margin-top:4px;
+  }
+  .btn{
+    display:inline-block;
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #d1d5db;
+    background:#fff;
+    color:#0f172a;
+    font-weight:800;
+    text-decoration:none;
+    cursor:pointer;
+    font-size:13px;
+  }
+  .btn:hover{background:#f8fafc;}
+  .btn-primary{
+    background:#0f766e;
+    border-color:#0f766e;
+    color:#fff;
+  }
+  .btn-success{
+    background:#16a34a;
+    border-color:#16a34a;
+    color:#fff;
+  }
+  .search-box{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:14px;
+    margin-bottom:14px;
+  }
+  .search-grid{
+    display:grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap:12px;
+    align-items:end;
+  }
+  @media (max-width: 1100px){ .search-grid{grid-template-columns: repeat(3, minmax(0, 1fr));} }
+  @media (max-width: 640px){ .search-grid{grid-template-columns: repeat(2, minmax(0, 1fr));} }
+
+  .field{display:flex;flex-direction:column;gap:7px}
+  label{font-size:12px;font-weight:900;color:#334155}
+  input,select{
+    padding:12px 12px;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    outline:none;
+    background:#fff;
+    font-size:14px;
+  }
+
+  .table-wrap{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    overflow:auto;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:1000px;
+  }
+  th,td{
+    padding:12px 10px;
+    border-bottom:1px solid #eef2f7;
+    text-align:left;
+    vertical-align:middle;
+    font-size:13px;
+  }
+  th{
+    background:#f8fafc;
+    color:#0f172a;
+    font-weight:900;
+  }
+  .mono{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight:800;
+    color:#0f172a;
+  }
+  .muted{color:#64748b;}
+  .empty{
+    padding:30px 16px;
+    text-align:center;
+    color:#64748b;
+    font-weight:700;
+  }
+  .user-badge{
+    display:inline-block;
+    padding:5px 10px;
+    border-radius:999px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    font-weight:800;
+    color:#334155;
+    font-size:12px;
+  }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <div class="topbar">
+      <div>
+        <h2 class="title">Deleted Orders</h2>
+        <div class="sub">Search first to show deleted orders.</div>
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a href="{% url 'order_list' %}" class="btn">Back to Orders</a>
+        <a href="{% url 'audit_log_list' %}" class="btn">Audit Logs</a>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <form method="get">
+        <input type="hidden" name="search" value="1">
+
+        <div class="search-grid">
+          <div class="field">
+            <label>From (date)</label>
+            <input type="date" name="from_date" value="{{ request.GET.from_date|default:default_from }}">
+          </div>
+
+          <div class="field">
+            <label>From (time)</label>
+            <input type="time" name="from_time" value="{{ request.GET.from_time|default:'00:00' }}">
+          </div>
+
+          <div class="field">
+            <label>To (date)</label>
+            <input type="date" name="to_date" value="{{ request.GET.to_date|default:default_to }}">
+          </div>
+
+          <div class="field">
+            <label>To (time)</label>
+            <input type="time" name="to_time" value="{{ request.GET.to_time|default:'23:59' }}">
+          </div>
+
+          <div class="field">
+            <label>Tracking</label>
+            <input name="tracking" value="{{ request.GET.tracking|default:'' }}" placeholder="DS2026...">
+          </div>
+
+          <div class="field">
+            <label>Shop</label>
+            <select name="seller">
+              <option value="">ALL</option>
+              {% for s in sellers %}
+                <option value="{{ s.id }}" {% if request.GET.seller == s.id|stringformat:"s" %}selected{% endif %}>
+                  {{ s.name }}{% if s.code %} ({{ s.code }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Deleted By</label>
+            <input name="deleted_by" value="{{ request.GET.deleted_by|default:'' }}" placeholder="username">
+          </div>
+
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-primary">Search</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px;">ID</th>
+            <th>Tracking</th>
+            <th>Shop</th>
+            <th>Deleted At</th>
+            <th>Deleted By</th>
+            <th style="width:140px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if search %}
+            {% for row in rows %}
+            <tr>
+              <td>{{ row.id }}</td>
+              <td class="mono">{{ row.tracking_no }}</td>
+              <td>{{ row.seller.name|default:"-" }}</td>
+              <td>
+                {% if row.deleted_at %}
+                  {{ row.deleted_at|date:"Y-m-d h:i A" }}
+                {% else %}
+                  <span class="muted">-</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if row.deleted_by %}
+                  <span class="user-badge">
+                    {{ row.deleted_by.get_full_name|default:row.deleted_by.username }}
+                  </span>
+                {% else %}
+                  <span class="muted">Old data / not recorded</span>
+                {% endif %}
+              </td>
+              <td>
+                <form method="post" action="{% url 'order_restore' row.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-success">Restore</button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="empty">No deleted orders found.</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="empty">Click Search to show data.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

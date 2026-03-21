@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="content-card">
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}" style="margin-bottom:12px;">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if errors %}
+    <div class="alert alert-danger" style="margin-bottom:12px;">
+      <strong>Update Errors:</strong>
+      <ul style="margin:8px 0 0 18px;">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="page-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="box">
+      <h3>1) Upload Bulk Update Excel</h3>
+      <p style="margin-bottom:10px;">
+        Download template first, edit the allowed fields, then upload.
+      </p>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <a href="{% url 'download_update_template' %}" class="btn btn-primary">Download Update Template</a>
+        <a href="{% url 'order_list' %}" class="btn btn-light">Back to Orders</a>
+      </div>
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="file" name="file" required>
+          <button type="submit" class="btn btn-success">Upload Update</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="box">
+      <h3>2) Search Update Batches</h3>
+      <p style="margin-bottom:10px;">Filter by date/time and filename, then click Search.</p>
+
+      <form method="get">
+        <input type="hidden" name="search" value="1">
+
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+          <div>
+            <label>From Date</label>
+            <input type="date" name="from_date" class="form-control" value="{{ request.GET.from_date|default:'' }}">
+          </div>
+          <div>
+            <label>From Time</label>
+            <input type="time" name="from_time" class="form-control" value="{{ request.GET.from_time|default:'00:00' }}">
+          </div>
+          <div>
+            <label>To Date</label>
+            <input type="date" name="to_date" class="form-control" value="{{ request.GET.to_date|default:'' }}">
+          </div>
+          <div>
+            <label>To Time</label>
+            <input type="time" name="to_time" class="form-control" value="{{ request.GET.to_time|default:'23:59' }}">
+          </div>
+          <div>
+            <label>Filename contains</label>
+            <input type="text" name="filename_contains" class="form-control" placeholder="example: update_march" value="{{ request.GET.filename_contains|default:'' }}">
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if search %}
+    <div class="summary-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px;">
+      <div class="summary-box">
+        <div class="summary-label">Total Batches</div>
+        <div class="summary-value">{{ total_batches }}</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-label">Total Updated Orders</div>
+        <div class="summary-value">{{ total_updated_sum }}</div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="box" style="margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h3 style="margin:0;">Bulk Update Batch List</h3>
+      {% if search %}
+        <small>Total: {{ total_batches }} batch{{ total_batches|pluralize }}</small>
+      {% endif %}
+    </div>
+
+    <div class="table-wrap" style="overflow:auto;">
+      <table class="table table-bordered table-sm" style="width:100%;">
+        <thead>
+          <tr>
+            <th>Batch ID</th>
+            <th>Created</th>
+            <th>File Name</th>
+            <th>Total Updated Orders</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for batch in page_obj %}
+            <tr>
+              <td>#{{ batch.id }}</td>
+              <td>{{ batch.created_at|date:"Y-m-d H:i" }}</td>
+              <td>{{ batch.filename }}</td>
+              <td>{{ batch.total_orders|default:0 }}</td>
+              <td>
+                <a href="{% url 'bulk_update_batch_detail' batch.id %}">View</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" style="text-align:center;">No data found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+.content-card{
+  background:#fff;
+  border-radius:14px;
+  padding:16px;
+}
+.box{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  padding:14px;
+}
+.summary-box{
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  padding:14px;
+}
+.summary-label{
+  font-size:13px;
+  color:#64748b;
+}
+.summary-value{
+  font-size:26px;
+  font-weight:700;
+  color:#0f172a;
+}
+.btn{
+  display:inline-block;
+  padding:8px 14px;
+  border-radius:8px;
+  text-decoration:none;
+  border:none;
+  cursor:pointer;
+}
+.btn-primary{background:#0f766e;color:#fff;}
+.btn-success{background:#16a34a;color:#fff;}
+.btn-light{background:#f1f5f9;color:#0f172a;}
+.form-control{
+  width:100%;
+  padding:8px 10px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+}
+.alert{
+  padding:12px 14px;
+  border-radius:10px;
+}
+.alert-danger{background:#fef2f2;color:#991b1b;}
+.alert-success{background:#f0fdf4;color:#166534;}
+.alert-info{background:#eff6ff;color:#1d4ed8;}
+.table{
+  border-collapse:collapse;
+}
+.table th,.table td{
+  padding:10px;
+  border-bottom:1px solid #e5e7eb;
+  text-align:left;
+}
+@media (max-width: 900px){
+  .page-grid,
+  .summary-row{
+    grid-template-columns:1fr !important;
+  }
+}
+</style>
+{% endblock %}

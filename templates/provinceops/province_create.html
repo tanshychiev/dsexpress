@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Ship to Province{% endblock %}
+{% block page_title %}Deliver to Province{% endblock %}
+{% block page_subtitle %}Assign Ship to Province - New{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;position:relative;">
+
+  <div style="font-weight:900;margin-bottom:10px;">
+    <span style="opacity:.8;">Scan</span> → Add → Review → Confirm → Assign shipper
+  </div>
+
+  <!-- ✅ CLEAR (small red, top-right OUTSIDE scan box) -->
+  <form method="post" class="clear-wrap">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="scan_clear"/>
+    <button class="btn-clear" type="submit">Clear</button>
+  </form>
+
+  <!-- SCAN BOX -->
+  <div class="scan-box">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="scan_add"/>
+
+      <div style="font-size:12px;opacity:.7;margin-bottom:6px;">Scan tracking code (one per line)</div>
+      <textarea name="scan_codes" class="input scan-textarea">{{ scan_value }}</textarea>
+
+      <!-- ✅ ADD full width (DS green) -->
+      <button class="btn-add-full" type="submit">Add</button>
+
+     
+    </form>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="card" style="margin-top:14px;padding:12px;border-radius:14px;">
+    <b>Total:</b> {{ total_count }}
+    &nbsp;&nbsp; <b style="color:#c00;">Not found:</b> {{ notfound }}
+    &nbsp;&nbsp; <b style="color:#d17a00;">Error:</b> {{ error_count }}
+    &nbsp;&nbsp; <b style="color:#0a8a2a;">Found:</b> {{ found_count }}
+  </div>
+
+  {% if rows_error %}
+    <div style="margin-top:10px;padding:10px;border-radius:12px;border:1px solid #ffc4c4;background:#fff3f3;color:#b10000;">
+      Some shipments cannot be assigned (DONE/PROCESSING/RETURN). Please remove them.
+    </div>
+  {% endif %}
+
+  <!-- TABLE -->
+  <div style="margin-top:14px; overflow:auto;">
+    <table class="ds-table" style="min-width:1250px;">
+      <thead>
+        <tr>
+          <th style="text-align:center;">N</th>
+          <th style="text-align:center;">TRACKING</th>
+          <th style="text-align:center;">SELLER</th>
+          <th style="text-align:center;">RECEIVER LOCATION</th>
+          <th style="text-align:center;">CUSTOMER</th>
+          <th style="text-align:center;">PHONE</th>
+          <th style="text-align:center;">PRICE</th>
+          <th style="text-align:center;">COD</th>
+          <th style="text-align:center;">STATUS</th>
+          <th style="text-align:center;">ACTION</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <!-- ERROR ROWS -->
+        {% for r in rows_error %}
+          <tr style="background:#fff3f3;">
+            <td style="text-align:center;">{{ forloop.counter }}</td>
+
+            <td style="text-align:center;">
+              <a href="{{ r.tracking_url }}" style="color:#b10000;font-weight:800;text-decoration:underline;">
+                {{ r.tracking_no }}
+              </a>
+            </td>
+
+            <td style="text-align:center;">{{ r.seller_name }}</td>
+            <td>{{ r.receiver_location }}</td>
+            <td style="text-align:center;">{{ r.customer_name }}</td>
+            <td style="text-align:center;">{{ r.customer_phone }}</td>
+            <td style="text-align:center;">{{ r.price }}</td>
+            <td style="text-align:center;">{{ r.cod }}</td>
+
+            <td style="text-align:center;">
+              <span class="badge badge-red">{{ r.status }}</span>
+            </td>
+
+            <td style="text-align:center;">
+              <form method="post" style="display:inline;" onsubmit="return confirm('Remove this shipment from list?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remove_scan">
+                <input type="hidden" name="code" value="{{ r.tracking_no }}">
+                <button type="submit" class="trash-btn" title="Remove">🗑</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+
+        <!-- ALLOWED ROWS -->
+        {% with offset=rows_error|length %}
+          {% for r in rows_allowed %}
+            <tr>
+              <td style="text-align:center;">{{ forloop.counter|add:offset }}</td>
+
+              <td style="text-align:center;">
+                <a href="{{ r.tracking_url }}" style="font-weight:800;text-decoration:underline;">
+                  {{ r.tracking_no }}
+                </a>
+              </td>
+
+              <td style="text-align:center;">{{ r.seller_name }}</td>
+              <td>{{ r.receiver_location }}</td>
+              <td style="text-align:center;">{{ r.customer_name }}</td>
+              <td style="text-align:center;">{{ r.customer_phone }}</td>
+              <td style="text-align:center;">{{ r.price }}</td>
+              <td style="text-align:center;">{{ r.cod }}</td>
+
+              <td style="text-align:center;">
+                <span class="badge badge-gray">{{ r.status }}</span>
+              </td>
+
+              <td style="text-align:center;">
+                <input type="checkbox" class="big-check" name="checked_ids" value="{{ r.id }}" form="confirmForm" checked>
+              </td>
+            </tr>
+          {% endfor %}
+        {% endwith %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CONFIRM -->
+  <form method="post" id="confirmForm" style="margin-top:14px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="confirm_create"/>
+
+    <div class="card" style="padding:12px;border-radius:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <div style="min-width:220px;">
+        <div style="font-size:12px;opacity:.7;margin-bottom:6px;">Please assign shipper</div>
+        <select class="input" name="shipper_id" style="width:100%;">
+          <option value="">-- Select shipper --</option>
+          {% for s in shippers %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="flex:1;min-width:240px;">
+        <div style="font-size:12px;opacity:.7;margin-bottom:6px;">Remark (optional)</div>
+        <input class="input" name="remark" placeholder="Remark..." style="width:100%;" />
+      </div>
+
+      <div style="display:flex;gap:10px;margin-left:auto;">
+        <button class="btn btn-ghost" type="submit" name="mode" value="save">Save</button>
+        <button class="btn" type="submit" name="mode" value="complete">Save &amp; Complete</button>
+      </div>
+    </div>
+  </form>
+
+</div>
+
+<style>
+  /* match Return-To-Shop layout */
+  .scan-box{
+    margin-top:8px;
+    padding:12px;
+    border-radius:14px;
+    border:1px solid #e7e7e7;
+    background:#fff;
+  }
+  .scan-textarea{
+    height:120px;
+    width:100%;
+    font-family: ui-monospace, Consolas, monospace;
+    margin-bottom:12px;
+  }
+
+  /* ✅ full width green add button */
+  .btn-add-full{
+    width:100%;
+    height:44px;
+    border:none;
+    border-radius:12px;
+    background:#159a43; /* DS green */
+    color:#fff;
+    font-weight:900;
+    cursor:pointer;
+  }
+  .btn-add-full:hover{ filter: brightness(.95); }
+
+  /* ✅ clear small red top-right outside */
+  .clear-wrap{
+    position:absolute;
+    top:16px;
+    right:16px;
+    margin:0;
+  }
+  .btn-clear{
+    height:30px;
+    padding:0 14px;
+    border:none;
+    border-radius:999px;
+    background:#e53935;
+    color:#fff;
+    font-weight:800;
+    cursor:pointer;
+    font-size:12px;
+  }
+  .btn-clear:hover{ filter: brightness(.95); }
+
+  /* trash */
+  .trash-btn{
+    width:46px;height:46px;
+    border-radius:14px;
+    border:1px solid #ffd0d0;
+    background:#fff3f3;
+    color:#b10000;
+    cursor:pointer;
+    font-size:20px;
+    font-weight:900;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .trash-btn:hover{background:#ffecec;}
+
+  .big-check{
+    width:22px;height:22px;
+    transform: translateY(3px);
+  }
+
+  /* status badges (same classes as Return-To-Shop) */
+  .badge{
+    padding:6px 14px;
+    border-radius:20px;
+    font-weight:800;
+    font-size:12px;
+    display:inline-block;
+  }
+  .badge-gray{
+    background:#f2f2f2;
+    color:#555;
+    border:1px solid #ddd;
+  }
+  .badge-red{
+    background:#fff3f3;
+    color:#b10000;
+    border:1px solid #ffd0d0;
+  }
+</style>
+{% endblock %}

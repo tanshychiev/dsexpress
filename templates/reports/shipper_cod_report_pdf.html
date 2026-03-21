@@ -1,0 +1,262 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Shipper COD Report</title>
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      color:#111;
+      margin:20px;
+    }
+
+    .title{
+      text-align:center;
+      font-size:28px;
+      font-weight:900;
+      margin-bottom:4px;
+    }
+
+    .subtitle{
+      text-align:center;
+      font-size:14px;
+      margin-bottom:16px;
+    }
+
+    .day-title{
+      margin-top:24px;
+      margin-bottom:8px;
+      padding:8px 10px;
+      text-align:center;
+      font-size:24px;
+      font-weight:900;
+      border:1px solid #111;
+      background:#eef4ff;
+    }
+
+    .shift-title{
+      margin-top:12px;
+      margin-bottom:6px;
+      padding:6px 8px;
+      text-align:center;
+      font-size:18px;
+      font-weight:900;
+      border:1px solid #111;
+      background:#fafafa;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-bottom:10px;
+      table-layout:fixed;
+    }
+
+    th, td{
+      border:1px solid #111;
+      padding:6px 8px;
+      vertical-align:middle;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    th{
+      background:#f6f6f6;
+    }
+
+    .num{
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    .center{
+      text-align:center;
+    }
+
+    .total-row{
+      background:#fafafa;
+      font-weight:900;
+    }
+
+    .neg{
+      color:#b00020;
+      font-weight:900;
+    }
+
+    .remark-cell{
+      white-space:normal !important;
+      word-break:break-word;
+      line-height:1.35;
+    }
+  </style>
+</head>
+<body>
+  <div class="title">Shipper COD Report</div>
+  <div class="subtitle">From {{ date_from|default:"-" }} To {{ date_to|default:"-" }}</div>
+
+  {% for day in report.days %}
+    <div class="day-title">{{ day.date|date:"Y-m-d" }}</div>
+
+    <!-- MORNING -->
+    <div class="shift-title">វេនព្រឹក</div>
+    <table>
+      <colgroup>
+        <col style="width:50px;">
+        <col style="width:180px;">
+        <col style="width:110px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:140px;">
+        <col style="width:180px;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="center">#</th>
+          <th>Name</th>
+          <th class="num">COD</th>
+          <th class="num">Cash USD</th>
+          <th class="num">Cash KHR</th>
+          <th class="num">ABA USD</th>
+          <th class="num">ABA KHR</th>
+          <th class="num">Balance ($)</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in day.morning_rows %}
+          <tr>
+            <td class="center">{{ forloop.counter }}</td>
+            <td>{{ r.shipper_name }}</td>
+            <td class="num">{{ r.cod|floatformat:2 }}</td>
+            <td class="num">{{ r.cash_usd|floatformat:2 }}</td>
+            <td class="num">{{ r.cash_khr|floatformat:0 }}</td>
+            <td class="num">{{ r.aba_usd|floatformat:2 }}</td>
+            <td class="num">{{ r.aba_khr|floatformat:0 }}</td>
+            <td class="num {% if r.balance_usd < 0 %}neg{% endif %}">{{ r.balance_usd|floatformat:2 }}</td>
+            <td class="remark-cell">{{ r.remark|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="9" class="center">No data.</td>
+          </tr>
+        {% endfor %}
+        <tr class="total-row">
+          <td class="center">-</td>
+          <td>សរុប ព្រឹក</td>
+          <td class="num">{{ day.morning_total.cod|floatformat:2 }}</td>
+          <td class="num">{{ day.morning_total.cash_usd|floatformat:2 }}</td>
+          <td class="num">{{ day.morning_total.cash_khr|floatformat:0 }}</td>
+          <td class="num">{{ day.morning_total.aba_usd|floatformat:2 }}</td>
+          <td class="num">{{ day.morning_total.aba_khr|floatformat:0 }}</td>
+          <td class="num {% if day.morning_total.balance_usd < 0 %}neg{% endif %}">{{ day.morning_total.balance_usd|floatformat:2 }}</td>
+          <td class="remark-cell">-</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- AFTERNOON -->
+    <div class="shift-title">វេនល្ងាច</div>
+    <table>
+      <colgroup>
+        <col style="width:50px;">
+        <col style="width:180px;">
+        <col style="width:110px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:140px;">
+        <col style="width:180px;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="center">#</th>
+          <th>Name</th>
+          <th class="num">COD</th>
+          <th class="num">Cash USD</th>
+          <th class="num">Cash KHR</th>
+          <th class="num">ABA USD</th>
+          <th class="num">ABA KHR</th>
+          <th class="num">Balance ($)</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in day.afternoon_rows %}
+          <tr>
+            <td class="center">{{ forloop.counter }}</td>
+            <td>{{ r.shipper_name }}</td>
+            <td class="num">{{ r.cod|floatformat:2 }}</td>
+            <td class="num">{{ r.cash_usd|floatformat:2 }}</td>
+            <td class="num">{{ r.cash_khr|floatformat:0 }}</td>
+            <td class="num">{{ r.aba_usd|floatformat:2 }}</td>
+            <td class="num">{{ r.aba_khr|floatformat:0 }}</td>
+            <td class="num {% if r.balance_usd < 0 %}neg{% endif %}">{{ r.balance_usd|floatformat:2 }}</td>
+            <td class="remark-cell">{{ r.remark|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="9" class="center">No data.</td>
+          </tr>
+        {% endfor %}
+        <tr class="total-row">
+          <td class="center">-</td>
+          <td>សរុប ល្ងាច</td>
+          <td class="num">{{ day.afternoon_total.cod|floatformat:2 }}</td>
+          <td class="num">{{ day.afternoon_total.cash_usd|floatformat:2 }}</td>
+          <td class="num">{{ day.afternoon_total.cash_khr|floatformat:0 }}</td>
+          <td class="num">{{ day.afternoon_total.aba_usd|floatformat:2 }}</td>
+          <td class="num">{{ day.afternoon_total.aba_khr|floatformat:0 }}</td>
+          <td class="num {% if day.afternoon_total.balance_usd < 0 %}neg{% endif %}">{{ day.afternoon_total.balance_usd|floatformat:2 }}</td>
+          <td class="remark-cell">-</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- DAY TOTAL -->
+    <table>
+      <colgroup>
+        <col style="width:50px;">
+        <col style="width:180px;">
+        <col style="width:110px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:130px;">
+        <col style="width:140px;">
+        <col style="width:180px;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="center">#</th>
+          <th>Name</th>
+          <th class="num">COD</th>
+          <th class="num">Cash USD</th>
+          <th class="num">Cash KHR</th>
+          <th class="num">ABA USD</th>
+          <th class="num">ABA KHR</th>
+          <th class="num">Balance ($)</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="total-row">
+          <td class="center">-</td>
+          <td>{{ day.date|date:"Y-m-d" }}</td>
+          <td class="num">{{ day.day_total.cod|floatformat:2 }}</td>
+          <td class="num">{{ day.day_total.cash_usd|floatformat:2 }}</td>
+          <td class="num">{{ day.day_total.cash_khr|floatformat:0 }}</td>
+          <td class="num">{{ day.day_total.aba_usd|floatformat:2 }}</td>
+          <td class="num">{{ day.day_total.aba_khr|floatformat:0 }}</td>
+          <td class="num {% if day.day_total.balance_usd < 0 %}neg{% endif %}">{{ day.day_total.balance_usd|floatformat:2 }}</td>
+          <td class="remark-cell">-</td>
+        </tr>
+      </tbody>
+    </table>
+  {% endfor %}
+</body>
+</html>

@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+  {% if mode == "edit" %}Edit Seller{% else %}New Seller{% endif %}
+{% endblock %}
+
+{% block page_subtitle %}Shop profile / portal setup{% endblock %}
+
+{% block content %}
+<style>
+  .seller-wrap{
+    display:grid;
+    grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);
+    gap:18px;
+  }
+  .card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    box-shadow:0 10px 24px rgba(15,23,42,.06);
+    overflow:hidden;
+  }
+  .card-head{
+    padding:18px 18px 14px;
+    border-bottom:1px solid #eef2f7;
+  }
+  .card-title{
+    font-size:20px;
+    font-weight:900;
+    color:#0f172a;
+    margin:0;
+  }
+  .card-sub{
+    margin-top:5px;
+    color:#64748b;
+    font-size:13px;
+  }
+  .card-body{
+    padding:18px;
+  }
+  .section-title{
+    font-size:13px;
+    font-weight:900;
+    color:#0f172a;
+    margin:0 0 12px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+  }
+  .field.full{
+    grid-column:1 / -1;
+  }
+  .field label{
+    font-size:13px;
+    font-weight:800;
+    color:#334155;
+  }
+  .input{
+    width:100%;
+    border:1px solid #d7dee7;
+    border-radius:12px;
+    padding:11px 12px;
+    font-size:14px;
+    outline:none;
+    background:#fff;
+  }
+  .input:focus{
+    border-color:#0f766e;
+    box-shadow:0 0 0 4px rgba(15,118,110,.10);
+  }
+  .hint{
+    font-size:12px;
+    color:#64748b;
+  }
+  .check-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 14px;
+    border:1px solid #d7dee7;
+    border-radius:12px;
+    background:#f8fafc;
+  }
+  .check-row input{
+    width:18px;
+    height:18px;
+    accent-color:#0f766e;
+  }
+  .actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:18px;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:12px;
+    padding:10px 16px;
+    font-size:14px;
+    font-weight:900;
+    text-decoration:none;
+    cursor:pointer;
+    border:1px solid transparent;
+  }
+  .btn-primary{
+    background:#0f766e;
+    color:#fff;
+    border-color:#0f766e;
+  }
+  .btn-ghost{
+    background:#fff;
+    color:#0f172a;
+    border-color:#d7dee7;
+  }
+  .sep{
+    height:1px;
+    background:#eef2f7;
+    margin:18px 0;
+  }
+  .alert{
+    padding:12px 14px;
+    border-radius:12px;
+    margin-bottom:14px;
+    font-size:14px;
+  }
+  .alert-danger{
+    border:1px solid #fecaca;
+    background:#fef2f2;
+    color:#b91c1c;
+  }
+  .stat-list{
+    display:grid;
+    gap:10px;
+  }
+  .stat{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:12px 14px;
+    background:#fff;
+  }
+  .stat-label{
+    font-size:12px;
+    color:#64748b;
+    font-weight:700;
+    margin-bottom:5px;
+  }
+  .stat-value{
+    font-size:16px;
+    color:#0f172a;
+    font-weight:900;
+  }
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:900;
+  }
+  .pill-on{
+    background:#ecfdf5;
+    color:#047857;
+    border:1px solid #bbf7d0;
+  }
+  .pill-off{
+    background:#fff1f2;
+    color:#be123c;
+    border:1px solid #fecdd3;
+  }
+  .mini-note{
+    margin-top:10px;
+    font-size:12px;
+    color:#64748b;
+    line-height:1.5;
+  }
+
+  @media (max-width: 980px){
+    .seller-wrap{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+{% if error %}
+  <div class="alert alert-danger">
+    <b>{{ error }}</b>
+  </div>
+{% endif %}
+
+<div class="seller-wrap">
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">
+        {% if mode == "edit" %}Update Seller{% else %}Create Seller{% endif %}
+      </div>
+      <div class="card-sub">Manage seller profile and portal access in one page.</div>
+    </div>
+
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="section-title">Seller Information</div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Name</label>
+            <input class="input" name="name" value="{{ row.name|default:'' }}" required />
+          </div>
+
+          <div class="field">
+            <label>Phone</label>
+            <input class="input" name="phone" value="{{ row.phone|default:'' }}" />
+          </div>
+
+          <div class="field full">
+            <label>Address</label>
+            <input class="input" name="address" value="{{ row.address|default:'' }}" />
+          </div>
+
+          {% if mode == "edit" %}
+          <div class="field">
+            <label>Seller Code</label>
+            <input class="input" value="{{ row.code }}" disabled />
+          </div>
+          {% endif %}
+
+          <div class="field">
+            <label>Status</label>
+            <div class="check-row">
+              <input
+                type="checkbox"
+                name="is_active"
+                value="1"
+                {% if row.is_active %}checked{% endif %}
+              >
+              <span>Active seller</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="section-title">Portal Login</div>
+
+        <div class="form-grid">
+          <div class="field full">
+            <div class="check-row">
+              <input
+                type="checkbox"
+                id="portal_enabled"
+                name="portal_enabled"
+                value="1"
+                {% if portal_data.portal_enabled %}checked{% endif %}
+              >
+              <span>Enable seller portal login</span>
+            </div>
+            <div class="hint">If enabled, seller can login to portal using username and password below.</div>
+          </div>
+
+          <div class="field">
+            <label>Portal Username</label>
+            <input
+              class="input portal-input"
+              name="portal_username"
+              value="{{ portal_data.portal_username|default:'' }}"
+              placeholder="Example: seller code or shop username"
+            />
+          </div>
+
+          <div class="field">
+            <label>{% if mode == "edit" %}Reset / New Password{% else %}Temporary Password{% endif %}</label>
+            <input
+              class="input portal-input"
+              name="portal_password"
+              type="text"
+              value=""
+              placeholder="{% if mode == 'edit' %}Leave blank to keep current password{% else %}Required for new portal account{% endif %}"
+            />
+          </div>
+        </div>
+
+        <div class="actions">
+          <a class="btn btn-ghost" href="{% url 'seller_list' %}">Cancel</a>
+          <button class="btn btn-primary" type="submit">Save Seller</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Portal Activity</div>
+      <div class="card-sub">Quick tracking for this seller portal account.</div>
+    </div>
+
+    <div class="card-body">
+      {% if mode == "edit" and activity %}
+        <div style="margin-bottom:12px;">
+          {% if activity.is_online_now %}
+            <span class="pill pill-on">Online Now</span>
+          {% else %}
+            <span class="pill pill-off">Offline</span>
+          {% endif %}
+        </div>
+
+        <div class="stat-list">
+          <div class="stat">
+            <div class="stat-label">Portal Enabled</div>
+            <div class="stat-value">{% if activity.portal_enabled %}Yes{% else %}No{% endif %}</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Portal Username</div>
+            <div class="stat-value">{{ activity.portal_username|default:"-" }}</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Last Login</div>
+            <div class="stat-value">
+              {% if activity.last_login_at %}{{ activity.last_login_at|date:"d M Y, h:i A" }}{% else %}-{% endif %}
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Last Activity</div>
+            <div class="stat-value">
+              {% if activity.last_activity_at %}{{ activity.last_activity_at|date:"d M Y, h:i A" }}{% else %}-{% endif %}
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Today Login Count</div>
+            <div class="stat-value">{{ activity.today_login_count }}</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Today Total Usage</div>
+            <div class="stat-value">{{ activity.today_total_minutes }} min</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">This Month Usage</div>
+            <div class="stat-value">{{ activity.month_total_minutes }} min</div>
+          </div>
+        </div>
+      {% else %}
+        <div class="stat">
+          <div class="stat-label">Portal Activity</div>
+          <div class="stat-value">Not available yet</div>
+          <div class="mini-note">Save seller first, then enable portal login and seller activity will appear here.</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    const portalEnabled = document.getElementById("portal_enabled");
+    const portalInputs = document.querySelectorAll(".portal-input");
+
+    function togglePortalFields() {
+      const enabled = portalEnabled && portalEnabled.checked;
+      portalInputs.forEach(function (el) {
+        el.disabled = !enabled;
+      });
+    }
+
+    if (portalEnabled) {
+      portalEnabled.addEventListener("change", togglePortalFields);
+      togglePortalFields();
+    }
+  })();
+</script>
+{% endblock %}

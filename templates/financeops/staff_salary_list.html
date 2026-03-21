@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Salary{% endblock %}
+{% block page_title %}Staff Salary{% endblock %}
+{% block page_subtitle %}Manage shipper and call center monthly salary{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+  <div class="toolbar">
+    <a class="btn btn-ghost" href="{% url 'finance_home' %}">← Finance Home</a>
+  </div>
+
+  <div class="section-title">{% if edit_obj %}Edit Salary{% else %}Add Salary{% endif %}</div>
+
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save">
+    <input type="hidden" name="row_id" value="{% if edit_obj %}{{ edit_obj.id }}{% endif %}">
+
+    <div>
+      <div class="label">Role</div>
+      {{ form.role }}
+    </div>
+
+    <div>
+      <div class="label">Shipper</div>
+      {{ form.shipper }}
+    </div>
+
+    <div>
+      <div class="label">Staff Name</div>
+      {{ form.staff_name }}
+    </div>
+
+    <div>
+      <div class="label">Monthly Salary (USD)</div>
+      {{ form.monthly_salary_usd }}
+    </div>
+
+    <div>
+      <div class="label">Note</div>
+      {{ form.note }}
+    </div>
+
+    <div>
+      <div class="label">Active</div>
+      <div style="padding-top:10px;">{{ form.is_active }}</div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn" type="submit">Save</button>
+      <a class="btn btn-ghost" href="{% url 'staff_salary_list' %}">Clear</a>
+    </div>
+  </form>
+
+  <div class="section-title" style="margin-top:18px;">Salary List</div>
+
+  <div style="overflow:auto;">
+    <table class="ds-table list-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Role</th>
+          <th>Shipper</th>
+          <th>Staff Name</th>
+          <th>Monthly Salary</th>
+          <th>Active</th>
+          <th>Note</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ r.role }}</td>
+            <td>{% if r.shipper %}{{ r.shipper.name }}{% else %}-{% endif %}</td>
+            <td>{{ r.staff_name|default:"-" }}</td>
+            <td>${{ r.monthly_salary_usd|floatformat:2 }}</td>
+            <td>{% if r.is_active %}YES{% else %}NO{% endif %}</td>
+            <td>{{ r.note|default:"-" }}</td>
+            <td>
+              <a class="mini-btn" href="{% url 'staff_salary_list' %}?edit={{ r.id }}">Edit</a>
+              <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="row_id" value="{{ r.id }}">
+                <button class="mini-btn mini-danger js-confirm" type="submit" data-title="Delete Salary" data-text="Delete this salary row?">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" style="text-align:center;opacity:.7;">No data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .toolbar{margin-bottom:12px;}
+  .section-title{
+    margin-bottom:10px;
+    padding:10px 14px;
+    border-radius:14px;
+    background:#eef4ff;
+    border:1px solid #cfdcff;
+    font-size:22px;
+    font-weight:900;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(220px,1fr));
+    gap:12px;
+    align-items:end;
+  }
+  .form-actions{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .label{
+    font-size:12px;
+    opacity:.7;
+    margin-bottom:6px;
+  }
+  .input{
+    width:100%;
+    height:42px;
+    padding:8px 10px;
+    border-radius:12px;
+    border:1px solid #e6e6e6;
+    background:#fff;
+  }
+  .big-check{
+    width:18px;
+    height:18px;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    height:42px;
+    padding:0 16px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    text-decoration:none;
+    font-weight:800;
+  }
+  .btn-ghost{
+    background:#fff;
+    color:#111;
+    border-color:#ddd;
+  }
+  .list-table{
+    width:100%;
+    min-width:1100px;
+  }
+  .mini-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    height:32px;
+    padding:0 10px;
+    border-radius:10px;
+    border:1px solid #ddd;
+    background:#fff;
+    color:#111;
+    text-decoration:none;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .mini-danger{
+    border-color:#ffd0d0;
+    background:#fff3f3;
+    color:#b10000;
+  }
+</style>
+{% endblock %}

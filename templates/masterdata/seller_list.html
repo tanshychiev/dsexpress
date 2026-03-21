@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block page_title %}Sellers{% endblock %}
+{% block page_subtitle %}Manage shops{% endblock %}
+
+{% block content %}
+<style>
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;font-size:12px}
+  .badge-green{background:#dcfce7;color:#166534}
+  .badge-red{background:#fee2e2;color:#991b1b}
+</style>
+
+<div class="page-head">
+  <div class="left">
+    <form class="search-row filters" method="get">
+      <input class="input" name="q" value="{{ q }}" placeholder="Search code / name / phone / address..." />
+      <select class="input" name="status" style="max-width:160px;">
+        <option value="all" {% if status == "all" %}selected{% endif %}>All</option>
+        <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+      </select>
+
+      <input type="hidden" name="search" value="1" />
+      <button class="btn" type="submit">Search</button>
+
+      {% if search %}
+        <a class="btn btn-ghost" href="{% url 'seller_list' %}">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="right">
+    <a class="btn btn-primary" href="{% url 'seller_create' %}">+ New Seller</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Seller List</div>
+
+  <div class="table-wrap">
+    <table class="ds-table">
+      <thead>
+        <tr>
+          <th style="width:70px;">No</th>
+          <th style="width:120px;">Code</th>
+          <th>Name</th>
+          <th style="width:160px;">Phone</th>
+          <th>Address</th>
+          <th style="width:110px;">Status</th>
+          <th style="width:170px;">Created</th>
+          <th style="width:260px;">Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% if not search %}
+          <tr><td colspan="8">Click <b>Search</b> to show data.</td></tr>
+        {% else %}
+          {% for s in page_obj %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ s.code }}</td>
+              <td>{{ s.name }}</td>
+              <td>{{ s.phone|default:"-" }}</td>
+              <td>{{ s.address|default:"-" }}</td>
+              <td>
+                {% if s.is_active %}
+                  <span class="badge badge-green">Active</span>
+                {% else %}
+                  <span class="badge badge-red">Inactive</span>
+                {% endif %}
+              </td>
+              <td>{{ s.created_at|date:"Y-m-d H:i" }}</td>
+
+              <td class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a class="btn btn-ghost" href="{% url 'seller_edit' s.id %}">Edit</a>
+
+                <!-- Toggle Active (POST) -->
+                <form method="post" action="{% url 'seller_toggle_active' s.id %}" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.number }}">
+                  <button class="btn btn-ghost" type="submit"
+                          onclick="return confirm('{% if s.is_active %}Deactivate{% else %}Activate{% endif %} seller {{ s.name }} ?');">
+                    {% if s.is_active %}Deactivate{% else %}Activate{% endif %}
+                  </button>
+                </form>
+
+                <!-- Delete (POST) -->
+                <form method="post" action="{% url 'seller_delete' s.id %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button class="btn btn-danger" type="submit"
+                          onclick="return confirm('Delete this seller?');">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8">No sellers found</td></tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if search and page_obj.paginator.num_pages > 1 %}
+    <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      {% if page_obj.has_previous %}
+        <a class="btn btn-ghost" href="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.previous_page_number }}">Prev</a>
+      {% endif %}
+
+      <div>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
+
+      {% if page_obj.has_next %}
+        <a class="btn btn-ghost" href="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

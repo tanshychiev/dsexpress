@@ -1,0 +1,1329 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Delivery Report{% endblock %}
+{% block page_title %}Delivery Report{% endblock %}
+{% block page_subtitle %}Show / Export Excel / PNG / PDF{% endblock %}
+
+{% block content %}
+<style>
+  .report-filter-card{
+    padding:16px;
+    border-radius:16px;
+  }
+
+  .report-filter-grid{
+    display:grid;
+    grid-template-columns:repeat(7, minmax(150px,1fr));
+    gap:12px;
+    align-items:end;
+  }
+
+  .report-filter-grid label{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    margin-bottom:6px;
+    color:#2c3e50;
+  }
+
+  .report-filter-grid input,
+  .report-filter-grid select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid #d8dde6;
+    border-radius:12px;
+    background:#fff;
+  }
+
+  .filter-empty-slot{
+    min-height:1px;
+  }
+
+  .report-top-actions{
+    grid-column:1 / -1;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid #e5e7eb;
+    align-items:center;
+  }
+
+  .report-top-actions-left{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .report-top-actions-right{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+  }
+
+  .report-actions{
+    grid-column:1 / -1;
+    margin-top:12px;
+    padding-top:10px;
+    border-top:1px solid #e5e7eb;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+
+  .report-actions-left{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+
+  .report-actions-right{
+    display:flex;
+    align-items:center;
+  }
+
+  .report-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration:none;
+    border:none;
+    border-radius:12px;
+    padding:10px 16px;
+    font-weight:800;
+    cursor:pointer;
+    transition:.18s ease;
+    font-size:13px;
+    white-space:nowrap;
+  }
+
+  .report-btn:hover{
+    transform:translateY(-1px);
+    opacity:.95;
+  }
+
+  .report-btn-show{
+    background:#124b84;
+    color:#fff;
+  }
+
+  .report-btn-excel{
+    background:#1d7a43;
+    color:#fff;
+  }
+
+  .report-btn-png{
+    background:#7c3aed;
+    color:#fff;
+  }
+
+  .report-btn-pdf{
+    background:#dc2626;
+    color:#fff;
+  }
+
+  .report-btn-gray{
+    background:#64748b;
+    color:#fff;
+  }
+
+  .report-btn-small{
+    min-height:38px;
+    padding:10px 14px;
+    font-size:12px;
+  }
+
+  .report-btn-show-large{
+    min-width:260px;
+    min-height:42px;
+    padding:10px 24px;
+    font-size:16px;
+    border-radius:999px;
+    box-shadow:0 4px 12px rgba(18,75,132,.18);
+  }
+
+  .report-wrapper{
+    margin-top:14px;
+    padding:18px;
+    border-radius:18px;
+  }
+
+  .page-title-main{
+    text-align:center;
+    margin:0 0 14px;
+    font-size:22px;
+    font-weight:900;
+    color:#17324d;
+  }
+
+  .selected-range-box{
+    background:#f8fafc;
+    border:1px solid #dbe3ec;
+    border-radius:16px;
+    padding:14px 16px;
+    margin-bottom:14px;
+  }
+
+  .selected-range-title{
+    font-size:14px;
+    font-weight:900;
+    color:#17324d;
+    margin-bottom:6px;
+  }
+
+  .selected-range-line{
+    font-size:13px;
+    color:#475569;
+    line-height:1.5;
+  }
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(180px,1fr));
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .summary-card{
+    background:#fff;
+    border:1px solid #dbe3ec;
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 3px 10px rgba(0,0,0,.03);
+  }
+
+  .summary-label{
+    font-size:13px;
+    color:#64748b;
+    font-weight:700;
+    margin-bottom:6px;
+  }
+
+  .summary-value{
+    font-size:28px;
+    font-weight:900;
+    color:#17324d;
+    line-height:1;
+  }
+
+  .bulk-toolbar{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+    align-items:center;
+  }
+
+  .bulk-left,
+  .bulk-right{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .selected-count-chip{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:0 14px;
+    border-radius:999px;
+    background:#eef5ff;
+    color:#1f4db8;
+    font-weight:900;
+    border:1px solid #cfe0ff;
+  }
+
+  .export-cover{
+    display:none;
+    align-items:center;
+    gap:14px;
+    padding-bottom:14px;
+    border-bottom:2px solid #e2e8f0;
+    margin-bottom:14px;
+  }
+
+  .export-cover-logo{
+    width:52px;
+    height:52px;
+    object-fit:contain;
+  }
+
+  .export-cover-title{
+    font-size:24px;
+    font-weight:900;
+    color:#17324d;
+    line-height:1.1;
+  }
+
+  .export-cover-sub{
+    font-size:13px;
+    color:#64748b;
+    margin-top:4px;
+  }
+
+  .shop-section{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    padding:16px;
+    margin-bottom:18px;
+    box-shadow:0 4px 16px rgba(0,0,0,.04);
+  }
+
+  .shop-header-row{
+    position:relative;
+    margin-bottom:14px;
+    border-bottom:2px solid #edf2f7;
+    padding-bottom:12px;
+    min-height:78px;
+  }
+
+  .shop-header-left{
+    position:absolute;
+    left:0;
+    top:0;
+    width:220px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-start;
+  }
+
+  .shop-header-center{
+    text-align:center;
+    max-width:700px;
+    margin:0 auto;
+  }
+
+  .shop-header-right{
+    position:absolute;
+    right:0;
+    top:0;
+    width:320px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-end;
+    gap:8px;
+    flex-wrap:nowrap;
+  }
+
+  .shop-header-title{
+    font-size:22px;
+    font-weight:900;
+    color:#17324d;
+    margin-bottom:6px;
+  }
+
+  .shop-header-line{
+    font-size:13px;
+    color:#4b5563;
+    margin-bottom:2px;
+  }
+
+  .shop-name{
+    font-size:16px;
+    font-weight:900;
+    color:#0f172a;
+    text-align:left;
+  }
+
+  .shop-check-wrap{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    font-weight:700;
+    color:#334155;
+    user-select:none;
+  }
+
+  .shop-check-wrap input{
+    width:16px;
+    height:16px;
+  }
+
+  .table-wrap{
+    overflow-x:auto;
+    overflow-y:visible;
+    border-radius:14px;
+    width:100%;
+  }
+
+  .rtable{
+    width:100%;
+    min-width:1450px;
+    border-collapse:collapse;
+    background:#fff;
+  }
+
+  .rtable th{
+    background:#124b84;
+    color:#fff;
+    padding:9px 8px;
+    border:1px solid #d0d7df;
+    font-size:12px;
+    text-align:center;
+    white-space:nowrap;
+  }
+
+  .rtable td{
+    padding:8px 8px;
+    border:1px solid #d9e0e8;
+    font-size:12px;
+    vertical-align:top;
+  }
+
+  .rtable td.num{
+    text-align:right;
+    white-space:nowrap;
+  }
+
+  .rtable td.center{
+    text-align:center;
+  }
+
+  .row-pending{
+    background:#fff6cc;
+  }
+
+  .row-returned{
+    background:#dff4df;
+  }
+
+  .row-returned td{
+    color:#166534;
+    font-weight:700;
+  }
+
+  .status-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:88px;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+    line-height:1;
+  }
+
+  .status-done{
+    background:#e8f0ff;
+    color:#1e40af;
+  }
+
+  .status-returned{
+    background:#dcfce7;
+    color:#166534;
+  }
+
+  .status-pending{
+    background:#fff7cc;
+    color:#92400e;
+  }
+
+  .totals-box{
+    margin-top:12px;
+    display:flex;
+    justify-content:flex-end;
+  }
+
+  .totals-inner{
+    min-width:320px;
+    background:#f8fafc;
+    border:1px solid #dbe3ec;
+    border-radius:14px;
+    padding:12px 14px;
+  }
+
+  .totals-row{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    font-size:14px;
+    padding:4px 0;
+  }
+
+  .totals-row strong{
+    color:#0f172a;
+  }
+
+  .export-footer{
+    display:none;
+    text-align:center;
+    margin-top:28px;
+    padding-top:14px;
+    border-top:2px solid #e2e8f0;
+    color:#475569;
+    font-size:14px;
+    font-weight:700;
+  }
+
+  .temp-export-footer{
+    text-align:center;
+    margin-top:28px;
+    padding-top:14px;
+    border-top:2px solid #e2e8f0;
+    color:#475569;
+    font-size:14px;
+    font-weight:700;
+  }
+
+  .empty-box{
+    text-align:center;
+    padding:30px 20px;
+    color:#6b7280;
+    font-weight:700;
+  }
+
+  .export-hide{
+    display:flex;
+  }
+
+  .export-mode .export-col-hide{
+    display:none !important;
+  }
+
+  .print-only-report .report-filter-card,
+  .print-only-report .topbar,
+  .print-only-report .sidebar,
+  .print-only-report .report-actions,
+  .print-only-report .page-title-main,
+  .print-only-report .bulk-toolbar{
+    display:none !important;
+  }
+
+  .print-only-report .export-cover{
+    display:flex !important;
+  }
+
+  .print-only-report .export-footer{
+    display:block !important;
+  }
+
+  @media (max-width: 1200px){
+    .report-filter-grid{
+      grid-template-columns:repeat(2, minmax(180px,1fr));
+    }
+
+    .summary-grid{
+      grid-template-columns:1fr;
+    }
+
+    .shop-header-row{
+      position:static;
+      min-height:auto;
+    }
+
+    .shop-header-left,
+    .shop-header-right{
+      position:static;
+      width:auto;
+      display:block;
+      margin-bottom:10px;
+    }
+
+    .shop-header-center{
+      margin-top:12px;
+      margin-bottom:12px;
+    }
+
+    .shop-header-right{
+      display:flex;
+      justify-content:flex-start;
+      flex-wrap:wrap;
+    }
+  }
+
+  @media print{
+    body.print-only-report .report-filter-card,
+    body.print-only-report .topbar,
+    body.print-only-report .sidebar,
+    body.print-only-report .report-actions,
+    body.print-only-report .page-title-main,
+    body.print-only-report .bulk-toolbar{
+      display:none !important;
+    }
+
+    body.print-only-report .report-wrapper{
+      margin:0 !important;
+      padding:0 !important;
+      border:none !important;
+      box-shadow:none !important;
+    }
+
+    body.print-only-report .export-cover{
+      display:flex !important;
+    }
+
+    body.print-only-report .export-footer{
+      display:block !important;
+    }
+
+    body.print-only-report .shop-section{
+      page-break-inside:avoid;
+      break-inside:avoid;
+      box-shadow:none;
+      border:1px solid #ccc !important;
+    }
+
+    body.print-only-report .export-hide{
+      display:none !important;
+    }
+  }
+
+  .shop-title-line{
+    white-space: nowrap;
+    font-weight:700;
+    display:inline-block;
+    font-size:16px;
+  }
+</style>
+
+<div class="card report-filter-card">
+  <form method="get" class="report-filter-grid">
+
+    <div>
+      <label>Shop</label>
+      {{ form.seller }}
+    </div>
+
+    <div>
+      <label>Delivery Date From (DONE)</label>
+      {{ form.delivery_date_from }}
+    </div>
+
+    <div>
+      <label>Delivery Date To (DONE)</label>
+      {{ form.delivery_date_to }}
+    </div>
+
+    <div>
+      <label>Pending Date From (Created)</label>
+      {{ form.pending_date_from }}
+    </div>
+
+    <div>
+      <label>Pending Date To (Created)</label>
+      {{ form.pending_date_to }}
+    </div>
+
+    <div>
+      <label>Search</label>
+      {% if form.search %}
+        {{ form.search }}
+      {% else %}
+        <input type="text" placeholder="Search tracking / phone..." disabled>
+      {% endif %}
+    </div>
+
+    <div>
+      <label>Status Filter</label>
+      {% if form.status_filter %}
+        {{ form.status_filter }}
+      {% else %}
+        <input type="text" placeholder="All status" disabled>
+      {% endif %}
+    </div>
+
+    <div class="report-actions">
+      <div class="report-actions-left">
+        <button class="report-btn report-btn-excel report-btn-small"
+                name="action"
+                value="download_update"
+                type="submit">
+          Download Update File
+        </button>
+
+        <a class="report-btn report-btn-show report-btn-small"
+           href="{% url 'delivery_report_upload' %}">
+          Upload Update File
+        </a>
+      </div>
+
+      <div class="report-actions-right">
+        <button class="report-btn report-btn-show report-btn-show-large"
+                name="action"
+                value="show"
+                type="submit">
+          Show
+        </button>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+<div class="card report-wrapper" id="reportCapture">
+  <div class="export-cover">
+    <img class="export-cover-logo" src="{% static 'img/ds-logo.png' %}" alt="DS Express" />
+    <div>
+      <div class="export-cover-title">DS Express</div>
+      <div class="export-cover-sub">Delivery Report</div>
+    </div>
+  </div>
+
+  <div class="bulk-toolbar export-hide">
+    <div class="bulk-left">
+      <button type="button" class="report-btn report-btn-show" id="toggleAllBtn">Tick All</button>
+      <div class="selected-count-chip">
+        Selected: <span id="selectedCountText" style="margin-left:6px;">0</span>
+      </div>
+    </div>
+
+    <div class="bulk-right">
+      <button type="button" class="report-btn report-btn-excel" id="saveSelectedExcelMergedBtn">
+        Save Selected Excel (All in 1 File)
+      </button>
+
+      <button type="button" class="report-btn report-btn-excel" id="saveSelectedExcelBtn">
+        Save Selected Excel (Separate)
+      </button>
+
+      <button type="button" class="report-btn report-btn-png" id="saveSelectedPngBtn">
+        Save Selected PNG
+      </button>
+
+      <button type="button" class="report-btn report-btn-pdf" id="saveSelectedPdfBtn">
+        Save Selected PDF
+      </button>
+    </div>
+  </div>
+
+  <h2 class="page-title-main">Delivery Report</h2>
+
+  {% if mode != "EMPTY" %}
+    <div class="selected-range-box">
+      <div class="selected-range-title">Selected Data Range</div>
+      {% if delivery_from or delivery_to %}
+        <div class="selected-range-line">
+          Delivered: {{ delivery_from|date:"M. j, Y"|default:"" }} → {{ delivery_to|date:"F j, Y"|default:"" }}
+        </div>
+      {% endif %}
+      {% if pending_from or pending_to %}
+        <div class="selected-range-line">
+          Pending: {{ pending_from|date:"M. j, Y"|default:"" }} → {{ pending_to|date:"F j, Y"|default:"" }}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Total Sent</div>
+        <div class="summary-value">{{ seller_summaries|length }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Total Done</div>
+        <div class="summary-value" id="summaryDoneCount">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Total Returned</div>
+        <div class="summary-value" id="summaryReturnedCount">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Total Pending</div>
+        <div class="summary-value" id="summaryPendingCount">0</div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if mode == "EMPTY" %}
+    <div class="empty-box">
+      Select Delivery Date and/or Pending Date, then click Show.
+    </div>
+  {% endif %}
+
+{% for s in seller_summaries %}
+  <div class="shop-section" id="shopReport{{ forloop.counter }}">
+    <div class="shop-header-row">
+      <div class="shop-header-left">
+        <div>
+          <span class="shop-title-line">Shop: {{ s.seller_key }}</span>
+
+          <div class="export-hide" style="margin-top:10px;">
+            <label class="shop-check-wrap">
+              <input type="checkbox"
+                     class="shopCheck"
+                     value="{{ forloop.counter }}"
+                     data-seller-id="{% if s.rows and s.rows.0.seller_id %}{{ s.rows.0.seller_id }}{% endif %}"
+                     data-shop-name="{{ s.seller_key|default_if_none:'' }}">
+              <span>Select</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="shop-header-center">
+        <div class="shop-header-title">Delivery Report</div>
+
+        {% if delivery_from or delivery_to %}
+          <div class="shop-header-line">
+            Delivered: {{ delivery_from|date:"M. j, Y"|default:"" }} → {{ delivery_to|date:"F j, Y"|default:"" }}
+          </div>
+        {% endif %}
+
+        <div class="shop-header-line">
+          Done: <strong class="shop-done-count">0</strong>
+          &nbsp;&nbsp;
+          Returned: <strong class="shop-returned-count">0</strong>
+          &nbsp;&nbsp;
+          Pending: <strong class="shop-pending-count">0</strong>
+        </div>
+      </div>
+
+      <div class="shop-header-right export-hide">
+        <a
+          class="report-btn report-btn-excel"
+          href="?seller={% if s.rows and s.rows.0.seller_id %}{{ s.rows.0.seller_id }}{% endif %}&shop_key={{ s.seller_key|urlencode }}&delivery_date_from={% if delivery_from %}{{ delivery_from|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&delivery_date_to={% if delivery_to %}{{ delivery_to|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&pending_date_from={% if pending_from %}{{ pending_from|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&pending_date_to={% if pending_to %}{{ pending_to|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&action=export"
+        >
+          Save Excel
+        </a>
+
+        <button type="button"
+                class="report-btn report-btn-png shopPngBtn"
+                data-shop="{{ forloop.counter }}"
+                data-shop-name="{{ s.seller_key|default_if_none:'' }}">
+          Save PNG
+        </button>
+
+        <button type="button"
+                class="report-btn report-btn-pdf shopPdfBtn"
+                data-shop="{{ forloop.counter }}"
+                data-shop-name="{{ s.seller_key|default_if_none:'' }}">
+          Save PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="rtable">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Code</th>
+            <th>Shipment ID</th>
+            <th>Seller</th>
+            <th>Pickup Date</th>
+            <th>Delivery Date</th>
+            <th>Location</th>
+            <th class="export-col-hide">Description</th>
+            <th class="export-col-hide">Qty</th>
+            <th>Phone Number</th>
+            <th>Receiver Name</th>
+            <th>Price</th>
+            <th class="export-col-hide">Delivery Fee</th>
+            <th class="export-col-hide">Addition Fee</th>
+            <th>Total Fee</th>
+            <th>COD</th>
+            <th>Status</th>
+            <th>Shipper name</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for o in s.rows %}
+            {% if o.status == "RETURNED" %}
+              <tr class="row-returned" data-report-status="RETURNED">
+            {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+              <tr data-report-status="DONE">
+            {% else %}
+              <tr class="row-pending" data-report-status="PENDING">
+            {% endif %}
+
+              <td class="center">{{ forloop.counter }}</td>
+              <td>{{ o.seller_order_code|default_if_none:"" }}</td>
+              <td>{{ o.tracking_no|default_if_none:"" }}</td>
+
+              <td>
+                {% if o.seller_name %}
+                  {{ o.seller_name }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+
+              <td class="center">{{ o.created_at|date:"Y-m-d" }}</td>
+              <td class="center">{{ o.done_at|date:"Y-m-d" }}</td>
+              <td>{{ o.receiver_address|default_if_none:"" }}</td>
+              <td class="export-col-hide">{{ o.product_desc|default_if_none:"" }}</td>
+              <td class="center export-col-hide">{{ o.quantity|default_if_none:"" }}</td>
+              <td>{{ o.receiver_phone|default_if_none:"" }}</td>
+              <td>{{ o.receiver_name|default_if_none:"" }}</td>
+              <td class="num">{{ o.price|default_if_none:"" }}</td>
+
+              {% if o.status == "RETURNED" %}
+                <td class="num export-col-hide">0.00</td>
+                <td class="num export-col-hide">0.00</td>
+                <td class="num">0.00</td>
+                <td class="num">0.00</td>
+                <td>
+                  <span class="status-badge status-returned">RETURNED</span>
+                </td>
+              {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+                <td class="num export-col-hide">{{ o.delivery_fee|default_if_none:"" }}</td>
+                <td class="num export-col-hide">{{ o.additional_fee|default_if_none:"" }}</td>
+                <td class="num">{{ o.delivery_fee|add:o.additional_fee }}</td>
+                <td class="num">{{ o.cod|default_if_none:"" }}</td>
+                <td>
+                  <span class="status-badge status-done">DONE</span>
+                </td>
+              {% else %}
+                <td class="num export-col-hide">0.00</td>
+                <td class="num export-col-hide">0.00</td>
+                <td class="num">0.00</td>
+                <td class="num">0.00</td>
+                <td>
+                  <span class="status-badge status-pending">PENDING</span>
+                </td>
+              {% endif %}
+
+              <td>
+                {% if o.delivery_shipper %}
+                  {{ o.delivery_shipper.name }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+
+              <td>{{ o.reason|default_if_none:"" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="19" class="empty-box">No data</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="totals-box">
+      <div class="totals-inner">
+        <div class="totals-row">
+          <span><strong>COD :</strong></span>
+          <span>{{ s.total_cod|floatformat:2 }}</span>
+        </div>
+        <div class="totals-row">
+          <span><strong>FEE :</strong></span>
+          <span>{{ s.total_fee|floatformat:2 }}</span>
+        </div>
+        <div class="totals-row">
+          <span><strong>PAY :</strong></span>
+          <span>{{ s.pay|floatformat:2 }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
+  <div class="export-footer">
+    Thank you for supporting DS Express.
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+  (function () {
+    const { jsPDF } = window.jspdf;
+
+    const reportEl = document.getElementById("reportCapture");
+    const savePngBtn = document.getElementById("savePngBtn");
+    const savePdfBtn = document.getElementById("savePdfBtn");
+
+    const toggleAllBtn = document.getElementById("toggleAllBtn");
+    const selectedCountText = document.getElementById("selectedCountText");
+
+    const saveSelectedExcelMergedBtn = document.getElementById("saveSelectedExcelMergedBtn");
+    const saveSelectedExcelBtn = document.getElementById("saveSelectedExcelBtn");
+    const saveSelectedPngBtn = document.getElementById("saveSelectedPngBtn");
+    const saveSelectedPdfBtn = document.getElementById("saveSelectedPdfBtn");
+
+    function sanitizeName(text) {
+      return (text || "shop")
+        .replace(/[\\\/:*?"<>|]+/g, "")
+        .replace(/\s+/g, "_")
+        .trim();
+    }
+
+    function getDeliveryDateText() {
+      const deliveryTo = "{{ delivery_to|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+      const deliveryFrom = "{{ delivery_from|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+      return deliveryTo || deliveryFrom || "no-date";
+    }
+
+    function buildFileName(shopName) {
+      return `${sanitizeName(shopName)}_${getDeliveryDateText()}`;
+    }
+
+    function countSummary() {
+      const rows = Array.from(document.querySelectorAll(".rtable tbody tr[data-report-status]"));
+
+      const doneRows = rows.filter(tr => tr.dataset.reportStatus === "DONE").length;
+      const returnedRows = rows.filter(tr => tr.dataset.reportStatus === "RETURNED").length;
+      const pendingRows = rows.filter(tr => tr.dataset.reportStatus === "PENDING").length;
+
+      const doneEl = document.getElementById("summaryDoneCount");
+      const returnedEl = document.getElementById("summaryReturnedCount");
+      const pendingEl = document.getElementById("summaryPendingCount");
+
+      if (doneEl) doneEl.textContent = doneRows;
+      if (returnedEl) returnedEl.textContent = returnedRows;
+      if (pendingEl) pendingEl.textContent = pendingRows;
+
+      document.querySelectorAll(".shop-section").forEach(section => {
+        const shopRows = Array.from(section.querySelectorAll(".rtable tbody tr[data-report-status]"));
+        const done = shopRows.filter(tr => tr.dataset.reportStatus === "DONE").length;
+        const returned = shopRows.filter(tr => tr.dataset.reportStatus === "RETURNED").length;
+        const pending = shopRows.filter(tr => tr.dataset.reportStatus === "PENDING").length;
+
+        const doneBox = section.querySelector(".shop-done-count");
+        const returnedBox = section.querySelector(".shop-returned-count");
+        const pendingBox = section.querySelector(".shop-pending-count");
+
+        if (doneBox) doneBox.textContent = done;
+        if (returnedBox) returnedBox.textContent = returned;
+        if (pendingBox) pendingBox.textContent = pending;
+      });
+    }
+
+    function getShopCheckboxes() {
+      return Array.from(document.querySelectorAll(".shopCheck"));
+    }
+
+    function getSelectedShopInfos() {
+      return getShopCheckboxes()
+        .filter(x => x.checked)
+        .map(x => ({
+          id: x.value,
+          sellerId: x.dataset.sellerId || "",
+          name: x.dataset.shopName || `shop_${x.value}`
+        }));
+    }
+
+    function updateSelectedUI() {
+      const boxes = getShopCheckboxes();
+      const checked = boxes.filter(x => x.checked).length;
+
+      if (selectedCountText) {
+        selectedCountText.textContent = checked;
+      }
+
+      if (toggleAllBtn) {
+        toggleAllBtn.textContent = checked === boxes.length && boxes.length > 0 ? "Untick All" : "Tick All";
+      }
+    }
+
+    function setExportMode(el, isOn) {
+      if (isOn) {
+        el.classList.add("export-mode");
+      } else {
+        el.classList.remove("export-mode");
+      }
+    }
+
+    async function renderCanvasForExport(el) {
+      const hiddenEls = el.querySelectorAll(".export-hide");
+      const coverEls = el.querySelectorAll(".export-cover");
+      const tempFooter = document.createElement("div");
+
+      hiddenEls.forEach(x => x.style.display = "none");
+      coverEls.forEach(x => x.style.display = "flex");
+
+      tempFooter.className = "temp-export-footer";
+      tempFooter.textContent = "Thank you for supporting DS Express.";
+      el.appendChild(tempFooter);
+
+      setExportMode(el, true);
+      document.body.classList.add("print-only-report");
+
+      try {
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          scrollX: 0,
+          scrollY: -window.scrollY,
+          width: el.scrollWidth,
+          height: el.scrollHeight,
+          windowWidth: Math.max(el.scrollWidth, document.documentElement.clientWidth),
+          windowHeight: Math.max(el.scrollHeight, document.documentElement.clientHeight),
+          onclone: function(clonedDoc) {
+            const clonedEl = clonedDoc.getElementById(el.id);
+            if (!clonedEl) return;
+
+            clonedDoc.querySelectorAll(".export-hide").forEach(node => {
+              node.style.display = "none";
+            });
+
+            clonedEl.style.width = el.scrollWidth + "px";
+            clonedEl.style.height = "auto";
+            clonedEl.style.overflow = "visible";
+
+            clonedDoc.querySelectorAll(".table-wrap").forEach(wrap => {
+              wrap.style.overflow = "visible";
+              wrap.style.maxHeight = "none";
+              wrap.style.height = "auto";
+              wrap.style.width = "100%";
+            });
+
+            clonedDoc.querySelectorAll(".rtable").forEach(table => {
+              table.style.width = "100%";
+              table.style.minWidth = "1450px";
+              table.style.tableLayout = "auto";
+            });
+
+            clonedDoc.querySelectorAll("body, html").forEach(node => {
+              node.style.overflow = "visible";
+              node.style.width = "auto";
+              node.style.height = "auto";
+            });
+          }
+        });
+
+        return canvas;
+      } finally {
+        tempFooter.remove();
+        hiddenEls.forEach(x => x.style.display = "");
+        coverEls.forEach(x => x.style.display = "");
+        setExportMode(el, false);
+        document.body.classList.remove("print-only-report");
+      }
+    }
+
+    async function saveElementAsPng(el, fileName) {
+      const canvas = await renderCanvasForExport(el);
+      const link = document.createElement("a");
+      link.download = `${fileName}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    async function saveElementAsPdf(el, fileName) {
+      const canvas = await renderCanvasForExport(el);
+      const imgData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? "landscape" : "portrait",
+        unit: "px",
+        format: [canvas.width, canvas.height]
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(`${fileName}.pdf`);
+    }
+
+    if (toggleAllBtn) {
+      toggleAllBtn.addEventListener("click", function () {
+        const boxes = getShopCheckboxes();
+        const allChecked = boxes.length > 0 && boxes.every(x => x.checked);
+        boxes.forEach(cb => cb.checked = !allChecked);
+        updateSelectedUI();
+      });
+    }
+
+    getShopCheckboxes().forEach(cb => {
+      cb.addEventListener("change", updateSelectedUI);
+    });
+
+    document.querySelectorAll(".shopPngBtn").forEach(btn => {
+      btn.addEventListener("click", async function () {
+        const shopId = btn.dataset.shop;
+        const shopName = btn.dataset.shopName || `shop_${shopId}`;
+        const el = document.getElementById(`shopReport${shopId}`);
+        if (!el) return;
+
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+
+        try {
+          await saveElementAsPng(el, buildFileName(shopName));
+        } catch (err) {
+          console.error(err);
+          alert("Could not save shop PNG.");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      });
+    });
+
+    document.querySelectorAll(".shopPdfBtn").forEach(btn => {
+      btn.addEventListener("click", async function () {
+        const shopId = btn.dataset.shop;
+        const shopName = btn.dataset.shopName || `shop_${shopId}`;
+        const el = document.getElementById(`shopReport${shopId}`);
+        if (!el) return;
+
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+
+        try {
+          await saveElementAsPdf(el, buildFileName(shopName));
+        } catch (err) {
+          console.error(err);
+          alert("Could not save shop PDF.");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      });
+    });
+
+    if (saveSelectedPngBtn) {
+      saveSelectedPngBtn.addEventListener("click", async function () {
+        const selected = getSelectedShopInfos();
+        if (!selected.length) {
+          alert("Please tick at least one shop.");
+          return;
+        }
+
+        const originalText = saveSelectedPngBtn.textContent;
+        saveSelectedPngBtn.disabled = true;
+        saveSelectedPngBtn.textContent = "Saving...";
+
+        try {
+          for (const item of selected) {
+            const el = document.getElementById(`shopReport${item.id}`);
+            if (el) {
+              await saveElementAsPng(el, buildFileName(item.name));
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Could not save selected PNG files.");
+        } finally {
+          saveSelectedPngBtn.disabled = false;
+          saveSelectedPngBtn.textContent = originalText;
+        }
+      });
+    }
+
+    if (saveSelectedPdfBtn) {
+      saveSelectedPdfBtn.addEventListener("click", async function () {
+        const selected = getSelectedShopInfos();
+        if (!selected.length) {
+          alert("Please tick at least one shop.");
+          return;
+        }
+
+        const originalText = saveSelectedPdfBtn.textContent;
+        saveSelectedPdfBtn.disabled = true;
+        saveSelectedPdfBtn.textContent = "Saving...";
+
+        try {
+          for (const item of selected) {
+            const el = document.getElementById(`shopReport${item.id}`);
+            if (el) {
+              await saveElementAsPdf(el, buildFileName(item.name));
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Could not save selected PDF files.");
+        } finally {
+          saveSelectedPdfBtn.disabled = false;
+          saveSelectedPdfBtn.textContent = originalText;
+        }
+      });
+    }
+
+    if (saveSelectedExcelMergedBtn) {
+      saveSelectedExcelMergedBtn.addEventListener("click", function () {
+        const selected = getSelectedShopInfos();
+        if (!selected.length) {
+          alert("Please tick at least one shop.");
+          return;
+        }
+
+        const originalText = saveSelectedExcelMergedBtn.textContent;
+        saveSelectedExcelMergedBtn.disabled = true;
+        saveSelectedExcelMergedBtn.textContent = "Downloading...";
+
+        const deliveryFrom = "{{ delivery_from|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+        const deliveryTo = "{{ delivery_to|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+        const pendingFrom = "{{ pending_from|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+        const pendingTo = "{{ pending_to|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+
+        const shopKeys = selected.map(x => x.name).filter(Boolean);
+
+        const params = new URLSearchParams();
+        params.set("delivery_date_from", deliveryFrom);
+        params.set("delivery_date_to", deliveryTo);
+        params.set("pending_date_from", pendingFrom);
+        params.set("pending_date_to", pendingTo);
+        params.set("selected_shop_keys", JSON.stringify(shopKeys));
+        params.set("action", "export_selected");
+
+        window.location.href = `?${params.toString()}`;
+
+        setTimeout(() => {
+          saveSelectedExcelMergedBtn.disabled = false;
+          saveSelectedExcelMergedBtn.textContent = originalText;
+        }, 1200);
+      });
+    }
+
+    if (saveSelectedExcelBtn) {
+      saveSelectedExcelBtn.addEventListener("click", function () {
+        const selected = getSelectedShopInfos();
+        if (!selected.length) {
+          alert("Please tick at least one shop.");
+          return;
+        }
+
+        const originalText = saveSelectedExcelBtn.textContent;
+        saveSelectedExcelBtn.disabled = true;
+        saveSelectedExcelBtn.textContent = "Downloading...";
+
+        const deliveryFrom = "{{ delivery_from|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+        const deliveryTo = "{{ delivery_to|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+        const pendingFrom = "{{ pending_from|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+        const pendingTo = "{{ pending_to|date:'Y-m-d\\TH:i'|default:''|escapejs }}";
+
+        try {
+          selected.forEach((item, index) => {
+            const url =
+              `?delivery_date_from=${encodeURIComponent(deliveryFrom)}` +
+              `&delivery_date_to=${encodeURIComponent(deliveryTo)}` +
+              `&pending_date_from=${encodeURIComponent(pendingFrom)}` +
+              `&pending_date_to=${encodeURIComponent(pendingTo)}` +
+              `&shop_key=${encodeURIComponent(item.name)}` +
+              `&action=export`;
+
+            setTimeout(() => {
+              window.open(url, "_blank");
+            }, index * 700);
+          });
+
+          setTimeout(() => {
+            alert(`Downloaded ${selected.length} Excel file(s).`);
+            saveSelectedExcelBtn.disabled = false;
+            saveSelectedExcelBtn.textContent = originalText;
+          }, selected.length * 700 + 300);
+
+        } catch (err) {
+          console.error(err);
+          alert("Could not download selected Excel files.");
+          saveSelectedExcelBtn.disabled = false;
+          saveSelectedExcelBtn.textContent = originalText;
+        }
+      });
+    }
+
+    countSummary();
+    updateSelectedUI();
+  })();
+</script>
+{% endblock %}

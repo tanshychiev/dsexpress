@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .wrap{padding:18px 22px;}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;box-shadow:0 10px 28px rgba(15,23,42,.06);}
+  .title{font-size:18px;font-weight:900;margin:0 0 10px 0;color:#0f172a}
+
+  /* SEARCH */
+  .search-box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;}
+  .search-grid{
+    display:grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap:12px;
+    align-items:end;
+  }
+  @media (max-width: 1100px){ .search-grid{grid-template-columns: repeat(3, minmax(0, 1fr));} }
+  @media (max-width: 640px){ .search-grid{grid-template-columns: repeat(2, minmax(0, 1fr));} }
+
+  .field{display:flex;flex-direction:column;gap:7px}
+  label{font-size:12px;font-weight:900;color:#334155}
+
+  /* BIGGER INPUTS */
+  input,select{
+    padding:12px 12px;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    outline:none;
+    background:#fff;
+    font-size:14px;
+  }
+  input:focus,select:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.12)}
+
+  .btn{
+    padding:10px 14px;border-radius:12px;border:1px solid #d1d5db;background:#fff;font-weight:900;cursor:pointer;
+  }
+  .btn-primary{background:#0f766e;border-color:#0f766e;color:#fff}
+  .btn-danger{background:#ef4444;border-color:#ef4444;color:#fff}
+  .btn:active{transform:translateY(1px)}
+
+  /* TOOLBAR */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:10px 0;}
+  .toolbar-left,.toolbar-right{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  /* TABLE */
+  .table-wrap{border:1px solid #e5e7eb;border-radius:12px;overflow:auto}
+  table{width:100%;border-collapse:collapse;font-size:12px;min-width:1200px;}
+  th,td{padding:10px 8px;border-bottom:1px solid #eef2f7;vertical-align:top;white-space:normal;}
+  th{background:#f8fafc;text-align:left;font-weight:900;color:#0f172a;position:sticky;top:0;z-index:1}
+
+  a.link{font-weight:900;color:#0f766e;text-decoration:none}
+  a.link:hover{text-decoration:underline}
+
+  .col-shop{max-width:150px;word-break:break-word;white-space:normal;}
+  .col-phone{max-width:140px;word-break:break-word;white-space:normal;}
+  .col-loc{max-width:240px;word-break:break-word;white-space:normal;}
+
+  .more-col{display:table-cell;}
+  .hide-more .more-col{display:none;}
+
+  .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:10px;flex-wrap:wrap;}
+  .pager a{padding:9px 12px;border:1px solid #d1d5db;border-radius:12px;text-decoration:none;color:#0f172a;font-weight:900;background:#fff}
+  .pager span{font-weight:800;color:#334155}
+
+  .toggles{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+
+  /* BIGGER CHECKBOX */
+  .cb{
+    width:20px;height:20px;
+    transform: scale(1.15);
+    accent-color:#0f766e;
+    cursor:pointer;
+  }
+  .td-center{text-align:center;vertical-align:middle;}
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="title">Orders</div>
+      <div class="toggles">
+        <button class="btn" type="button" id="toggleSearch">Hide search</button>
+        <button class="btn" type="button" id="toggleMore">Hide more</button>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="search-box" id="searchBox">
+      <form method="get">
+        <input type="hidden" name="search" value="1">
+
+        <div class="search-grid">
+          <div class="field">
+            <label>From (date)</label>
+            <input type="date" name="from_date" value="{{ request.GET.from_date|default:default_from }}">
+          </div>
+
+          <div class="field">
+            <label>From (time)</label>
+            <input type="time" name="from_time" value="{{ request.GET.from_time|default:'00:00' }}">
+          </div>
+
+          <div class="field">
+            <label>To (date)</label>
+            <input type="date" name="to_date" value="{{ request.GET.to_date|default:default_to }}">
+          </div>
+
+          <div class="field">
+            <label>To (time)</label>
+            <input type="time" name="to_time" value="{{ request.GET.to_time|default:'23:59' }}">
+          </div>
+
+          <div class="field">
+            <label>Tracking Number</label>
+            <input name="tracking" value="{{ request.GET.tracking|default:'' }}" placeholder="DS2026...">
+          </div>
+
+          <div class="field">
+            <label>Order Code</label>
+            <input name="order_code" value="{{ request.GET.order_code|default:'' }}" placeholder="SO-001">
+          </div>
+
+          <div class="field">
+            <label>Seller (Shop)</label>
+            <select name="seller">
+              <option value="">ALL</option>
+              {% for s in sellers %}
+                <option value="{{ s.id }}" {% if request.GET.seller == s.id|stringformat:"s" %}selected{% endif %}>
+                  {{ s.name }}{% if s.code %} ({{ s.code }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Receiver Name</label>
+            <input name="receiver_name" value="{{ request.GET.receiver_name|default:'' }}" placeholder="receiver name">
+          </div>
+
+          <div class="field">
+            <label>Receiver Phone</label>
+            <input name="receiver_phone" value="{{ request.GET.receiver_phone|default:'' }}" placeholder="012xxxxxx">
+          </div>
+
+          <div class="field">
+            <label>Status</label>
+            <select name="status">
+              <option value="">ALL</option>
+              <option value="PENDING" {% if request.GET.status == "PENDING" %}selected{% endif %}>PENDING</option>
+              <option value="DONE" {% if request.GET.status == "DONE" %}selected{% endif %}>DONE</option>
+            </select>
+          </div>
+
+          <!-- BIGGER SEARCH FIELD -->
+          <div class="field" style="grid-column: span 3;">
+            <label>Search</label>
+            <input name="q" value="{{ request.GET.q|default:'' }}" placeholder="phone / address / seller code">
+          </div>
+
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" type="submit">Search</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+  <a class="btn" href="{% url 'download_orders_excel' %}?{{ params }}">Download Excel</a>
+
+  <a class="btn" href="{% url 'import_orders' %}">Upload (Import)</a>
+
+  <a class="btn" href="{% url 'bulk_update' %}">Bulk Update</a>
+
+  <!-- NEW -->
+  <a class="btn" href="{% url 'order_trash' %}">Trash</a>
+
+  <a class="btn" href="{% url 'audit_log_list' %}">Audit Logs</a>
+</div>
+
+      <div class="toolbar-right">
+        <button class="btn btn-primary" type="button" id="btnPrint">Print</button>
+        <button class="btn btn-danger" type="button" id="btnDelete">Delete</button>
+        <button class="btn" type="button" id="check_all">Check All</button>
+        <button class="btn" type="button" id="uncheck_all">Uncheck All</button>
+      </div>
+    </div>
+
+    <!-- TABLE + BULK FORM -->
+    <form method="post" action="{% url 'order_bulk_action' %}" id="bulkForm">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="bulkAction" value="">
+
+      <div class="table-wrap" id="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:52px;">No</th>
+              <th>Tracking</th>
+              <th class="more-col">Create Date</th>
+              <th>Shop</th>
+              <th>Seller Name</th>
+              <th class="more-col">Order Code</th>
+              <th class="col-loc">Receiver Location</th>
+              <th class="col-phone">Receiver Phone</th>
+              <th>Receiver Name</th>
+              <th class="more-col">Price</th>
+              <th class="more-col">COD</th>
+              <th>Status</th>
+              <th style="width:70px;">Printed</th>
+              <th style="width:55px;" class="td-center">✓</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if page_obj and page_obj.object_list %}
+              {% for o in page_obj %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><a class="link" href="{% url 'order_created' o.id %}">{{ o.tracking_no }}</a></td>
+
+                <td class="more-col">{% if o.created_at %}{{ o.created_at|date:"Y-m-d H:i" }}{% endif %}</td>
+
+                <td class="col-shop">{{ o.seller.name }}</td>
+                <td>{% if o.seller_name %}{{ o.seller_name }}{% endif %}</td>
+
+                <td class="more-col">{{ o.seller_order_code|default:"" }}</td>
+
+                <td class="col-loc">{{ o.receiver_address|default:"" }}</td>
+                <td class="col-phone">{{ o.receiver_phone|default:"" }}</td>
+                <td>{{ o.receiver_name|default:"" }}</td>
+
+                <td class="more-col">${{ o.price }}</td>
+                <td class="more-col">${{ o.cod }}</td>
+
+                <td>{{ o.status }}</td>
+                <td class="td-center">{{ o.print_count|default:0 }}</td>
+
+                <td class="td-center">
+                  <input type="checkbox" name="ids" value="{{ o.id }}" class="cb">
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="14">Click Search to show data.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if page_obj and page_obj.paginator.num_pages > 1 %}
+        <div class="pager">
+          {% if page_obj.has_previous %}
+            <a href="?{{ params }}&page={{ page_obj.previous_page_number }}">Prev</a>
+          {% endif %}
+          <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}
+            <a href="?{{ params }}&page={{ page_obj.next_page_number }}">Next</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </form>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const bulkForm = document.getElementById("bulkForm");
+  const bulkAction = document.getElementById("bulkAction");
+
+  document.getElementById("btnPrint").addEventListener("click", () => {
+    bulkAction.value = "print";
+    bulkForm.submit();
+  });
+
+  document.getElementById("btnDelete").addEventListener("click", () => {
+    if(!confirm("Delete selected orders?")) return;
+    bulkAction.value = "delete";
+    bulkForm.submit();
+  });
+
+  function setAll(v){
+    document.querySelectorAll(".cb").forEach(cb => cb.checked = v);
+  }
+  document.getElementById("check_all").addEventListener("click", ()=>setAll(true));
+  document.getElementById("uncheck_all").addEventListener("click", ()=>setAll(false));
+
+  const searchBox = document.getElementById("searchBox");
+  const toggleSearch = document.getElementById("toggleSearch");
+  toggleSearch.addEventListener("click", ()=>{
+    const hide = searchBox.style.display !== "none";
+    searchBox.style.display = hide ? "none" : "block";
+    toggleSearch.textContent = hide ? "Show search" : "Hide search";
+  });
+
+  const tableWrap = document.getElementById("tableWrap");
+  const toggleMore = document.getElementById("toggleMore");
+  let moreHidden = false;
+
+  function autoSmall(){
+    if(window.innerWidth <= 720){
+      moreHidden = true;
+      tableWrap.classList.add("hide-more");
+      toggleMore.textContent = "Show more";
+    }else{
+      moreHidden = false;
+      tableWrap.classList.remove("hide-more");
+      toggleMore.textContent = "Hide more";
+    }
+  }
+  window.addEventListener("resize", autoSmall);
+  autoSmall();
+
+  toggleMore.addEventListener("click", ()=>{
+    moreHidden = !moreHidden;
+    if(moreHidden){
+      tableWrap.classList.add("hide-more");
+      toggleMore.textContent = "Show more";
+    }else{
+      tableWrap.classList.remove("hide-more");
+      toggleMore.textContent = "Hide more";
+    }
+  });
+})();
+</script>
+{% endblock %}

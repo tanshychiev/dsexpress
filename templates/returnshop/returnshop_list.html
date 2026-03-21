@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Return To Shop{% endblock %}
+{% block page_title %}Return To Shop{% endblock %}
+{% block page_subtitle %}Batch List{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <form method="get" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+    <input type="hidden" name="search" value="1"/>
+
+    <div style="min-width:160px;">
+      <div class="label">Assign Date From</div>
+      <input class="input" type="date" name="date_from" value="{{ date_from }}">
+    </div>
+
+    <div style="min-width:160px;">
+      <div class="label">Assign Date To</div>
+      <input class="input" type="date" name="date_to" value="{{ date_to }}">
+    </div>
+
+    <div style="min-width:160px;">
+      <div class="label">Status</div>
+      <select class="input" name="status">
+        <option value="">-- All --</option>
+        <option value="PENDING" {% if status|upper == "PENDING" %}selected{% endif %}>PENDING</option>
+        <option value="DONE" {% if status|upper == "DONE" %}selected{% endif %}>DONE</option>
+        <option value="CANCELLED" {% if status|upper == "CANCELLED" %}selected{% endif %}>CANCELLED</option>
+      </select>
+    </div>
+
+    <button class="btn" type="submit" style="height:40px;">Search</button>
+
+    <div style="flex:1;"></div>
+
+    <a class="btn btn-ghost" href="{% url 'returnshop_new' %}" style="height:40px;display:inline-flex;align-items:center;">
+      + New Return To Shop
+    </a>
+  </form>
+
+  <div style="margin-top:14px;overflow:auto;">
+    <table class="ds-table" style="min-width:980px;">
+      <thead>
+        <tr>
+          <th style="text-align:center;width:60px;">N</th>
+          <th style="text-align:center;width:140px;">Batch</th>
+          <th style="text-align:center;width:180px;">Assign Date</th>
+          <th style="text-align:center;width:160px;">Assign By</th>
+          <th style="text-align:center;width:120px;">Total PC</th>
+          <th style="text-align:center;width:120px;">Labels</th>
+          <th style="text-align:center;width:160px;">Status</th>
+          <th style="text-align:center;width:160px;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not searched %}
+          <tr>
+            <td colspan="8" style="padding:14px;opacity:.7;">Click <b>Search</b> to show data.</td>
+          </tr>
+        {% else %}
+          {% for r in rows %}
+            <tr>
+              <td style="text-align:center;">{{ forloop.counter }}</td>
+              <td style="text-align:center;"><b>RTS-{{ r.id }}</b></td>
+              <td style="text-align:center;">{{ r.assigned_at|date:"Y-m-d H:i" }}</td>
+              <td style="text-align:center;">{{ r.created_by.username|default:"-" }}</td>
+              <td style="text-align:center;"><b>{{ r.total_pc|default:0 }}</b></td>
+              <td style="text-align:center;"><b>{{ r.total_labels|default:0 }}</b></td>
+              <td style="text-align:center;">
+                {% if r.progress_label == "CANCELLED" %}
+                  <span class="badge badge-red">CANCELLED</span>
+                {% elif r.progress_label == "PENDING" %}
+                  <span class="badge badge-yellow">PENDING</span>
+                {% else %}
+                  <span class="badge badge-blue">{{ r.progress_label }}</span>
+                {% endif %}
+              </td>
+              <td style="text-align:center;">
+                <a class="btn btn-ghost" href="{% url 'returnshop_detail' r.id %}">Detail</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" style="padding:14px;opacity:.7;">No result.</td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .label{
+    font-size:12px;
+    opacity:.7;
+    margin-bottom:6px;
+  }
+
+  .input{
+    height:40px;
+    padding:8px 10px;
+    border-radius:12px;
+    border:1px solid #e6e6e6;
+    background:#fff;
+  }
+
+  .btn{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    cursor:pointer;
+    text-decoration:none;
+  }
+
+  .btn-ghost{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    background:#fff;
+    color:#111;
+    cursor:pointer;
+    text-decoration:none;
+  }
+
+  .badge{
+    display:inline-block;
+    min-width:96px;
+    padding:5px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:900;
+    border:1px solid transparent;
+    text-align:center;
+  }
+
+  .badge-green{
+    background:#e8fff0;
+    color:#138a3d;
+    border-color:#bff0cf;
+  }
+
+  .badge-yellow{
+    background:#fff8e6;
+    color:#9a6b00;
+    border-color:#ffe2a8;
+  }
+
+  .badge-red{
+    background:#fff0f0;
+    color:#b40000;
+    border-color:#ffd0d0;
+  }
+
+  .badge-blue{
+    background:#eef4ff;
+    color:#1f5eff;
+    border-color:#cfdcff;
+  }
+</style>
+{% endblock %}

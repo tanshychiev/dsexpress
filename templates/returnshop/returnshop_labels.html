@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}Return To Shop - Labels{% endblock %}
+{% block page_title %}Return To Shop{% endblock %}
+{% block page_subtitle %}Create Label Batches (Merge / No Merge){% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+    <div>
+      <div style="font-size:18px; font-weight:900;">
+        Batch <span class="mono">RTS-{{ batch.id }}</span>
+      </div>
+      <div style="opacity:.8; margin-top:6px;">
+        Step: Choose Merge / No Merge → Fill destination info → Save label batch → Print
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="{% url 'returnshop_detail' batch.id %}">← Back</a>
+      <a class="btn btn-ghost" href="{% url 'returnshop_history' %}">📜 Batch History</a>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="card" style="margin-top:14px;padding:12px;border-radius:14px;background:#fafafa;border:1px solid #eee;">
+    <b>Total shops:</b> {{ total_shops }}
+    &nbsp; • &nbsp;
+    <b>Total orders:</b> {{ total_pc }}
+    &nbsp; • &nbsp;
+    <b>Remaining:</b> {{ remaining_pc }}
+    <div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap;">
+      {% for s in shop_summary %}
+        <span class="badge">{{ s.shop }} {{ s.count }} PC</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ACTION BAR -->
+  <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <button class="btn" type="button" id="openMerge">Merge (select shops)</button>
+    <button class="btn btn-ghost" type="button" id="openNoMerge">No Merge (1 label / shop)</button>
+
+    <form method="post" style="display:inline;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="undo_merge_all">
+      <button class="btn btn-ghost" type="submit" onclick="return confirm('Undo ALL MERGE labels for this batch?')">
+        Undo Merge All
+      </button>
+    </form>
+
+    <form method="post" style="display:inline;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="undo_no_merge_all">
+      <button class="btn btn-ghost" type="submit" onclick="return confirm('Undo ALL SHOP labels for this batch?')">
+        Undo No Merge All
+      </button>
+    </form>
+
+    <div style="font-weight:900;margin-left:auto;">
+      Selected Shops: <span id="selShops">—</span>
+      &nbsp; • &nbsp;
+      Total PC: <span id="selPc">0</span>
+    </div>
+  </div>
+
+  <!-- =========================
+       MERGE MODE
+  ========================== -->
+  <div id="mergePanel" style="margin-top:14px;">
+    <div style="font-weight:900; font-size:16px;">Merge Mode</div>
+    <div style="opacity:.75; font-size:13px; margin-top:4px;">
+      Select shops you want to merge into 1 label. Only remaining items are merged.
+    </div>
+
+    <div style="margin-top:12px; display:grid; gap:10px;">
+      {% for g in shop_groups %}
+        <div class="box">
+          <label style="display:flex; gap:10px; align-items:flex-start;">
+            <input type="checkbox" class="chk"
+                   value="{{ g.gid }}"
+                   data-shop="{{ g.shop }}"
+                   data-rem="{{ g.remaining_count }}">
+            <div style="flex:1;">
+              <div style="font-weight:900;">
+                {{ g.shop }}
+                <span class="badge">All {{ g.count_all }} PC</span>
+                <span class="badge badge-warn">Remaining {{ g.remaining_count }}</span>
+              </div>
+
+              <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                {% for o in g.orders %}
+                  <a href="{{ o.tracking_url }}" target="_blank" class="pill">{{ o.tracking }}</a>
+                {% endfor %}
+              </div>
+            </div>
+          </label>
+        </div>
+      {% empty %}
+        <div style="opacity:.7;">No groups</div>
+      {% endfor %}
+    </div>
+
+    <!-- MERGE FORM -->
+    <div class="card" style="margin-top:12px;padding:12px;border-radius:14px;">
+      <form method="post" id="mergeForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_merge_label">
+        <div id="mergeHidden"></div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+          <div>
+            <div class="lbl">Destination Location</div>
+            <input class="input" name="ship_to_address" placeholder="Destination..." required>
+          </div>
+          <div>
+            <div class="lbl">Phone Number</div>
+            <input class="input" name="ship_to_phone" placeholder="Phone..." required>
+          </div>
+          <div>
+            <div class="lbl">COD</div>
+            <input class="input" name="cod_amount" value="0">
+          </div>
+        </div>
+
+        <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+          <button class="btn" type="submit" id="mergeSaveBtn">Save Merge</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================
+       NO MERGE MODE (FILTERED)
+       ✅ only show shops with remaining>0 OR saved_label exists
+  ========================== -->
+  <div id="noMergePanel" style="margin-top:14px; display:none;">
+    <div style="font-weight:900; font-size:16px;">No Merge Mode</div>
+    <div style="opacity:.75; font-size:13px; margin-top:4px;">
+      Save 1 label per shop. Shops already merged (0 remaining) will not show here.
+    </div>
+
+    <div style="margin-top:12px; display:grid; gap:12px;">
+      {% for g in shop_groups_no_merge %}
+        <div class="box">
+          <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+            <div style="font-weight:900;">
+              {{ g.shop }}
+              <span class="badge">All {{ g.count_all }} PC</span>
+              <span class="badge badge-warn">Remaining {{ g.remaining_count }}</span>
+            </div>
+
+            {% if g.saved_label %}
+              <div style="display:flex; gap:10px; align-items:center;">
+                <span class="mono" style="font-weight:900;">{{ g.saved_label.code }}</span>
+
+                <form method="post" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_label">
+                  <input type="hidden" name="label_id" value="{{ g.saved_label.id }}">
+                  <button class="btn btn-ghost" type="submit"
+                          onclick="return confirm('Undo save (delete this shop label)?')">
+                    Undo Save
+                  </button>
+                </form>
+
+                <a class="btn" href="{% url 'returnshop_label_print' g.saved_label.id %}" target="_blank">Print</a>
+              </div>
+            {% endif %}
+          </div>
+
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+            {% for o in g.orders %}
+              <a href="{{ o.tracking_url }}" target="_blank" class="pill">{{ o.tracking }}</a>
+            {% endfor %}
+          </div>
+
+          {% if not g.saved_label %}
+            <form method="post" style="margin-top:10px;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="create_shop_label">
+              <input type="hidden" name="gid" value="{{ g.gid }}">
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                <div>
+                  <div class="lbl">Destination Location</div>
+                  <input class="input" name="ship_to_address" placeholder="Destination..." required>
+                </div>
+                <div>
+                  <div class="lbl">Phone Number</div>
+                  <input class="input" name="ship_to_phone" placeholder="Phone..." required>
+                </div>
+                <div>
+                  <div class="lbl">COD</div>
+                  <input class="input" name="cod_amount" value="0">
+                </div>
+              </div>
+
+              <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                <button class="btn" type="submit">Save</button>
+              </div>
+            </form>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div style="opacity:.7;">No shops available for No Merge.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- EXISTING LABELS TABLE -->
+  <div style="margin-top:18px;">
+    <div style="font-weight:900; font-size:16px;">Existing Label Batches</div>
+    <div style="margin-top:10px; overflow:auto;">
+      <table class="ds-table" style="min-width:1000px;">
+        <thead>
+          <tr>
+            <th class="th">Code</th>
+            <th class="th">Mode</th>
+            <th class="th">Shop</th>
+            <th class="th">Created</th>
+            <th class="th">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lb in existing_labels %}
+            <tr>
+              <td class="td mono">{{ lb.code }}</td>
+              <td class="td">{{ lb.mode|default:"-" }}</td>
+              <td class="td">{{ lb.shop_name|default:"-" }}</td>
+              <td class="td">{% if lb.created_at %}{{ lb.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+              <td class="td">
+                <a class="btn btn-ghost" href="{% url 'returnshop_label_detail' lb.id %}">View</a>
+                <a class="btn" href="{% url 'returnshop_label_print' lb.id %}" target="_blank">Print</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" style="padding:14px;opacity:.7;">No label batches yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .btn{padding:10px 14px;border-radius:12px;border:1px solid #111;background:#111;color:#fff;cursor:pointer;text-decoration:none;font-weight:900;}
+  .btn-ghost{padding:10px 14px;border-radius:12px;border:1px solid #ddd;background:#fff;color:#111;cursor:pointer;text-decoration:none;font-weight:900;}
+  .input{height:40px;padding:8px 10px;border-radius:12px;border:1px solid #e6e6e6;background:#fff;width:100%;}
+  .lbl{font-weight:900;font-size:12px;margin-bottom:6px;opacity:.85;}
+  .box{border:1px solid #eee;border-radius:14px;padding:12px;background:#fafafa;}
+  .badge{padding:4px 10px;border-radius:999px;background:#eef5ff;border:1px solid #cfe0ff;font-weight:900;font-size:12px;display:inline-block;}
+  .badge-warn{background:#fff4e8;border:1px solid #ffd7b1;}
+  .pill{display:inline-block; padding:6px 10px; border-radius:999px; border:1px solid #ddd; background:#fff; text-decoration:none; font-weight:900; font-size:12px; color:#111;}
+  .th,.td{text-align:center;}
+</style>
+
+<script>
+  (function(){
+    const mergePanel = document.getElementById("mergePanel");
+    const noMergePanel = document.getElementById("noMergePanel");
+    const openMerge = document.getElementById("openMerge");
+    const openNoMerge = document.getElementById("openNoMerge");
+
+    const selShops = document.getElementById("selShops");
+    const selPc = document.getElementById("selPc");
+
+    const mergeHidden = document.getElementById("mergeHidden");
+    const mergeForm = document.getElementById("mergeForm");
+
+    function selected(){
+      const chks = Array.from(document.querySelectorAll(".chk:checked"));
+      const shops = chks.map(x => x.dataset.shop).filter(Boolean);
+      const pc = chks.reduce((sum, x) => sum + (parseInt(x.dataset.rem || "0") || 0), 0);
+      const gids = chks.map(x => x.value);
+      return {shops, pc, gids};
+    }
+
+    function renderSel(){
+      const s = selected();
+      selShops.textContent = s.shops.length ? s.shops.join(" + ") : "—";
+      selPc.textContent = s.pc;
+    }
+
+    document.addEventListener("change", function(e){
+      if(e.target.classList && e.target.classList.contains("chk")){
+        renderSel();
+      }
+    });
+
+    mergeForm.addEventListener("submit", function(e){
+      const s = selected();
+      if(!s.gids.length){
+        alert("Please select shop(s) to merge.");
+        e.preventDefault();
+        return;
+      }
+      // build hidden selected_gid
+      mergeHidden.innerHTML = "";
+      s.gids.forEach(gid => {
+        const i = document.createElement("input");
+        i.type = "hidden";
+        i.name = "selected_gid";
+        i.value = gid;
+        mergeHidden.appendChild(i);
+      });
+    });
+
+    openMerge.addEventListener("click", function(){
+      mergePanel.style.display = "block";
+      noMergePanel.style.display = "none";
+    });
+
+    openNoMerge.addEventListener("click", function(){
+      mergePanel.style.display = "none";
+      noMergePanel.style.display = "block";
+    });
+
+    renderSel();
+  })();
+</script>
+{% endblock %}

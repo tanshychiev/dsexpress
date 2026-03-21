@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Finance Settings{% endblock %}
+{% block page_title %}Finance Settings{% endblock %}
+{% block page_subtitle %}Salary / Electricity / Province Expense{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <div class="home-grid">
+    <a href="{% url 'staff_salary_list' %}" class="home-box">
+      <div class="home-title">Staff Salary</div>
+      <div class="home-value">{{ staff_count }}</div>
+      <div class="home-note">Active: {{ active_staff_count }}</div>
+    </a>
+
+    <a href="{% url 'monthly_expense_list' %}" class="home-box">
+      <div class="home-title">Monthly Electricity</div>
+      <div class="home-value">{{ month_count }}</div>
+      <div class="home-note">
+        {% if latest_month %}
+          Latest: {{ latest_month.month|date:"Y-m" }}
+        {% else %}
+          No data
+        {% endif %}
+      </div>
+    </a>
+
+    <a href="{% url 'province_expense_list' %}" class="home-box">
+      <div class="home-title">Province Expense</div>
+      <div class="home-value">{{ province_count }}</div>
+      <div class="home-note">
+        {% if latest_province %}
+          Latest: {{ latest_province.expense_date|date:"Y-m-d" }}
+        {% else %}
+          No data
+        {% endif %}
+      </div>
+    </a>
+  </div>
+
+  <div class="quick-links">
+    <a class="btn" href="{% url 'staff_salary_list' %}">Open Staff Salary</a>
+    <a class="btn" href="{% url 'monthly_expense_list' %}">Open Monthly Electricity</a>
+    <a class="btn" href="{% url 'province_expense_list' %}">Open Province Expense</a>
+  </div>
+</div>
+
+<style>
+  .home-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(220px,1fr));
+    gap:14px;
+  }
+  .home-box{
+    display:block;
+    text-decoration:none;
+    color:#111;
+    border:1px solid #e8e8e8;
+    border-radius:16px;
+    background:#fff;
+    padding:18px;
+  }
+  .home-box:hover{
+    background:#fafcff;
+  }
+  .home-title{
+    font-size:14px;
+    opacity:.75;
+    margin-bottom:8px;
+  }
+  .home-value{
+    font-size:34px;
+    font-weight:900;
+    line-height:1.1;
+  }
+  .home-note{
+    margin-top:8px;
+    font-size:12px;
+    opacity:.7;
+  }
+  .quick-links{
+    margin-top:18px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    height:42px;
+    padding:0 16px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    text-decoration:none;
+    font-weight:800;
+  }
+</style>
+{% endblock %}

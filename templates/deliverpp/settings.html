@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}PP System Settings{% endblock %}
+{% block page_title %}PP System Settings{% endblock %}
+{% block page_subtitle %}Exchange Rate & Tolerance{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;max-width:680px;">
+  <div style="font-weight:900;font-size:16px;margin-bottom:10px;">System Settings</div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <div class="label">USD → KHR Rate</div>
+        {{ form.usd_to_khr_rate }}
+      </div>
+      <div>
+        <div class="label">Tolerance (KHR)</div>
+        {{ form.balance_tolerance_khr }}
+      </div>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:10px;">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <a class="btn btn-ghost" href="{% url 'clearpp_list' %}">Back</a>
+    </div>
+
+    <div style="margin-top:10px;opacity:.7;font-size:12px;">
+      Updated: {{ settings_obj.updated_at|date:"Y-m-d H:i" }}
+      {% if settings_obj.updated_by %} • By: {{ settings_obj.updated_by.username }}{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

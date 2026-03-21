@@ -1,0 +1,123 @@
+{% extends "customerportal/base.html" %}
+{% load static %}
+{% block title %}Booking{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'customerportal/css/booking.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="pickup-page">
+  <div class="pickup-shell">
+
+    <div class="pickup-map-banner">
+      <a href="{% url 'portal:home' %}" class="pickup-back-btn">‹</a>
+      <div class="pickup-map-pin">📍</div>
+    </div>
+
+    <div class="pickup-card">
+      <h1>Pickup details</h1>
+
+      <form method="post" class="pickup-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="pickup-field">
+          <label for="id_pickup_location">Sender location</label>
+
+          <div class="location-search-box">
+            <input
+              type="text"
+              id="id_pickup_location"
+              name="pickup_location"
+              placeholder="Search or enter sender location"
+              value="{{ form.pickup_location.value|default:'' }}"
+              required
+            >
+            <button type="button" id="openMapBtn" class="location-map-btn">📍</button>
+          </div>
+
+          <button type="button" id="currentLocationBtn" class="pickup-map-action">
+            Use Current Location
+          </button>
+
+          <input type="hidden" id="id_latitude" name="latitude">
+          <input type="hidden" id="id_longitude" name="longitude">
+
+          {% if form.pickup_location.errors %}
+            <div class="field-error">{{ form.pickup_location.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="pickup-field">
+          <label for="id_name">Sender name <span>*</span></label>
+          <input
+            type="text"
+            id="id_name"
+            name="name"
+            placeholder="Enter sender name"
+            value="{{ form.name.value|default:'' }}"
+            required
+          >
+          {% if form.name.errors %}
+            <div class="field-error">{{ form.name.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="pickup-field">
+          <label for="id_phone">Sender number <span>*</span></label>
+          <input
+            type="text"
+            id="id_phone"
+            name="phone"
+            placeholder="Enter sender phone"
+            value="{{ form.phone.value|default:'' }}"
+            required
+          >
+          {% if form.phone.errors %}
+            <div class="field-error">{{ form.phone.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="pickup-field">
+          <label for="id_total_pc">Total PC</label>
+          <input
+            type="number"
+            id="id_total_pc"
+            name="total_pc"
+            placeholder="How many parcels?"
+            value="{{ form.total_pc.value|default:'' }}"
+            min="1"
+            required
+          >
+          {% if form.total_pc.errors %}
+            <div class="field-error">{{ form.total_pc.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="pickup-confirm-btn">
+          Confirm
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
+
+{% if success_popup %}
+<div class="pickup-popup show">
+  <div class="pickup-popup-card">
+    <div class="pickup-popup-icon">✓</div>
+    <h3>Thank you 🎉</h3>
+    <p>
+      Thank you for booking with <strong>DS Express</strong>.<br><br>
+      Our team will contact you shortly to confirm your pickup.
+    </p>
+    <a href="{% url 'portal:home' %}" class="pickup-popup-btn">OK</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'customerportal/js/booking.js' %}"></script>
+{% endblock %}

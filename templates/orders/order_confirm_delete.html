@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Delete Order{% endblock %}
+{% block page_title %}Delete Order{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h3>Move this order to trash?</h3>
+  <p>{{ order.tracking_no }}</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">Move to Trash</button>
+    <a href="{% url 'order_list' %}">Cancel</a>
+  </form>
+</div>
+{% endblock %}

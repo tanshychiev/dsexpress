@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block page_title %}{% if mode == "edit" %}Edit Role{% else %}Create Role{% endif %}{% endblock %}
+{% block page_subtitle %}Role permissions{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:1200px;margin:0 auto;">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <h2 style="margin:0;font-size:22px;">
+      {% if mode == "edit" %}Edit Role{% else %}Create Role{% endif %}
+    </h2>
+    <a class="btn" href="{% url 'role_list' %}">Back</a>
+  </div>
+
+  <div style="height:12px;"></div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end;">
+      <div>
+        <label style="display:block;font-weight:900;margin-bottom:6px;">Role name</label>
+        <input
+          name="name"
+          value="{% if role %}{{ role.name }}{% endif %}"
+          style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d0d7de;font-size:15px;"
+          placeholder="e.g. Operator, Admin, Staff..."
+        />
+      </div>
+
+      <div style="color:#6b7280;font-weight:700;">
+        Tip: Use “Select All” per section.
+      </div>
+    </div>
+
+    <div style="height:14px;"></div>
+
+    <!-- Permissions -->
+    {% for app, perms in perm_by_app.items %}
+      <div style="border:1px solid #e5e7eb;border-radius:14px;padding:14px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="font-weight:900;font-size:16px;">{{ app|upper }}</div>
+          <button type="button" class="btn" onclick="toggleSection('{{ app }}', this)">Select All</button>
+        </div>
+
+        <div style="height:10px;"></div>
+
+        <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;">
+          {% for p in perms %}
+            <label style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;border:1px solid #eef2f7;background:#fff;">
+              <input
+                class="perm-{{ app }}"
+                type="checkbox"
+                name="permissions"
+                value="{{ p.id }}"
+                {% if selected_ids and p.id in selected_ids %}checked{% endif %}
+                style="width:18px;height:18px;"
+              />
+              <span style="font-weight:800;font-size:13px;">{{ p.codename }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <a class="btn" href="{% url 'role_list' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  function toggleSection(app, btn){
+    const boxes = document.querySelectorAll(".perm-" + app);
+    if(!boxes.length) return;
+
+    let allChecked = true;
+    boxes.forEach(b => { if(!b.checked) allChecked = false; });
+
+    const newState = !allChecked;
+    boxes.forEach(b => b.checked = newState);
+
+    btn.textContent = newState ? "Unselect All" : "Select All";
+  }
+</script>
+{% endblock %}

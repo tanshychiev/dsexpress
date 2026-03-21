@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Delivery Profit Dashboard{% endblock %}
+{% block page_title %}Delivery Profit Dashboard{% endblock %}
+{% block page_subtitle %}Income / Expense / Net Profit{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <form method="get" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+    <input type="hidden" name="search" value="1">
+
+    <div style="min-width:180px;">
+      <div class="label">Date From</div>
+      <input class="input" type="date" name="date_from" value="{{ date_from }}">
+    </div>
+
+    <div style="min-width:180px;">
+      <div class="label">Date To</div>
+      <input class="input" type="date" name="date_to" value="{{ date_to }}">
+    </div>
+
+    <button class="btn" type="submit" style="height:40px;">Show</button>
+  </form>
+
+  {% if searched %}
+    <div class="card-grid" style="margin-top:18px;">
+      <div class="sum-card income">
+        <div class="sum-label">Fee Income</div>
+        <div class="sum-value">${{ report.total.fee_income_usd|floatformat:2 }}</div>
+      </div>
+
+      <div class="sum-card province">
+        <div class="sum-label">Province Expense</div>
+        <div class="sum-value">${{ report.total.province_expense_usd|floatformat:2 }}</div>
+      </div>
+
+      <div class="sum-card salary">
+        <div class="sum-label">Shipper Salary</div>
+        <div class="sum-value">${{ report.total.shipper_salary_usd|floatformat:2 }}</div>
+      </div>
+
+      <div class="sum-card salary">
+        <div class="sum-label">Call Center Salary</div>
+        <div class="sum-value">${{ report.total.callcenter_salary_usd|floatformat:2 }}</div>
+      </div>
+
+      <div class="sum-card utility">
+        <div class="sum-label">Electricity</div>
+        <div class="sum-value">${{ report.total.electricity_usd|floatformat:2 }}</div>
+      </div>
+
+      <div class="sum-card commission">
+        <div class="sum-label">Commission</div>
+        <div class="sum-value">${{ report.total.commission_usd|floatformat:2 }}</div>
+      </div>
+
+      <div class="sum-card profit {% if report.total.net_profit_usd < 0 %}loss{% endif %}">
+        <div class="sum-label">Net Profit</div>
+        <div class="sum-value">${{ report.total.net_profit_usd|floatformat:2 }}</div>
+      </div>
+    </div>
+
+    <div class="section-title">Daily Profit Table</div>
+
+    <div style="overflow:auto;">
+      <table class="ds-table profit-table">
+        <thead>
+          <tr>
+            <th style="text-align:center;">#</th>
+            <th style="text-align:center;">Date</th>
+            <th style="text-align:right;">Fee Income</th>
+            <th style="text-align:right;">Province Expense</th>
+            <th style="text-align:right;">Commission</th>
+            <th style="text-align:right;">Shipper Salary</th>
+            <th style="text-align:right;">Call Center Salary</th>
+            <th style="text-align:right;">Electricity</th>
+            <th style="text-align:right;">Net Profit</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for r in report.rows %}
+            <tr class="{% if r.is_loss %}loss-row{% elif r.is_zero_day %}zero-row{% endif %}">
+              <td style="text-align:center;">{{ forloop.counter }}</td>
+              <td style="text-align:center;">{{ r.date|date:"Y-m-d" }}</td>
+              <td class="num">${{ r.fee_income_usd|floatformat:2 }}</td>
+              <td class="num">${{ r.province_expense_usd|floatformat:2 }}</td>
+              <td class="num">${{ r.commission_usd|floatformat:2 }}</td>
+              <td class="num">${{ r.shipper_salary_usd|floatformat:2 }}</td>
+              <td class="num">${{ r.callcenter_salary_usd|floatformat:2 }}</td>
+              <td class="num">${{ r.electricity_usd|floatformat:2 }}</td>
+              <td class="num"><b>${{ r.net_profit_usd|floatformat:2 }}</b></td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" style="text-align:center;opacity:.7;">No data.</td>
+            </tr>
+          {% endfor %}
+
+          <tr class="total-row">
+            <td style="text-align:center;">-</td>
+            <td><b>Total</b></td>
+            <td class="num"><b>${{ report.total.fee_income_usd|floatformat:2 }}</b></td>
+            <td class="num"><b>${{ report.total.province_expense_usd|floatformat:2 }}</b></td>
+            <td class="num"><b>${{ report.total.commission_usd|floatformat:2 }}</b></td>
+            <td class="num"><b>${{ report.total.shipper_salary_usd|floatformat:2 }}</b></td>
+            <td class="num"><b>${{ report.total.callcenter_salary_usd|floatformat:2 }}</b></td>
+            <td class="num"><b>${{ report.total.electricity_usd|floatformat:2 }}</b></td>
+            <td class="num"><b>${{ report.total.net_profit_usd|floatformat:2 }}</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+  .label{
+    font-size:12px;
+    opacity:.7;
+    margin-bottom:6px;
+  }
+
+  .input{
+    height:40px;
+    width:100%;
+    padding:8px 10px;
+    border-radius:12px;
+    border:1px solid #e6e6e6;
+    background:#fff;
+  }
+
+  .btn{
+    padding:10px 16px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  .card-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(180px,1fr));
+    gap:12px;
+  }
+
+  .sum-card{
+    border:1px solid #ececec;
+    border-radius:16px;
+    padding:16px;
+    background:#fff;
+  }
+
+  .sum-label{
+    font-size:12px;
+    opacity:.7;
+    margin-bottom:8px;
+  }
+
+  .sum-value{
+    font-size:24px;
+    font-weight:900;
+  }
+
+  .income{ background:#eefcf3; }
+  .province{ background:#fff7ed; }
+  .salary{ background:#f8f7ff; }
+  .utility{ background:#f5fbff; }
+  .commission{ background:#fff8e8; }
+  .profit{ background:#eef8ff; }
+  .profit.loss{ background:#fff1f1; color:#b00020; }
+
+  .section-title{
+    margin-top:22px;
+    margin-bottom:10px;
+    padding:10px 14px;
+    border-radius:14px;
+    background:#eef4ff;
+    border:1px solid #cfdcff;
+    font-size:22px;
+    font-weight:900;
+  }
+
+  .profit-table{
+    width:100%;
+    min-width:1300px;
+    table-layout:fixed;
+  }
+
+  .profit-table th,
+  .profit-table td{
+    border:1px solid #111 !important;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    vertical-align:middle;
+  }
+
+  .num{
+    text-align:right;
+  }
+
+  .total-row{
+    background:#fafafa;
+  }
+
+  .loss-row td{
+    background:#fff1f1 !important;
+    color:#b00020;
+    font-weight:800;
+  }
+
+  .zero-row td{
+    background:#fff8f0 !important;
+    color:#a04b00;
+  }
+</style>
+{% endblock %}

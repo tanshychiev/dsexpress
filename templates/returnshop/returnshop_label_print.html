@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Print Label {{ label.code }}</title>
+
+  <style>
+    /* A4 print safe */
+    @page { margin: 6mm; }
+    body { font-family: Arial, sans-serif; margin:0; padding:0; }
+
+    /* 9cm x 9cm label */
+    .label {
+      width: 90mm;
+      height: 90mm;
+      border: 2px solid #111;
+      border-radius: 10px;
+      padding: 6mm;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: 1fr 42mm;
+      grid-template-rows: auto 1fr auto;
+      gap: 6mm;
+    }
+
+    .top { grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+    .brand { font-weight: 900; font-size: 14px; }
+    .code  { font-weight: 900; font-size: 13px; text-align:right; }
+
+    .info { font-size: 12px; line-height: 1.35; }
+    .row { margin-bottom: 4px; }
+    .k { opacity:.75; font-weight:700; margin-right:6px; }
+
+    .qrBox { display:flex; align-items:center; justify-content:center; }
+    .qrBox img { width: 40mm; height: 40mm; object-fit: contain; border:1px solid #ddd; padding:2mm; border-radius:8px; }
+
+    .bottom { grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .pc { font-weight: 900; font-size: 12px; }
+    .small { font-size: 11px; opacity: .8; }
+
+    /* hide buttons when printing */
+    .toolbar { margin: 10px 0; }
+    @media print {
+      .toolbar { display:none; }
+    }
+
+    .btn {
+      padding:8px 12px; border-radius:10px; border:1px solid #111;
+      background:#111; color:#fff; font-weight:900; cursor:pointer; text-decoration:none;
+      display:inline-block;
+    }
+    .btn-ghost{
+      padding:8px 12px; border-radius:10px; border:1px solid #ddd;
+      background:#fff; color:#111; font-weight:900; cursor:pointer; text-decoration:none;
+      display:inline-block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="toolbar">
+    <button class="btn" onclick="window.print()">🖨 Print</button>
+    <a class="btn-ghost" href="{% url 'returnshop_labels' batch.id %}">Back</a>
+  </div>
+
+  <div class="label">
+    <div class="top">
+      <div class="brand">DS Express · Return To Shop</div>
+      <div class="code">
+        {{ label.code }}
+        <div class="small">{% if label.mode %}{{ label.mode }}{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="info">
+      <div class="row"><span class="k">Shop:</span> {{ shop_names }}</div>
+      <div class="row"><span class="k">To:</span> {{ label.ship_to_address|default:"-" }}</div>
+      <div class="row"><span class="k">Phone:</span> {{ label.ship_to_phone|default:"-" }}</div>
+      <div class="row"><span class="k">COD:</span> {{ label.cod_amount|default:"0" }}</div>
+    </div>
+
+    <div class="qrBox">
+      {% if qr_data_uri %}
+        <img src="{{ qr_data_uri }}" alt="QR"/>
+      {% else %}
+        <div style="font-size:12px;opacity:.7;">QR not generated</div>
+      {% endif %}
+    </div>
+
+    <div class="bottom">
+      <div class="pc">Total PC: {{ total_pc }}</div>
+      <div class="small">Batch RTS-{{ batch.id }}</div>
+    </div>
+  </div>
+
+</body>
+</html>

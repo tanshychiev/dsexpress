@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Return To Shop Detail{% endblock %}
+{% block page_title %}Return To Shop{% endblock %}
+{% block page_subtitle %}Batch Detail{% endblock %}
+
+{% block content %}
+<div class="card rts-card">
+
+  <!-- HEADER -->
+  <div class="rts-header">
+    <div>
+      <div class="rts-title">
+        Batch <span class="mono">RTS-{{ batch.id }}</span>
+
+        {% if batch.status == "DONE" %}
+          <span class="badge badge-green">DONE</span>
+        {% elif batch.status == "CANCELLED" %}
+          <span class="badge badge-red">CANCELLED</span>
+        {% else %}
+          <span class="badge badge-yellow">PENDING</span>
+        {% endif %}
+      </div>
+
+      <div class="rts-meta">
+        <span class="meta-item">
+          Total orders:
+          <span class="big-num">{{ total_orders }}</span>
+        </span>
+        <span class="sep">•</span>
+        <span class="meta-item">Assign by: <b>{{ batch.created_by.username|default:"-" }}</b></span>
+        <span class="sep">•</span>
+        <span class="meta-item">
+          Assign time:
+          <b>{% if batch.assigned_at %}{{ batch.assigned_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</b>
+        </span>
+      </div>
+    </div>
+
+    <div class="rts-actions">
+
+      <!-- Create / Manage Labels -->
+      <a class="btn btn-ghost" href="{% url 'returnshop_labels' batch.id %}">🏷 Labels</a>
+
+      <!-- Reprint Labels (saved labels) -->
+      <a class="btn btn-ghost" href="{% url 'returnshop_labels' batch.id %}
+" target="_blank">🖨 Print Labels</a>
+
+      <!-- Optional: print batch summary if you have this url -->
+      {# <a class="btn btn-ghost" href="{% url 'returnshop_print' batch.id %}" target="_blank">🧾 Print Batch</a> #}
+
+      <!-- COMPLETE / UNDO COMPLETE -->
+      {% if batch.status == "DONE" %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="undo_complete">
+          <button type="submit"
+                  class="btn btn-ghost js-confirm"
+                  data-title="Undo complete?"
+                  data-text="Restore COD and status before.">
+            ↩ Undo Complete
+          </button>
+        </form>
+      {% elif batch.status != "CANCELLED" %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="complete">
+          <button type="submit"
+                  class="btn js-confirm"
+                  data-title="Complete batch?"
+                  data-text="Orders will be marked DONE.">
+            ✅ Complete
+          </button>
+        </form>
+      {% endif %}
+
+      <!-- EDIT -->
+      {% if batch.status != "DONE" and batch.status != "CANCELLED" %}
+        <a class="btn btn-ghost" href="?edit=1">✏ Edit</a>
+      {% endif %}
+
+      <!-- CANCEL / UNDO CANCEL -->
+      {% if batch.status == "CANCELLED" %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="undo_cancel">
+          <button type="submit"
+                  class="btn btn-ghost js-confirm"
+                  data-title="Undo cancel?"
+                  data-text="Restore COD and status before.">
+            ↩ Undo Cancel
+          </button>
+        </form>
+      {% else %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="cancel">
+          <button type="submit"
+                  class="btn btn-danger js-confirm"
+                  data-title="Cancel batch?"
+                  data-text="Orders move to INBOUND and COD restored.">
+            🛑 Cancel
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- EDIT MODE -->
+  {% if edit_mode %}
+    <div class="edit-card">
+      <div class="edit-title">Edit Mode</div>
+      <div class="edit-sub">Scan codes to add. Trash to remove. Text stays after Add.</div>
+
+      <form method="post" class="edit-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="scan_add">
+        <div class="edit-wrap">
+          <textarea class="scan-box mono"
+                    name="scan_codes"
+                    placeholder="Scan tracking code(s), one per line...">{{ edit_scan_value }}</textarea>
+
+          <div class="edit-actions">
+            <button type="submit" class="btn big">+ Add</button>
+            <a class="btn btn-ghost" href="{% url 'returnshop_detail' batch.id %}">Done Editing</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table class="ds-table wide">
+      <thead>
+        <tr>
+          <th class="th-center" style="width:55px;">N</th>
+          <th class="th-center" style="width:180px;">Tracking</th>
+          <th class="th-center" style="width:200px;">Seller</th>
+          <th class="th-center">Receiver Location</th>
+          <th class="th-center" style="width:170px;">Customer</th>
+          <th class="th-center" style="width:140px;">Phone</th>
+          <th class="th-center" style="width:110px;">Price</th>
+          <th class="th-center" style="width:90px;">COD</th>
+          <th class="th-center" style="width:140px;">Status</th>
+          <th class="th-center" style="width:90px;">Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="td-center">{{ forloop.counter }}</td>
+
+            <td class="td-center">
+              <a href="{{ r.tracking_url }}" class="trk">{{ r.tracking_no }}</a>
+            </td>
+
+            <td class="td-center">{{ r.seller_name }}</td>
+            <td>{{ r.receiver_location }}</td>
+            <td class="td-center">{{ r.customer_name }}</td>
+            <td class="td-center">{{ r.customer_phone }}</td>
+            <td class="td-center">{{ r.price }}</td>
+            <td class="td-center"><b>{{ r.cod }}</b></td>
+
+       <td style="text-align:center;">
+  {% if r.order_status == "RETURNED" %}
+    <span class="badge badge-green">RETURNED</span>
+  {% elif r.order_status == "RETURNING" %}
+    <span class="badge badge-yellow">RETURNING</span>
+  {% else %}
+    <span class="badge badge-gray">{{ r.order_status }}</span>
+  {% endif %}
+</td>
+
+            <td class="td-center">
+              {% if edit_mode %}
+                <form method="post" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove_item">
+                  <input type="hidden" name="item_id" value="{{ r.item_id }}">
+                  <button type="submit"
+                          class="icon-btn danger big js-confirm"
+                          data-title="Remove this shipment?"
+                          data-text="Remove from batch and restore COD, status -> INBOUND.">
+                    🗑
+                  </button>
+                </form>
+              {% else %}
+                <span style="opacity:.35;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="10" style="padding:14px; opacity:.7;">No orders in this batch.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal" id="confirmModal">
+  <div class="modal-backdrop" id="confirmBackdrop"></div>
+  <div class="modal-card">
+    <div class="modal-title" id="confirmTitle">Confirm</div>
+    <div class="modal-text" id="confirmText">Are you sure?</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="confirmNoBtn">No</button>
+      <button type="button" class="btn" id="confirmYesBtn">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .rts-card{padding:18px;border-radius:16px;}
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+
+  .rts-header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
+  .rts-title{font-size:18px;font-weight:900;display:flex;gap:10px;align-items:center;}
+  .rts-meta{margin-top:6px;opacity:.85;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .meta-item{display:inline-flex;gap:6px;align-items:baseline;}
+  .sep{opacity:.5;}
+  .big-num{font-size:20px;font-weight:900;}
+
+  .rts-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .inline{display:inline;}
+
+  .btn{padding:10px 14px;border-radius:12px;border:1px solid #111;background:#111;color:#fff;cursor:pointer;text-decoration:none;}
+  .btn.big{padding:12px 18px;font-size:15px;font-weight:900;}
+  .btn-ghost{padding:10px 14px;border-radius:12px;border:1px solid #ddd;background:#fff;color:#111;cursor:pointer;text-decoration:none;}
+  .btn-danger{padding:10px 14px;border-radius:12px;border:1px solid #ffb8b8;background:#fff0f0;color:#b40000;cursor:pointer;font-weight:900;}
+
+  .badge{padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;border:1px solid transparent;display:inline-block;}
+  .badge-green{background:#e8fff0;color:#138a3d;border-color:#bff0cf;}
+  .badge-yellow{background:#fff8e6;color:#9a6b00;border-color:#ffe2a8;}
+  .badge-gray{background:#f3f3f3;color:#666;border-color:#e5e5e5;}
+  .badge-red{background:#fff0f0;color:#b40000;border-color:#ffd0d0;}
+  .badge-blue{background:#eef5ff;color:#1f4db8;border-color:#cfe0ff;}
+
+  .edit-card{margin-top:14px;padding:14px;border-radius:16px;border:1px solid #eee;background:#fafafa;}
+  .edit-title{font-weight:900;margin-bottom:4px;}
+  .edit-sub{opacity:.75;font-size:13px;margin-bottom:10px;}
+  .edit-wrap{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;}
+  .scan-box{height:140px;width:min(760px,100%);border-radius:14px;border:1px solid #e6e6e6;background:#fff;padding:10px;}
+
+  .edit-actions{display:flex;gap:10px;align-items:flex-start;}
+
+  .table-wrap{margin-top:14px;overflow:auto;}
+  table.wide{min-width:1400px;}
+  .th-center{text-align:center;}
+  .td-center{text-align:center;}
+
+  .trk{font-weight:900;text-decoration:underline;}
+  .icon-btn{border:1px solid #ddd;background:#fff;border-radius:14px;padding:10px 14px;cursor:pointer;font-size:22px;}
+  .icon-btn.big{font-size:22px;}
+  .icon-btn.danger{border-color:#ffd0d0;background:#fff3f3;color:#b40000;font-weight:900;}
+
+  /* modal */
+  .modal{display:none;position:fixed;inset:0;z-index:9999;}
+  .modal.show{display:block;}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);}
+  .modal-card{position:relative;margin:12vh auto 0;width:min(460px,92vw);background:#fff;border-radius:18px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .modal-title{font-size:16px;font-weight:900;margin-bottom:6px;}
+  .modal-text{font-size:13px;opacity:.8;margin-bottom:14px;line-height:1.4;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+</style>
+
+<script>
+  (function(){
+    const modal = document.getElementById("confirmModal");
+    const titleEl = document.getElementById("confirmTitle");
+    const textEl  = document.getElementById("confirmText");
+    const yesBtn  = document.getElementById("confirmYesBtn");
+    const noBtn   = document.getElementById("confirmNoBtn");
+    const backdrop= document.getElementById("confirmBackdrop");
+    let pendingForm = null;
+
+    function openModal(title, text, form){
+      pendingForm = form;
+      titleEl.textContent = title || "Confirm";
+      textEl.textContent  = text  || "Are you sure?";
+      modal.classList.add("show");
+    }
+    function closeModal(){
+      modal.classList.remove("show");
+      pendingForm = null;
+    }
+
+    document.addEventListener("click", function(e){
+      const btn = e.target.closest(".js-confirm");
+      if(!btn) return;
+      const form = btn.closest("form");
+      if(!form) return;
+      e.preventDefault();
+      openModal(btn.dataset.title, btn.dataset.text, form);
+    });
+
+    yesBtn.addEventListener("click", function(){
+      if(pendingForm) pendingForm.submit();
+      closeModal();
+    });
+    noBtn.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", closeModal);
+  })();
+</script>
+{% endblock %}

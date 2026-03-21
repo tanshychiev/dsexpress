@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+  {% if mode == "edit" %}Edit Shipper{% else %}New Shipper{% endif %}
+{% endblock %}
+
+{% block page_subtitle %}Driver / Partner{% endblock %}
+
+{% block content %}
+
+{% if form and form.errors %}
+  <div style="padding:10px;border:1px solid #f5c2c7;background:#f8d7da;border-radius:10px;margin-bottom:12px;">
+    <b>Please check the form again.</b>
+    <div style="margin-top:6px;">{{ form.non_field_errors }}</div>
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-title">
+    {% if mode == "edit" %}Update Shipper{% else %}Create Shipper{% endif %}
+  </div>
+
+  <form method="post" class="form-grid" novalidate>
+    {% csrf_token %}
+
+    <div class="field">
+      <label>Name</label>
+      <input class="input" name="name" value="{{ row.name|default:'' }}" required />
+      {% if form and form.name.errors %}
+        <div style="color:#b02a37;font-size:13px;margin-top:6px;">{{ form.name.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="field">
+      <label>Phone</label>
+      <input class="input" name="phone" value="{{ row.phone|default:'' }}" />
+      {% if form and form.phone.errors %}
+        <div style="color:#b02a37;font-size:13px;margin-top:6px;">{{ form.phone.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="field full">
+      <label>Type</label>
+     <select class="input" name="shipper_type">
+  <option value="DELIVERY" {% if row.shipper_type == "DELIVERY" %}selected{% endif %}>DELIVERY</option>
+  <option value="PROVINCE" {% if row.shipper_type == "PROVINCE" %}selected{% endif %}>PROVINCE</option>
+  <option value="RETURN" {% if row.shipper_type == "RETURN" %}selected{% endif %}>RETURN</option>
+</select>
+      {% if form and form.shipper_type.errors %}
+        <div style="color:#b02a37;font-size:13px;margin-top:6px;">{{ form.shipper_type.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-ghost" href="{% url 'shipper_list' %}">Cancel</a>
+      <button class="btn btn-primary" type="submit">Save</button>
+    </div>
+  </form>
+</div>
+{% if error %}
+  <div style="padding:10px;border:1px solid #f5c2c7;background:#f8d7da;border-radius:10px;margin-bottom:12px;">
+    <b>{{ error }}</b>
+  </div>
+{% endif %}
+
+{% endblock %}

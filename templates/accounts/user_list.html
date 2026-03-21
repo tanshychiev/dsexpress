@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .page-wrap{padding:20px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 10px 24px rgba(15,23,42,.06);overflow:hidden}
+  .card-head{padding:18px 18px 14px;border-bottom:1px solid #e5e7eb;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px}
+  .title{margin:0;font-size:22px;font-weight:900;color:#0f172a}
+  .sub{margin:4px 0 0;font-size:13px;color:#64748b}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .search-form{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .search-input{width:340px;max-width:80vw;padding:12px 14px;border-radius:12px;border:1px solid #d0d7de;font-size:14px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:12px;text-decoration:none;font-size:14px;font-weight:800;border:1px solid #d0d7de;background:#fff;color:#0f172a;cursor:pointer}
+  .btn-primary{background:#0f766e;color:#fff;border-color:#0f766e}
+  .btn-danger{background:#fff5f5;color:#b91c1c;border-color:#fecaca}
+  .btn-role{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+  .table-wrap{overflow:auto}
+  table{width:100%;border-collapse:collapse;min-width:1320px}
+  th{background:#0f172a;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:.4px;padding:12px;text-align:left;white-space:nowrap}
+  td{padding:12px;border-bottom:1px solid #eef2f7;font-size:14px;color:#0f172a;vertical-align:middle}
+  tr:hover td{background:#fafafa}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800}
+  .pill-active{background:#ecfdf5;color:#047857;border:1px solid #bbf7d0}
+  .pill-inactive{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
+  .pill-staff{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+  .pill-nostaff{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+  .actions{display:flex;flex-wrap:wrap;gap:8px}
+  .empty{padding:28px;text-align:center;color:#64748b;font-weight:700}
+  .pagination{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px 18px}
+  .pagination a,.pagination span{padding:8px 12px;border:1px solid #d0d7de;border-radius:10px;text-decoration:none;color:#0f172a;font-size:13px;font-weight:700}
+  .pagination .current{background:#0f766e;color:#fff;border-color:#0f766e}
+  .role-badge{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#f8fafc;border:1px solid #e2e8f0;color:#334155}
+</style>
+
+<div class="page-wrap">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h1 class="title">Users</h1>
+        <p class="sub">Manage user accounts by account type</p>
+      </div>
+
+      <div class="toolbar">
+        <form method="get" class="search-form">
+          <input
+            type="text"
+            name="q"
+            value="{{ q|default:'' }}"
+            placeholder="Search username / email / name..."
+            class="search-input"
+          >
+          <button class="btn" type="submit">Search</button>
+          <a class="btn" href="{% url 'user_list' %}">Clear</a>
+        </form>
+
+        <a class="btn btn-primary" href="{% url 'user_create' %}">+ Create User</a>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Account Type</th>
+            <th>Link</th>
+            <th>Role</th>
+            <th>Staff</th>
+            <th>Active</th>
+            <th>Date Joined</th>
+            <th>Last Login</th>
+            <th style="width:360px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in page_obj %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td><strong>{{ u.username }}</strong></td>
+            <td>{{ u.first_name }} {{ u.last_name }}</td>
+            <td>{{ u.email|default:"-" }}</td>
+
+            <td>
+              {% if u.account %}
+                <span class="role-badge">{{ u.account.account_type|title }}</span>
+              {% else %}
+                <span class="role-badge">Staff</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if u.account %}
+                {% if u.account.account_type == "seller" %}
+                  {{ u.account.seller|default:"-" }}
+                {% elif u.account.account_type == "shipper" %}
+                  {{ u.account.shipper|default:"-" }}
+                {% else %}
+                  -
+                {% endif %}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>
+              {% if u.account and u.account.account_type != "staff" %}
+                <span class="role-badge">-</span>
+              {% else %}
+                {% with g=u.groups.first %}
+                  {% if g %}
+                    <span class="role-badge">{{ g.name }}</span>
+                  {% else %}
+                    <span class="role-badge">-</span>
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
+            </td>
+
+            <td>
+              {% if u.is_staff %}
+                <span class="pill pill-staff">Staff</span>
+              {% else %}
+                <span class="pill pill-nostaff">No</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if u.is_active %}
+                <span class="pill pill-active">Active</span>
+              {% else %}
+                <span class="pill pill-inactive">Inactive</span>
+              {% endif %}
+            </td>
+
+            <td>{{ u.date_joined|date:"M d, Y g:i a" }}</td>
+            <td>
+              {% if u.last_login %}
+                {{ u.last_login|date:"M d, Y g:i a" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>
+              <div class="actions">
+                <a class="btn btn-role" href="{% url 'user_edit' u.id %}">Set Role</a>
+                <a class="btn" href="{% url 'user_edit' u.id %}">Edit</a>
+                <a class="btn" href="{% url 'user_change_password' u.id %}">Change PW</a>
+                <a class="btn btn-danger" href="{% url 'user_delete' u.id %}">Delete</a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="12" class="empty">No users found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&q={{ q|urlencode }}">Previous</a>
+      {% endif %}
+
+      <span class="current">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&q={{ q|urlencode }}">Next</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

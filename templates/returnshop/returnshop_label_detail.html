@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Master Batch Detail{% endblock %}
+{% block page_title %}Return To Shop{% endblock %}
+{% block page_subtitle %}Master Batch Detail{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+    <div>
+      <div style="font-size:18px;font-weight:900;">
+        Master Batch <span class="mono">{{ label.code }}</span>
+      </div>
+      <div style="opacity:.85; margin-top:6px;">
+        Shops: <b>{{ shop_names }}</b>
+        &nbsp; • &nbsp;
+        Total PC: <span style="font-size:18px; font-weight:900;">{{ total_pc }}</span>
+      </div>
+      <div style="opacity:.85; margin-top:6px;">
+        Location: <b>{{ label.ship_to_address }}</b>
+        &nbsp; • &nbsp;
+        Phone: <b>{{ label.ship_to_phone }}</b>
+        &nbsp; • &nbsp;
+        COD: <b>{{ label.cod_amount }}</b>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="{% url 'returnshop_history' %}">📜 History</a>
+      <a class="btn btn-ghost" href="{% url 'returnshop_labels' batch.id %}">← Back Merge</a>
+      <a class="btn" href="{% url 'returnshop_label_print' label.id %}" target="_blank">🖨 Print Label</a>
+    </div>
+  </div>
+
+  <div style="margin-top:14px; overflow:auto;">
+    <table class="ds-table" style="min-width:900px;">
+      <thead>
+        <tr>
+          <th class="th">N</th>
+          <th class="th">Tracking</th>
+          <th class="th">Shop</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="td">{{ forloop.counter }}</td>
+            <td class="td"><a href="{{ r.tracking_url }}" target="_blank" style="font-weight:900;text-decoration:underline;">{{ r.tracking }}</a></td>
+            <td class="td">{{ r.seller }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" style="padding:14px; opacity:.7;">No items.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<style>
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .btn{padding:10px 14px;border-radius:12px;border:1px solid #111;background:#111;color:#fff;cursor:pointer;text-decoration:none;font-weight:900;}
+  .btn-ghost{padding:10px 14px;border-radius:12px;border:1px solid #ddd;background:#fff;color:#111;cursor:pointer;text-decoration:none;font-weight:900;}
+  .th{text-align:center;}
+  .td{text-align:center;}
+</style>
+{% endblock %}

@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+  .content-card{
+    background:#fff;
+    border-radius:16px;
+    padding:18px;
+  }
+
+  .box{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+
+  .section-title{
+    margin:0 0 8px;
+    font-size:20px;
+    font-weight:800;
+    color:#0f172a;
+  }
+
+  .section-desc{
+    margin:0 0 14px;
+    color:#475569;
+    line-height:1.5;
+  }
+
+  .summary-row{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin:14px 0;
+  }
+
+  .summary-box{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:16px;
+  }
+
+  .summary-label{
+    font-size:13px;
+    color:#64748b;
+    margin-bottom:6px;
+    font-weight:600;
+  }
+
+  .summary-value{
+    font-size:30px;
+    font-weight:800;
+    color:#0f172a;
+    line-height:1;
+  }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 16px;
+    border-radius:10px;
+    text-decoration:none;
+    border:none;
+    cursor:pointer;
+    font-weight:700;
+    font-size:14px;
+    transition:.15s ease;
+  }
+
+  .btn:hover{
+    opacity:.95;
+    transform:translateY(-1px);
+  }
+
+  .btn-primary{
+    background:#0f766e;
+    color:#fff;
+  }
+
+  .btn-success{
+    background:#16a34a;
+    color:#fff;
+  }
+
+  .btn-light{
+    background:#f1f5f9;
+    color:#0f172a;
+    border:1px solid #e2e8f0;
+  }
+
+  .btn-big{
+  min-height:48px;
+  padding:12px 28px;
+  min-width:140px;
+  font-size:15px;
+  border-radius:12px;
+}
+
+  .file-input{
+    padding:11px 12px;
+    border:1px solid #cbd5e1;
+    border-radius:12px;
+    background:#fff;
+    min-height:46px;
+    font-size:14px;
+  }
+
+  .form-control{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    background:#fff;
+    min-height:42px;
+    font-size:14px;
+  }
+
+  .form-control:focus,
+  .file-input:focus{
+    outline:none;
+    border-color:#0f766e;
+    box-shadow:0 0 0 3px rgba(15,118,110,.12);
+  }
+
+  .label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:#334155;
+    margin-bottom:6px;
+  }
+
+  .alert{
+    padding:12px 14px;
+    border-radius:12px;
+    margin-bottom:12px;
+  }
+
+  .alert-danger{
+    background:#fef2f2;
+    color:#991b1b;
+    border:1px solid #fecaca;
+  }
+
+  .alert-success{
+    background:#f0fdf4;
+    color:#166534;
+    border:1px solid #bbf7d0;
+  }
+
+  .alert-info{
+    background:#eff6ff;
+    color:#1d4ed8;
+    border:1px solid #bfdbfe;
+  }
+
+  .actions-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+
+  .upload-row{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  .search-grid{
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:12px;
+  }
+
+  .search-actions{
+    margin-top:14px;
+  }
+
+  .table-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:14px;
+    margin-top:14px;
+  }
+
+  .table-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+
+  .table-title{
+    margin:0;
+    font-size:18px;
+    font-weight:800;
+    color:#0f172a;
+  }
+
+  .table-note{
+    font-size:13px;
+    color:#475569;
+  }
+
+  .table-wrap{
+    overflow:auto;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+  }
+
+  .table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:760px;
+    background:#fff;
+  }
+
+  .table th,
+  .table td{
+    padding:12px 12px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+    font-size:14px;
+  }
+
+  .table th{
+    background:#f8fafc;
+    color:#0f172a;
+    font-weight:800;
+  }
+
+  .table tbody tr:hover{
+    background:#f8fafc;
+  }
+
+  .detail-link{
+    color:#0f766e;
+    font-weight:700;
+    text-decoration:none;
+  }
+
+  .detail-link:hover{
+    text-decoration:underline;
+  }
+  .upload-input{
+  flex:1;
+  min-width:200px;
+}
+
+  @media (max-width: 1100px){
+    .search-grid{
+      grid-template-columns:repeat(2,1fr);
+    }
+  }
+
+  @media (max-width: 900px){
+    .summary-row{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 700px){
+    .search-grid{
+      grid-template-columns:1fr;
+    }
+
+    .upload-row{
+      flex-direction:column;
+      align-items:stretch;
+    }
+
+    .btn-big{
+      width:100%;
+    }
+
+    .file-input{
+      width:100%;
+    }
+  }
+</style>
+
+<div class="content-card">
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if errors %}
+    <div class="alert alert-danger">
+      <strong>Import Errors:</strong>
+      <ul style="margin:8px 0 0 18px;">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <!-- Section 1 -->
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+
+  <div>
+    <h3 class="section-title" style="margin-bottom:4px;">1) Upload Excel</h3>
+    <div class="section-desc" style="margin:0;">
+      Use the sample file to get correct headings.
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{% url 'download_import_sample_excel' %}" class="btn btn-primary">
+      Download Sample Excel
+    </a>
+
+    <a href="{% url 'order_list' %}" class="btn btn-light">
+      Back to Orders
+    </a>
+  </div>
+
+</div>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="upload-row" style="display:flex; gap:12px; align-items:center;">
+  <input type="file" name="file" required class="file-input upload-input">
+  <button type="submit" class="btn btn-success btn-big">Import</button>
+</div>
+    </form>
+  </div>
+
+  <!-- Section 2 -->
+  <div class="box">
+    <h3 class="section-title">2) Search Import Batches</h3>
+    <p class="section-desc">
+      Filter by date, time, and filename, then click Search.
+    </p>
+
+    <form method="get">
+      <input type="hidden" name="search" value="1">
+
+      <div class="search-grid">
+        <div>
+          <label class="label">From Date</label>
+          <input
+            type="date"
+            name="from_date"
+            class="form-control"
+            value="{{ request.GET.from_date|default:default_from }}"
+          >
+        </div>
+
+        <div>
+          <label class="label">From Time</label>
+          <input
+            type="time"
+            name="from_time"
+            class="form-control"
+            value="{{ request.GET.from_time|default:'00:00' }}"
+          >
+        </div>
+
+        <div>
+          <label class="label">To Date</label>
+          <input
+            type="date"
+            name="to_date"
+            class="form-control"
+            value="{{ request.GET.to_date|default:default_to }}"
+          >
+        </div>
+
+        <div>
+          <label class="label">To Time</label>
+          <input
+            type="time"
+            name="to_time"
+            class="form-control"
+            value="{{ request.GET.to_time|default:'23:59' }}"
+          >
+        </div>
+
+        <div>
+          <label class="label">Filename contains</label>
+          <input
+            type="text"
+            name="filename_contains"
+            class="form-control"
+            placeholder="example: orders_feb"
+            value="{{ request.GET.filename_contains }}"
+          >
+        </div>
+      </div>
+
+      <div class="search-actions" style="display:flex;justify-content:flex-end;margin-top:14px;">
+  <button type="submit" class="btn btn-primary btn-big" style="min-width:160px;">
+    Search
+  </button>
+</div>
+    </form>
+  </div>
+
+  {% if search %}
+    <div class="summary-row">
+      <div class="summary-box">
+        <div class="summary-label">Total Batches</div>
+        <div class="summary-value">{{ total_batches }}</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-label">Total Orders</div>
+        <div class="summary-value">{{ total_orders_sum }}</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-label">Total Shops</div>
+        <div class="summary-value">{{ total_shops_sum }}</div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="table-card">
+    <div class="table-header">
+      <h3 class="table-title">Import Batch List</h3>
+      {% if search %}
+        <div class="table-note">Total: {{ total_batches }} batch{{ total_batches|pluralize }}</div>
+      {% endif %}
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Batch ID</th>
+            <th>Created</th>
+            <th>File Name</th>
+            <th>Total Shops</th>
+            <th>Total Orders</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for batch in page_obj %}
+            <tr>
+              <td>#{{ batch.id }}</td>
+              <td>{{ batch.created_at|date:"Y-m-d H:i" }}</td>
+              <td>{{ batch.filename }}</td>
+              <td>{{ batch.total_shops|default:0 }}</td>
+              <td>{{ batch.total_orders|default:0 }}</td>
+              <td>
+                <a href="{% url 'import_batch_detail' batch.id %}" class="detail-link">Detail</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" style="text-align:center; padding:18px;">No data found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Restore Order{% endblock %}
+{% block page_title %}Restore Order{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h3>Restore this order?</h3>
+  <p><strong>{{ order.tracking }}</strong></p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">Restore</button>
+    <a href="{% url 'order_trash' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

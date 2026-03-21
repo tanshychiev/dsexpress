@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Delivery Report Update{% endblock %}
+{% block page_title %}Upload Delivery Report Update{% endblock %}
+{% block page_subtitle %}Upload edited Excel file to update orders{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:16px;">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="margin-bottom:12px;">
+      <label>Update Excel File</label>
+      {{ form.file }}
+    </div>
+    <button class="btn" type="submit">Upload and Update</button>
+    <a class="btn" href="{% url 'delivery_report' %}">Back</a>
+  </form>
+</div>
+
+{% if summary %}
+<div class="card" style="padding:16px; margin-top:12px;">
+  <h3>Upload Summary</h3>
+  <p>Total Rows: {{ summary.total_rows }}</p>
+  <p>Updated Rows: {{ summary.updated_rows }}</p>
+  <p>Skipped Rows: {{ summary.skipped_rows }}</p>
+  <p>Not Found Rows: {{ summary.not_found_rows }}</p>
+
+  {% if summary.errors %}
+    <h4>Errors</h4>
+    <ul>
+      {% for e in summary.errors %}
+        <li>{{ e }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

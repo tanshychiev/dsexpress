@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Deliver in PP - New{% endblock %}
+{% block page_title %}Deliver in PP{% endblock %}
+{% block page_subtitle %}New Batch{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <div style="font-weight:900;margin-bottom:10px;">
+    Scan → Add → Review → Save
+  </div>
+
+  <!-- SCAN -->
+  <form method="post" style="margin-bottom:10px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="scan_add">
+    <div class="label">Scan tracking OR return (RTS-17 / RTS-17-58) (one per line)</div>
+    <textarea
+      name="scan_codes"
+      class="input"
+      style="height:110px;width:100%;font-family:ui-monospace,Consolas,monospace;"
+    >{{ scan_value }}</textarea>
+
+    <div style="display:flex;gap:10px;justify-content:space-between;margin-top:10px;">
+      <button class="btn btn-primary" type="submit" style="min-width:200px;">Add</button>
+    </div>
+  </form>
+
+  <!-- CLEAR -->
+  <form method="post" style="text-align:right;margin-bottom:14px;" onsubmit="return confirm('Clear all scanned codes?');">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="scan_clear">
+    <button class="btn btn-danger" type="submit">Clear</button>
+  </form>
+
+  <!-- TOTALS -->
+  <div style="padding:10px;border:1px solid #eee;border-radius:12px;margin-bottom:10px;text-align:center;">
+    <b>Total:</b> {{ total_count }}
+    &nbsp;&nbsp;<b style="color:#0a7;">Shipment:</b> {{ shipment_delivery_count }}
+    &nbsp;&nbsp;<b style="color:#06c;">Return batch:</b> {{ return_batch_count }}
+  </div>
+
+  <!-- RETURN PREVIEW -->
+  <div class="card" style="margin-top:14px;padding:14px;border-radius:14px;">
+    <div style="font-weight:900;margin-bottom:10px;text-align:center;">Return Batch Preview</div>
+
+    <div style="overflow:auto;">
+      <table class="ds-table" style="min-width:1100px;">
+        <thead>
+          <tr>
+            <th style="text-align:center;">N</th>
+            <th style="text-align:center;">RETURN CODE</th>
+            <th style="text-align:center;">CREATE DATE</th>
+            <th style="text-align:center;">SELLER</th>
+            <th style="text-align:center;">LOCATION</th>
+            <th style="text-align:center;">PHONE</th>
+            <th style="text-align:center;">TOTAL PC</th>
+            <th style="text-align:center;">COD</th>
+            <th style="text-align:center;">STATUS</th>
+            <th style="text-align:center;">ACTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows_return_found %}
+            <tr{% if not r.ok %} style="background:#ffecec;"{% endif %}>
+              <td style="text-align:center;">{{ forloop.counter }}</td>
+              <td style="text-align:center;"><b>{{ r.code }}</b></td>
+              <td style="text-align:center;">
+                {% if r.created_at %}{{ r.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}
+              </td>
+              <td style="text-align:center;">{{ r.shop|default:"-" }}</td>
+              <td style="text-align:center;">{{ r.address|default:"-" }}</td>
+              <td style="text-align:center;">{{ r.phone|default:"-" }}</td>
+              <td style="text-align:center;"><b>{{ r.total_pc }}</b></td>
+              <td style="text-align:center;"><b>{{ r.cod }}</b></td>
+              <td style="text-align:center;">
+                {% if r.ok %}
+                  <span class="badge badge-ok">OK</span>
+                {% else %}
+                  <span class="badge badge-bad">NOT ALLOWED</span>
+                  <div style="font-size:11px;opacity:.75;margin-top:4px;">{{ r.why }}</div>
+                {% endif %}
+              </td>
+              <td style="text-align:center;">
+                <form method="post" onsubmit="return confirm('Remove this code?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove_scan">
+                  <input type="hidden" name="code" value="{{ r.code }}">
+                  <button class="trash-mini" type="submit" title="Remove">🗑</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="10" style="text-align:center;padding:14px;opacity:.7;">No return codes.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if rows_return_notfound %}
+      <div style="color:#c00;margin-top:10px;text-align:center;">
+        <b>Return not found:</b> {{ rows_return_notfound|join:", " }}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- PP DELIVERY PREVIEW -->
+  <div class="card" style="margin-top:14px;padding:14px;border-radius:14px;">
+    <div style="font-weight:900;margin-bottom:10px;text-align:center;">PP Delivery Preview</div>
+
+    <div style="overflow:auto;">
+      <table class="ds-table" style="min-width:1200px;">
+        <thead>
+          <tr>
+            <th style="text-align:center;">N</th>
+            <th style="text-align:center;">TRACKING</th>
+            <th style="text-align:center;">SHOP</th>
+            <th style="text-align:center;">CODE</th>
+            <th style="text-align:center;">LOCATION</th>
+            <th style="text-align:center;">RECEIVER</th>
+            <th style="text-align:center;">PHONE</th>
+            <th style="text-align:center;">PRICE</th>
+            <th style="text-align:center;">COD</th>
+            <th style="text-align:center;">STATUS</th>
+            <th style="text-align:center;">ACTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows_normal_found %}
+            {% with o=row.order %}
+              <tr{% if not row.ok %} style="background:#ffecec;"{% endif %}>
+                <td style="text-align:center;">{{ forloop.counter }}</td>
+                <td style="text-align:center;"><b>{{ o.tracking_no }}</b></td>
+                <td style="text-align:center;">{% if o.seller %}{{ o.seller.name }}{% else %}-{% endif %}</td>
+                <td style="text-align:center;">{{ o.seller_code|default:"-" }}</td>
+                <td style="text-align:center;">{% firstof o.receiver_address "-" %}</td>
+                <td style="text-align:center;">{% firstof o.receiver_name "-" %}</td>
+                <td style="text-align:center;">{% firstof o.receiver_phone "-" %}</td>
+                <td style="text-align:center;">{{ o.price|default:"-" }}</td>
+                <td style="text-align:center;">{{ o.cod|default:"0" }}</td>
+                <td style="text-align:center;">
+                  {% if row.ok %}
+                    <span class="badge badge-ok">{{ o.status }}</span>
+                  {% else %}
+                    <span class="badge badge-bad">{{ o.status }}</span>
+                    <div style="font-size:11px;opacity:.75;margin-top:4px;">{{ row.why }}</div>
+                  {% endif %}
+                </td>
+                <td style="text-align:center;">
+                  <form method="post" onsubmit="return confirm('Remove this code?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove_scan">
+                    <input type="hidden" name="code" value="{{ o.tracking_no }}">
+                    <button class="trash-mini" type="submit" title="Remove">🗑</button>
+                  </form>
+                </td>
+              </tr>
+            {% endwith %}
+          {% empty %}
+            <tr>
+              <td colspan="11" style="text-align:center;padding:14px;opacity:.7;">No shipment codes.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if rows_normal_notfound %}
+      <div style="color:#c00;margin-top:10px;text-align:center;">
+        <b>Not found:</b> {{ rows_normal_notfound|join:", " }}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- SAVE -->
+  <form method="post" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:14px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="confirm_create">
+
+    <div style="min-width:260px;">
+      <div class="label">Assign shipper</div>
+      <select class="input" name="shipper_id">
+        <option value="">-- Select shipper --</option>
+        {% for s in shippers %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="flex:1;min-width:320px;">
+      <div class="label">Remark</div>
+      <input class="input" name="remark" placeholder="Remark...">
+    </div>
+
+    <button class="btn" type="submit" style="background:#159a43;border:none;">Save</button>
+  </form>
+
+</div>
+
+<style>
+  .badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 800;
+    font-size: 12px;
+    display: inline-block;
+  }
+  .badge-ok {
+    background: #eafff0;
+    color: #0a7;
+    border: 1px solid #a7f0c0;
+  }
+  .badge-bad {
+    background: #ffecec;
+    color: #c00;
+    border: 1px solid #ffb4b4;
+  }
+  .trash-mini {
+    width: 42px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid #ffd0d0;
+    background: #fff3f3;
+    color: #b10000;
+    cursor: pointer;
+  }
+</style>
+{% endblock %}

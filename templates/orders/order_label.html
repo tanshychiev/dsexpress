@@ -1,0 +1,429 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Label</title>
+
+<style>
+
+@page{
+size:100mm 100mm;
+margin:0;
+}
+
+body{
+margin:0;
+font-family:Arial,"Noto Sans Khmer","Khmer OS System","Khmer OS",sans-serif;
+color:#000;
+background:#fff;
+}
+
+.page{
+width:100mm;
+height:100mm;
+display:flex;
+align-items:center;
+justify-content:center;
+box-sizing:border-box;
+}
+
+.label{
+width:95mm;
+height:95mm;
+border:0.6mm solid #000;
+box-sizing:border-box;
+background:#fff;
+overflow:hidden;
+}
+
+.top{
+display:flex;
+border-bottom:0.5mm solid #000;
+height:40mm;
+}
+
+.top-left{
+width:52mm;
+padding:1mm;
+box-sizing:border-box;
+border-right:0.5mm solid #000;
+}
+
+.brand{
+font-size:3mm;
+font-weight:900;
+letter-spacing:0.2mm;
+line-height:1;
+margin-bottom:2.5mm;
+}
+
+.tracking-box{
+border-top:0.4mm solid #000;
+border-bottom:0.4mm solid #000;
+padding:1.4mm 0;
+margin-bottom:2mm;
+font-size:3mm;
+font-weight:700;
+}
+
+.mini-row{
+display:flex;
+align-items:flex-end;
+gap:2mm;
+margin-bottom:2mm;
+}
+
+.mini-row .label-text{
+flex:0 0 auto;
+font-weight:300;
+font-size:2mm;
+line-height:1;
+white-space:nowrap;
+}
+
+.mini-row .value{
+border-bottom:0.35mm solid #000;
+min-height:2mm;
+display:flex;
+align-items:flex-end;
+padding:0 0.8mm 0.4mm 0.8mm;
+font-size:3mm;
+font-weight:500;
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis;
+box-sizing:border-box;
+}
+
+/* widths */
+
+.shop-value{
+flex:1;
+font-size:3mm;
+}
+
+.seller-label{
+margin-left:1mm;
+}
+
+.seller-value{
+flex:0 0 7mm;
+max-width:7mm;
+}
+
+.code-value{
+flex:1;
+}
+
+.qty-label{
+margin-left:6mm;
+}
+
+.qty-value{
+flex:0 0 4mm;
+max-width:4mm;
+justify-content:flex-start;
+}
+
+/* item wrap */
+
+.item-value{
+flex:1;
+font-size:2.6mm;
+line-height:1.1;
+white-space:normal !important;
+display:block;
+overflow:hidden;
+word-break:break-word;
+min-height:5.5mm;
+max-height:5.8mm;
+padding-top:0.2mm;
+}
+
+/* QR */
+
+.top-right{
+flex:1;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:2.5mm;
+box-sizing:border-box;
+}
+
+.qr-box{
+width:100%;
+height:100%;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:1mm;
+box-sizing:border-box;
+background:#fff;
+}
+
+.qr-box img{
+width:120%;
+height:120%;
+object-fit:contain;
+}
+
+/* middle */
+
+.middle{
+height:30mm;
+padding:3mm;
+box-sizing:border-box;
+border-bottom:0.5mm solid #000;
+}
+
+.middle-row{
+display:flex;
+align-items:flex-end;
+gap:2mm;
+margin-bottom:3.2mm;
+}
+
+.middle-row .label-text{
+flex:0 0 auto;
+font-size:4mm;
+line-height:1;
+font-weight:400;
+white-space:nowrap;
+}
+
+.middle-row .value{
+flex:1;
+border-bottom:0.35mm solid #000;
+min-height:4.4mm;
+display:flex;
+align-items:flex-end;
+padding:0 0.8mm 0.4mm 0.8mm;
+font-size:3.7mm;
+font-weight:500;
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis;
+box-sizing:border-box;
+}
+
+/* customer */
+
+.bottom-row{
+display:flex;
+gap:2mm;
+align-items:flex-end;
+margin-top:4mm;
+}
+
+.bottom-block{
+display:flex;
+align-items:flex-end;
+gap:2mm;
+flex:1;
+}
+
+.bottom-block .small-label{
+flex:0 0 auto;
+font-size:4mm;
+font-weight:400;
+line-height:1;
+white-space:nowrap;
+}
+
+.bottom-block .value{
+flex:1;
+border-bottom:0.35mm solid #000;
+min-height:4mm;
+display:flex;
+align-items:flex-end;
+padding:0 0.8mm 0.4mm 0.8mm;
+font-size:3mm;
+font-weight:500;
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis;
+box-sizing:border-box;
+}
+
+/* COD */
+
+.bottom{
+height:18mm;
+padding:2.5mm 3mm;
+box-sizing:border-box;
+}
+
+.cod-title{
+font-size:4mm;
+font-weight:700;
+margin-bottom:1.5mm;
+}
+
+.money-row{
+display:flex;
+align-items:flex-end;
+justify-content:space-between;
+gap:2mm;
+}
+
+.money-block{
+flex:1;
+display:flex;
+align-items:flex-end;
+gap:1.5mm;
+}
+
+.money-currency{
+font-size:4mm;
+min-width:7mm;
+}
+
+.money-value{
+flex:1;
+border-bottom:0.45mm solid #000;
+min-height:4mm;
+display:flex;
+align-items:flex-end;
+padding:0 1mm 0.8mm 1mm;
+font-size:4mm;
+font-weight:600;
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis;
+box-sizing:border-box;
+}
+
+.or-text{
+font-size:4mm;
+padding:0 2mm 1mm 2mm;
+}
+
+/* print button */
+
+.printBtn{
+position:fixed;
+right:10px;
+top:10px;
+z-index:9;
+}
+
+.printBtn button{
+padding:10px 16px;
+border:none;
+border-radius:10px;
+background:#0f766e;
+color:#fff;
+font-weight:700;
+cursor:pointer;
+}
+
+@media print{
+.printBtn{display:none;}
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="printBtn">
+<button onclick="window.print()">Print</button>
+</div>
+
+<div class="page">
+<div class="label">
+
+<div class="top">
+
+<div class="top-left">
+
+<div class="brand">DS EXPRESS</div>
+
+<div class="tracking-box">
+Tracking: {{ sn }}
+</div>
+
+<div class="mini-row">
+<div class="label-text">Shop:</div>
+<div class="value shop-value">{{ order.seller.name|default:"" }}</div>
+
+<div class="label-text seller-label">Seller:</div>
+<div class="value seller-value">{{ order.seller_name|default:"" }}</div>
+</div>
+
+<div class="mini-row">
+<div class="label-text">Code:</div>
+<div class="value code-value">{{ order.seller_order_code|default:"-" }}</div>
+
+<div class="label-text qty-label">Qty:</div>
+<div class="value qty-value">{{ order.qty|default:"-" }}</div>
+</div>
+
+<div class="mini-row" style="margin-bottom:0;">
+<div class="label-text">Item:</div>
+<div class="value item-value">{{ order.product_desc|default:"-" }}</div>
+</div>
+
+</div>
+
+<div class="top-right">
+<div class="qr-box">
+{% if qr_src %}
+<img src="{{ qr_src }}" alt="QR">
+{% else %}
+<div>No QR</div>
+{% endif %}
+</div>
+</div>
+
+</div>
+
+<div class="middle">
+
+<div class="middle-row">
+<div class="label-text">Location:</div>
+<div class="value">{{ order.receiver_address|default:"-" }}</div>
+</div>
+
+<div class="middle-row">
+<div class="label-text">Phone:</div>
+<div class="value">{{ order.receiver_phone|default:"-" }}</div>
+</div>
+
+<div class="bottom-row">
+<div class="bottom-block">
+<div class="small-label">Customer</div>
+<div class="value">{{ order.receiver_name|default:"-" }}</div>
+</div>
+</div>
+
+</div>
+
+<div class="bottom">
+
+<div class="cod-title">COD:</div>
+
+<div class="money-row">
+
+<div class="money-block">
+<div class="money-currency">$</div>
+<div class="money-value">{{ cod_usd|floatformat:2 }}</div>
+</div>
+
+<div class="or-text">or</div>
+
+<div class="money-block">
+<div class="money-currency">៛</div>
+<div class="money-value">{{ cod_khr_text }}</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,477 @@
+{% load static %}
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}DS Express{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'css/ds.css' %}" />
+    {% block extra_head %}{% endblock %}
+
+    <style>
+      .menu-item .tag{
+        margin-left:auto;
+        font-size:11px;
+        font-weight:900;
+        padding:3px 8px;
+        border-radius:999px;
+        border:1px solid #e7e7e7;
+        background:#fff;
+        color:#111;
+        opacity:.9;
+      }
+      .tag-new{border-color:#cfe0ff;background:#eef5ff;color:#1f4db8;}
+      .tag-ops{border-color:#bff0cf;background:#e8fff0;color:#138a3d;}
+      .tag-return{border-color:#ffd0d0;background:#fff0f0;color:#b40000;}
+      .tag-pp{border-color:#cfe0ff;background:#eef5ff;color:#1f4db8;}
+      .tag-report{border-color:#e7d8ff;background:#f5efff;color:#6b21c8;}
+      .tag-profit{border-color:#c9f1d9;background:#ebfff2;color:#0f7f50;}
+      .tag-finance{border-color:#ffe2b8;background:#fff6e8;color:#b86a00;}
+      .tag-role{border-color:#dbeafe;background:#eff6ff;color:#1d4ed8;}
+
+      .menu-title{
+        font-size:11px;
+        font-weight:900;
+        letter-spacing:.08em;
+        text-transform:uppercase;
+        color:rgba(255,255,255,.72);
+        margin:10px 0 8px;
+        padding:0 22px 0 6px;
+        cursor:pointer;
+        position:relative;
+        user-select:none;
+      }
+      .menu-title::after{
+        content:"▸";
+        position:absolute;
+        right:6px;
+        top:0;
+        opacity:.7;
+        font-size:12px;
+        line-height:1.2;
+      }
+      .menu-title.open::after{
+        content:"▾";
+      }
+
+      .menu-item.report-item,
+      .menu-item.finance-item{
+        display:flex;
+        align-items:center;
+        gap:10px;
+      }
+      .menu-item.report-item .icon,
+      .menu-item.finance-item .icon{
+        width:18px;
+        text-align:center;
+        opacity:.95;
+        flex:0 0 18px;
+      }
+
+      .menu-group{
+        display:block;
+      }
+      .menu-group.hidden-sec{
+        display:none !important;
+      }
+
+      .modal{display:none; position:fixed; inset:0; z-index:9999;}
+      .modal.show{display:block;}
+      .modal-backdrop{position:absolute; inset:0; background:rgba(0,0,0,.45);}
+      .modal-card{
+        position:relative;
+        margin:12vh auto 0;
+        width:min(460px,92vw);
+        background:#fff;
+        border-radius:18px;
+        padding:16px;
+        box-shadow:0 20px 60px rgba(0,0,0,.25);
+      }
+      .modal-title{
+        font-size:16px;
+        font-weight:900;
+        margin-bottom:6px;
+      }
+      .modal-text{
+        font-size:13px;
+        opacity:.85;
+        margin-bottom:14px;
+        line-height:1.4;
+      }
+      .modal-actions{
+        display:flex;
+        gap:10px;
+        justify-content:flex-end;
+      }
+      .btnx{
+        padding:10px 14px;
+        border-radius:12px;
+        border:1px solid #111;
+        background:#111;
+        color:#fff;
+        cursor:pointer;
+        font-weight:900;
+      }
+      .btnx-ghost{
+        padding:10px 14px;
+        border-radius:12px;
+        border:1px solid #e7e7e7;
+        background:#fff;
+        color:#111;
+        cursor:pointer;
+        font-weight:900;
+      }
+
+      body.print-mode aside.sidebar,
+      body.print-mode header.topbar { display:none !important; }
+      body.print-mode main.main { margin:0 !important; }
+      body.print-mode .content { padding:0 !important; }
+
+      .logout-btn{
+        background:none;
+        border:0;
+        padding:0;
+        color:inherit;
+        font:inherit;
+        cursor:pointer;
+      }
+      .logout-form{
+        margin:0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <img class="brand-logo" src="{% static 'img/ds-logo.png' %}" alt="DS Express" />
+          <div class="brand-text">
+            <div class="brand-name">DS Express</div>
+            <div class="brand-sub">Management System</div>
+          </div>
+        </div>
+
+        <nav class="menu">
+
+          <div class="menu-title open" data-target="group-orders">Orders</div>
+          <div class="menu-group" id="group-orders">
+            <a class="menu-item {% if request.path == '/orders/' or request.path|slice:':8' == '/orders/' and request.path != '/orders/import/' and request.path|slice:':15' != '/orders/update/' and request.path != '/orders/create/' %}active{% endif %}" href="/orders/">
+              <span class="dot"></span> Orders
+            </a>
+
+            <a class="menu-item {% if request.path == '/orders/import/' %}active{% endif %}" href="/orders/import/">
+              <span class="dot"></span> Import Orders
+            </a>
+
+            <a class="menu-item {% if request.path|slice:':15' == '/orders/update/' or request.path == '/orders/update/upload/' %}active{% endif %}" href="/orders/update/upload/">
+              <span class="dot"></span> Bulk Update
+            </a>
+
+            <a class="menu-item {% if request.path == '/orders/create/' %}active{% endif %}" href="/orders/create/">
+              <span class="dot"></span> Create Order
+            </a>
+          </div>
+
+          <div class="menu-sep"></div>
+
+          <div class="menu-title" data-target="group-master">Master Data</div>
+          <div class="menu-group hidden-sec" id="group-master">
+            <a class="menu-item {% if request.path|slice:':9' == '/sellers/' %}active{% endif %}" href="/sellers/">
+              <span class="dot"></span> Sellers
+            </a>
+
+            <a class="menu-item {% if request.path|slice:':10' == '/shippers/' %}active{% endif %}" href="/shippers/">
+              <span class="dot"></span> Shippers
+            </a>
+          </div>
+
+          <div class="menu-sep"></div>
+
+          <div class="menu-title" data-target="group-users">Users</div>
+          <div class="menu-group hidden-sec" id="group-users">
+            <a class="menu-item {% if request.path == '/users/' or request.path == '/users/create/' or '/edit/' in request.path or '/password/' in request.path or '/delete/' in request.path %}active{% endif %}" href="{% url 'user_list' %}">
+              <span class="dot"></span> Staff / Seller / Shipper Accounts
+            </a>
+
+            <a class="menu-item {% if request.path|slice:':13' == '/users/roles/' %}active{% endif %}" href="{% url 'role_list' %}">
+              <span class="dot"></span> Roles
+              <span class="tag tag-role">ROLE</span>
+            </a>
+          </div>
+
+          <div class="menu-sep"></div>
+
+          <div class="menu-title" data-target="group-ops">Operations</div>
+          <div class="menu-group hidden-sec" id="group-ops">
+            <a class="menu-item {% if request.path|slice:':10' == '/province/' %}active{% endif %}" href="{% url 'province_list' %}">
+              <span class="dot"></span> Deliver To Province
+              <span class="tag tag-ops">OPS</span>
+            </a>
+
+            <a class="menu-item {% if request.path|slice:':17' == '/deliver-pp/clear/' %}active{% endif %}" href="{% url 'clearpp_list' %}">
+              <span class="dot"></span> Clear Delivery PP
+              <span class="tag tag-pp">PP</span>
+            </a>
+
+            <a class="menu-item {% if request.path|slice:':12' == '/deliver-pp/' and request.path|slice:':17' != '/deliver-pp/clear/' %}active{% endif %}" href="{% url 'deliverpp_list' %}">
+              <span class="dot"></span> Deliver in PP
+              <span class="tag tag-pp">PP</span>
+            </a>
+
+            <a class="menu-item {% if request.path|slice:':14' == '/return-shop/' %}active{% endif %}" href="{% url 'returnshop_list' %}">
+              <span class="dot"></span> Return To Shop
+              <span class="tag tag-return">NEW</span>
+            </a>
+          </div>
+
+          <div class="menu-sep"></div>
+
+          <div class="menu-title" data-target="group-reports">Reports</div>
+          <div class="menu-group hidden-sec" id="group-reports">
+            <a class="menu-item report-item {% if request.resolver_match and request.resolver_match.url_name == 'delivery_report' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_upload' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_png' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_pdf' %}active{% endif %}" href="{% url 'delivery_report' %}">
+              <span class="icon">📦</span>
+              <span>Delivery Report</span>
+              <span class="tag tag-report">REPORT</span>
+            </a>
+
+            <a class="menu-item report-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report_pdf' %}active{% endif %}" href="{% url 'shipper_cod_report' %}">
+              <span class="icon">💰</span>
+              <span>Shipper COD</span>
+              <span class="tag tag-report">REPORT</span>
+            </a>
+
+            <a class="menu-item report-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report_pdf' %}active{% endif %}" href="{% url 'shipper_commission_report' %}">
+              <span class="icon">🧾</span>
+              <span>Shipper Commission</span>
+              <span class="tag tag-report">REPORT</span>
+            </a>
+
+            <a class="menu-item report-item {% if request.resolver_match and request.resolver_match.url_name == 'profit_dashboard' %}active{% endif %}" href="{% url 'profit_dashboard' %}">
+              <span class="icon">📊</span>
+              <span>Profit Dashboard</span>
+              <span class="tag tag-profit">NEW</span>
+            </a>
+          </div>
+
+          <div class="menu-sep"></div>
+
+          <div class="menu-title" data-target="group-finance">Finance</div>
+          <div class="menu-group hidden-sec" id="group-finance">
+            <a class="menu-item finance-item {% if request.resolver_match and request.resolver_match.url_name == 'finance_home' %}active{% endif %}" href="{% url 'finance_home' %}">
+              <span class="icon">🏦</span>
+              <span>Finance Home</span>
+              <span class="tag tag-finance">NEW</span>
+            </a>
+
+            <a class="menu-item finance-item {% if request.resolver_match and request.resolver_match.url_name == 'staff_salary_list' %}active{% endif %}" href="{% url 'staff_salary_list' %}">
+              <span class="icon">👤</span>
+              <span>Staff Salary</span>
+            </a>
+
+            <a class="menu-item finance-item {% if request.resolver_match and request.resolver_match.url_name == 'monthly_expense_list' %}active{% endif %}" href="{% url 'monthly_expense_list' %}">
+              <span class="icon">💡</span>
+              <span>Monthly Electricity</span>
+            </a>
+
+            <a class="menu-item finance-item {% if request.resolver_match and request.resolver_match.url_name == 'province_expense_list' %}active{% endif %}" href="{% url 'province_expense_list' %}">
+              <span class="icon">🚚</span>
+              <span>Province Expense</span>
+            </a>
+          </div>
+
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="pill">v1</div>
+          <form method="post" action="{% url 'logout' %}" class="logout-form">
+            {% csrf_token %}
+            <button type="submit" class="logout logout-btn">Logout</button>
+          </form>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <button class="icon-btn" id="toggleBtn" type="button">☰</button>
+
+          <div class="topbar-title">
+            {% block page_title %}Dashboard{% endblock %}
+            <div class="topbar-sub">
+              {% block page_subtitle %}DS Express Ops{% endblock %}
+            </div>
+          </div>
+
+          <div class="topbar-right">
+            <div class="search">
+              <input placeholder="Search tracking / phone..." />
+            </div>
+
+            <div class="user-chip">
+              <div class="avatar">DS</div>
+              <div class="user-meta">
+                <div class="user-name">{{ request.user.username|default:"admin" }}</div>
+                <div class="user-role">Online</div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section class="content">
+          {% if messages %}
+            <div style="margin-bottom:14px;">
+              {% for message in messages %}
+                <div class="msg msg-{{ message.tags|default:'info' }}">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {% block content %}{% endblock %}
+        </section>
+      </main>
+
+    </div>
+
+    <div class="modal" id="confirmModal">
+      <div class="modal-backdrop" id="confirmBackdrop"></div>
+      <div class="modal-card">
+        <div class="modal-title" id="confirmTitle">Confirm</div>
+        <div class="modal-text" id="confirmText">Are you sure?</div>
+        <div class="modal-actions">
+          <button type="button" class="btnx-ghost" id="confirmNoBtn">No</button>
+          <button type="button" class="btnx" id="confirmYesBtn">Yes, continue</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const toggleBtn = document.getElementById("toggleBtn");
+      const sidebar = document.getElementById("sidebar");
+      toggleBtn?.addEventListener("click", () => sidebar.classList.toggle("collapsed"));
+
+      (function(){
+        const qs = new URLSearchParams(window.location.search);
+        if(qs.get("print") === "1"){
+          document.body.classList.add("print-mode");
+        }
+      })();
+
+      (function(){
+        const modal = document.getElementById("confirmModal");
+        const titleEl = document.getElementById("confirmTitle");
+        const textEl  = document.getElementById("confirmText");
+        const yesBtn  = document.getElementById("confirmYesBtn");
+        const noBtn   = document.getElementById("confirmNoBtn");
+        const backdrop= document.getElementById("confirmBackdrop");
+        let pendingForm = null;
+
+        function openModal(title, text, form){
+          pendingForm = form;
+          titleEl.textContent = title || "Confirm";
+          textEl.textContent  = text  || "Are you sure?";
+          modal.classList.add("show");
+        }
+
+        function closeModal(){
+          modal.classList.remove("show");
+          pendingForm = null;
+        }
+
+        document.addEventListener("click", function(e){
+          const btn = e.target.closest(".js-confirm");
+          if(!btn) return;
+
+          const form = btn.closest("form");
+          if(!form) return;
+
+          e.preventDefault();
+          openModal(btn.dataset.title, btn.dataset.text, form);
+        });
+
+        yesBtn.addEventListener("click", function(){
+          if(pendingForm) pendingForm.submit();
+          closeModal();
+        });
+
+        noBtn.addEventListener("click", closeModal);
+        backdrop.addEventListener("click", closeModal);
+      })();
+
+      (function(){
+        const titles = document.querySelectorAll(".menu-title");
+
+        function openSection(title, group){
+          title.classList.add("open");
+          group.classList.remove("hidden-sec");
+        }
+
+        function closeSection(title, group){
+          title.classList.remove("open");
+          group.classList.add("hidden-sec");
+        }
+
+        function saveState(){
+          const state = {};
+          titles.forEach(title => {
+            const target = title.dataset.target;
+            if (!target) return;
+            state[target] = title.classList.contains("open");
+          });
+          localStorage.setItem("ds_sidebar_sections", JSON.stringify(state));
+        }
+
+        function loadState(){
+          try{
+            return JSON.parse(localStorage.getItem("ds_sidebar_sections") || "{}");
+          }catch(e){
+            return {};
+          }
+        }
+
+        const saved = loadState();
+
+        titles.forEach(title => {
+          const target = title.dataset.target;
+          if (!target) return;
+
+          const group = document.getElementById(target);
+          if (!group) return;
+
+          if (saved[target] === true) {
+            openSection(title, group);
+          } else if (saved[target] === false) {
+            closeSection(title, group);
+          }
+
+          title.addEventListener("click", function(){
+            if (group.classList.contains("hidden-sec")) {
+              openSection(title, group);
+            } else {
+              closeSection(title, group);
+            }
+            saveState();
+          });
+        });
+
+        titles.forEach(title => {
+          const target = title.dataset.target;
+          if (!target) return;
+
+          const group = document.getElementById(target);
+          if (!group) return;
+
+          if (group.querySelector(".menu-item.active")) {
+            openSection(title, group);
+            saveState();
+          }
+        });
+      })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Deliver in PP - List{% endblock %}
+{% block page_title %}Deliver in PP{% endblock %}
+{% block page_subtitle %}Batch List{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+    <div style="font-weight:900;">Search Deliver PP Batches</div>
+    <a class="btn btn-primary" href="{% url 'deliverpp_new' %}">+ New Batch</a>
+  </div>
+
+  <form method="get" style="margin-top:14px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+
+      <div style="min-width:200px;">
+        <div class="label">Date From</div>
+        <input class="input" type="date" name="date_from" value="{{ date_from }}">
+      </div>
+
+      <div style="min-width:200px;">
+        <div class="label">Date To</div>
+        <input class="input" type="date" name="date_to" value="{{ date_to }}">
+      </div>
+
+      <div style="min-width:220px;">
+        <div class="label">Status</div>
+        <select class="input" name="status">
+          <option value="">-- All --</option>
+          {% for v,l in status_choices %}
+            <option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="min-width:260px;">
+        <div class="label">Shipper</div>
+        <select class="input" name="shipper_id">
+          <option value="">-- All --</option>
+          {% for s in shippers %}
+            <option value="{{ s.id }}" {% if shipper_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <input type="hidden" name="show" value="1">
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-success" type="submit">Search</button>
+        <a class="btn btn-danger" href="{% url 'deliverpp_list' %}">Reset</a>
+      </div>
+
+    </div>
+  </form>
+
+  {% if show_results %}
+    <div style="margin-top:16px;overflow:auto;">
+      <table class="ds-table" style="min-width:1200px;">
+        <thead>
+          <tr>
+            <th style="text-align:center;">ID</th>
+            <th style="text-align:center;">CODE</th>
+            <th style="text-align:center;">DATE</th>
+            <th style="text-align:center;">SHIPPER</th>
+            <th style="text-align:center;">STATUS</th>
+            <th style="text-align:center;">TOTAL</th>
+            <th style="text-align:center;">SHIPMENT</th>
+            <th style="text-align:center;">RETURN BATCH</th>
+            <th style="text-align:center;">TOTAL PC</th>
+            <th style="text-align:center;">ACTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in batches %}
+          <tr>
+            <td style="text-align:center;">{{ b.id }}</td>
+            <td style="text-align:center;"><b>{{ b.code }}</b></td>
+            <td style="text-align:center;">{{ b.created_at|date:"Y-m-d H:i" }}</td>
+            <td style="text-align:center;">{% if b.shipper %}{{ b.shipper.name }}{% else %}-{% endif %}</td>
+            <td style="text-align:center;">
+              <span class="badge {% if b.status == 'DONE' %}badge-ok{% elif b.status == 'CANCELLED' %}badge-bad{% else %}badge-mid{% endif %}">
+                {{ b.status }}
+              </span>
+            </td>
+
+            <td style="text-align:center;"><b>{{ b.shipment_cnt|add:b.return_batch_cnt }}</b></td>
+            <td style="text-align:center;">{{ b.shipment_cnt }}</td>
+            <td style="text-align:center;">{{ b.return_batch_cnt }}</td>
+            <td style="text-align:center;"><b>{{ b.total_pc_cnt }}</b></td>
+            <td style="text-align:center;">
+              <a class="btn btn-primary" href="{% url 'deliverpp_detail' b.id %}">Open</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="10" style="text-align:center;padding:14px;opacity:.7;">No results.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="margin-top:16px;text-align:center;opacity:.75;">
+      Fill filters and click <b>Search</b>.
+    </div>
+  {% endif %}
+
+</div>
+
+<style>
+  .badge{ padding:6px 14px;border-radius:20px;font-weight:800;font-size:12px;display:inline-block; }
+  .badge-ok{ background:#eafff0;color:#0a7;border:1px solid #a7f0c0; }
+  .badge-bad{ background:#ffecec;color:#c00;border:1px solid #ffb4b4; }
+  .badge-mid{ background:#f3f6ff;color:#214bff;border:1px solid #cfd8ff; }
+
+  .ds-table{ width:100%; border-collapse:collapse; }
+  .ds-table th,.ds-table td{ border-bottom:1px solid #eee; padding:10px; }
+  .ds-table th{ background:#fafafa; font-weight:900; }
+</style>
+{% endblock %}

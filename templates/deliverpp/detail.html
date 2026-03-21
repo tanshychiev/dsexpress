@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block title %}Deliver in PP - Detail{% endblock %}
+{% block page_title %}Deliver in PP{% endblock %}
+{% block page_subtitle %}Batch {{ batch.code }}{% endblock %}
+
+{% block content %}
+<div class="card pp-card">
+
+  <!-- HEADER -->
+  <div class="pp-header">
+    <div>
+      <div class="pp-title">
+        Batch <a class="mono trk" href="{% url 'deliverpp_detail' batch.id %}">{{ batch.code }}</a>
+
+        {% if batch.status == "DONE" %}
+          <span class="badge badge-green">DONE</span>
+        {% elif batch.status == "CANCELLED" %}
+          <span class="badge badge-red">CANCELLED</span>
+        {% else %}
+          <span class="badge badge-yellow">PENDING</span>
+        {% endif %}
+      </div>
+
+      <div class="pp-meta">
+        <span class="meta-item">Total: <span class="big-num">{{ total_all }}</span></span>
+        <span class="sep">•</span>
+        <span class="meta-item">Shipment: <b>{{ total_shipment }}</b></span>
+        <span class="sep">•</span>
+        <span class="meta-item">Return batch: <b>{{ total_return_batch }}</b></span>
+        <span class="sep">•</span>
+        <span class="meta-item">Total PC: <b>{{ batch.total_pc }}</b></span>
+      </div>
+    </div>
+
+    <div class="pp-actions no-print">
+<a class="btn btn-ghost"
+   target="_blank"
+   href="{% url 'deliverpp_print' batch.id %}">
+   🖨 Print
+</a>      <button type="submit" form="reasonForm" class="btn btn-ghost">💾 Save Reasons</button>
+
+      {% if edit_mode %}
+        <button type="submit" form="mainSaveForm" class="btn">✅ Save (Done Editing)</button>
+      {% else %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="enter_edit">
+          <button type="submit" class="btn btn-ghost">✏️ Edit</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- hidden reason form -->
+  <form method="post" id="reasonForm" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_reasons">
+  </form>
+
+  <!-- ONE hidden action form (for row actions) -->
+  <form method="post" id="rowActionForm" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="rowAction" value="">
+    <input type="hidden" name="item_id" id="rowItemId" value="">
+    <input type="hidden" name="label_code" id="rowLabelCode" value="">
+  </form>
+
+  <script>
+    function submitRowAction(action, itemId, labelCode){
+      document.getElementById("rowAction").value = action || "";
+      document.getElementById("rowItemId").value = itemId || "";
+      document.getElementById("rowLabelCode").value = labelCode || "";
+      document.getElementById("rowActionForm").submit();
+    }
+  </script>
+
+  <!-- Return Batch -->
+  {% if return_blocks %}
+    <div class="section-title">Return Batch</div>
+    <div class="table-wrap">
+      <table class="ds-table wide">
+        <thead>
+          <tr>
+            <th class="th-center" style="width:55px;">N</th>
+            <th class="th-center" style="width:190px;">Return Code</th>
+            <th class="th-center" style="width:150px;">Create Date</th>
+            <th class="th-center" style="width:220px;">Seller</th>
+            <th class="th-center">Location</th>
+            <th class="th-center" style="width:150px;">Phone</th>
+            <th class="th-center" style="width:110px;">Total PC</th>
+            <th class="th-center" style="width:110px;">COD</th>
+            <th class="th-center no-print" style="width:110px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in return_blocks %}
+            <tr class="{% if r.staged_removed %}row-removed{% endif %}">
+              <td class="td-center">{{ forloop.counter }}</td>
+              <td class="td-center">
+                <a class="trk mono" href="{% url 'returnshop_label_detail' r.label_id %}">{{ r.code }}</a>
+              </td>
+              <td class="td-center">{% if r.batch and r.batch.created_at %}{{ r.batch.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+              <td class="td-center">{% firstof r.shop "-" %}</td>
+              <td>{% firstof r.address "-" %}</td>
+              <td class="td-center">{% firstof r.phone "-" %}</td>
+              <td class="td-center"><b>{{ r.pc }}</b></td>
+              <td class="td-center"><b>{{ r.cod }}</b></td>
+
+              <td class="td-center no-print">
+                {% if edit_mode %}
+                  {% if r.staged_removed %}
+                    <button type="button" class="btn btn-ghost"
+                      onclick="submitRowAction('undo_remove_return','', '{{ r.label_code }}')">Undo</button>
+                  {% else %}
+                    <button type="button" class="icon-btn danger"
+                      onclick="if(confirm('Remove this return label from batch?')){submitRowAction('stage_remove_return','', '{{ r.label_code }}')}">🗑</button>
+                  {% endif %}
+                {% else %}
+                  <span style="opacity:.35;">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <!-- ADD / SCAN + PREVIEW (edit mode only) -->
+  {% if edit_mode %}
+    <div class="section-title">Add / Scan Shipment</div>
+    <div class="addbox no-print">
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="stage_add">
+        <div class="addbox-row">
+          <textarea name="scan_codes" class="input addbox-text" placeholder="One code per line...">{{ staged_add_text }}</textarea>
+          <button type="submit" class="btn">➕ Add (Preview)</button>
+        </div>
+        <div class="addbox-help">Preview will show under. Then click <b>✅ Save (Done Editing)</b> to apply.</div>
+      </form>
+
+      {% if staged_add_text %}
+        <div class="preview-wrap">
+          <div class="preview-title">Preview</div>
+
+          {% if preview_notfound %}
+            <div class="preview-sub">Not Found</div>
+            <div class="preview-pills">
+              {% for c in preview_notfound %}
+                <span class="pill pill-red mono">{{ c }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {% if preview_rows %}
+            <div class="preview-sub">Shipment Preview</div>
+            <div class="table-wrap" style="margin-top:8px;">
+              <table class="ds-table wide">
+                <thead>
+                  <tr>
+                    <th class="th-center" style="width:55px;">N</th>
+                    <th class="th-center" style="width:180px;">Tracking</th>
+                    <th class="th-center" style="width:200px;">Seller</th>
+                    <th class="th-center" style="width:160px;">Order Code</th>
+                    <th class="th-center">Receiver Location</th>
+                    <th class="th-center" style="width:170px;">Customer</th>
+                    <th class="th-center" style="width:140px;">Phone</th>
+                    <th class="th-center" style="width:110px;">Price</th>
+                    <th class="th-center" style="width:90px;">COD</th>
+                    <th class="th-center" style="width:220px;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in preview_rows %}
+                    {% with o=r.order %}
+                      <tr class="{% if not r.ok %}row-warn{% endif %}">
+                        <td class="td-center">{{ forloop.counter }}</td>
+                        <td class="td-center"><a class="trk mono" href="/orders/created/{{ o.id }}/">{% firstof o.tracking_no o.id %}</a></td>
+                        <td class="td-center">{% if o.seller %}{% firstof o.seller.seller_name o.seller.name "-" %}{% else %}-{% endif %}</td>
+                        <td class="td-center">{% firstof o.seller_order_code o.code "-" %}</td>
+                        <td>{% firstof o.receiver_address "-" %}</td>
+                        <td class="td-center">{% firstof o.receiver_name "-" %}</td>
+                        <td class="td-center">{% firstof o.receiver_phone "-" %}</td>
+                        <td class="td-center">{% firstof o.price "-" %}</td>
+                        <td class="td-center"><b>{% firstof o.cod "0" %}</b></td>
+                        <td class="td-center">
+                          {% if r.ok %}
+                            <span class="pill pill-green">OK</span>
+                          {% else %}
+                            <span class="pill pill-red">{{ r.why }}</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endwith %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+
+          {% if preview_return %}
+            <div class="preview-sub" style="margin-top:10px;">Return Codes</div>
+            <div class="preview-pills">
+              {% for rr in preview_return %}
+                {% if rr.status == "OK" %}
+                  <span class="pill pill-green mono">{{ rr.code }}</span>
+                {% else %}
+                  <span class="pill pill-red mono">{{ rr.code }} — {{ rr.status }}</span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <!-- MAIN SAVE FORM (ONLY confirm_save) -->
+  <form method="post" id="mainSaveForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="confirm_save">
+  </form>
+
+  <!-- MAIN TABLE (NO forms inside) -->
+  <div class="section-title">PP Delivery</div>
+  <div class="table-wrap">
+    <table class="ds-table wide">
+      <thead>
+        <tr>
+          <th class="th-center" style="width:55px;">N</th>
+          <th class="th-center" style="width:180px;">Tracking</th>
+          <th class="th-center" style="width:200px;">Seller</th>
+          <th class="th-center" style="width:160px;">Order Code</th>
+          <th class="th-center">Receiver Location</th>
+          <th class="th-center" style="width:170px;">Customer</th>
+          <th class="th-center" style="width:140px;">Phone</th>
+          <th class="th-center" style="width:110px;">Price</th>
+          <th class="th-center" style="width:90px;">COD</th>
+          <th class="th-center" style="width:220px;">Reason</th>
+          <th class="th-center no-print" style="width:110px;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+          {% with o=it.order %}
+            <tr class="{% if it.id in staged_remove %}row-removed{% endif %}">
+              <td class="td-center">{{ forloop.counter }}</td>
+              <td class="td-center"><a class="trk mono" href="/orders/created/{{ o.id }}/">{% firstof o.tracking_no o.id %}</a></td>
+              <td class="td-center">{% if o.seller %}{% firstof o.seller.seller_name o.seller.name "-" %}{% else %}-{% endif %}</td>
+              <td class="td-center">{% firstof o.seller_order_code o.code "-" %}</td>
+              <td>{% firstof o.receiver_address "-" %}</td>
+              <td class="td-center">{% firstof o.receiver_name "-" %}</td>
+              <td class="td-center">{% firstof o.receiver_phone "-" %}</td>
+              <td class="td-center">{% firstof o.price "-" %}</td>
+              <td class="td-center"><b>{% firstof o.cod "0" %}</b></td>
+
+              <td class="td-center">
+                <input class="input reason-input"
+                       form="reasonForm"
+                       name="reason_{{ it.id }}"
+                       value="{{ it.reason|default_if_none:'' }}"
+                       placeholder="Reason..." />
+              </td>
+
+              <td class="td-center no-print">
+                {% if edit_mode %}
+                  {% if it.id in staged_remove %}
+                    <button type="button" class="btn btn-ghost"
+                      onclick="submitRowAction('undo_remove','{{ it.id }}','')">Undo</button>
+                  {% else %}
+                    <button type="button" class="icon-btn danger"
+                      onclick="if(confirm('Remove this shipment?')){submitRowAction('stage_remove','{{ it.id }}','')}">🗑</button>
+                  {% endif %}
+                {% else %}
+                  <span style="opacity:.35;">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endwith %}
+        {% empty %}
+          <tr><td colspan="11" style="padding:14px;opacity:.7;">No items.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<style>
+  .pp-card{padding:18px;border-radius:16px;}
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .inline{display:inline;}
+  .pp-header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
+  .pp-title{font-size:18px;font-weight:900;display:flex;gap:10px;align-items:center;}
+  .pp-meta{margin-top:6px;opacity:.85;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .meta-item{display:inline-flex;gap:6px;align-items:baseline;}
+  .sep{opacity:.5;}
+  .big-num{font-size:20px;font-weight:900;}
+  .pp-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .section-title{margin-top:14px;font-weight:900;color:#0f172a;font-size:14px;}
+  .btn{padding:10px 14px;border-radius:12px;border:1px solid #111;background:#111;color:#fff;cursor:pointer;text-decoration:none;}
+  .btn-ghost{padding:10px 14px;border-radius:12px;border:1px solid #ddd;background:#fff;color:#111;cursor:pointer;text-decoration:none;}
+  .table-wrap{margin-top:10px;overflow:auto;}
+  table.wide{min-width:1400px;}
+  .th-center{text-align:center;}
+  .td-center{text-align:center;}
+  .ds-table{width:100%;border-collapse:collapse;}
+  .ds-table th,.ds-table td{border-bottom:1px solid #eee;padding:10px;vertical-align:top;}
+  .ds-table th{background:#fafafa;font-weight:900;}
+  .trk{font-weight:900;text-decoration:underline;color:inherit;}
+  .icon-btn{border:1px solid #ddd;background:#fff;border-radius:14px;padding:10px 14px;cursor:pointer;font-size:18px;}
+  .icon-btn.danger{border-color:#ffd0d0;background:#fff3f3;color:#b40000;font-weight:900;}
+  .row-removed{background:#ffecec;opacity:.75;}
+  .row-warn{background:#fff7ed;}
+  .input{padding:10px 12px;border-radius:12px;border:1px solid #ddd;width:100%;}
+  .reason-input{width:210px;max-width:210px;}
+  .addbox{border:1px solid #eee;border-radius:14px;padding:12px;margin-top:8px;background:#fff;}
+  .addbox-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+  .addbox-text{height:100px;min-width:420px;flex:1;font-family:ui-monospace,Consolas,monospace;}
+  .addbox-help{margin-top:8px;opacity:.7;font-size:12px;}
+  .preview-wrap{margin-top:12px;padding-top:10px;border-top:1px dashed #e5e7eb;}
+  .preview-title{font-weight:900;}
+  .preview-sub{margin-top:8px;font-weight:900;font-size:12px;opacity:.8;}
+  .preview-pills{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;}
+  .pill{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;border:1px solid transparent;}
+  .pill-green{background:#e8fff0;color:#138a3d;border-color:#bff0cf;}
+  .pill-red{background:#fff0f0;color:#b40000;border-color:#ffd0d0;}
+</style>
+{% endblock %}

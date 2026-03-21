@@ -1,0 +1,690 @@
+{% extends "customerportal/base.html" %}
+{% load static %}
+
+{% block title %}Seller Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+  *{
+    box-sizing:border-box;
+  }
+
+  body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f3f4f6;
+    color:#263238;
+  }
+
+  .app-shell{
+    min-height:100vh;
+    background:
+      radial-gradient(circle at top left, rgba(35,184,119,.08), transparent 28%),
+      radial-gradient(circle at top right, rgba(22,154,101,.08), transparent 24%),
+      linear-gradient(180deg,#f4fbf7 0%, #eef6f1 45%, #f7faf8 100%);
+    padding-bottom:95px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .page-fx{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+    overflow:hidden;
+  }
+
+  .fx-bubble,
+  .fx-parcel{
+    position:absolute;
+    display:block;
+    pointer-events:none;
+    user-select:none;
+  }
+
+  .fx-bubble{
+    border-radius:50%;
+    opacity:.32;
+    animation:floatBubble linear infinite;
+    filter:blur(1px);
+  }
+
+  .fx-bubble-1{
+    width:140px;
+    height:140px;
+    left:-25px;
+    top:8%;
+    background:radial-gradient(circle at 30% 30%, rgba(64,211,141,.26), rgba(64,211,141,.05) 70%, transparent 72%);
+    animation-duration:18s;
+  }
+
+  .fx-bubble-2{
+    width:90px;
+    height:90px;
+    right:4%;
+    top:24%;
+    background:radial-gradient(circle at 30% 30%, rgba(54,191,126,.20), rgba(54,191,126,.03) 70%, transparent 72%);
+    animation-duration:14s;
+    animation-delay:-4s;
+  }
+
+  .fx-bubble-3{
+    width:165px;
+    height:165px;
+    left:6%;
+    bottom:12%;
+    background:radial-gradient(circle at 30% 30%, rgba(29,167,108,.14), rgba(29,167,108,.03) 72%, transparent 75%);
+    animation-duration:21s;
+    animation-delay:-7s;
+  }
+
+  .fx-bubble-4{
+    width:115px;
+    height:115px;
+    right:-15px;
+    bottom:20%;
+    background:radial-gradient(circle at 30% 30%, rgba(79,217,150,.16), rgba(79,217,150,.03) 70%, transparent 72%);
+    animation-duration:16s;
+    animation-delay:-2s;
+  }
+
+  .fx-bubble-5{
+    width:72px;
+    height:72px;
+    left:52%;
+    top:40%;
+    background:radial-gradient(circle at 30% 30%, rgba(43,190,120,.18), rgba(43,190,120,.03) 70%, transparent 72%);
+    animation-duration:12s;
+    animation-delay:-5s;
+  }
+
+  .fx-parcel{
+    font-size:22px;
+    opacity:.12;
+    animation:floatParcel linear infinite;
+  }
+
+  .fx-parcel-1{
+    left:8%;
+    top:18%;
+    animation-duration:18s;
+  }
+
+  .fx-parcel-2{
+    right:10%;
+    top:52%;
+    font-size:26px;
+    animation-duration:16s;
+    animation-delay:-5s;
+  }
+
+  .fx-parcel-3{
+    left:18%;
+    bottom:10%;
+    font-size:20px;
+    animation-duration:22s;
+    animation-delay:-8s;
+  }
+
+  .fx-parcel-4{
+    right:22%;
+    bottom:26%;
+    font-size:18px;
+    animation-duration:19s;
+    animation-delay:-3s;
+  }
+
+  @keyframes floatBubble{
+    0%{ transform:translate3d(0,0,0) scale(1); }
+    25%{ transform:translate3d(10px,-18px,0) scale(1.04); }
+    50%{ transform:translate3d(-6px,-30px,0) scale(.98); }
+    75%{ transform:translate3d(12px,-14px,0) scale(1.03); }
+    100%{ transform:translate3d(0,0,0) scale(1); }
+  }
+
+  @keyframes floatParcel{
+    0%{ transform:translate3d(0,0,0) rotate(0deg); }
+    20%{ transform:translate3d(8px,-18px,0) rotate(6deg); }
+    40%{ transform:translate3d(-8px,-34px,0) rotate(-5deg); }
+    60%{ transform:translate3d(10px,-18px,0) rotate(4deg); }
+    80%{ transform:translate3d(-4px,-8px,0) rotate(-3deg); }
+    100%{ transform:translate3d(0,0,0) rotate(0deg); }
+  }
+
+  .phone-wrap{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    position:relative;
+    z-index:1;
+  }
+
+  .top-header{
+    background:linear-gradient(135deg,#179b67,#22b276);
+    color:#fff;
+    padding:18px 18px 28px;
+    border-bottom-left-radius:42px;
+    box-shadow:0 8px 24px rgba(20,134,88,.20);
+  }
+
+  .status-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:15px;
+    font-weight:800;
+    margin-bottom:18px;
+    opacity:.96;
+  }
+
+  .top-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .left-top{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+
+  .top-btn{
+    color:#fff;
+    text-decoration:none;
+    font-size:22px;
+    line-height:1;
+  }
+
+  .logo{
+    width:54px;
+    height:54px;
+    border-radius:50%;
+    background:#fff;
+    padding:4px;
+    object-fit:cover;
+    box-shadow:0 4px 14px rgba(0,0,0,.12);
+  }
+
+  .page-title{
+    font-size:21px;
+    font-weight:900;
+    letter-spacing:.2px;
+  }
+
+  .content{
+    padding:16px;
+    position:relative;
+    z-index:1;
+  }
+
+  .summary-card{
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(6px);
+    border-radius:22px;
+    box-shadow:0 8px 18px rgba(0,0,0,.07);
+    padding:16px;
+    margin-bottom:14px;
+  }
+
+  .summary-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .summary-title{
+    font-size:18px;
+    font-weight:900;
+    color:#1f2937;
+    margin:0;
+  }
+
+  .summary-sub{
+    font-size:13px;
+    color:#64748b;
+    margin-top:4px;
+    font-weight:600;
+  }
+
+  .profile-badge{
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,#e8f8ef,#dff4e8);
+    color:#179b67;
+    font-size:18px;
+    font-weight:900;
+    box-shadow:inset 0 0 0 1px #dbece2;
+    flex:0 0 auto;
+  }
+
+  .money-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+  }
+
+  .money-card{
+    background:linear-gradient(180deg,#eaf8f0 0%, #dff3e7 100%);
+    border-radius:16px;
+    text-align:center;
+    padding:14px 8px;
+    box-shadow:0 6px 14px rgba(23,132,88,.10);
+  }
+
+  .money-label{
+    font-size:12px;
+    font-weight:700;
+    color:#64748b;
+    margin-bottom:8px;
+  }
+
+  .money-value{
+    font-size:20px;
+    font-weight:900;
+    color:#1f2937;
+    line-height:1.15;
+  }
+
+  .hero-card{
+    background:rgba(255,255,255,.97);
+    backdrop-filter:blur(6px);
+    border-radius:22px;
+    box-shadow:0 8px 18px rgba(0,0,0,.07);
+    padding:18px 16px;
+    margin-bottom:14px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .hero-card::before{
+    content:"";
+    position:absolute;
+    right:-30px;
+    top:-30px;
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    background:rgba(34,178,118,.08);
+  }
+
+  .hero-card::after{
+    content:"";
+    position:absolute;
+    left:-20px;
+    bottom:-40px;
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    background:rgba(23,155,103,.06);
+  }
+
+  .hero-eyebrow{
+    font-size:12px;
+    font-weight:900;
+    letter-spacing:.08em;
+    color:#179b67;
+    text-transform:uppercase;
+    margin:0 0 8px;
+    position:relative;
+    z-index:1;
+  }
+
+  .hero-name{
+    font-size:22px;
+    font-weight:900;
+    color:#1f2937;
+    margin:0 0 8px;
+    position:relative;
+    z-index:1;
+  }
+
+  .hero-sub{
+    font-size:14px;
+    color:#64748b;
+    line-height:1.5;
+    margin:0 0 14px;
+    position:relative;
+    z-index:1;
+  }
+
+  .hero-stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    position:relative;
+    z-index:1;
+  }
+
+  .hero-stat{
+    background:#f8fbf9;
+    border:1px solid #e6eeea;
+    border-radius:16px;
+    padding:12px 10px;
+    text-align:center;
+  }
+
+  .hero-stat span{
+    display:block;
+    font-size:11px;
+    color:#64748b;
+    font-weight:800;
+    margin-bottom:5px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+
+  .hero-stat strong{
+    display:block;
+    font-size:18px;
+    color:#1f2937;
+    font-weight:900;
+  }
+
+  .action-box{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    text-decoration:none;
+    color:inherit;
+    background:linear-gradient(135deg,#179b67,#22b276);
+    border-radius:22px;
+    padding:16px;
+    box-shadow:0 10px 20px rgba(20,134,88,.16);
+    margin-bottom:14px;
+    position:relative;
+    z-index:1;
+  }
+
+  .action-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-width:0;
+  }
+
+  .action-icon-wrap{
+    width:46px;
+    height:46px;
+    border-radius:16px;
+    background:rgba(255,255,255,.18);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 46px;
+  }
+
+  .action-icon{
+    font-size:22px;
+    line-height:1;
+  }
+
+  .action-text strong{
+    display:block;
+    font-size:16px;
+    font-weight:900;
+    color:#fff;
+    margin-bottom:4px;
+  }
+
+  .action-text p{
+    margin:0;
+    font-size:12px;
+    color:rgba(255,255,255,.9);
+    line-height:1.45;
+  }
+
+  .action-arrow{
+    color:#fff;
+    font-size:22px;
+    font-weight:900;
+    flex:0 0 auto;
+  }
+
+  .menu-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-bottom:14px;
+    position:relative;
+    z-index:1;
+  }
+
+  .menu-item{
+    background:rgba(255,255,255,.97);
+    backdrop-filter:blur(6px);
+    border-radius:20px;
+    box-shadow:0 8px 18px rgba(0,0,0,.07);
+    text-decoration:none;
+    color:#334155;
+    padding:16px 10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    min-height:108px;
+  }
+
+  .menu-icon{
+    width:48px;
+    height:48px;
+    border-radius:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(180deg,#eaf8f0 0%, #dff3e7 100%);
+    box-shadow:inset 0 0 0 1px #dbece2;
+    font-size:22px;
+    margin-bottom:10px;
+  }
+
+  .menu-item span{
+    font-size:13px;
+    font-weight:800;
+    color:#475569;
+    line-height:1.35;
+  }
+
+  .bottom-nav{
+    position:fixed;
+    left:50%;
+    bottom:12px;
+    transform:translateX(-50%);
+    width:min(420px, calc(100% - 24px));
+    background:#fff;
+    border-radius:24px;
+    box-shadow:0 12px 28px rgba(0,0,0,0.12);
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    padding:10px 6px;
+    z-index:999;
+  }
+
+  .bottom-link{
+    text-decoration:none;
+    text-align:center;
+    color:#7a7f87;
+    font-size:12px;
+    font-weight:800;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+  }
+
+  .bottom-link span{
+    font-size:20px;
+    line-height:1;
+  }
+
+  .bottom-link.active{
+    color:#169864;
+  }
+
+  @media (max-width: 420px){
+    .money-grid{
+      gap:10px;
+    }
+
+    .money-value{
+      font-size:18px;
+    }
+
+    .hero-stat strong{
+      font-size:16px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="app-shell">
+
+  <div class="page-fx" aria-hidden="true">
+    <span class="fx-bubble fx-bubble-1"></span>
+    <span class="fx-bubble fx-bubble-2"></span>
+    <span class="fx-bubble fx-bubble-3"></span>
+    <span class="fx-bubble fx-bubble-4"></span>
+    <span class="fx-bubble fx-bubble-5"></span>
+
+    <span class="fx-parcel fx-parcel-1">📦</span>
+    <span class="fx-parcel fx-parcel-2">📦</span>
+    <span class="fx-parcel fx-parcel-3">📦</span>
+    <span class="fx-parcel fx-parcel-4">📦</span>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="top-header">
+      <div class="status-bar">
+        
+      </div>
+
+      <div class="top-row">
+        <div class="left-top">
+          <a href="#" class="top-btn">←</a>
+          <img src="{% static 'img/ds-logo.png' %}" alt="DS Express" class="logo">
+          <div class="page-title">Dashboard</div>
+        </div>
+
+        <a href="{% url 'portal:change_password' %}" class="top-btn">🔔</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="summary-card">
+        <div class="summary-top">
+          <div>
+            <h2 class="summary-title">Account Summary</h2>
+            <div class="summary-sub">Overview of your seller account</div>
+          </div>
+          <div class="profile-badge">👤</div>
+        </div>
+
+        <div class="money-grid">
+          <div class="money-card">
+            <div class="money-label">Balance</div>
+            <div class="money-value">${{ cod_balance|default:0 }}</div>
+          </div>
+
+          <div class="money-card">
+            <div class="money-label">Delivered</div>
+            <div class="money-value">{{ delivered_parcels|default:0 }}</div>
+          </div>
+
+          <div class="money-card">
+            <div class="money-label">Pending</div>
+            <div class="money-value">{{ pending_parcels|default:0 }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <p class="hero-eyebrow">Welcome Back</p>
+        <h3 class="hero-name">{{ seller.name }}</h3>
+        <p class="hero-sub">
+          Manage your orders, reports and parcel tracking in one place.
+        </p>
+
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span>Total</span>
+            <strong>{{ total_parcels|default:0 }}</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Pending</span>
+            <strong>{{ pending_parcels|default:0 }}</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Out</span>
+            <strong>{{ out_for_delivery|default:0 }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <a href="{% url 'portal:booking_seller' %}" class="action-box">
+        <div class="action-left">
+          <div class="action-icon-wrap">
+            <div class="action-icon">📦</div>
+          </div>
+
+          <div class="action-text">
+            <strong>Create Pickup</strong>
+            <p>Book a rider to collect your parcels quickly</p>
+          </div>
+        </div>
+
+        <div class="action-arrow">→</div>
+      </a>
+
+      <div class="menu-grid">
+        <a href="{% url 'portal:orders' %}" class="menu-item">
+          <div class="menu-icon">🛵</div>
+          <span>My Orders</span>
+        </a>
+
+        <a href="{% url 'portal:seller_report' %}" class="menu-item">
+          <div class="menu-icon">📊</div>
+          <span>Report</span>
+        </a>
+
+        <a href="{% url 'portal:tracking' %}" class="menu-item">
+          <div class="menu-icon">📍</div>
+          <span>Tracking</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="{% url 'portal:dashboard' %}" class="bottom-link active">
+      <span>🏠</span>
+      <small>Home</small>
+    </a>
+
+    <a href="tel:+85500000000" class="bottom-link">
+      <span>📞</span>
+      <small>Contact</small>
+    </a>
+
+    <a href="#" class="bottom-link">
+      <span>❔</span>
+      <small>Help</small>
+    </a>
+
+    <a href="{% url 'portal:change_password' %}" class="bottom-link">
+      <span>👤</span>
+      <small>Profile</small>
+    </a>
+  </nav>
+</section>
+{% endblock %}

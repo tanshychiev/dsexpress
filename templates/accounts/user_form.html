@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+  {% if mode == "edit" %}Edit User{% else %}Create User{% endif %}
+{% endblock %}
+
+{% block page_subtitle %}User account + role{% endblock %}
+
+{% block content %}
+<style>
+  .form-wrap{max-width:1200px;margin:0 auto;}
+  .form-card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:22px;}
+  .form-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .form-title{margin:0;font-size:24px;font-weight:900;}
+  .muted{color:#6b7280;font-weight:700;margin-top:2px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:900px){.grid{grid-template-columns:1fr;}}
+  label{display:block;font-weight:900;margin-bottom:6px;color:#111827;}
+
+  .inp,.sel{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid #d0d7de;
+    font-size:15px;
+    outline:none;
+    background:#fff;
+    box-sizing:border-box;
+  }
+  .inp:focus,.sel:focus{
+    border-color:#22c55e;
+    box-shadow:0 0 0 3px rgba(34,197,94,.15);
+  }
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .hint{font-weight:700;color:#6b7280;font-size:13px;}
+
+  .btnx{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 14px;
+    border-radius:10px;
+    border:1px solid #d0d7de;
+    background:#fff;
+    color:#111827;
+    font-weight:800;
+    text-decoration:none;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .btnx:hover{
+    transform:translateY(-1px);
+    border-color:#94a3b8;
+    background:#f8fafc;
+  }
+  .btnx-primary{
+    background:#0f766e;
+    color:#fff;
+    border-color:#0f766e;
+  }
+  .btnx-primary:hover{
+    background:#115e59;
+    border-color:#115e59;
+  }
+  .btnx-sm{
+    padding:7px 10px;
+    font-size:12px;
+    line-height:1;
+  }
+
+  .errbox{
+    margin-bottom:14px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:#fee2e2;
+    border:1px solid #fecaca;
+    color:#991b1b;
+    font-weight:900;
+  }
+  .errlist{
+    margin:6px 0 0;
+    padding-left:18px;
+    color:#b91c1c;
+    font-weight:800;
+    font-size:13px;
+  }
+
+  .check{display:flex;gap:10px;align-items:center;}
+  .check input{width:18px;height:18px;}
+
+  .role-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+</style>
+
+<div class="form-wrap">
+  <div class="form-card">
+
+    {% if form.non_field_errors %}
+      <div class="errbox">
+        <div>Please fix:</div>
+        <ul class="errlist">
+          {% for e in form.non_field_errors %}
+            <li>{{ e }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="form-head">
+      <div>
+        <h2 class="form-title">
+          {% if mode == "edit" %}Edit User{% else %}Create User{% endif %}
+        </h2>
+        <div class="muted">User account + role</div>
+      </div>
+      <a class="btnx" href="{% url 'user_list' %}">Back</a>
+    </div>
+
+    <div style="height:16px;"></div>
+
+    <form method="post" autocomplete="off">
+      {% csrf_token %}
+
+      <div class="grid">
+        <div>
+          <label for="{{ form.username.id_for_label }}">Username</label>
+          {{ form.username }}
+          {% if form.username.errors %}
+            <ul class="errlist">
+              {% for e in form.username.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.email.id_for_label }}">Email</label>
+          {{ form.email }}
+          {% if form.email.errors %}
+            <ul class="errlist">
+              {% for e in form.email.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.first_name.id_for_label }}">First name</label>
+          {{ form.first_name }}
+          {% if form.first_name.errors %}
+            <ul class="errlist">
+              {% for e in form.first_name.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.last_name.id_for_label }}">Last name</label>
+          {{ form.last_name }}
+          {% if form.last_name.errors %}
+            <ul class="errlist">
+              {% for e in form.last_name.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.account_type.id_for_label }}">Account Type</label>
+          {{ form.account_type }}
+          <div class="hint" style="margin-top:6px;">
+            Choose Staff, Seller, or Shipper.
+          </div>
+          {% if form.account_type.errors %}
+            <ul class="errlist">
+              {% for e in form.account_type.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <div id="statusWrap">
+          <label>Status</label>
+          <div class="check">
+            {{ form.is_active }}
+            <div style="font-weight:900;">Active</div>
+          </div>
+          {% if form.is_active.errors %}
+            <ul class="errlist">
+              {% for e in form.is_active.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+
+          <div style="height:10px;"></div>
+
+          <div class="row">
+            {% if mode == "edit" %}
+              <a class="btnx btnx-sm" href="{% url 'user_change_password' form.instance.pk %}">Change Password</a>
+            {% else %}
+              <div class="hint">Password will be asked below for new user</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div id="sellerWrap">
+          <label for="{{ form.seller.id_for_label }}">Seller</label>
+          {{ form.seller }}
+          <div class="hint" style="margin-top:6px;">
+            Required when account type is Seller.
+          </div>
+          {% if form.seller.errors %}
+            <ul class="errlist">
+              {% for e in form.seller.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <div id="shipperWrap">
+          <label for="{{ form.shipper.id_for_label }}">Shipper</label>
+          {{ form.shipper }}
+          <div class="hint" style="margin-top:6px;">
+            Required when account type is Shipper.
+          </div>
+          {% if form.shipper.errors %}
+            <ul class="errlist">
+              {% for e in form.shipper.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <div id="roleWrap">
+          <div class="role-head">
+            <label for="{{ form.groups.id_for_label }}" style="margin-bottom:0;">Role</label>
+            <div class="row">
+              <a class="btnx btnx-sm" href="{% url 'role_list' %}">Permissions</a>
+            </div>
+          </div>
+
+          <div style="height:6px;"></div>
+
+          {{ form.groups }}
+
+          <div class="hint" style="margin-top:6px;">
+            Required when account type is Staff.
+          </div>
+
+          {% if form.groups.errors %}
+            <ul class="errlist">
+              {% for e in form.groups.errors %}
+                <li>{{ e }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if mode != "edit" %}
+        <div style="height:14px;"></div>
+
+        <div class="grid">
+          <div>
+            <label for="{{ form.password1.id_for_label }}">Password (min 6 chars)</label>
+            <div class="row">
+              {{ form.password1 }}
+              <button type="button" class="btnx" onclick="togglePw('{{ form.password1.id_for_label }}', this)">Show</button>
+            </div>
+            {% if form.password1.errors %}
+              <ul class="errlist">
+                {% for e in form.password1.errors %}
+                  <li>{{ e }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
+          <div>
+            <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+            <div class="row">
+              {{ form.password2 }}
+              <button type="button" class="btnx" onclick="togglePw('{{ form.password2.id_for_label }}', this)">Show</button>
+            </div>
+            {% if form.password2.errors %}
+              <ul class="errlist">
+                {% for e in form.password2.errors %}
+                  <li>{{ e }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      <div style="height:16px;"></div>
+
+      <div class="row">
+        <button class="btnx btnx-primary" type="submit">Save</button>
+        <a class="btnx" href="{% url 'user_list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
+    const textLike = document.querySelectorAll("input[type='text'], input[type='email'], input[type='password'], select");
+    textLike.forEach(function(el){
+      if(!el.classList.contains("inp") && !el.classList.contains("sel")){
+        if(el.tagName.toLowerCase() === "select"){
+          el.classList.add("sel");
+        }else{
+          el.classList.add("inp");
+        }
+      }
+    });
+
+    const accountType = document.getElementById("id_account_type");
+    const roleWrap = document.getElementById("roleWrap");
+    const sellerWrap = document.getElementById("sellerWrap");
+    const shipperWrap = document.getElementById("shipperWrap");
+
+    function refreshAccountFields(){
+      const v = accountType ? accountType.value : "staff";
+
+      if(roleWrap){
+        roleWrap.style.display = (v === "staff") ? "" : "none";
+      }
+
+      if(sellerWrap){
+        sellerWrap.style.display = (v === "seller") ? "" : "none";
+      }
+
+      if(shipperWrap){
+        shipperWrap.style.display = (v === "shipper") ? "" : "none";
+      }
+    }
+
+    if(accountType){
+      accountType.addEventListener("change", refreshAccountFields);
+      refreshAccountFields();
+    }
+  });
+
+  function togglePw(id, btn){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.type = (el.type === "password") ? "text" : "password";
+    btn.textContent = (el.type === "password") ? "Show" : "Hide";
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block page_title %}Delete Role{% endblock %}
+{% block page_subtitle %}Confirm action{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:720px;margin:0 auto;">
+  <h2 style="margin-top:0;">Delete Role</h2>
+
+  <div style="padding:12px 14px;border-radius:12px;background:#fee2e2;border:1px solid #fecaca;color:#991b1b;font-weight:800;">
+    Are you sure you want to delete role: <b>{{ role.name }}</b> ?
+  </div>
+
+  <div style="height:14px;"></div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" type="submit">Yes, Delete</button>
+      <a class="btn" href="{% url 'role_list' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "customerportal/base.html" %}
+{% include "customerportal/navbar.html" %}
+{% load static %}
+
+{% block title %}Booking History{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'customerportal/css/booking_history.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="history-app">
+  <div class="history-phone">
+
+    <div class="history-header">
+      <div class="history-header-top">
+        <a href="{% url 'portal:booking_seller' %}" class="header-icon" aria-label="Back">←</a>
+
+        <div class="history-brand">
+          <div class="history-logo">DS</div>
+          <h1>Booking History</h1>
+        </div>
+
+        <a href="{% url 'portal:dashboard' %}" class="header-icon" aria-label="Home">⌂</a>
+      </div>
+    </div>
+
+    <div class="history-body">
+      {% if bookings %}
+        <div class="history-list">
+          {% for booking in bookings %}
+            <div class="history-card">
+              <div class="history-card-top">
+                <div>
+                  <h3>Booking #{{ booking.id }}</h3>
+                  <p>{{ booking.created_at|date:"d/m/Y H:i" }}</p>
+                </div>
+
+                <span class="status-badge status-{{ booking.status|lower }}">
+                  {{ booking.get_status_display }}
+                </span>
+              </div>
+
+              <div class="history-info-grid">
+                <div class="info-box">
+                  <span>Phone</span>
+                  <strong>{{ booking.sender_phone }}</strong>
+                </div>
+
+                <div class="info-box">
+                  <span>Total Package</span>
+                  <strong>{{ booking.total_pc }}</strong>
+                </div>
+              </div>
+
+              <div class="info-box full-box">
+                <span>Pickup Address</span>
+                <strong>{{ booking.sender_address }}</strong>
+              </div>
+
+              {% if booking.remark %}
+              <div class="info-box full-box">
+                <span>Remark</span>
+                <strong>{{ booking.remark }}</strong>
+              </div>
+              {% endif %}
+
+              <div class="timeline-row">
+                <div class="time-card">
+                  <span>Est. Pick Up</span>
+                  <strong>{{ booking.pickup_date|date:"d/m/Y" }}</strong>
+                  <p>{{ booking.pickup_time }}</p>
+                </div>
+
+                <div class="time-sep">→</div>
+
+                <div class="time-card">
+                  <span>Est. Arrive</span>
+                  <strong>{{ booking.arrive_date|date:"d/m/Y" }}</strong>
+                  <p>{{ booking.arrive_time }}</p>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-history">
+          <div class="empty-icon">📦</div>
+          <h3>No booking yet</h3>
+          <p>Your booking history will appear here.</p>
+          <a href="{% url 'portal:booking_seller' %}" class="new-booking-btn">Create Booking</a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+{% endblock %}

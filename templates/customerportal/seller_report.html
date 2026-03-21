@@ -1,0 +1,882 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family:Arial,sans-serif;
+      background:#f3f4f6;
+      color:#263238;
+    }
+
+    .phone-wrap{
+      max-width:480px;
+      margin:0 auto;
+      min-height:100vh;
+      background:#f3f4f6;
+      padding-bottom:28px;
+    }
+
+    .top-header{
+      background:linear-gradient(135deg,#179b67,#22b276);
+      color:#fff;
+      padding:18px 18px 28px;
+      border-bottom-left-radius:42px;
+      box-shadow:0 8px 24px rgba(20,134,88,.20);
+    }
+
+    .status-bar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size:15px;
+      font-weight:800;
+      margin-bottom:18px;
+      opacity:.96;
+    }
+
+    .top-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .left-top{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+
+    .top-btn{
+      color:#fff;
+      text-decoration:none;
+      font-size:22px;
+      line-height:1;
+    }
+
+    .logo{
+      width:54px;
+      height:54px;
+      border-radius:50%;
+      background:#fff;
+      padding:4px;
+      object-fit:cover;
+      box-shadow:0 4px 14px rgba(0,0,0,.12);
+    }
+
+    .page-title{
+      font-size:21px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+
+    .content{
+      padding:16px;
+    }
+
+    .card{
+      background:#fff;
+      border-radius:22px;
+      box-shadow:0 8px 18px rgba(0,0,0,.07);
+      padding:14px;
+      margin-bottom:14px;
+    }
+
+    .section-title{
+      font-size:15px;
+      font-weight:900;
+      color:#334155;
+      margin-bottom:10px;
+    }
+
+    .date-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .field-box{
+      position:relative;
+    }
+
+    .field-box label{
+      display:block;
+      font-size:12px;
+      font-weight:800;
+      color:#475569;
+      margin-bottom:6px;
+    }
+
+    .date-input{
+      width:100%;
+      height:42px;
+      border:none;
+      outline:none;
+      border-radius:14px;
+      background:#edf1f4;
+      padding:0 40px 0 12px;
+      font-size:13px;
+      color:#334155;
+      appearance:none;
+    }
+
+    .field-box::after{
+      content:"📅";
+      position:absolute;
+      right:12px;
+      top:38px;
+      transform:translateY(-50%);
+      font-size:13px;
+      pointer-events:none;
+    }
+
+    .view-btn{
+      width:100%;
+      height:46px;
+      border:none;
+      border-radius:999px;
+      margin-top:15px;
+      background:linear-gradient(135deg,#179b67,#22b276);
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(20,134,88,.16);
+    }
+
+    .hidden{
+      display:none;
+    }
+
+    .report-box{
+      animation:fadeUp .28s ease;
+    }
+
+    @keyframes fadeUp{
+      from{ opacity:0; transform:translateY(10px); }
+      to{ opacity:1; transform:translateY(0); }
+    }
+
+    .chart-card{
+      background:#fff;
+      border-radius:22px;
+      box-shadow:0 8px 18px rgba(0,0,0,.07);
+      padding:14px;
+      margin-bottom:14px;
+    }
+
+    .chart-row{
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+
+    .chart-left{
+      width:145px;
+      height:145px;
+      position:relative;
+      flex:0 0 145px;
+    }
+
+    .chart-center{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      pointer-events:none;
+    }
+
+    .chart-center .big{
+      font-size:30px;
+      line-height:1;
+      font-weight:900;
+      color:#1f2937;
+    }
+
+    .chart-center .small{
+      margin-top:4px;
+      font-size:12px;
+      font-weight:700;
+      color:#64748b;
+    }
+
+    .chart-right{
+      flex:1;
+    }
+
+    .bar-wrap{
+      margin-bottom:10px;
+      border-radius:999px;
+      overflow:hidden;
+      background:#edf1f4;
+    }
+
+    .bar{
+      min-height:29px;
+      display:flex;
+      align-items:center;
+      padding:0 12px;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .bar-green{
+      color:#fff;
+      background:linear-gradient(90deg,#0e9d66,#1bbc79);
+    }
+
+    .bar-yellow{
+      color:#5b4a00;
+      background:linear-gradient(90deg,#e0b81a,#efd054);
+    }
+
+    .bar-red{
+      color:#fff;
+      background:linear-gradient(90deg,#db4c42,#ef6d61);
+    }
+
+    .legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:10px;
+      font-size:12px;
+      color:#64748b;
+      font-weight:700;
+    }
+
+    .legend-item{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      display:inline-block;
+    }
+
+    .dot-green{ background:#1bbc79; }
+    .dot-yellow{ background:#efd054; }
+    .dot-red{ background:#ef6d61; }
+
+    .money-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .money-card{
+      background:linear-gradient(180deg,#eaf8f0 0%, #dff3e7 100%);
+      border-radius:16px;
+      text-align:center;
+      padding:14px 8px;
+      box-shadow:0 6px 14px rgba(23,132,88,.10);
+    }
+
+    .money-label{
+      font-size:13px;
+      font-weight:700;
+      color:#64748b;
+      margin-bottom:8px;
+    }
+
+    .money-value{
+      font-size:22px;
+      font-weight:900;
+      color:#1f2937;
+    }
+
+    .download-card{
+      background:#fff;
+      border-radius:22px;
+      box-shadow:0 8px 18px rgba(0,0,0,.07);
+      padding:14px;
+      margin-bottom:14px;
+    }
+
+    .download-title{
+      width:100%;
+      height:38px;
+      border-radius:20px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#deefe5;
+      font-size:13px;
+      font-weight:800;
+      color:#31473a;
+      margin-bottom:14px;
+    }
+
+    .download-grid{
+      display:flex;
+      justify-content:center;
+      gap:18px;
+    }
+
+    .download-btn{
+      border:none;
+      background:none;
+      text-decoration:none;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      color:inherit;
+    }
+
+    .download-icon{
+      width:62px;
+      height:62px;
+      border-radius:18px;
+      background:#fff;
+      box-shadow:0 8px 18px rgba(0,0,0,.12);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+      font-weight:900;
+      transition:.2s ease;
+      border:2px solid #edf1f4;
+    }
+
+    .download-btn:hover .download-icon{
+      transform:translateY(-2px);
+    }
+
+    .icon-png{ color:#0ea5e9; }
+    .icon-pdf{ color:#dc2626; }
+    .icon-xls{ color:#15803d; }
+
+    .download-btn span{
+      font-size:12px;
+      font-weight:700;
+      color:#475569;
+    }
+
+    .table-card{
+      background:#fff;
+      border-radius:22px;
+      box-shadow:0 8px 18px rgba(0,0,0,.07);
+      padding:14px;
+      overflow:auto;
+      margin-bottom:14px;
+    }
+
+    .shop-name{
+      font-size:16px;
+      font-weight:900;
+      color:#0f172a;
+      margin-bottom:12px;
+    }
+
+    .table-scroll{
+      overflow-x:auto;
+      overflow-y:hidden;
+      -webkit-overflow-scrolling:touch;
+    }
+
+    .rtable{
+      width:100%;
+      min-width:360px;
+      border-collapse:collapse;
+      background:#fff;
+      table-layout:fixed;
+    }
+
+    .rtable th{
+      background:#144a83;
+      color:#fff;
+      padding:9px 8px;
+      border:1px solid #d1d9e0;
+      font-size:12px;
+      text-align:center;
+      white-space:nowrap;
+    }
+
+    .rtable td{
+      padding:8px;
+      border:1px solid #dde5ec;
+      font-size:12px;
+      vertical-align:top;
+    }
+
+    .rtable td.center{
+      text-align:center;
+    }
+
+    .rtable td.num{
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    .rtable th:nth-child(1){ width:20px; }
+    .rtable th:nth-child(2){ width:120px; }
+    .rtable th:nth-child(3){ width:80px; }
+    .rtable th:nth-child(4){ width:50px; }
+    .rtable th:nth-child(5){ width:70px; }
+
+    .rtable td:nth-child(5){
+      text-align:center;
+      vertical-align:middle;
+      font-weight:600;
+    }
+
+    .location-col{
+      max-width:120px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .row-pending{
+      background:#fff7d0;
+    }
+
+    .row-returned{
+      background:#e1f5e1;
+    }
+
+    .empty-note{
+      background:#fff;
+      border-radius:18px;
+      box-shadow:0 8px 18px rgba(0,0,0,.07);
+      padding:16px;
+      text-align:center;
+      font-size:13px;
+      color:#64748b;
+      font-weight:700;
+    }
+
+    .flatpickr-calendar{
+      border-radius:16px !important;
+      box-shadow:0 10px 24px rgba(0,0,0,.16) !important;
+      font-size:14px !important;
+    }
+
+    .flatpickr-day.selected{
+      background:#16a466 !important;
+      border-color:#16a466 !important;
+    }
+
+    .flatpickr-day.today{
+      border-color:#16a466 !important;
+    }
+
+    .flatpickr-months{
+      border-radius:16px 16px 0 0;
+    }
+
+    @media (max-width: 520px){
+      .flatpickr-calendar{
+        position:fixed !important;
+        top:50% !important;
+        left:50% !important;
+        transform:translate(-50%, -50%) !important;
+        width:calc(100vw - 24px) !important;
+        max-width:430px !important;
+        height:auto !important;
+        max-height:none !important;
+        border-radius:18px !important;
+        margin:0 !important;
+        box-shadow:0 14px 40px rgba(0,0,0,.22) !important;
+        padding:12px 10px 10px !important;
+        z-index:99999 !important;
+      }
+
+      .flatpickr-months{
+        padding:0 6px;
+      }
+
+      .flatpickr-innerContainer,
+      .flatpickr-rContainer,
+      .flatpickr-days,
+      .dayContainer{
+        width:100% !important;
+        max-width:none !important;
+      }
+
+      .dayContainer{
+        min-width:100% !important;
+        height:auto !important;
+      }
+
+      .flatpickr-days{
+        height:auto !important;
+      }
+
+      .flatpickr-day{
+        height:44px !important;
+        line-height:44px !important;
+        max-width:none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-wrap">
+    <div class="top-header">
+      <div class="status-bar">
+        <div>08:36</div>
+        <div>📶 4G 🔋</div>
+      </div>
+
+      <div class="top-row">
+        <div class="left-top">
+          <a href="javascript:history.back()" class="top-btn">←</a>
+          <img src="{% static 'img/ds-logo.png' %}" alt="DS Express" class="logo">
+          <div class="page-title">Report</div>
+        </div>
+
+        <a href="#" class="top-btn">🔔</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <div class="section-title">Delivery Date</div>
+        <div class="date-grid">
+          <div class="field-box">
+            <label>From:</label>
+            <input
+              type="text"
+              id="delivery_from"
+              class="date-input"
+              placeholder="Select date"
+              value="{% if delivery_from %}{{ delivery_from|date:'Y-m-d' }}{% endif %}"
+            >
+          </div>
+
+          <div class="field-box">
+            <label>To:</label>
+            <input
+              type="text"
+              id="delivery_to"
+              class="date-input"
+              placeholder="Select date"
+              value="{% if delivery_to %}{{ delivery_to|date:'Y-m-d' }}{% endif %}"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Pending Date</div>
+        <div class="date-grid">
+          <div class="field-box">
+            <label>From:</label>
+            <input
+              type="text"
+              id="pending_from"
+              class="date-input"
+              placeholder="Select date"
+              value="{% if pending_from %}{{ pending_from|date:'Y-m-d' }}{% endif %}"
+            >
+          </div>
+
+          <div class="field-box">
+            <label>To:</label>
+            <input
+              type="text"
+              id="pending_to"
+              class="date-input"
+              placeholder="Select date"
+              value="{% if pending_to %}{{ pending_to|date:'Y-m-d' }}{% endif %}"
+            >
+          </div>
+        </div>
+
+        <button type="button" class="view-btn" id="viewReportBtn">View Report</button>
+      </div>
+
+      <div id="reportSection" class="{% if not show_results %}hidden{% endif %}">
+        <div class="report-box">
+          <div class="chart-card">
+            <div class="chart-row">
+              <div class="chart-left">
+                <canvas id="reportChart"></canvas>
+                <div class="chart-center">
+                  <div class="big">{{ top_summary.total_sent|default:0 }}</div>
+                  <div class="small">Orders</div>
+                </div>
+              </div>
+
+              <div class="chart-right">
+                <div class="bar-wrap">
+                  <div class="bar bar-green" style="width:{% if top_summary.total_sent %}{% widthratio top_summary.total_done top_summary.total_sent 100 %}{% else %}0{% endif %}%;">
+                    Done: {{ top_summary.total_done|default:0 }}
+                  </div>
+                </div>
+
+                <div class="bar-wrap">
+                  <div class="bar bar-yellow" style="width:{% if top_summary.total_sent %}{% widthratio top_summary.total_pending top_summary.total_sent 100 %}{% else %}0{% endif %}%;">
+                    Pending: {{ top_summary.total_pending|default:0 }}
+                  </div>
+                </div>
+
+                <div class="bar-wrap">
+                  <div class="bar bar-red" style="width:{% if top_summary.total_sent %}{% widthratio top_summary.total_return top_summary.total_sent 100 %}{% else %}0{% endif %}%;">
+                    Return: {{ top_summary.total_return|default:0 }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="legend">
+              <div class="legend-item"><span class="dot dot-green"></span> Done</div>
+              <div class="legend-item"><span class="dot dot-yellow"></span> Pending</div>
+              <div class="legend-item"><span class="dot dot-red"></span> Return</div>
+            </div>
+          </div>
+
+          <div class="money-grid">
+            <div class="money-card">
+              <div class="money-label">COD</div>
+              <div class="money-value">${{ top_summary.total_cod|floatformat:2 }}</div>
+            </div>
+            <div class="money-card">
+              <div class="money-label">Fee</div>
+              <div class="money-value">${{ top_summary.total_fee|floatformat:2 }}</div>
+            </div>
+            <div class="money-card">
+              <div class="money-label">Pay</div>
+              <div class="money-value">${{ top_summary.total_pay|floatformat:2 }}</div>
+            </div>
+          </div>
+
+          <div class="download-card">
+            <div class="download-title">DOWNLOAD REPORT AS</div>
+            <div class="download-grid">
+              <button type="button" class="download-btn" id="pngBtn">
+                <div class="download-icon icon-png">PNG</div>
+                <span>PNG</span>
+              </button>
+
+              <button type="button" class="download-btn" id="pdfBtn">
+                <div class="download-icon icon-pdf">PDF</div>
+                <span>PDF</span>
+              </button>
+
+              <button type="button" class="download-btn" id="excelBtn">
+                <div class="download-icon icon-xls">XLS</div>
+                <span>Excel</span>
+              </button>
+            </div>
+          </div>
+
+          {% for s in seller_summaries %}
+          <div class="table-card">
+            <div class="shop-name">Shop: {{ s.seller_key }}</div>
+
+            <div class="table-scroll">
+              <table class="rtable">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Location</th>
+                    <th>Phone</th>
+                    <th>COD</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for o in s.rows %}
+                    {% if o.clear_delivery %}
+                      <tr class="row-returned">
+                    {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+                      <tr>
+                    {% else %}
+                      <tr class="row-pending">
+                    {% endif %}
+
+                      <td class="center">{{ forloop.counter }}</td>
+
+                      <td class="location-col" title="{{ o.receiver_address|default_if_none:'' }}">
+                        {{ o.receiver_address|default_if_none:"" }}
+                      </td>
+
+                      <td>{{ o.receiver_phone|default_if_none:"" }}</td>
+
+                      {% if o.clear_delivery %}
+                        <td class="num">0.00</td>
+                        <td>DONE RETURN</td>
+                      {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+                        <td class="num">{{ o.cod|default_if_none:"" }}</td>
+                        <td>DONE</td>
+                      {% else %}
+                        <td class="num">0.00</td>
+                        <td>PENDING</td>
+                      {% endif %}
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="5">No data</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endfor %}
+
+          {% if show_results and not seller_summaries %}
+          <div class="empty-note">
+            No data found for selected date range.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const reportUrl = "{% url 'portal:seller_report' %}";
+      const pngUrl = "{% url 'delivery_report_png' %}";
+      const pdfUrl = "{% url 'delivery_report_pdf' %}";
+      const sellerName = "{{ request.user.seller_profile.name|default:request.user.username|slugify }}";
+
+      function toDateTimeLocal(dateStr, endOfDay = false) {
+        if (!dateStr) return "";
+        return endOfDay ? `${dateStr}T23:59` : `${dateStr}T00:00`;
+      }
+
+      function getRawDates() {
+        const deliveryFrom = document.getElementById("delivery_from").value;
+        const deliveryTo = document.getElementById("delivery_to").value;
+        const pendingFrom = document.getElementById("pending_from").value;
+        const pendingTo = document.getElementById("pending_to").value;
+        return { deliveryFrom, deliveryTo, pendingFrom, pendingTo };
+      }
+
+      function buildParams(includeAction = true, actionValue = "show") {
+        const { deliveryFrom, deliveryTo, pendingFrom, pendingTo } = getRawDates();
+
+        const params = new URLSearchParams();
+
+        if (deliveryFrom) params.set("delivery_date_from", toDateTimeLocal(deliveryFrom, false));
+        if (deliveryTo) params.set("delivery_date_to", toDateTimeLocal(deliveryTo, true));
+        if (pendingFrom) params.set("pending_date_from", toDateTimeLocal(pendingFrom, false));
+        if (pendingTo) params.set("pending_date_to", toDateTimeLocal(pendingTo, true));
+
+        if (includeAction) {
+          params.set("action", actionValue);
+        }
+
+        return params.toString();
+      }
+
+      function buildFileBaseName() {
+        const { deliveryFrom, deliveryTo, pendingFrom, pendingTo } = getRawDates();
+        const fromDate = deliveryFrom || pendingFrom || "from";
+        const toDate = deliveryTo || pendingTo || "to";
+        return `${sellerName}_${fromDate}_to_${toDate}`;
+      }
+
+      const viewBtn = document.getElementById("viewReportBtn");
+      const excelBtn = document.getElementById("excelBtn");
+      const pdfBtn = document.getElementById("pdfBtn");
+      const pngBtn = document.getElementById("pngBtn");
+
+      if (viewBtn) {
+        viewBtn.onclick = function () {
+          window.location.href = `${reportUrl}?${buildParams(true, "show")}`;
+        };
+      }
+
+      if (excelBtn) {
+        excelBtn.onclick = function () {
+          const baseName = buildFileBaseName();
+          window.location.href = `${reportUrl}?${buildParams(true, "export")}&download_name=${encodeURIComponent(baseName)}`;
+        };
+      }
+
+      if (pdfBtn) {
+        pdfBtn.onclick = function () {
+          const baseName = buildFileBaseName();
+          window.location.href = `${pdfUrl}?${buildParams(false)}&download_name=${encodeURIComponent(baseName)}`;
+        };
+      }
+
+      if (pngBtn) {
+        pngBtn.onclick = function () {
+          const baseName = buildFileBaseName();
+          window.location.href = `${pngUrl}?${buildParams(false)}&download_name=${encodeURIComponent(baseName)}`;
+        };
+      }
+
+      const totalSent = {{ top_summary.total_sent|default:0 }};
+      const totalDone = {{ top_summary.total_done|default:0 }};
+      const totalPending = {{ top_summary.total_pending|default:0 }};
+      const totalReturn = {{ top_summary.total_return|default:0 }};
+
+      const chartCanvas = document.getElementById("reportChart");
+      if (chartCanvas && totalSent > 0) {
+        new Chart(chartCanvas, {
+          type: "doughnut",
+          data: {
+            labels: ["Done", "Pending", "Return"],
+            datasets: [{
+              data: [totalDone, totalPending, totalReturn],
+              backgroundColor: ["#1bbc79", "#efd054", "#ef6d61"],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "72%",
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+      }
+
+      flatpickr("#delivery_from", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+        disableMobile: true
+      });
+
+      flatpickr("#delivery_to", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+        disableMobile: true
+      });
+
+      flatpickr("#pending_from", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+        disableMobile: true
+      });
+
+      flatpickr("#pending_to", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+        disableMobile: true
+      });
+    })();
+  </script>
+</body>
+</html>

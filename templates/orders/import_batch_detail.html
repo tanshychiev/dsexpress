@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .wrap{
+    padding:18px 22px;
+  }
+
+  .card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:14px;
+    box-shadow:0 10px 28px rgba(15,23,42,.06);
+  }
+
+  .title{
+    font-size:18px;
+    font-weight:900;
+    color:#0f172a;
+    margin:0;
+  }
+
+  .muted{
+    color:#64748b;
+    font-weight:800;
+  }
+
+  .top{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+
+  .btn{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #d1d5db;
+    background:#fff;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:none;
+    color:#0f172a;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .btn:hover{
+    opacity:.95;
+  }
+
+  .btn-primary{
+    background:#0f766e;
+    border-color:#0f766e;
+    color:#fff;
+  }
+
+  .btn-danger{
+    background:#ef4444;
+    border-color:#ef4444;
+    color:#fff;
+  }
+
+  .btn-light{
+    background:#fff;
+    color:#0f172a;
+  }
+
+  input{
+    padding:12px 12px;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    background:#fff;
+    outline:none;
+    font-size:14px;
+  }
+
+  input:focus{
+    border-color:#0f766e;
+    box-shadow:0 0 0 3px rgba(15,118,110,.12);
+  }
+
+  .summary-row{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin:12px 0 14px;
+  }
+
+  .summary-box{
+    min-width:120px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:12px 14px;
+  }
+
+  .summary-label{
+    font-size:12px;
+    font-weight:800;
+    color:#64748b;
+    margin-bottom:4px;
+  }
+
+  .summary-value{
+    font-size:28px;
+    font-weight:900;
+    color:#0f172a;
+    line-height:1.1;
+  }
+
+  .search-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:end;
+    margin-bottom:12px;
+  }
+
+  .toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    margin:10px 0 12px;
+  }
+
+  .left,.right{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .table-wrap{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    overflow:auto;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:12px;
+    min-width:1200px;
+  }
+
+  th,td{
+    padding:10px 8px;
+    border-bottom:1px solid #eef2f7;
+    vertical-align:top;
+    white-space:normal;
+  }
+
+  th{
+    background:#f8fafc;
+    text-align:left;
+    font-weight:900;
+    color:#0f172a;
+    position:sticky;
+    top:0;
+    z-index:1;
+  }
+
+  a.link{
+    font-weight:900;
+    color:#0f766e;
+    text-decoration:none;
+  }
+
+  a.link:hover{
+    text-decoration:underline;
+  }
+
+  .cb{
+    width:20px;
+    height:20px;
+    transform:scale(1.15);
+    accent-color:#0f766e;
+    cursor:pointer;
+  }
+
+  .td-center{
+    text-align:center;
+    vertical-align:middle;
+  }
+
+  .empty{
+    text-align:center;
+    color:#64748b;
+    font-weight:800;
+    padding:18px 10px;
+  }
+
+  .inline-form{
+    margin:0;
+  }
+
+  @media (max-width: 768px){
+    .wrap{
+      padding:14px;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <div class="top">
+
+  <div style="display:flex;flex-direction:column;gap:10px;">
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div class="title">Import Batch #{{ batch.id }}</div>
+
+      <form method="post"
+            action="{% url 'delete_import_batch' batch.id %}"
+            class="inline-form"
+            onsubmit="return confirm('Delete this whole batch?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete Batch</button>
+      </form>
+    </div>
+
+    <div class="muted">
+      {{ batch.filename }} • {{ batch.created_at|date:"Y-m-d H:i" }}
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-box">
+        <div class="summary-label">Total Orders</div>
+        <div class="summary-value">{{ total_orders }}</div>
+      </div>
+
+      <div class="summary-box">
+        <div class="summary-label">Total Shops</div>
+        <div class="summary-value">{{ total_shops }}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <a class="btn btn-light" href="{% url 'import_orders' %}">Back to Import</a>
+    <a class="btn btn-light" href="{% url 'order_list' %}">Back to Orders</a>
+  </div>
+
+</div>
+
+    <form method="get" class="search-row">
+      <div>
+        <label style="font-weight:900;font-size:12px;color:#334155">Search</label><br>
+        <input
+          name="q"
+          value="{{ request.GET.q|default:'' }}"
+          placeholder="tracking / phone / address / order code"
+          style="min-width:360px;max-width:100%;"
+        >
+      </div>
+      <div>
+        <label style="visibility:hidden">x</label><br>
+        <button class="btn btn-primary" type="submit">Search</button>
+      </div>
+    </form>
+
+    <div class="toolbar">
+      <div class="left">
+        <a class="btn" href="{% url 'download_import_batch_excel' batch.id %}?{{ params }}">Download Excel</a>
+      </div>
+
+      <div class="right">
+        <button class="btn btn-primary" type="button" id="btnPrint">Print</button>
+        <button class="btn btn-danger" type="button" id="btnDelete">Delete</button>
+        <button class="btn" type="button" id="toggleAll">Check All</button>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'order_bulk_action' %}" id="bulkForm">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="bulkAction" value="">
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:52px;">No</th>
+              <th>Tracking</th>
+              <th>Create Date</th>
+              <th>Shop</th>
+              <th>Seller Name</th>
+              <th>Order Code</th>
+              <th>Receiver Location</th>
+              <th>Receiver Phone</th>
+              <th>Receiver Name</th>
+              <th>Price</th>
+              <th>COD</th>
+              <th>Status</th>
+              <th style="width:70px;">Printed</th>
+              <th style="width:55px;" class="td-center">✓</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in page_obj %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                  <a class="link" href="{% url 'order_created' o.id %}">{{ o.tracking_no }}</a>
+                </td>
+                <td>{% if o.created_at %}{{ o.created_at|date:"Y-m-d H:i" }}{% endif %}</td>
+                <td>{{ o.seller.name|default:"" }}</td>
+                <td>{{ o.seller_name|default:"" }}</td>
+                <td>{{ o.seller_order_code|default:"" }}</td>
+                <td>{{ o.receiver_address|default:"" }}</td>
+                <td>{{ o.receiver_phone|default:"" }}</td>
+                <td>{{ o.receiver_name|default:"" }}</td>
+                <td>${{ o.price }}</td>
+                <td>${{ o.cod }}</td>
+                <td>{{ o.status }}</td>
+                <td class="td-center">{{ o.print_count|default:0 }}</td>
+                <td class="td-center">
+                  <input type="checkbox" name="ids" value="{{ o.id }}" class="cb">
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="14" class="empty">No orders in this batch.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  const bulkForm = document.getElementById("bulkForm");
+  const bulkAction = document.getElementById("bulkAction");
+  const btnPrint = document.getElementById("btnPrint");
+  const btnDelete = document.getElementById("btnDelete");
+  const toggleAll = document.getElementById("toggleAll");
+
+  function getCheckboxes() {
+    return Array.from(document.querySelectorAll(".cb"));
+  }
+
+  function getCheckedCount() {
+    return document.querySelectorAll(".cb:checked").length;
+  }
+
+  function hasSelected() {
+    return getCheckedCount() > 0;
+  }
+
+  function refreshToggleText() {
+    const boxes = getCheckboxes();
+    const checked = getCheckedCount();
+
+    if (boxes.length > 0 && checked === boxes.length) {
+      toggleAll.textContent = "Uncheck All";
+    } else {
+      toggleAll.textContent = "Check All";
+    }
+  }
+
+  btnPrint.addEventListener("click", () => {
+    if (!hasSelected()) {
+      alert("Please select at least 1 order.");
+      return;
+    }
+    bulkAction.value = "print";
+    bulkForm.submit();
+  });
+
+  btnDelete.addEventListener("click", () => {
+    if (!hasSelected()) {
+      alert("Please select at least 1 order.");
+      return;
+    }
+    if (!confirm("Delete selected orders?")) return;
+    bulkAction.value = "delete";
+    bulkForm.submit();
+  });
+
+  toggleAll.addEventListener("click", () => {
+    const boxes = getCheckboxes();
+    const checked = getCheckedCount();
+    const shouldCheck = !(boxes.length > 0 && checked === boxes.length);
+
+    boxes.forEach(cb => {
+      cb.checked = shouldCheck;
+    });
+
+    refreshToggleText();
+  });
+
+  document.addEventListener("change", function(e){
+    if (e.target.classList.contains("cb")) {
+      refreshToggleText();
+    }
+  });
+
+  refreshToggleText();
+})();
+</script>
+{% endblock %}

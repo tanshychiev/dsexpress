@@ -1,0 +1,351 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Delivery Report PNG</title>
+  <style>
+    body{
+      margin:0;
+      padding:20px;
+      background:#ffffff;
+      font-family:Arial,sans-serif;
+    }
+
+    .report-wrapper{
+      margin-top:14px;
+      padding:18px;
+      border-radius:18px;
+      background:#fff;
+    }
+
+    .page-title-main{
+      text-align:center;
+      margin:0 0 14px;
+      font-size:22px;
+      font-weight:900;
+      color:#17324d;
+    }
+
+    .selected-range-box{
+      background:#f8fafc;
+      border:1px solid #dbe3ec;
+      border-radius:16px;
+      padding:14px 16px;
+      margin-bottom:14px;
+    }
+
+    .selected-range-title{
+      font-size:14px;
+      font-weight:900;
+      color:#17324d;
+      margin-bottom:6px;
+    }
+
+    .selected-range-line{
+      font-size:13px;
+      color:#475569;
+      line-height:1.5;
+    }
+
+    .summary-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(180px,1fr));
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .summary-card{
+      background:#fff;
+      border:1px solid #dbe3ec;
+      border-radius:16px;
+      padding:16px;
+      box-shadow:0 3px 10px rgba(0,0,0,.03);
+    }
+
+    .summary-label{
+      font-size:13px;
+      color:#64748b;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+
+    .summary-value{
+      font-size:28px;
+      font-weight:900;
+      color:#17324d;
+      line-height:1;
+    }
+
+    .shop-section{
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:18px;
+      padding:16px;
+      margin-bottom:18px;
+      box-shadow:0 4px 16px rgba(0,0,0,.04);
+    }
+
+    .shop-header-title{
+      font-size:22px;
+      font-weight:900;
+      color:#17324d;
+      margin-bottom:6px;
+      text-align:center;
+    }
+
+    .shop-header-line{
+      font-size:13px;
+      color:#4b5563;
+      margin-bottom:2px;
+      text-align:center;
+    }
+
+    .shop-name{
+      font-size:16px;
+      font-weight:900;
+      color:#0f172a;
+      text-align:left;
+      margin-bottom:10px;
+    }
+
+    .table-wrap{
+      overflow:visible;
+      border-radius:14px;
+      width:100%;
+    }
+
+    .rtable{
+      width:100%;
+      min-width:1450px;
+      border-collapse:collapse;
+      background:#fff;
+    }
+
+    .rtable th{
+      background:#124b84;
+      color:#fff;
+      padding:9px 8px;
+      border:1px solid #d0d7df;
+      font-size:12px;
+      text-align:center;
+      white-space:nowrap;
+    }
+
+    .rtable td{
+      padding:8px 8px;
+      border:1px solid #d9e0e8;
+      font-size:12px;
+      vertical-align:top;
+    }
+
+    .rtable td.num{
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    .rtable td.center{
+      text-align:center;
+    }
+
+    .row-pending{
+      background:#fff6cc;
+    }
+
+    .row-returned{
+      background:#dff4df;
+    }
+
+    .totals-box{
+      margin-top:12px;
+      display:flex;
+      justify-content:flex-end;
+    }
+
+    .totals-inner{
+      min-width:320px;
+      background:#f8fafc;
+      border:1px solid #dbe3ec;
+      border-radius:14px;
+      padding:12px 14px;
+    }
+
+    .totals-row{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      font-size:14px;
+      padding:4px 0;
+    }
+
+    .totals-row strong{
+      color:#0f172a;
+    }
+
+    .export-footer{
+      text-align:center;
+      margin-top:28px;
+      padding-top:14px;
+      border-top:2px solid #e2e8f0;
+      color:#475569;
+      font-size:14px;
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-wrapper" id="reportCapture">
+    <h2 class="page-title-main">Delivery Report</h2>
+
+    {% if mode != "EMPTY" %}
+      <div class="selected-range-box">
+        <div class="selected-range-title">Selected Data Range</div>
+        {% if delivery_from or delivery_to %}
+          <div class="selected-range-line">
+            Delivered: {{ delivery_from|date:"M. j, Y"|default:"" }} → {{ delivery_to|date:"F j, Y"|default:"" }}
+          </div>
+        {% endif %}
+        {% if pending_from or pending_to %}
+          <div class="selected-range-line">
+            Pending: {{ pending_from|date:"M. j, Y"|default:"" }} → {{ pending_to|date:"F j, Y"|default:"" }}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">Total Sent</div>
+          <div class="summary-value">{{ top_summary.total_sent }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total Done</div>
+          <div class="summary-value">{{ top_summary.total_done }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total Pending</div>
+          <div class="summary-value">{{ top_summary.total_pending }}</div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% for s in seller_summaries %}
+      <div class="shop-section">
+        <div class="shop-name">Shop: {{ s.seller_key }}</div>
+        <div class="shop-header-title">Delivery Report</div>
+
+        {% if delivery_from or delivery_to %}
+          <div class="shop-header-line">
+            Delivered: {{ delivery_from|date:"M. j, Y"|default:"" }} → {{ delivery_to|date:"F j, Y"|default:"" }}
+          </div>
+        {% endif %}
+
+        <div class="shop-header-line">
+          Done: <strong>{{ s.total_done }}</strong>
+          &nbsp;&nbsp;
+          Pending: <strong>{{ s.total_pending }}</strong>
+        </div>
+
+        <div class="table-wrap">
+          <table class="rtable">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Code</th>
+                <th>Shipment ID</th>
+                <th>Seller</th>
+                <th>Pickup Date</th>
+                <th>Delivery Date</th>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Phone Number</th>
+                <th>Receiver Name</th>
+                <th>Price</th>
+                <th>Delivery Fee</th>
+                <th>Addition Fee</th>
+                <th>Total Fee</th>
+                <th>COD</th>
+                <th>Status</th>
+                <th>Shipper name</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in s.rows %}
+                {% if o.clear_delivery %}
+                  <tr class="row-returned">
+                {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+                  <tr>
+                {% else %}
+                  <tr class="row-pending">
+                {% endif %}
+                  <td class="center">{{ forloop.counter }}</td>
+                  <td>{{ o.seller_order_code|default_if_none:"" }}</td>
+                  <td>{{ o.tracking_no|default_if_none:"" }}</td>
+                  <td>{% if o.seller_name %}{{ o.seller_name }}{% else %}-{% endif %}</td>
+                  <td class="center">{{ o.created_at|date:"Y-m-d" }}</td>
+                  <td class="center">{{ o.done_at|date:"Y-m-d" }}</td>
+                  <td>{{ o.receiver_address|default_if_none:"" }}</td>
+                  <td>{{ o.product_desc|default_if_none:"" }}</td>
+                  <td class="center">{{ o.quantity|default_if_none:"" }}</td>
+                  <td>{{ o.receiver_phone|default_if_none:"" }}</td>
+                  <td>{{ o.receiver_name|default_if_none:"" }}</td>
+                  <td class="num">{{ o.price|default_if_none:"" }}</td>
+
+                  {% if o.clear_delivery %}
+                    <td class="num">0.00</td>
+                    <td class="num">0.00</td>
+                    <td class="num">0.00</td>
+                    <td class="num">0.00</td>
+                    <td>DONE RETURN</td>
+                  {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+                    <td class="num">{{ o.delivery_fee|default_if_none:"" }}</td>
+                    <td class="num">{{ o.additional_fee|default_if_none:"" }}</td>
+                    <td class="num">{{ o.delivery_fee|add:o.additional_fee }}</td>
+                    <td class="num">{{ o.cod|default_if_none:"" }}</td>
+                    <td>DONE</td>
+                  {% else %}
+                    <td class="num">0.00</td>
+                    <td class="num">0.00</td>
+                    <td class="num">0.00</td>
+                    <td class="num">0.00</td>
+                    <td>PENDING</td>
+                  {% endif %}
+
+                  <td>{% if o.delivery_shipper %}{{ o.delivery_shipper.name }}{% else %}-{% endif %}</td>
+                  <td>{{ o.reason|default_if_none:"" }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="19">No data</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="totals-box">
+          <div class="totals-inner">
+            <div class="totals-row">
+              <span><strong>COD :</strong></span>
+              <span>{{ s.total_cod|floatformat:2 }}</span>
+            </div>
+            <div class="totals-row">
+              <span><strong>FEE :</strong></span>
+              <span>{{ s.total_fee|floatformat:2 }}</span>
+            </div>
+            <div class="totals-row">
+              <span><strong>PAY :</strong></span>
+              <span>{{ s.pay|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="export-footer">
+      Thank you for supporting DS EXPRESS.
+    </div>
+  </div>
+</body>
+</html>

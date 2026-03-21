@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Return To Shop - New{% endblock %}
+{% block page_title %}Return To Shop{% endblock %}
+{% block page_subtitle %}Return To Shop - New{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;position:relative;">
+
+  <div style="font-weight:900;margin-bottom:10px;">
+    <span style="opacity:.8;">Scan</span> → Add → Review → Confirm → Save &amp; Complete / Print Label
+  </div>
+
+  <!-- CLEAR -->
+  <form method="post" class="clear-wrap">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="scan_clear"/>
+    <button class="btn-clear" type="submit">Clear</button>
+  </form>
+
+  <!-- SCAN BOX -->
+  <div class="scan-box">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="scan_add"/>
+
+      <div style="font-size:12px;opacity:.7;margin-bottom:6px;">Scan tracking code (one per line)</div>
+      <textarea name="scan_codes" class="input scan-textarea">{{ scan_value }}</textarea>
+
+      <button class="btn-add-full" type="submit">Add</button>
+    </form>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="card" style="margin-top:14px;padding:12px;border-radius:14px;">
+    <b>Total:</b> {{ total_count }}
+    &nbsp;&nbsp; <b style="color:#c00;">Not found:</b> {{ notfound }}
+    &nbsp;&nbsp; <b style="color:#d17a00;">Not allow:</b> {{ error_count }}
+    &nbsp;&nbsp; <b style="color:#0a8a2a;">Allowed:</b> {{ found_count }}
+  </div>
+
+  {% if rows_error %}
+    <div style="margin-top:10px;padding:10px;border-radius:12px;border:1px solid #ffc4c4;background:#fff3f3;color:#b10000;">
+      Some shipments cannot be returned. Please remove them.
+    </div>
+  {% endif %}
+
+  <!-- TABLE -->
+  <div style="margin-top:14px; overflow:auto;">
+    <table class="ds-table" style="min-width:1480px;">
+      <thead>
+        <tr>
+          <th style="text-align:center;">N</th>
+          <th style="text-align:center;">TRACKING</th>
+          <th style="text-align:center;">SELLER</th>
+          <th style="text-align:center;">RECEIVER LOCATION</th>
+          <th style="text-align:center;">CUSTOMER</th>
+          <th style="text-align:center;">PHONE</th>
+          <th style="text-align:center;">PRICE</th>
+          <th style="text-align:center;">COD</th>
+          <th style="text-align:center;">STATUS</th>
+          <th style="text-align:center;">REASON</th>
+          <th style="text-align:center;">ACTION</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <!-- ERROR ROWS -->
+        {% for r in rows_error %}
+          <tr style="background:#fff3f3;">
+            <td style="text-align:center;">{{ forloop.counter }}</td>
+
+            <td style="text-align:center;">
+              <a href="{{ r.tracking_url }}" style="color:#b10000;font-weight:800;text-decoration:underline;">
+                {{ r.tracking_no }}
+              </a>
+            </td>
+
+            <td style="text-align:center;">{{ r.seller_name }}</td>
+            <td>{{ r.receiver_location }}</td>
+            <td style="text-align:center;">{{ r.customer_name }}</td>
+            <td style="text-align:center;">{{ r.customer_phone }}</td>
+            <td style="text-align:center;">{{ r.price }}</td>
+            <td style="text-align:center;">{{ r.cod }}</td>
+
+            <td style="text-align:center;">
+              {% if r.status == "RETURNED" %}
+                <span class="badge badge-green">RETURNED</span>
+              {% elif r.status == "RETURNING" %}
+                <span class="badge badge-yellow">RETURNING</span>
+              {% elif r.status == "DONE" or r.status == "DELIVERED" %}
+                <span class="badge badge-blue">{{ r.status }}</span>
+              {% else %}
+                <span class="badge badge-red">{{ r.status }}</span>
+              {% endif %}
+            </td>
+
+            <td style="text-align:center;">
+              <span style="opacity:.45;">-</span>
+            </td>
+
+            <td style="text-align:center;">
+              <form method="post" style="display:inline;" onsubmit="return confirm('Remove this shipment from list?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remove_scan">
+                <input type="hidden" name="code" value="{{ r.tracking_no }}">
+                <button type="submit" class="trash-btn" title="Remove">🗑</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+
+        <!-- ALLOWED ROWS -->
+        {% with offset=rows_error|length %}
+          {% for r in rows_allowed %}
+            <tr {% if r.is_done %}class="done-row"{% endif %}>
+              <td style="text-align:center;">{{ forloop.counter|add:offset }}</td>
+
+              <td style="text-align:center;">
+                <a href="{{ r.tracking_url }}" style="font-weight:800;text-decoration:underline;">
+                  {{ r.tracking_no }}
+                </a>
+              </td>
+
+              <td style="text-align:center;">{{ r.seller_name }}</td>
+              <td>{{ r.receiver_location }}</td>
+              <td style="text-align:center;">{{ r.customer_name }}</td>
+              <td style="text-align:center;">{{ r.customer_phone }}</td>
+              <td style="text-align:center;">{{ r.price }}</td>
+              <td style="text-align:center;">{{ r.cod }}</td>
+
+              <td style="text-align:center;">
+                {% if r.status == "RETURNED" %}
+                  <span class="badge badge-green">RETURNED</span>
+                {% elif r.status == "RETURNING" %}
+                  <span class="badge badge-yellow">RETURNING</span>
+                {% elif r.status == "DONE" or r.status == "DELIVERED" %}
+                  <span class="badge badge-blue">{{ r.status }}</span>
+                {% else %}
+                  <span class="badge badge-gray">{{ r.status }}</span>
+                {% endif %}
+              </td>
+
+              <td style="text-align:center;min-width:230px;">
+  <span class="reason-text">{{ r.return_reason|default:"-" }}</span>
+</td>
+
+              <td style="text-align:center;">
+                <input
+                  type="checkbox"
+                  class="big-check"
+                  name="checked_ids"
+                  value="{{ r.id }}"
+                  form="confirmForm"
+                  checked
+                  {% if r.is_done %}
+                  onchange="handleDoneCheck(this, '{{ r.tracking_no|escapejs }}')"
+                  {% endif %}
+                >
+              </td>
+            </tr>
+          {% endfor %}
+        {% endwith %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CONFIRM -->
+  <form method="post" id="confirmForm" style="margin-top:14px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="confirm_create"/>
+
+    <div class="card" style="padding:12px;border-radius:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <div style="flex:1;min-width:240px;">
+        <div style="font-size:12px;opacity:.7;margin-bottom:6px;">Remark (optional)</div>
+        <input class="input" name="remark" placeholder="Remark..." style="width:100%;" />
+      </div>
+
+      <div style="display:flex;gap:10px;margin-left:auto;">
+        <button class="btn btn-ghost" type="submit" name="mode" value="complete">Save &amp; Complete</button>
+        <button class="btn" type="submit" name="mode" value="print_label">Save &amp; Print Label</button>
+      </div>
+    </div>
+  </form>
+
+</div>
+
+<script>
+function handleDoneCheck(el, tracking){
+  if (el.checked){
+    const ok = confirm(
+      "⚠️ This shipment (" + tracking + ") is already DONE / DELIVERED.\n\n" +
+      "Please make sure you fill the REASON column before confirm."
+    );
+    if (!ok){
+      el.checked = false;
+    }
+  }
+}
+
+document.getElementById("confirmForm").addEventListener("submit", function(e){
+  const checked = this.querySelectorAll('input[name="checked_ids"]:checked');
+
+  for (const cb of checked){
+    const rowId = cb.value;
+    const reasonInput = this.querySelector(`input[name="reason_${rowId}"]`);
+
+    if (reasonInput && reasonInput.value.trim() === ""){
+      alert("Please fill reason for DONE / DELIVERED shipment before confirm.");
+      reasonInput.focus();
+      e.preventDefault();
+      return false;
+    }
+  }
+});
+</script>
+
+<style>
+  .scan-box{
+    margin-top:8px;
+    padding:12px;
+    border-radius:14px;
+    border:1px solid #e7e7e7;
+    background:#fff;
+  }
+
+  .scan-textarea{
+    height:120px;
+    width:100%;
+    font-family:ui-monospace, Consolas, monospace;
+    margin-bottom:12px;
+  }
+
+  .btn-add-full{
+    width:100%;
+    height:44px;
+    border:none;
+    border-radius:12px;
+    background:#159a43;
+    color:#fff;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .btn-add-full:hover{
+    filter:brightness(.95);
+  }
+
+  .clear-wrap{
+    position:absolute;
+    top:16px;
+    right:16px;
+    margin:0;
+  }
+
+  .btn-clear{
+    height:30px;
+    padding:0 14px;
+    border:none;
+    border-radius:999px;
+    background:#e53935;
+    color:#fff;
+    font-weight:800;
+    cursor:pointer;
+    font-size:12px;
+  }
+
+  .btn-clear:hover{
+    filter:brightness(.95);
+  }
+
+  .trash-btn{
+    width:46px;
+    height:46px;
+    border-radius:14px;
+    border:1px solid #ffd0d0;
+    background:#fff3f3;
+    color:#b10000;
+    cursor:pointer;
+    font-size:20px;
+    font-weight:900;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .trash-btn:hover{
+    background:#ffecec;
+  }
+
+  .big-check{
+    width:22px;
+    height:22px;
+    transform:translateY(3px);
+  }
+
+  .reason-input{
+    width:210px;
+    height:38px;
+    border-radius:10px;
+    border:1px solid #ddd;
+    padding:0 10px;
+    background:#fff;
+  }
+
+  .badge{
+    padding:6px 14px;
+    border-radius:20px;
+    font-weight:800;
+    font-size:12px;
+    display:inline-block;
+  }
+
+  .badge-green{
+    background:#e7f9ee;
+    color:#0a8a2a;
+    border:1px solid #bfe9c8;
+  }
+
+  .badge-yellow{
+    background:#fff8e1;
+    color:#b88900;
+    border:1px solid #ffe08a;
+  }
+
+  .badge-gray{
+    background:#f2f2f2;
+    color:#555;
+    border:1px solid #ddd;
+  }
+
+  .badge-red{
+    background:#fff3f3;
+    color:#b10000;
+    border:1px solid #ffd0d0;
+  }
+
+  .badge-blue{
+    background:#eef4ff;
+    color:#1f5eff;
+    border:1px solid #cfdcff;
+  }
+
+  .done-row{
+    background:#fcfdff;
+  }
+</style>
+{% endblock %}

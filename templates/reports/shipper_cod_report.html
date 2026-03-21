@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Shipper COD Report{% endblock %}
+{% block page_title %}Shipper COD Report{% endblock %}
+{% block page_subtitle %}Daily Morning / Afternoon COD Summary{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <form method="get" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+    <input type="hidden" name="search" value="1">
+
+    <div style="min-width:180px;">
+      <div class="label">Date From</div>
+      <input class="input" type="date" name="date_from" value="{{ date_from }}">
+    </div>
+
+    <div style="min-width:180px;">
+      <div class="label">Date To</div>
+      <input class="input" type="date" name="date_to" value="{{ date_to }}">
+    </div>
+
+    <button class="btn" type="submit" style="height:40px;">Show</button>
+
+    {% if searched %}
+      <a
+        class="btn btn-ghost"
+        style="height:40px;display:inline-flex;align-items:center;text-decoration:none;"
+        href="{% url 'shipper_cod_report_pdf' %}?date_from={{ date_from }}&date_to={{ date_to }}"
+      >
+        Download PDF
+      </a>
+    {% endif %}
+  </form>
+
+  {% if searched %}
+    <div style="margin-top:20px;text-align:center;">
+      <div style="font-size:30px;font-weight:900;line-height:1.2;">Shipper COD Report</div>
+      <div style="font-size:14px;opacity:.8;">
+        From {{ date_from|default:"-" }} To {{ date_to|default:"-" }}
+      </div>
+    </div>
+
+    {% for day in report.days %}
+      <div class="day-title">{{ day.date|date:"Y-m-d" }}</div>
+
+      <!-- MORNING -->
+      <div class="shift-title">វេនព្រឹក</div>
+      <div style="overflow:auto;">
+        <table class="ds-table shipper-report-table">
+          <colgroup>
+            <col style="width:50px;">
+            <col style="width:180px;">
+            <col style="width:110px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:140px;">
+            <col style="width:180px;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th style="text-align:center;">#</th>
+              <th>Name</th>
+              <th style="text-align:right;">COD</th>
+              <th style="text-align:right;">Cash USD</th>
+              <th style="text-align:right;">Cash KHR</th>
+              <th style="text-align:right;">ABA USD</th>
+              <th style="text-align:right;">ABA KHR</th>
+              <th style="text-align:right;">Balance ($)</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in day.morning_rows %}
+              <tr>
+                <td style="text-align:center;">{{ forloop.counter }}</td>
+                <td>{{ r.shipper_name }}</td>
+                <td class="num">{{ r.cod|floatformat:2 }}</td>
+                <td class="num">{{ r.cash_usd|floatformat:2 }}</td>
+                <td class="num">{{ r.cash_khr|floatformat:0 }}</td>
+                <td class="num">{{ r.aba_usd|floatformat:2 }}</td>
+                <td class="num">{{ r.aba_khr|floatformat:0 }}</td>
+                <td class="num {% if r.balance_usd < 0 %}neg{% endif %}">{{ r.balance_usd|floatformat:2 }}</td>
+                <td class="remark-cell">{{ r.remark|default:"-" }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="9" style="text-align:center;opacity:.7;">No data.</td>
+              </tr>
+            {% endfor %}
+            <tr class="total-row">
+              <td style="text-align:center;">-</td>
+              <td><b>សរុប ព្រឹក</b></td>
+              <td class="num"><b>{{ day.morning_total.cod|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.morning_total.cash_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.morning_total.cash_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ day.morning_total.aba_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.morning_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num {% if day.morning_total.balance_usd < 0 %}neg{% endif %}">
+                <b>{{ day.morning_total.balance_usd|floatformat:2 }}</b>
+              </td>
+              <td class="remark-cell">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- AFTERNOON -->
+      <div class="shift-title">វេនល្ងាច</div>
+      <div style="overflow:auto;">
+        <table class="ds-table shipper-report-table">
+          <colgroup>
+            <col style="width:50px;">
+            <col style="width:180px;">
+            <col style="width:110px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:140px;">
+            <col style="width:180px;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th style="text-align:center;">#</th>
+              <th>Name</th>
+              <th style="text-align:right;">COD</th>
+              <th style="text-align:right;">Cash USD</th>
+              <th style="text-align:right;">Cash KHR</th>
+              <th style="text-align:right;">ABA USD</th>
+              <th style="text-align:right;">ABA KHR</th>
+              <th style="text-align:right;">Balance ($)</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in day.afternoon_rows %}
+              <tr>
+                <td style="text-align:center;">{{ forloop.counter }}</td>
+                <td>{{ r.shipper_name }}</td>
+                <td class="num">{{ r.cod|floatformat:2 }}</td>
+                <td class="num">{{ r.cash_usd|floatformat:2 }}</td>
+                <td class="num">{{ r.cash_khr|floatformat:0 }}</td>
+                <td class="num">{{ r.aba_usd|floatformat:2 }}</td>
+                <td class="num">{{ r.aba_khr|floatformat:0 }}</td>
+                <td class="num {% if r.balance_usd < 0 %}neg{% endif %}">{{ r.balance_usd|floatformat:2 }}</td>
+                <td class="remark-cell">{{ r.remark|default:"-" }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="9" style="text-align:center;opacity:.7;">No data.</td>
+              </tr>
+            {% endfor %}
+            <tr class="total-row">
+              <td style="text-align:center;">-</td>
+              <td><b>សរុប ល្ងាច</b></td>
+              <td class="num"><b>{{ day.afternoon_total.cod|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.afternoon_total.cash_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.afternoon_total.cash_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ day.afternoon_total.aba_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.afternoon_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num {% if day.afternoon_total.balance_usd < 0 %}neg{% endif %}">
+                <b>{{ day.afternoon_total.balance_usd|floatformat:2 }}</b>
+              </td>
+              <td class="remark-cell">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- DAY TOTAL -->
+      <div class="shift-title">សរុបប្រចាំថ្ងៃ</div>
+      <div style="overflow:auto;">
+        <table class="ds-table shipper-report-table">
+          <colgroup>
+            <col style="width:50px;">
+            <col style="width:180px;">
+            <col style="width:110px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:140px;">
+            <col style="width:180px;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th style="text-align:center;">#</th>
+              <th>Name</th>
+              <th style="text-align:right;">COD</th>
+              <th style="text-align:right;">Cash USD</th>
+              <th style="text-align:right;">Cash KHR</th>
+              <th style="text-align:right;">ABA USD</th>
+              <th style="text-align:right;">ABA KHR</th>
+              <th style="text-align:right;">Balance ($)</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="total-row">
+              <td style="text-align:center;">-</td>
+              <td><b>{{ day.date|date:"Y-m-d" }}</b></td>
+              <td class="num"><b>{{ day.day_total.cod|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.day_total.cash_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.day_total.cash_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ day.day_total.aba_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ day.day_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num {% if day.day_total.balance_usd < 0 %}neg{% endif %}">
+                <b>{{ day.day_total.balance_usd|floatformat:2 }}</b>
+              </td>
+              <td class="remark-cell">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% empty %}
+      <div style="margin-top:20px;text-align:center;opacity:.7;">No data.</div>
+    {% endfor %}
+  {% endif %}
+</div>
+
+<style>
+  .label{
+    font-size:12px;
+    opacity:.7;
+    margin-bottom:6px;
+  }
+
+  .input{
+    height:40px;
+    width:100%;
+    padding:8px 10px;
+    border-radius:12px;
+    border:1px solid #e6e6e6;
+    background:#fff;
+  }
+
+  .btn{
+    padding:10px 16px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  .btn-ghost{
+    padding:10px 16px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    background:#fff;
+    color:#111;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  .day-title{
+    margin-top:26px;
+    margin-bottom:10px;
+    padding:10px 14px;
+    font-size:28px;
+    font-weight:900;
+    text-align:center;
+    background:#eef4ff;
+    border:1px solid #cfdcff;
+    border-radius:14px;
+  }
+
+  .shift-title{
+    margin-top:16px;
+    margin-bottom:8px;
+    padding:8px 12px;
+    font-size:22px;
+    font-weight:900;
+    text-align:center;
+    background:#f6f6f6;
+    border:1px solid #ddd;
+    border-radius:12px;
+  }
+
+  .shipper-report-table{
+    width:100%;
+    min-width:1180px;
+    margin-top:8px;
+    table-layout:fixed;
+  }
+
+  .shipper-report-table th,
+  .shipper-report-table td{
+    border:1px solid #111 !important;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    vertical-align:middle;
+  }
+
+  .num{
+    text-align:right;
+    white-space:nowrap;
+  }
+
+  .neg{
+    color:#b00020;
+    font-weight:900;
+  }
+
+  .total-row{
+    background:#fafafa;
+  }
+
+  .remark-cell{
+    white-space:normal !important;
+    word-break:break-word;
+    line-height:1.35;
+  }
+</style>
+{% endblock %}

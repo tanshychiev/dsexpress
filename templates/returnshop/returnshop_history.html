@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Return To Shop - Batch History{% endblock %}
+{% block page_title %}Return To Shop{% endblock %}
+{% block page_subtitle %}Batch History (Master Batches){% endblock %}
+
+{% block content %}
+<div class="card" style="padding:18px;border-radius:16px;">
+
+  <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+    <div>
+      <div style="font-size:18px; font-weight:900;">Batch History</div>
+      <div style="opacity:.75; margin-top:6px;">Scan a QR code into the search box to jump directly to that batch.</div>
+    </div>
+    <a class="btn btn-ghost" href="{% url 'returnshop_list' %}">← Back</a>
+  </div>
+
+  <form method="get" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+    <input class="input mono" name="q" value="{{ q }}" placeholder="Scan / type Master QR code (e.g. RTS-5-12)..." autofocus>
+    <button class="btn" type="submit">Search</button>
+  </form>
+
+  <div style="margin-top:14px; overflow:auto;">
+    <table class="ds-table" style="min-width:1100px;">
+      <thead>
+        <tr>
+          <th class="th">Batch ID</th>
+          <th class="th">Shop Names</th>
+          <th class="th">Total PC</th>
+          <th class="th">Date</th>
+          <th class="th">Status</th>
+          <th class="th">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="td mono">{{ r.code }}</td>
+            <td class="td">{{ r.shop_names }}</td>
+            <td class="td"><b>{{ r.total_pc }}</b></td>
+            <td class="td">{% if r.created_at %}{{ r.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+            <td class="td">{{ r.status }}</td>
+            <td class="td">
+              <a class="btn btn-ghost" href="{% url 'returnshop_label_detail' r.id %}">View</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" style="padding:14px; opacity:.7;">No batches found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<style>
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .btn{padding:10px 14px;border-radius:12px;border:1px solid #111;background:#111;color:#fff;cursor:pointer;text-decoration:none;font-weight:900;}
+  .btn-ghost{padding:10px 14px;border-radius:12px;border:1px solid #ddd;background:#fff;color:#111;cursor:pointer;text-decoration:none;font-weight:900;}
+  .input{height:40px;padding:8px 10px;border-radius:12px;border:1px solid #e6e6e6;background:#fff; width:min(760px,100%);}
+  .th{text-align:center;}
+  .td{text-align:center;}
+</style>
+{% endblock %}

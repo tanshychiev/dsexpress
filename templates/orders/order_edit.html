@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .wrap{
+    width:100%;
+    padding:18px 22px;
+  }
+
+  .page-title{
+    margin:0 0 14px 0;
+    font-size:24px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:18px;
+    max-width:1050px;
+    box-shadow:0 10px 28px rgba(15,23,42,.06);
+  }
+
+  .err{
+    background:#fff1f2;
+    border:1px solid #fecdd3;
+    color:#9f1239;
+    padding:12px 14px;
+    border-radius:12px;
+    margin-bottom:14px;
+  }
+
+  .warn{
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+    padding:12px 14px;
+    border-radius:12px;
+    margin-bottom:14px;
+    font-weight:800;
+  }
+
+  .section{
+    border:1px solid #eef2f7;
+    border-radius:14px;
+    overflow:hidden;
+    margin-bottom:16px;
+    background:#fff;
+  }
+
+  .section-head{
+    background:#f8fafc;
+    border-bottom:1px solid #eef2f7;
+    padding:12px 14px;
+    font-size:14px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .section-body{
+    padding:14px;
+  }
+
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+
+  @media (max-width: 900px){
+    .grid2{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .field-full{
+    grid-column:1 / -1;
+  }
+
+  label{
+    display:block;
+    font-weight:800;
+    font-size:13px;
+    color:#334155;
+  }
+
+  input, select, textarea{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    outline:none;
+    font-size:14px;
+    background:#fff;
+  }
+
+  input:focus, select:focus, textarea:focus{
+    border-color:#0f766e;
+    box-shadow:0 0 0 3px rgba(15,118,110,.12);
+  }
+
+  textarea{
+    min-height:100px;
+    resize:vertical;
+  }
+
+  .readonly{
+    background:#f8fafc;
+    color:#334155;
+  }
+
+  .small-note{
+    font-size:12px;
+    color:#64748b;
+    margin-top:2px;
+  }
+
+  .small-note.red{
+    color:#b91c1c;
+    font-weight:800;
+  }
+
+  .btns{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:10px;
+    padding-top:14px;
+    border-top:1px solid #f1f5f9;
+    flex-wrap:wrap;
+  }
+
+  .btn{
+    padding:10px 14px;
+    border-radius:10px;
+    border:1px solid #d1d5db;
+    background:#fff;
+    font-weight:800;
+    font-size:13px;
+    text-decoration:none;
+    cursor:pointer;
+    color:#0f172a;
+  }
+
+  .btn:hover{
+    background:#f8fafc;
+  }
+
+  .btn-primary{
+    background:#0f766e;
+    color:#fff;
+    border-color:#0f766e;
+  }
+
+  .btn-primary:hover{
+    background:#115e59;
+  }
+</style>
+
+<div class="wrap">
+  <div class="page-title">Edit Order</div>
+
+  <div class="card">
+
+    {% if errors %}
+      <div class="err">
+        <ul style="margin:0;padding-left:18px;">
+          {% for e in errors %}
+            <li>{{ e }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if is_done_or_delivered %}
+      <div class="warn">
+        This order is already Delivered / Done. You can still edit normal fields, but COD can only be changed by admin or with override password.
+      </div>
+    {% endif %}
+
+    <form method="post" id="editOrderForm">
+      {% csrf_token %}
+      <input type="hidden" name="override_password" id="override_password_hidden">
+
+      <div class="section">
+        <div class="section-head">Basic Information</div>
+        <div class="section-body">
+          <div class="grid2">
+
+            <div class="field field-full">
+              <label>Tracking / SN</label>
+              <input value="{{ order.tracking_no }}" disabled class="readonly">
+            </div>
+
+            <div class="field">
+              <label>Shop</label>
+              <select name="seller">
+                <option value="">Select shop</option>
+                {% for s in sellers %}
+                  <option value="{{ s.id }}" {% if order.seller_id == s.id %}selected{% endif %}>
+                    {{ s.name }}{% if s.code %} ({{ s.code }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Seller Name</label>
+              <input name="seller_name" value="{{ order.seller_name|default:'' }}">
+            </div>
+
+            <div class="field">
+              <label>Order Code</label>
+              <input name="seller_order_code" value="{{ order.seller_order_code|default:'' }}">
+            </div>
+
+            <div class="field">
+              <label>Product</label>
+              <input name="product_desc" value="{{ order.product_desc|default:'' }}">
+            </div>
+
+            <div class="field">
+              <label>Quantity</label>
+              <input name="quantity" value="{{ order.quantity }}">
+            </div>
+
+            <div class="field">
+              <label>COD ($)</label>
+              <input
+                type="text"
+                name="cod"
+                id="cod_input"
+                value="{{ order.cod }}"
+                data-old-cod="{{ order.cod }}"
+                {% if is_done_or_delivered %}data-protected="1"{% endif %}
+              >
+              <div id="cod-change-note" class="small-note red" style="display:none;">
+                COD changed. Password confirmation will be required.
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Price ($)</label>
+              <input name="price" value="{{ order.price }}">
+            </div>
+
+            <div class="field">
+              <label>Delivery Fee ($)</label>
+              <input name="delivery_fee" value="{{ order.delivery_fee }}">
+            </div>
+
+            <div class="field">
+              <label>Additional Fee ($)</label>
+              <input name="additional_fee" value="{{ order.additional_fee }}">
+            </div>
+
+            <div class="field">
+              <label>Province Fee ($)</label>
+              <input name="province_fee" value="{{ order.province_fee }}">
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">Receiver Information</div>
+        <div class="section-body">
+          <div class="grid2">
+
+            <div class="field field-full">
+              <label>Receiver Name</label>
+              <input name="receiver_name" value="{{ order.receiver_name|default:'' }}">
+            </div>
+
+            <div class="field">
+              <label>Phone</label>
+              <input name="receiver_phone" value="{{ order.receiver_phone|default:'' }}">
+            </div>
+
+            <div class="field">
+              <label>Address</label>
+              <input name="receiver_address" value="{{ order.receiver_address|default:'' }}">
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">Remark / Reason</div>
+        <div class="section-body">
+          <div class="grid2">
+
+            <div class="field">
+              <label>Remark</label>
+              <textarea name="remark">{{ order.remark|default:'' }}</textarea>
+            </div>
+
+            <div class="field">
+              <label>Reason</label>
+              <textarea name="reason">{{ order.reason|default:'' }}</textarea>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="btns">
+        <a class="btn" href="{% url 'order_created' order.id %}">Cancel</a>
+        <button class="btn btn-primary" type="submit" id="saveBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="cod-password-modal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.45);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    width:100%;
+    max-width:420px;
+    background:#fff;
+    border-radius:16px;
+    padding:18px;
+    box-shadow:0 20px 60px rgba(15,23,42,.25);
+  ">
+    <h3 style="margin:0 0 10px 0; font-size:18px; font-weight:900; color:#0f172a;">
+      COD Override Password
+    </h3>
+
+    <div style="color:#64748b; font-size:13px; margin-bottom:14px;">
+      This order is already Delivered / Done. Enter password to confirm COD change.
+    </div>
+
+    <input
+      type="password"
+      id="override_password_input"
+      placeholder="Enter override password"
+      style="
+        width:100%;
+        padding:12px;
+        border:1px solid #d1d5db;
+        border-radius:10px;
+        outline:none;
+        margin-bottom:14px;
+      "
+    >
+
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" id="cod-modal-cancel" class="btn">
+        Cancel
+      </button>
+
+      <button type="button" id="cod-modal-confirm" class="btn btn-primary">
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("editOrderForm");
+  const saveBtn = document.getElementById("saveBtn");
+  const codInput = document.getElementById("cod_input");
+  const codChangeNote = document.getElementById("cod-change-note");
+  const modal = document.getElementById("cod-password-modal");
+  const modalInput = document.getElementById("override_password_input");
+  const modalConfirm = document.getElementById("cod-modal-confirm");
+  const modalCancel = document.getElementById("cod-modal-cancel");
+  const hiddenPassword = document.getElementById("override_password_hidden");
+
+  if (!form || !saveBtn) return;
+
+  function normalize(v) {
+    return String(v || "").trim();
+  }
+
+  function codChanged() {
+    if (!codInput) return false;
+    return normalize(codInput.value) !== normalize(codInput.dataset.oldCod || "");
+  }
+
+  function refreshCodUI() {
+    if (!codInput) return;
+
+    if (codChanged()) {
+      codInput.style.borderColor = "#ef4444";
+      codInput.style.background = "#fef2f2";
+      if (codChangeNote) codChangeNote.style.display = "block";
+    } else {
+      codInput.style.borderColor = "";
+      codInput.style.background = "";
+      if (codChangeNote) codChangeNote.style.display = "none";
+      if (hiddenPassword) hiddenPassword.value = "";
+    }
+  }
+
+  if (codInput) {
+    codInput.addEventListener("input", refreshCodUI);
+    refreshCodUI();
+  }
+
+  form.addEventListener("submit", function (e) {
+    const protectedCod = codInput && codInput.dataset.protected === "1";
+
+    if (protectedCod && codChanged() && !hiddenPassword.value) {
+      e.preventDefault();
+      modal.style.display = "flex";
+      modalInput.value = "";
+      modalInput.focus();
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.innerText = "Saving...";
+  });
+
+  if (modalConfirm) {
+    modalConfirm.addEventListener("click", function () {
+      hiddenPassword.value = modalInput.value.trim();
+      modal.style.display = "none";
+      form.submit();
+    });
+  }
+
+  if (modalCancel) {
+    modalCancel.addEventListener("click", function () {
+      modal.style.display = "none";
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

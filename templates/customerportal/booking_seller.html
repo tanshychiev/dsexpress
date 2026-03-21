@@ -1,0 +1,287 @@
+{% extends "customerportal/base.html" %}
+{% load static %}
+
+{% block title %}Booking{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'customerportal/css/booking_seller.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="booking-app">
+  <div class="booking-phone">
+
+    <div class="booking-header">
+      <div class="booking-header-top">
+        <a href="{% url 'portal:dashboard' %}" class="header-icon back-btn" aria-label="Back">←</a>
+
+        <div class="booking-brand">
+          <div class="booking-logo">DS</div>
+          <h1>Booking</h1>
+        </div>
+
+        <a href="{% url 'portal:dashboard' %}" class="header-icon bell-btn" aria-label="Dashboard">⌂</a>
+      </div>
+
+      <div class="booking-tabs">
+        <a href="{% url 'portal:booking_seller' %}" class="booking-tab active">Booking</a>
+        <a href="{% url 'portal:booking_history' %}" class="booking-tab">Booking History</a>
+      </div>
+    </div>
+
+    <form method="post" class="booking-form" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="section-card soft-green">
+        <div class="section-head">
+          <h2>Sender</h2>
+          <div class="section-tools">
+            <button type="button" class="mini-tool" aria-label="Edit">✎</button>
+            <button type="button" class="mini-tool" aria-label="Profile">👤</button>
+          </div>
+        </div>
+
+        <div class="field-pill">
+          <div class="field-icon">📞</div>
+          <input
+            type="text"
+            id="sender_phone"
+            name="sender_phone"
+            placeholder="Phone number"
+            value="{{ seller.phone|default:'' }}"
+          >
+        </div>
+
+        <div class="field-pill field-pill-full">
+          <div class="field-icon">📍</div>
+          <textarea
+            id="sender_address"
+            name="sender_address"
+            rows="2"
+            placeholder="Pickup address"
+          >{{ seller.address|default:'' }}</textarea>
+        </div>
+      </div>
+
+      <div class="section-card white-card">
+        <div class="booking-bubbles">
+          <span class="bubble"></span>
+          <span class="bubble"></span>
+          <span class="bubble"></span>
+          <span class="bubble"></span>
+          <span class="bubble"></span>
+
+          <span class="spark"></span>
+          <span class="spark"></span>
+          <span class="spark"></span>
+          <span class="spark"></span>
+        </div>
+
+        <div class="single-field">
+          <label>Total Package</label>
+
+          <div class="package-counter-wrap">
+            <div class="package-counter">
+              <button type="button" class="counter-btn" onclick="changePackage(-1)">‹</button>
+              <input type="number" name="total_pc" id="id_total_pc" value="1" min="1">
+              <button type="button" class="counter-btn" onclick="changePackage(1)">›</button>
+            </div>
+
+            <div class="package-side-icon">📦</div>
+          </div>
+        </div>
+
+        <div class="single-field">
+          <label>Package Picture</label>
+          <label class="upload-box">
+            <input type="file" name="package_picture" hidden>
+            <span class="upload-text">Press to select or take photo of the package</span>
+            <span class="upload-icon">📷</span>
+          </label>
+        </div>
+
+        <div class="single-field">
+          <label>Remark</label>
+          <div class="remark-box">
+            <textarea name="remark" rows="2" placeholder="Add note for rider or operation team"></textarea>
+            <span class="remark-icon">📝</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card soft-green schedule-card">
+        <div class="schedule-title">
+          <h2>Estimate</h2>
+        </div>
+
+        <div class="schedule-grid">
+          <div class="schedule-col">
+            <label>Est. Pick Up</label>
+
+            <div class="field-pill small-pill">
+              <input type="date" name="pickup_date" id="pickup_date" readonly>
+              <span class="field-side-icon">🗓️</span>
+            </div>
+
+            <div class="field-pill small-pill">
+              <input type="text" name="pickup_time" id="pickup_time" readonly>
+              <span class="field-side-icon">▾</span>
+            </div>
+          </div>
+
+          <div class="schedule-center">
+            <div class="schedule-line"></div>
+            <div class="schedule-truck">🚚</div>
+            <div class="schedule-line"></div>
+          </div>
+
+          <div class="schedule-col">
+            <label>Est. Arrive</label>
+
+            <div class="field-pill small-pill">
+              <input type="date" name="arrive_date" id="arrive_date" readonly>
+              <span class="field-side-icon">🗓️</span>
+            </div>
+
+            <div class="field-pill small-pill">
+              <input type="text" name="arrive_time" id="arrive_time" readonly>
+              <span class="field-side-icon">▾</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if error_message %}
+      <div class="form-error-box">
+        {{ error_message }}
+      </div>
+      {% endif %}
+
+      <div class="submit-wrap">
+        <button type="submit" class="book-btn">Book Now</button>
+      </div>
+    </form>
+
+  </div>
+</section>
+
+{% if success_popup %}
+<div class="success-popup-overlay" id="successPopup">
+  <div class="success-popup-box">
+    <div class="success-icon">✅</div>
+    <h3>Thank You</h3>
+    <p>Your booking has been submitted successfully.</p>
+    <button type="button" class="success-btn" onclick="closeSuccessPopup()">OK</button>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function changePackage(delta) {
+  const input = document.getElementById("id_total_pc");
+  let value = parseInt(input.value || "1", 10);
+  value += delta;
+  if (value < 1) value = 1;
+  input.value = value;
+}
+
+function formatDateLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function setEstimatedBookingTimes() {
+  const now = new Date();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const current = hour * 60 + minute;
+
+  const pickupDate = document.getElementById("pickup_date");
+  const pickupTime = document.getElementById("pickup_time");
+  const arriveDate = document.getElementById("arrive_date");
+  const arriveTime = document.getElementById("arrive_time");
+
+  const today = new Date();
+  const nextDay = new Date();
+  nextDay.setDate(today.getDate() + 1);
+
+  const eleven = 11 * 60;
+  const sixteenThirty = 16 * 60 + 30;
+
+  if (current < eleven) {
+    pickupDate.value = formatDateLocal(today);
+    pickupTime.value = "09:00 - 12:30";
+
+    arriveDate.value = formatDateLocal(today);
+    arriveTime.value = "13:30 - 17:30";
+  } else if (current < sixteenThirty) {
+    pickupDate.value = formatDateLocal(today);
+    pickupTime.value = "14:30 - 17:30";
+
+    arriveDate.value = formatDateLocal(nextDay);
+    arriveTime.value = "08:30 - 11:30";
+  } else {
+    pickupDate.value = formatDateLocal(nextDay);
+    pickupTime.value = "09:30 - 12:30";
+
+    arriveDate.value = formatDateLocal(nextDay);
+    arriveTime.value = "13:30 - 17:30";
+  }
+}
+
+function saveSenderInfo() {
+  const phone = document.getElementById("sender_phone");
+  const address = document.getElementById("sender_address");
+
+  if (phone) {
+    localStorage.setItem("seller_booking_phone", phone.value || "");
+  }
+  if (address) {
+    localStorage.setItem("seller_booking_address", address.value || "");
+  }
+}
+
+function loadSenderInfo() {
+  const phone = document.getElementById("sender_phone");
+  const address = document.getElementById("sender_address");
+
+  const savedPhone = localStorage.getItem("seller_booking_phone");
+  const savedAddress = localStorage.getItem("seller_booking_address");
+
+  if (phone && (!phone.value || phone.value.trim() === "") && savedPhone) {
+    phone.value = savedPhone;
+  }
+
+  if (address && (!address.value || address.value.trim() === "") && savedAddress) {
+    address.value = savedAddress;
+  }
+}
+
+function closeSuccessPopup() {
+  const popup = document.getElementById("successPopup");
+  if (popup) {
+    popup.style.display = "none";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  setEstimatedBookingTimes();
+  loadSenderInfo();
+
+  const phone = document.getElementById("sender_phone");
+  const address = document.getElementById("sender_address");
+
+  if (phone) {
+    phone.addEventListener("input", saveSenderInfo);
+    phone.addEventListener("change", saveSenderInfo);
+  }
+
+  if (address) {
+    address.addEventListener("input", saveSenderInfo);
+    address.addEventListener("change", saveSenderInfo);
+  }
+});
+</script>
+{% endblock %}

@@ -6,87 +6,99 @@
 
   <style>
     /* ---------- PRINT SETTINGS ---------- */
-    @page { size: A4 landscape; margin: 10mm; }
-    @media print {
-      .no-print { display: none !important; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    }
+@page { size: A4 landscape; margin: 2mm; }
 
-    body{
-      font-family: Arial, Helvetica, sans-serif;
-      margin:0;
-      padding:0;
-      color:#111;
-      font-size:11px; /* small for 15+ rows */
-    }
+@media print {
+  .no-print { display: none !important; }
+  body { margin:0 !important; }
+}
 
-    .wrap{ padding:10mm; }
+/* BODY */
+body{
+  font-family: Arial, Helvetica, sans-serif;
+  margin:0;
+  padding:0;
+  color:#111;
+  font-size:12px;   /* increase from 10 → 11 */
+}
 
-    .top{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:12px;
-      margin-bottom:10px;
-    }
+/* REMOVE EXTRA SPACE */
+.wrap{
+  padding:2mm;
+}
 
-    .left-info .title{
-      font-size:16px;
-      font-weight:900;
-      margin-bottom:4px;
-    }
+/* HEADER */
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:4px;   /* reduce space */
+}
 
-    .meta{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      font-size:12px;
-    }
+.left-info .title{
+  font-size:17px;   /* bigger */
+  font-weight:900;
+}
 
-    .meta b{ font-weight:900; }
+.meta{
+  font-size:12px;
+}
 
-    /* Right side bigger + bold */
-    .right-info{
-      text-align:right;
-      font-size:14px;
-      font-weight:900;
-      line-height:1.4;
-    }
-    .right-info .sub{
-      font-size:13px;
-      font-weight:900;
-      opacity:.9;
-    }
+/* RIGHT SIDE */
+.right-info{
+  text-align:right;
+  font-size:12px;
+  font-weight:900;
+  line-height:1.2;
+}
 
-    .section{
-      margin-top:10px;
-      font-weight:900;
-      font-size:13px;
-      margin-bottom:6px;
-    }
+/* SECTION */
+.section{
+  margin-top:4px;
+  font-weight:900;
+  font-size:12px;
+  margin-bottom:3px;
+}
 
-    table{
-      width:100%;
-      border-collapse:collapse;
-    }
-    th, td{
-      border:1px solid #ddd;
-      padding:6px 6px;
-      vertical-align:top;
-    }
-    th{
-      background:#f5f5f5;
-      font-weight:900;
-      text-align:center;
-      font-size:11px;
-    }
-    td.center{ text-align:center; }
-    td.small{ font-size:10px; }
+/* TABLE */
+table{
+  width:100%;
+  border-collapse:collapse;
+}
 
-    .code{
-      font-family: ui-monospace, Consolas, monospace;
-      font-weight:900;
-    }
+th, td{
+  border:1px solid #ccc;
+  padding:3px 4px;   /* tighter */
+  vertical-align:top;
+}
+
+th{
+  background:#f5f5f5;
+  font-weight:900;
+  text-align:center;
+  font-size:10px;
+}
+
+td.center{ text-align:center; }
+
+/* SMALL COLUMNS */
+.n-col{ width:28px; font-size:9px; }
+.tracking-col{ width:110px; font-size:9px; }
+
+/* LOCATION BIG */
+.location-cell{
+  font-size:14px;
+  font-weight:700;
+  line-height:1.3;
+  white-space:normal;
+  word-break:break-word;
+}
+
+/* CODE */
+.code{
+  font-family: Consolas, monospace;
+  font-weight:900;
+}
   </style>
 </head>
 
@@ -155,16 +167,16 @@
   <table>
     <thead>
       <tr>
-        <th style="width:50px;">N</th>
-        <th style="width:160px;">Tracking</th>
-        <th style="width:170px;">Seller</th>
-        <th style="width:130px;">Order Code</th>
-        <th>Receiver Location</th>
-        <th style="width:140px;">Customer</th>
-        <th style="width:120px;">Phone</th>
-        <th style="width:80px;">Price</th>
-        <th style="width:80px;">COD</th>
-        <th style="width:170px;">Reason</th>
+       <th class="n-col">N</th>
+<th class="tracking-col">Tracking</th>
+<th style="width:130px;">Seller</th>
+<th style="width:110px;">Order Code</th>
+<th>Receiver Location</th>
+<th style="width:110px;">Customer</th>
+<th style="width:100px;">Phone</th>
+<th style="width:60px;">Price</th>
+<th style="width:60px;">COD</th>
+<th style="width:120px;">Reason</th>
       </tr>
     </thead>
     <tbody>

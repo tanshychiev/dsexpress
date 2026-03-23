@@ -56,6 +56,20 @@ letter-spacing:0.2mm;
 line-height:1;
 margin-bottom:2.5mm;
 }
+.brand-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+ 
+}
+
+.print-date{
+  font-size:2mm;
+  font-weight:600;
+  white-space:nowrap;
+
+}
+
 
 .tracking-box{
 border-top:0.4mm solid #000;
@@ -193,18 +207,19 @@ white-space:nowrap;
 }
 
 .middle-row .value{
-flex:1;
-border-bottom:0.35mm solid #000;
-min-height:4.4mm;
-display:flex;
-align-items:flex-end;
-padding:0 0.8mm 0.4mm 0.8mm;
-font-size:3.7mm;
-font-weight:500;
-overflow:hidden;
-white-space:nowrap;
-text-overflow:ellipsis;
-box-sizing:border-box;
+  flex:1;
+  border-bottom:0.35mm solid #000;
+  min-height:4.4mm;
+  display:block;
+  padding:0 0.8mm 0.4mm 0.8mm;
+  font-size:3.7mm;
+  font-weight:500;
+  overflow:hidden;
+  white-space:normal;       /* allow wrap */
+  word-break:break-word;    /* break long words */
+  line-height:1.2;
+  max-height:9mm;           /* limit to ~2 lines */
+  box-sizing:border-box;
 }
 
 /* customer */
@@ -338,7 +353,10 @@ cursor:pointer;
 
 <div class="top-left">
 
-<div class="brand">DS EXPRESS</div>
+<div class="brand-row">
+  <div class="brand">DS EXPRESS</div>
+  <div class="print-date">PRINT : {% now "d/m/Y H:i" %}</div>
+</div>
 
 <div class="tracking-box">
 Tracking: {{ sn }}

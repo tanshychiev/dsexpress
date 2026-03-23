@@ -343,23 +343,78 @@ def _set_order_status_after_pp_assign(
                 )
 
 
-def _reset_order_status_if_removed(order_ids: List[int], user, to_status: str = "INBOUND"):
+def _safe_recalc_batch_totals(batch: PPDeliveryBatch, save: bool = True):
+    items_qs = batch.items.all()
+
+    normal_count = items_qs.filter(source_type=PPDeliveryItem.SOURCE_NORMAL).count()
+
+    ret_label_codes = list(
+        items_qs.filter(source_type=PPDeliveryItem.SOURCE_RETURN)
+        .exclude(source_code__isnull=True)
+        .exclude(source_code="")
+        .values_list("source_code", flat=True)
+    )
+
+    master_ids = set()
+    for code in ret_label_codes:
+        p = _ret_parts(code)
+        if p:
+            master_ids.add(int(p[1]))
+
+    shipment_count = int(normal_count)
+    return_batch_count = int(len(master_ids))
+    total_count = shipment_count + return_batch_count
+    total_pc = items_qs.count()
+
+    changed = False
+
+    if _has_field(PPDeliveryBatch, "shipment_count") and getattr(batch, "shipment_count", None) != shipment_count:
+        batch.shipment_count = shipment_count
+        changed = True
+
+    if _has_field(PPDeliveryBatch, "return_batch_count") and getattr(batch, "return_batch_count", None) != return_batch_count:
+        batch.return_batch_count = return_batch_count
+        changed = True
+
+    if _has_field(PPDeliveryBatch, "total_count") and getattr(batch, "total_count", None) != total_count:
+        batch.total_count = total_count
+        changed = True
+
+    if _has_field(PPDeliveryBatch, "total_pc") and getattr(batch, "total_pc", None) != total_pc:
+        batch.total_pc = total_pc
+        changed = True
+
+    _batch_set_master_ids(batch, sorted(master_ids))
+    _batch_set_label_codes(batch, sorted(set(ret_label_codes)))
+    changed = True
+
+    if save and changed:
+        batch.save()
+
+    return batch
+
+
+def _reset_order_status_if_removed(
+    order_ids: List[int],
+    user,
+    to_status: str = "INBOUND",
+    exclude_batch_id: Optional[int] = None,
+):
     if not order_ids:
         return
 
-    still_in_pp_ids = set(
-        PPDeliveryItem.objects.filter(order_id__in=order_ids).values_list("order_id", flat=True)
-    )
-
     safe_ids: List[int] = []
     for oid in order_ids:
-        if oid in still_in_pp_ids:
-            continue
         o = Order.objects.filter(id=oid).first()
         if not o:
             continue
+
+        if _order_is_in_any_pp(o, exclude_batch_id=exclude_batch_id):
+            continue
+
         if _order_is_in_any_return_batch(o):
             continue
+
         safe_ids.append(oid)
 
     if not safe_ids:
@@ -401,21 +456,23 @@ def _reset_order_status_if_removed(order_ids: List[int], user, to_status: str = 
             )
 
 
-def _reset_return_order_status_if_removed(order_ids: List[int], user):
+def _reset_return_order_status_if_removed(
+    order_ids: List[int],
+    user,
+    exclude_batch_id: Optional[int] = None,
+):
     if not order_ids:
         return
 
-    still_in_pp_ids = set(
-        PPDeliveryItem.objects.filter(order_id__in=order_ids).values_list("order_id", flat=True)
-    )
-
     safe_ids: List[int] = []
     for oid in order_ids:
-        if oid in still_in_pp_ids:
-            continue
         o = Order.objects.filter(id=oid).first()
         if not o:
             continue
+
+        if _order_is_in_any_pp(o, exclude_batch_id=exclude_batch_id):
+            continue
+
         safe_ids.append(oid)
 
     if not safe_ids:
@@ -429,9 +486,10 @@ def _reset_return_order_status_if_removed(order_ids: List[int], user):
         old_shipper = order.delivery_shipper
 
         order.status = Order.STATUS_RETURN_ASSIGNED
+        order.delivery_shipper = None
         order.updated_at = now
         order.updated_by = user
-        order.save(update_fields=["status", "updated_at", "updated_by"])
+        order.save(update_fields=["status", "delivery_shipper", "updated_at", "updated_by"])
 
         _add_status_activity_and_audit(
             order=order,
@@ -443,34 +501,17 @@ def _reset_return_order_status_if_removed(order_ids: List[int], user):
             note="Removed from PP batch and reset to return assigned",
         )
 
-
-def _safe_recalc_batch_totals(batch: PPDeliveryBatch, save: bool = True):
-    total_pc = PPDeliveryItem.objects.filter(batch=batch).count()
-    shipment_cnt = PPDeliveryItem.objects.filter(
-        batch=batch,
-        source_type=PPDeliveryItem.SOURCE_NORMAL,
-    ).count()
-    return_batch_cnt = len(set(_batch_get_master_ids(batch)))
-    total_count = int(shipment_cnt) + int(return_batch_cnt)
-
-    update_fields = []
-    if hasattr(batch, "total_pc"):
-        batch.total_pc = int(total_pc)
-        update_fields.append("total_pc")
-    if hasattr(batch, "shipment_count"):
-        batch.shipment_count = int(shipment_cnt)
-        update_fields.append("shipment_count")
-    if hasattr(batch, "return_batch_count"):
-        batch.return_batch_count = int(return_batch_cnt)
-        update_fields.append("return_batch_count")
-    if hasattr(batch, "total_count"):
-        batch.total_count = int(total_count)
-        update_fields.append("total_count")
-
-    if save and update_fields:
-        batch.save(update_fields=update_fields)
-
-
+        if old_shipper:
+            add_audit_log(
+                module=AuditLog.MODULE_ORDER,
+                obj=order,
+                action=AuditLog.ACTION_ASSIGN_SHIPPER,
+                user=user,
+                field_name="delivery_shipper",
+                old_value=str(old_shipper.name),
+                new_value="",
+                note="Delivery shipper cleared after removing from PP return batch",
+            )
 # ============================================================
 # Return helpers
 # ============================================================
@@ -614,63 +655,6 @@ def _collect_return_orders_for_pp(
             ret_orders.append((o, src_code))
 
     return ret_orders, sorted(master_ids_used), sorted(label_codes_used), code_status
-
-
-# ============================================================
-# LIST
-# ============================================================
-@login_required
-def deliverpp_list(request):
-    shippers = _get_pp_shippers()
-
-    show_results = (request.GET.get("show") or "") == "1"
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
-    status = (request.GET.get("status") or "").strip()
-    shipper_id = (request.GET.get("shipper_id") or "").strip()
-
-    batches = PPDeliveryBatch.objects.none()
-
-    if show_results:
-        qs = PPDeliveryBatch.objects.all()
-        if date_from:
-            qs = qs.filter(created_at__date__gte=date_from)
-        if date_to:
-            qs = qs.filter(created_at__date__lte=date_to)
-        if status:
-            qs = qs.filter(status=status)
-        if shipper_id.isdigit():
-            qs = qs.filter(shipper_id=int(shipper_id))
-
-        batches = (
-            qs.select_related("created_by", "shipper")
-            .annotate(
-                total_pc_cnt=Count("items", distinct=True),
-                shipment_cnt=Count(
-                    "items",
-                    filter=Q(items__source_type=PPDeliveryItem.SOURCE_NORMAL),
-                    distinct=True,
-                ),
-                return_batch_cnt=Coalesce(
-                    F("return_batch_count"),
-                    Value(0),
-                    output_field=IntegerField(),
-                ),
-            )
-            .order_by("-id")
-        )
-
-    return render(request, "deliverpp/list.html", {
-        "show_results": show_results,
-        "batches": batches,
-        "shippers": shippers,
-        "status_choices": PPDeliveryBatch.STATUS_CHOICES,
-        "date_from": date_from,
-        "date_to": date_to,
-        "status": status,
-        "shipper_id": shipper_id,
-    })
-
 
 # ============================================================
 # CREATE
@@ -965,10 +949,64 @@ def pp_delivery_create(request):
         "rows_return_notfound": rows_return_notfound,
         "shippers": _get_pp_shippers(),
     })
+# ============================================================
+# LIST
+# ============================================================
+@login_required
+def deliverpp_list(request):
+    shippers = _get_pp_shippers()
+
+    show_results = (request.GET.get("show") or "") == "1"
+    date_from = (request.GET.get("date_from") or "").strip()
+    date_to = (request.GET.get("date_to") or "").strip()
+    status = (request.GET.get("status") or "").strip()
+    shipper_id = (request.GET.get("shipper_id") or "").strip()
+
+    batches = PPDeliveryBatch.objects.none()
+
+    if show_results:
+        qs = PPDeliveryBatch.objects.all()
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+        if status:
+            qs = qs.filter(status=status)
+        if shipper_id.isdigit():
+            qs = qs.filter(shipper_id=int(shipper_id))
+
+        batches = (
+            qs.select_related("created_by", "shipper")
+            .annotate(
+                total_pc_cnt=Count("items", distinct=True),
+                shipment_cnt=Count(
+                    "items",
+                    filter=Q(items__source_type=PPDeliveryItem.SOURCE_NORMAL),
+                    distinct=True,
+                ),
+                return_batch_cnt=Coalesce(
+                    F("return_batch_count"),
+                    Value(0),
+                    output_field=IntegerField(),
+                ),
+            )
+            .order_by("-id")
+        )
+
+    return render(request, "deliverpp/list.html", {
+        "show_results": show_results,
+        "batches": batches,
+        "shippers": shippers,
+        "status_choices": PPDeliveryBatch.STATUS_CHOICES,
+        "date_from": date_from,
+        "date_to": date_to,
+        "status": status,
+        "shipper_id": shipper_id,
+    })
 
 
 # ============================================================
-# DETAIL + EDIT
+# DETAIL / EDIT
 # ============================================================
 @login_required
 def pp_delivery_detail(request, batch_id: int):
@@ -1094,12 +1132,25 @@ def pp_delivery_detail(request, batch_id: int):
             removed_count = 0
 
             with transaction.atomic():
+                posted_shipper_id = (request.POST.get("shipper_id") or "").strip()
+                old_batch_shipper = getattr(batch, "shipper", None)
+                selected_shipper = old_batch_shipper
+
+                if posted_shipper_id.isdigit():
+                    selected_shipper = Shipper.objects.filter(id=int(posted_shipper_id)).first()
+
                 if staged_remove_ids:
                     rm_qs = PPDeliveryItem.objects.filter(batch=batch, id__in=staged_remove_ids).select_related("order")
                     rm_order_ids = [it.order_id for it in rm_qs if it.order_id]
                     removed_count += rm_qs.count()
                     rm_qs.delete()
-                    _reset_order_status_if_removed(rm_order_ids, user=request.user, to_status="INBOUND")
+
+                    _reset_order_status_if_removed(
+                        rm_order_ids,
+                        user=request.user,
+                        to_status="INBOUND",
+                        exclude_batch_id=batch.id,
+                    )
 
                 if staged_remove_ret_labels:
                     rm_ret_qs = PPDeliveryItem.objects.filter(
@@ -1110,7 +1161,12 @@ def pp_delivery_detail(request, batch_id: int):
                     rm_ret_order_ids = [it.order_id for it in rm_ret_qs if it.order_id]
                     removed_count += rm_ret_qs.count()
                     rm_ret_qs.delete()
-                    _reset_return_order_status_if_removed(rm_ret_order_ids, user=request.user)
+
+                    _reset_return_order_status_if_removed(
+                        rm_ret_order_ids,
+                        user=request.user,
+                        exclude_batch_id=batch.id,
+                    )
 
                     cur_labels = set(_batch_get_label_codes(batch))
                     cur_labels.difference_update(staged_remove_ret_labels)
@@ -1179,13 +1235,92 @@ def pp_delivery_detail(request, batch_id: int):
                             return_added += 1
                             return_to_update.append(o)
 
-                posted_shipper_id = (request.POST.get("shipper_id") or "").strip()
-                selected_shipper = getattr(batch, "shipper", None)
-                if posted_shipper_id.isdigit():
-                    selected_shipper = Shipper.objects.filter(id=int(posted_shipper_id)).first()
-                    if selected_shipper and getattr(batch, "shipper_id", None) != selected_shipper.id:
-                        batch.shipper = selected_shipper
-                        batch.save(update_fields=["shipper"])
+                if selected_shipper and getattr(batch, "shipper_id", None) != selected_shipper.id:
+                    batch.shipper = selected_shipper
+                    batch.save(update_fields=["shipper"])
+
+                shipper_changed = (
+                    selected_shipper
+                    and old_batch_shipper
+                    and selected_shipper.id != old_batch_shipper.id
+                ) or (selected_shipper and not old_batch_shipper)
+
+                if shipper_changed:
+                    active_items = list(batch.items.select_related("order").all())
+                    active_orders_normal: List[Order] = []
+                    active_orders_return: List[Order] = []
+
+                    for it in active_items:
+                        if not it.order:
+                            continue
+                        if it.source_type == PPDeliveryItem.SOURCE_RETURN:
+                            active_orders_return.append(it.order)
+                        else:
+                            active_orders_normal.append(it.order)
+
+                    for order in active_orders_normal:
+                        old_shipper = order.delivery_shipper
+                        if old_shipper == selected_shipper:
+                            continue
+
+                        old_status = order.status
+                        order.delivery_shipper = selected_shipper
+                        order.updated_at = timezone.now()
+                        order.updated_by = request.user
+                        order.save(update_fields=["delivery_shipper", "updated_at", "updated_by"])
+
+                        add_order_activity(
+                            order=order,
+                            action=OrderActivity.ACTION_ASSIGN,
+                            user=request.user,
+                            shipper=selected_shipper,
+                            old_status=old_status,
+                            new_status=order.status,
+                            note=f"Changed PP batch shipper to {selected_shipper.name}",
+                        )
+
+                        add_audit_log(
+                            module=AuditLog.MODULE_ORDER,
+                            obj=order,
+                            action=AuditLog.ACTION_ASSIGN_SHIPPER,
+                            user=request.user,
+                            field_name="delivery_shipper",
+                            old_value=str(old_shipper.name if old_shipper else ""),
+                            new_value=str(selected_shipper.name),
+                            note="Updated shipper from PP batch edit",
+                        )
+
+                    for order in active_orders_return:
+                        old_shipper = order.delivery_shipper
+                        if old_shipper == selected_shipper:
+                            continue
+
+                        old_status = order.status
+                        order.delivery_shipper = selected_shipper
+                        order.updated_at = timezone.now()
+                        order.updated_by = request.user
+                        order.save(update_fields=["delivery_shipper", "updated_at", "updated_by"])
+
+                        add_order_activity(
+                            order=order,
+                            action=OrderActivity.ACTION_EDIT,
+                            user=request.user,
+                            shipper=selected_shipper,
+                            old_status=old_status,
+                            new_status=order.status,
+                            note=f"Changed PP return shipper to {selected_shipper.name}",
+                        )
+
+                        add_audit_log(
+                            module=AuditLog.MODULE_ORDER,
+                            obj=order,
+                            action=AuditLog.ACTION_ASSIGN_SHIPPER,
+                            user=request.user,
+                            field_name="delivery_shipper",
+                            old_value=str(old_shipper.name if old_shipper else ""),
+                            new_value=str(selected_shipper.name),
+                            note="Updated return shipper from PP batch edit",
+                        )
 
                 _set_order_status_after_pp_assign(
                     normal_to_update,
@@ -1320,7 +1455,6 @@ def pp_delivery_detail(request, batch_id: int):
         "now": timezone.now(),
         "shippers": _get_pp_shippers(),
     })
-
 
 @login_required
 def pp_delivery_print(request, batch_id: int):

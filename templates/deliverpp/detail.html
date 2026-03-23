@@ -40,14 +40,22 @@
 </a>      <button type="submit" form="reasonForm" class="btn btn-ghost">💾 Save Reasons</button>
 
       {% if edit_mode %}
-        <button type="submit" form="mainSaveForm" class="btn">✅ Save (Done Editing)</button>
-      {% else %}
-        <form method="post" class="inline">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="enter_edit">
-          <button type="submit" class="btn btn-ghost">✏️ Edit</button>
-        </form>
-      {% endif %}
+  <div class="shipper-edit-box no-print" style="margin:10px 0 14px;">
+    <label for="shipper_id" style="font-weight:700; margin-right:8px;">Shipper:</label>
+    <select name="shipper_id" id="shipper_id" form="mainSaveForm" style="min-width:220px; height:36px;">
+      <option value="">-- Select shipper --</option>
+      {% for s in shippers %}
+        <option value="{{ s.id }}" {% if batch.shipper_id == s.id %}selected{% endif %}>
+          {{ s.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+{% else %}
+  <div style="margin:10px 0 14px; font-weight:700;">
+    Shipper: {% if batch.shipper %}{{ batch.shipper.name }}{% else %}-{% endif %}
+  </div>
+{% endif %}
     </div>
   </div>
 

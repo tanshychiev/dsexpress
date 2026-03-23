@@ -1054,18 +1054,66 @@ def pp_delivery_detail(request, batch_id: int):
             if updates:
                 item_map = {
                     it.id: it
-                    for it in PPDeliveryItem.objects.filter(batch=batch, id__in=[x[0] for x in updates])
+                    for it in (
+                        PPDeliveryItem.objects
+                        .filter(batch=batch, id__in=[x[0] for x in updates])
+                        .select_related("order")
+                    )
                 }
+
+                now = timezone.now()
+
                 for it_id, reason in updates:
                     it = item_map.get(it_id)
-                    if it:
-                        it.reason = reason
-                        it.save(update_fields=["reason"])
+                    if not it:
+                        continue
+
+                    old_item_reason = (it.reason or "").strip()
+                    new_reason = (reason or "").strip()
+
+                    if old_item_reason == new_reason:
+                        continue
+
+                    # 1) save snapshot reason on this PP item (history for this batch)
+                    it.reason = new_reason
+                    it.save(update_fields=["reason"])
+
+                    # 2) also sync latest reason to Order (current detail / current report)
+                    if it.source_type == PPDeliveryItem.SOURCE_NORMAL and it.order_id:
+                        order = it.order
+                        old_order_reason = (order.reason or "").strip()
+
+                        order.reason = new_reason
+                        order.updated_at = now
+                        order.updated_by = request.user
+                        order.save(update_fields=["reason", "updated_at", "updated_by"])
+
+                        add_audit_log(
+                            module=AuditLog.MODULE_ORDER,
+                            obj=order,
+                            action=AuditLog.ACTION_UPDATE,
+                            user=request.user,
+                            field_name="reason",
+                            old_value=old_order_reason,
+                            new_value=new_reason,
+                            note=f"Updated reason from Deliver PP batch {batch.code}",
+                        )
+
+                        add_order_activity(
+                            order=order,
+                            action=OrderActivity.ACTION_EDIT,
+                            user=request.user,
+                            shipper=order.delivery_shipper,
+                            old_status=order.status,
+                            new_status=order.status,
+                            note=f"Reason updated from Deliver PP: {old_order_reason or '-'} -> {new_reason or '-'}",
+                        )
+
                 messages.success(request, "Reasons saved.")
             else:
                 messages.info(request, "No reason changes.")
-            return redirect(_detail_url(batch.id, edit=False))
 
+            return redirect(_detail_url(batch.id, edit=False))
         if action in {
             "stage_add",
             "stage_remove",

@@ -165,7 +165,7 @@ def _save_order_and_logs(
 
     if clear_done_at:
         order.done_at = None
-    elif set_done_today:
+    elif set_done_today and not order.done_at:
         order.done_at = timezone.localdate()
 
     order.updated_at = timezone.now()
@@ -620,7 +620,7 @@ def clearpp_detail(request: HttpRequest, batch_id: int) -> HttpResponse:
                         note=f"Clear COD finalized: delivered from batch {batch.code}",
                         action=OrderActivity.ACTION_DELIVERED,
                         new_shipper="__KEEP__",
-                        set_done_today=True,
+                        set_done_today=False,
                     )
 
                 # ===== RETURN UNTICKED => RETURN_ASSIGNED =====
@@ -660,7 +660,7 @@ def clearpp_detail(request: HttpRequest, batch_id: int) -> HttpResponse:
                         note=f"Clear COD finalized: return completed from batch {batch.code}",
                         action=getattr(OrderActivity, "ACTION_RETURNED", OrderActivity.ACTION_EDIT),
                         new_shipper="__KEEP__",
-                        set_done_today=True,
+                        set_done_today=False,
                     )
 
                 old_batch_status = batch.status
@@ -1032,7 +1032,7 @@ def clearpp_cancel(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_status=Order.STATUS_INBOUND,
                 note=f"Batch {batch.code} cancelled from Clear PP",
                 action=OrderActivity.ACTION_INBOUND,
-                new_shipper=None,
+                new_shipper="__KEEP__",
                 clear_done_at=True,
             )
 
@@ -1051,7 +1051,7 @@ def clearpp_cancel(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_status=Order.STATUS_RETURN_ASSIGNED,
                 note=f"Return batch {batch.code} cancelled from Clear PP",
                 action=OrderActivity.ACTION_EDIT,
-                new_shipper=None,
+                new_shipper="__KEEP__",
                 clear_done_at=True,
             )
 

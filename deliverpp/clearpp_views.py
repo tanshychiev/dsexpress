@@ -842,6 +842,8 @@ def clear_delivery_ajax(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_shipper="__KEEP__",
                 set_done_today=True,
             )
+            order.clear_delivery = True
+            order.save(update_fields=["clear_delivery"])
 
         # ===== RETURN: ticked => RETURNED =====
         ticked_return_orders = list(
@@ -862,6 +864,8 @@ def clear_delivery_ajax(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_shipper="__KEEP__",
                 set_done_today=True,
             )
+            order.clear_delivery = True
+            order.save(update_fields=["clear_delivery"])
 
         # ===== RETURN: unticked stays RETURNING =====
         unticked_return_orders = list(
@@ -882,6 +886,8 @@ def clear_delivery_ajax(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_shipper="__KEEP__",
                 clear_done_at=True,
             )
+            order.clear_delivery = False
+            order.save(update_fields=["clear_delivery"])
 
         add_audit_log(
             module=AuditLog.MODULE_CLEAR_PP,
@@ -892,7 +898,6 @@ def clear_delivery_ajax(request: HttpRequest, batch_id: int) -> JsonResponse:
         )
 
     return JsonResponse({"ok": True})
-
 
 # =========================================================
 # 6) AJAX: UNDO
@@ -929,6 +934,8 @@ def clearpp_undo_clear(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_shipper="__KEEP__",
                 clear_done_at=True,
             )
+            order.clear_delivery = False
+            order.save(update_fields=["clear_delivery"])
 
         # ===== RETURN => RETURNING =====
         return_orders = list(
@@ -948,6 +955,8 @@ def clearpp_undo_clear(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_shipper="__KEEP__",
                 clear_done_at=True,
             )
+            order.clear_delivery = False
+            order.save(update_fields=["clear_delivery"])
 
         clear_cod = ClearPPCOD.objects.filter(batch=batch).first()
         if clear_cod:
@@ -996,8 +1005,6 @@ def clearpp_undo_clear(request: HttpRequest, batch_id: int) -> JsonResponse:
             )
 
     return JsonResponse({"ok": True})
-
-
 # =========================================================
 # 7) AJAX: CANCEL
 # =========================================================
@@ -1035,6 +1042,8 @@ def clearpp_cancel(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_shipper="__KEEP__",
                 clear_done_at=True,
             )
+            order.clear_delivery = False
+            order.save(update_fields=["clear_delivery"])
 
         # ===== RETURN => RETURN_ASSIGNED =====
         return_orders = list(
@@ -1054,6 +1063,8 @@ def clearpp_cancel(request: HttpRequest, batch_id: int) -> JsonResponse:
                 new_shipper="__KEEP__",
                 clear_done_at=True,
             )
+            order.clear_delivery = False
+            order.save(update_fields=["clear_delivery"])
 
         item_qs.update(
             ticked=False,

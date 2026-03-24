@@ -148,7 +148,11 @@ def get_done_queryset(Order, cleaned):
     qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")
-        .filter(is_deleted=False)
+        .filter(
+            is_deleted=False,
+            status__in=(DONE_STATUSES | RETURNED_STATUSES),
+            clear_delivery=True,
+        )
     )
 
     seller = cleaned.get("seller")
@@ -157,8 +161,6 @@ def get_done_queryset(Order, cleaned):
 
     d_from = cleaned.get("delivery_date_from")
     d_to = cleaned.get("delivery_date_to")
-
-    qs = qs.filter(status__in=(DONE_STATUSES | RETURNED_STATUSES))
 
     if d_from:
         qs = qs.filter(done_at__gte=d_from)

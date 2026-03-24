@@ -66,29 +66,39 @@ def _finalize_balance(row: dict):
 def _sum_rows(rows: list[dict]) -> dict:
     total = _new_row()
     for r in rows:
-        total["cod"] += r["cod"]
-        total["cash_usd"] += r["cash_usd"]
-        total["cash_khr"] += r["cash_khr"]
-        total["aba_usd"] += r["aba_usd"]
-        total["aba_khr"] += r["aba_khr"]
-        total["expense"] += r["expense"]
+        total["cod"] += _to_decimal(r.get("cod", 0))
+        total["cash_usd"] += _to_decimal(r.get("cash_usd", 0))
+        total["cash_khr"] += _to_decimal(r.get("cash_khr", 0))
+        total["aba_usd"] += _to_decimal(r.get("aba_usd", 0))
+        total["aba_khr"] += _to_decimal(r.get("aba_khr", 0))
+        total["expense"] += _to_decimal(r.get("expense", 0))
+        total["remark"] = _append_text(total["remark"], r.get("remark", ""))
     _finalize_balance(total)
     return total
 
 
 def build_shipper_cod_report(clear_cod_rows):
     """
-    Group by:
-      date -> shift -> shipper
+    Group by ASSIGN DATE -> ASSIGN SHIFT -> SHIPPER
+
+    Business rule:
+    - If assigned in morning but clear COD in afternoon, record in morning of assign date
+    - If assigned in afternoon but clear COD next day morning, record in afternoon of assign date
     """
+
     grouped = OrderedDict()
 
     for obj in clear_cod_rows:
         batch = getattr(obj, "batch", None)
+        if not batch:
+            continue
+
         shipper = getattr(batch, "shipper", None)
         shipper_name = getattr(shipper, "name", "") or "-"
         assigned_at = getattr(batch, "assigned_at", None)
 
+        # IMPORTANT:
+        # Always use assigned_at, not COD clear time
         if not assigned_at:
             continue
 

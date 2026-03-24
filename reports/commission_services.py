@@ -89,23 +89,29 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
 
     # -----------------------------
     # DONE
+    # RULE:
+    # count done by ASSIGN DATE + ASSIGN SHIFT
+    # not by delivery cleared datetime
     # -----------------------------
     for item in pp_items:
         if not getattr(item, "ticked", False):
             continue
 
-        done_at = getattr(item, "delivery_cleared_at", None)
-        if not done_at:
+        batch = getattr(item, "batch", None)
+        if not batch:
             continue
 
-        batch = getattr(item, "batch", None)
-        shipper = getattr(batch, "shipper", None) if batch else None
+        assigned_at = getattr(batch, "assigned_at", None)
+        if not assigned_at:
+            continue
+
+        shipper = getattr(batch, "shipper", None)
         shipper_name = getattr(shipper, "name", "") or "-"
         shipper_names.add(shipper_name)
 
-        day_key = done_at.date()
+        day_key = assigned_at.date()
         activity_dates.append(day_key)
-        shift = _get_shift_name(done_at)
+        shift = _get_shift_name(assigned_at)
 
         key = (shipper_name, day_key)
         row = grouped[key]

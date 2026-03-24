@@ -1,119 +1,292 @@
 {% extends "base.html" %}
-{% block title %}Deliver in PP - List{% endblock %}
+{% block title %}Deliver in PP{% endblock %}
 {% block page_title %}Deliver in PP{% endblock %}
 {% block page_subtitle %}Batch List{% endblock %}
 
 {% block content %}
-<div class="card" style="padding:18px;border-radius:16px;">
+<div class="page-wrap">
 
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-    <div style="font-weight:900;">Search Deliver PP Batches</div>
-    <a class="btn btn-primary" href="{% url 'deliverpp_new' %}">+ New Batch</a>
+  <div class="page-head-row">
+    <div>
+      <div class="content-title">Deliver in PP</div>
+      <div class="content-subtitle">Batch List</div>
+    </div>
+
+    <a class="btn btn-blue-action" href="{% url 'deliverpp_new' %}">+ Assign Delivery PP</a>
   </div>
 
-  <form method="get" style="margin-top:14px;">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-
-      <div style="min-width:200px;">
-        <div class="label">Date From</div>
-        <input class="input" type="date" name="date_from" value="{{ date_from }}">
-      </div>
-
-      <div style="min-width:200px;">
-        <div class="label">Date To</div>
-        <input class="input" type="date" name="date_to" value="{{ date_to }}">
-      </div>
-
-      <div style="min-width:220px;">
-        <div class="label">Status</div>
-        <select class="input" name="status">
-          <option value="">-- All --</option>
-          {% for v,l in status_choices %}
-            <option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div style="min-width:260px;">
-        <div class="label">Shipper</div>
-        <select class="input" name="shipper_id">
-          <option value="">-- All --</option>
-          {% for s in shippers %}
-            <option value="{{ s.id }}" {% if shipper_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
+  <div class="card filter-card">
+    <form method="get" class="filter-row">
       <input type="hidden" name="show" value="1">
 
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-success" type="submit">Search</button>
-        <a class="btn btn-danger" href="{% url 'deliverpp_list' %}">Reset</a>
+      <div class="field-box">
+        <label>Date From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="input">
       </div>
 
-    </div>
-  </form>
+      <div class="field-box">
+        <label>Date To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="input">
+      </div>
 
-  {% if show_results %}
-    <div style="margin-top:16px;overflow:auto;">
-      <table class="ds-table" style="min-width:1200px;">
+      <div class="field-box">
+        <label>Status</label>
+        <select name="status" class="input">
+          <option value="">-- All --</option>
+          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+          <option value="DONE" {% if status == "DONE" %}selected{% endif %}>Done</option>
+          <option value="CANCELLED" {% if status == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+        </select>
+      </div>
+
+      <div class="field-box">
+        <label>Shipper</label>
+        <select name="shipper_id" class="input">
+          <option value="">-- All --</option>
+          {% for s in shippers %}
+            <option value="{{ s.id }}" {% if shipper_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
+              {{ s.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field-actions">
+        <button type="submit" class="btn btn-search-black">Search</button>
+        <a href="{% url 'deliverpp_list' %}" class="btn btn-reset-link">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-wrap">
+      <table class="ds-table province-like">
         <thead>
           <tr>
-            <th style="text-align:center;">ID</th>
-            <th style="text-align:center;">CODE</th>
-            <th style="text-align:center;">DATE</th>
-            <th style="text-align:center;">SHIPPER</th>
-            <th style="text-align:center;">STATUS</th>
-            <th style="text-align:center;">TOTAL</th>
-            <th style="text-align:center;">SHIPMENT</th>
-            <th style="text-align:center;">RETURN BATCH</th>
-            <th style="text-align:center;">TOTAL PC</th>
-            <th style="text-align:center;">ACTION</th>
+            <th>N</th>
+            <th>ID</th>
+            <th>CODE</th>
+            <th>DATE</th>
+            <th>SHIPPER</th>
+            <th>STATUS</th>
+            <th>TOTAL</th>
+            <th>SHIPMENT</th>
+            <th>RETURN BATCH</th>
+            <th>TOTAL PC</th>
+            <th>ACTION</th>
           </tr>
         </thead>
         <tbody>
-          {% for b in batches %}
-          <tr>
-            <td style="text-align:center;">{{ b.id }}</td>
-            <td style="text-align:center;"><b>{{ b.code }}</b></td>
-            <td style="text-align:center;">{{ b.created_at|date:"Y-m-d H:i" }}</td>
-            <td style="text-align:center;">{% if b.shipper %}{{ b.shipper.name }}{% else %}-{% endif %}</td>
-            <td style="text-align:center;">
-              <span class="badge {% if b.status == 'DONE' %}badge-ok{% elif b.status == 'CANCELLED' %}badge-bad{% else %}badge-mid{% endif %}">
-                {{ b.status }}
-              </span>
-            </td>
-
-            <td style="text-align:center;"><b>{{ b.shipment_cnt|add:b.return_batch_cnt }}</b></td>
-            <td style="text-align:center;">{{ b.shipment_cnt }}</td>
-            <td style="text-align:center;">{{ b.return_batch_cnt }}</td>
-            <td style="text-align:center;"><b>{{ b.total_pc_cnt }}</b></td>
-            <td style="text-align:center;">
-              <a class="btn btn-primary" href="{% url 'deliverpp_detail' b.id %}">Open</a>
-            </td>
-          </tr>
+          {% for batch in batches %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ batch.id }}</td>
+              <td><b>{{ batch.code }}</b></td>
+              <td>{{ batch.assigned_at|date:"Y-m-d H:i" }}</td>
+              <td>{{ batch.shipper.name|default:"-" }}</td>
+              <td>
+                <span class="status-pill
+                  {% if batch.status == 'DONE' %}status-green
+                  {% elif batch.status == 'CANCELLED' %}status-red
+                  {% else %}status-yellow{% endif %}">
+                  {{ batch.status }}
+                </span>
+              </td>
+              <td><b>{{ batch.total_all|default:0 }}</b></td>
+              <td>{{ batch.shipment_count|default:0 }}</td>
+              <td>{{ batch.return_batch_count|default:0 }}</td>
+              <td><b>{{ batch.total_pc|default:0 }}</b></td>
+              <td>
+                <a href="{% url 'deliverpp_detail' batch.id %}" class="action-link">Open</a>
+              </td>
+            </tr>
           {% empty %}
-          <tr><td colspan="10" style="text-align:center;padding:14px;opacity:.7;">No results.</td></tr>
+            <tr>
+              <td colspan="11" class="empty-row">Fill filters and click Search.</td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  {% else %}
-    <div style="margin-top:16px;text-align:center;opacity:.75;">
-      Fill filters and click <b>Search</b>.
-    </div>
-  {% endif %}
+  </div>
 
 </div>
 
 <style>
-  .badge{ padding:6px 14px;border-radius:20px;font-weight:800;font-size:12px;display:inline-block; }
-  .badge-ok{ background:#eafff0;color:#0a7;border:1px solid #a7f0c0; }
-  .badge-bad{ background:#ffecec;color:#c00;border:1px solid #ffb4b4; }
-  .badge-mid{ background:#f3f6ff;color:#214bff;border:1px solid #cfd8ff; }
+  .page-wrap{width:100%;}
 
-  .ds-table{ width:100%; border-collapse:collapse; }
-  .ds-table th,.ds-table td{ border-bottom:1px solid #eee; padding:10px; }
-  .ds-table th{ background:#fafafa; font-weight:900; }
+  .page-head-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+
+  .content-title{
+    font-size:32px;
+    font-weight:900;
+    color:#0f172a;
+    line-height:1.1;
+  }
+
+  .content-subtitle{
+    margin-top:4px;
+    font-size:13px;
+    color:#6b7280;
+    font-weight:700;
+  }
+
+  .btn-blue-action{
+    background:#2563eb;
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    padding:12px 18px;
+    font-weight:900;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:44px;
+  }
+
+  .filter-card{
+    padding:12px;
+    border-radius:14px;
+    margin-bottom:12px;
+  }
+
+  .filter-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:end;
+  }
+
+  .field-box{min-width:110px;}
+
+  .field-box label{
+    display:block;
+    margin-bottom:6px;
+    font-size:11px;
+    color:#6b7280;
+    font-weight:700;
+  }
+
+  .input{
+    width:100%;
+    min-width:120px;
+    height:38px;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    padding:0 12px;
+    background:#fff;
+  }
+
+  .field-actions{
+    display:flex;
+    align-items:end;
+    gap:10px;
+  }
+
+  .btn-search-black{
+    background:#111827;
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    height:38px;
+    padding:0 16px;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .btn-reset-link{
+    color:#111827;
+    font-weight:700;
+    text-decoration:none;
+    padding:0 2px;
+    display:inline-flex;
+    align-items:center;
+    height:38px;
+  }
+
+  .table-card{
+    padding:10px;
+    border-radius:14px;
+  }
+
+  .table-wrap{overflow:auto;}
+
+  .province-like{
+    width:100%;
+    min-width:1100px;
+    border-collapse:separate;
+    border-spacing:0;
+  }
+
+  .province-like th{
+    background:#f8fafc;
+    color:#111827;
+    font-size:12px;
+    font-weight:900;
+    text-align:center;
+    padding:10px 12px;
+    border-bottom:1px solid #e5e7eb;
+  }
+
+  .province-like td{
+    text-align:center;
+    padding:12px;
+    border-bottom:1px solid #e5e7eb;
+    font-size:13px;
+    background:#fff;
+  }
+
+  .empty-row{
+    text-align:center;
+    color:#6b7280;
+    padding:18px !important;
+  }
+
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:88px;
+    height:28px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+    padding:0 10px;
+  }
+
+  .status-green{background:#dcfce7;color:#166534;}
+  .status-yellow{background:#fef3c7;color:#92400e;}
+  .status-red{background:#fee2e2;color:#b91c1c;}
+
+  .action-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:74px;
+    height:32px;
+    padding:0 12px;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-weight:800;
+    text-decoration:none;
+    border:1px solid #bfdbfe;
+    transition:all .15s ease;
+  }
+
+  .action-link:hover{
+    background:#1d4ed8;
+    color:#fff;
+    border-color:#1d4ed8;
+    transform:translateY(-1px);
+  }
 </style>
 {% endblock %}

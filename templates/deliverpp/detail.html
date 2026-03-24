@@ -1,606 +1,652 @@
 {% extends "base.html" %}
-{% load static %}
-{% load dict_extras %}
-
-{% block title %}Deliver in PP{% endblock %}
-{% block page_title %}Deliver in PP{% endblock %}
+{% block title %}Deliver PP - Detail{% endblock %}
+{% block page_title %}Deliver PP Detail{% endblock %}
 {% block page_subtitle %}Batch {{ batch.code }}{% endblock %}
 
 {% block content %}
-<style>
-.pp-wrap{
-  width:100%;
-  max-width:none;
-  margin:0;
-}
+<div class="card pp-card">
 
-.pp-card{
-  background:#fff;
-  border:1px solid #e5e7eb;
-  border-radius:16px;
-  box-shadow:0 8px 24px rgba(15,23,42,.05);
-  overflow:hidden;
-}
-
-.pp-head{
-  padding:16px 18px 14px;
-  border-bottom:1px solid #eef2f7;
-  background:linear-gradient(180deg,#ffffff 0%, #fafafa 100%);
-}
-
-.pp-body{
-  padding:16px 18px 18px;
-}
-
-.pp-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:14px;
-  flex-wrap:wrap;
-}
-
-.pp-title{
-  font-size:28px;
-  font-weight:800;
-  color:#111827;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  line-height:1.15;
-}
-
-.batch-code-big{
-  font-size:32px;
-  font-weight:900;
-  color:#1d4ed8;
-  text-decoration:none;
-  letter-spacing:.2px;
-}
-
-.pp-meta{
-  margin-top:8px;
-  font-size:14px;
-  color:#6b7280;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  align-items:center;
-}
-
-.meta-item b{
-  font-weight:700;
-  color:#111827;
-}
-
-.sep{
-  color:#d1d5db;
-}
-
-.shipper-edit-box{
-  margin-top:12px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.shipper-select{
-  min-width:220px;
-  height:38px;
-  border:1px solid #d1d5db;
-  border-radius:10px;
-  padding:0 12px;
-  font-size:14px;
-  background:#fff;
-}
-
-.pp-actions{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-
-.btn{
-  height:38px;
-  padding:0 14px;
-  border-radius:10px;
-  font-size:13px;
-  font-weight:700;
-  border:none;
-  cursor:pointer;
-  background:#111827;
-  color:#fff;
-}
-
-.btn:hover{
-  opacity:.92;
-}
-
-.btn-ghost{
-  background:#fff;
-  border:1px solid #d1d5db;
-  color:#111827;
-}
-
-.inline{
-  display:inline;
-}
-
-.section-title{
-  font-size:18px;
-  font-weight:800;
-  color:#111827;
-  margin:6px 0 12px;
-}
-
-.edit-box{
-  border:1px solid #e5e7eb;
-  border-radius:14px;
-  background:#fcfcfd;
-  padding:14px;
-  margin-bottom:16px;
-}
-
-.edit-box textarea{
-  width:100%;
-  min-height:92px;
-  border:1px solid #d1d5db;
-  border-radius:12px;
-  padding:12px 14px;
-  font-size:14px;
-  box-sizing:border-box;
-  resize:vertical;
-}
-
-.edit-grid{
-  display:grid;
-  grid-template-columns:1fr auto;
-  gap:10px;
-  align-items:center;
-}
-
-.edit-help{
-  margin-top:8px;
-  font-size:13px;
-  color:#6b7280;
-}
-
-.table-wrap{
-  width:100%;
-  overflow:auto;
-  border:1px solid #e5e7eb;
-  border-radius:14px;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  min-width:1250px;
-}
-
-thead th{
-  background:#f8fafc;
-  font-size:12px;
-  font-weight:700;
-  color:#475569;
-  text-transform:uppercase;
-  padding:11px 10px;
-  border-bottom:1px solid #e5e7eb;
-  text-align:left;
-  white-space:nowrap;
-}
-
-tbody td{
-  padding:12px 10px;
-  font-size:14px;
-  color:#111827;
-  border-bottom:1px solid #f1f5f9;
-  vertical-align:top;
-}
-
-tbody tr:hover{
-  background:#fafafa;
-}
-
-.col-n{
-  width:44px;
-  text-align:center;
-}
-
-.col-tracking{
-  width:210px;
-}
-
-.col-seller{
-  width:140px;
-}
-
-.col-code{
-  width:150px;
-}
-
-.col-location{
-  min-width:420px;
-}
-
-.col-customer{
-  width:150px;
-}
-
-.col-phone{
-  width:140px;
-}
-
-.col-price{
-  width:90px;
-  text-align:right;
-}
-
-.col-cod{
-  width:90px;
-  text-align:right;
-  font-weight:700;
-}
-
-.col-reason{
-  width:180px;
-}
-
-.col-action{
-  width:80px;
-  text-align:center;
-}
-
-.tracking-link-big{
-  font-size:18px;
-  font-weight:800;
-  color:#1d4ed8;
-  text-decoration:underline;
-  text-underline-offset:3px;
-  white-space:nowrap;
-}
-
-.order-code-text{
-  font-size:15px;
-  font-weight:700;
-  color:#111827;
-}
-
-.location-cell{
-  font-size:14px;
-  font-weight:600;
-  line-height:1.4;
-  word-break:break-word;
-}
-
-.reason-input{
-  width:100%;
-  border:1px solid #d1d5db;
-  border-radius:10px;
-  padding:7px 10px;
-  font-size:13px;
-}
-
-.danger-btn{
-  width:34px;
-  height:34px;
-  border-radius:10px;
-  border:none;
-  cursor:pointer;
-  background:#fee2e2;
-  color:#b91c1c;
-}
-
-.undo-btn{
-  background:#dbeafe;
-  color:#1d4ed8;
-}
-
-.row-removed td{
-  background:#fff7ed;
-}
-
-.tag-remove{
-  font-size:11px;
-  padding:4px 8px;
-  border-radius:999px;
-  background:#ffedd5;
-  color:#9a3412;
-  display:inline-block;
-}
-
-@media print{
-  .no-print{ display:none !important; }
-  .pp-card{
-    border:none;
-    box-shadow:none;
-  }
-}
-</style>
-<div class="pp-wrap">
-  <div class="pp-card">
-    <div class="pp-head">
-      <div class="pp-header">
-        <div>
-          <div class="pp-title">
-            Batch
-            <a class="mono trk" href="{% url 'deliverpp_detail' batch.id %}">{{ batch.code }}</a>
-
-            {% if batch.status == "DONE" %}
-              <span class="badge badge-green">DONE</span>
-            {% elif batch.status == "CANCELLED" %}
-              <span class="badge badge-red">CANCELLED</span>
-            {% else %}
-              <span class="badge badge-yellow">PENDING</span>
-            {% endif %}
-          </div>
-
-          <div class="pp-meta">
-            <span class="meta-item">Total: <span class="big-num">{{ total_all }}</span></span>
-            <span class="sep">•</span>
-            <span class="meta-item">Shipment: <b>{{ total_shipment }}</b></span>
-            <span class="sep">•</span>
-            <span class="meta-item">Return batch: <b>{{ total_return_batch }}</b></span>
-            <span class="sep">•</span>
-            <span class="meta-item">Total PC: <b>{{ batch.total_pc|default:"0" }}</b></span>
-            <span class="sep">•</span>
-            <span class="meta-item">
-              Shipper:
-              <b>{% if batch.shipper %}{{ batch.shipper.name }}{% else %}-{% endif %}</b>
-            </span>
-          </div>
-
-          {% if edit_mode %}
-            <div class="shipper-edit-box no-print">
-              <label for="shipper_id">Shipper:</label>
-              <select name="shipper_id" id="shipper_id" form="mainSaveForm" class="shipper-select">
-                <option value="">-- Select shipper --</option>
-                {% for s in shippers %}
-                  <option value="{{ s.id }}" {% if batch.shipper_id == s.id %}selected{% endif %}>
-                    {{ s.name }}
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-          {% endif %}
+  {% if messages %}
+    <div style="margin-bottom:12px;display:flex;flex-direction:column;gap:8px;">
+      {% for message in messages %}
+        <div class="msg {% if message.tags == 'success' %}msg-success{% elif message.tags == 'error' %}msg-error{% else %}msg-info{% endif %}">
+          {{ message }}
         </div>
+      {% endfor %}
+    </div>
+  {% endif %}
 
-        <div class="pp-actions no-print">
-          <a class="btn btn-ghost" target="_blank" href="{% url 'deliverpp_print' batch.id %}">
-            🖨 Print
-          </a>
+  <!-- HEADER -->
+  <div class="pp-header">
+    <div>
+      <div class="pp-title">
+        Batch <a class="mono trk" href="{% url 'deliverpp_detail' batch.id %}">{{ batch.code }}</a>
+        {% if edit_mode %}
+          <span class="pp-state pp-orange">EDIT MODE</span>
+        {% else %}
+          <span class="pp-state pp-blue">VIEW MODE</span>
+        {% endif %}
+      </div>
 
-          <button type="submit" form="reasonForm" class="btn btn-ghost">
-            💾 Save Reasons
-          </button>
-
-          {% if edit_mode %}
-            <button type="submit" form="mainSaveForm" class="btn">
-              ✅ Save (Done Editing)
-            </button>
-
-            <form method="post" class="inline">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="cancel_edit">
-              <button type="submit" class="btn btn-ghost">Cancel Edit</button>
-            </form>
-          {% else %}
-            <form method="post" class="inline">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="enter_edit">
-              <button type="submit" class="btn">✏️ Edit</button>
-            </form>
-          {% endif %}
-        </div>
+      <div class="pp-meta">
+        <span class="meta-item">Total: <span class="big-num">{{ total_all }}</span></span>
+        <span class="sep">•</span>
+        <span class="meta-item">Shipment: <b>{{ total_shipment }}</b></span>
+        <span class="sep">•</span>
+        <span class="meta-item">Return batch: <b>{{ total_return_batch }}</b></span>
+        {% if batch.shipper %}
+          <span class="sep">•</span>
+          <span class="meta-item">Shipper: <b>{{ batch.shipper.name }}</b></span>
+        {% endif %}
+        {% if batch.created_by %}
+          <span class="sep">•</span>
+          <span class="meta-item">Created by: <b>{{ batch.created_by.username }}</b></span>
+        {% endif %}
       </div>
     </div>
 
-    <div class="pp-body">
-      <form method="post" id="mainSaveForm">
+    <div class="pp-actions no-print">
+      <a class="btn btn-ghost" href="{% url 'deliverpp_list' %}">← Back</a>
+      <a class="btn btn-ghost" target="_blank" href="{% url 'deliverpp_print' batch.id %}">🖨 Print</a>
+
+      {% if not edit_mode %}
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="enter_edit">
+          <button class="btn btn-primary" type="submit">✏ Edit</button>
+        </form>
+      {% else %}
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="cancel_edit">
+          <button class="btn btn-warning" type="submit">Cancel Edit</button>
+        </form>
+
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="confirm_save">
+          <button class="btn btn-success" type="submit">✅ Save (Done Editing)</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if edit_mode %}
+    <div class="section-title">Edit Shipper</div>
+    <div class="edit-box" style="margin-bottom:12px;">
+      <form method="post" class="shipper-form">
         {% csrf_token %}
-        <input type="hidden" name="action" value="confirm_save">
-      </form>
+        <input type="hidden" name="action" value="change_shipper">
 
-      <form method="post" id="reasonForm">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="save_reasons">
-
-        {% if edit_mode %}
-          <div class="edit-box no-print">
-            <div class="section-title" style="margin-top:0;">Add / Scan Shipment</div>
-
-            <div class="edit-grid">
-              <textarea name="scan_codes" form="stageAddForm" placeholder="One code per line...">{{ staged_add_text }}</textarea>
-
-              <form method="post" id="stageAddForm" class="inline">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="stage_add">
-                <button type="submit" class="btn">➕ Add (Preview)</button>
-              </form>
-            </div>
-
-            <div class="edit-help">
-              Preview will show under. Then click ✅ <b>Save (Done Editing)</b> to apply.
-            </div>
-
-            {% if preview_rows or preview_notfound or preview_return %}
-              <div class="preview-box">
-                {% if preview_rows %}
-                  <div class="preview-group-title">Preview - Normal Orders</div>
-                  <div class="preview-list">
-                    {% for p in preview_rows %}
-                      <div class="preview-item {% if p.ok %}preview-ok{% else %}preview-bad{% endif %}">
-                        <b>{{ p.order.tracking_no }}</b>
-                        — {% if p.order.seller %}{{ p.order.seller.name }}{% else %}-{% endif %}
-                        — {{ p.why }}
-                      </div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-
-                {% if preview_return %}
-                  <div class="preview-group-title" style="margin-top:10px;">Preview - Return Codes</div>
-                  <div class="preview-list">
-                    {% for p in preview_return %}
-                      <div class="preview-item {% if p.status == 'OK' %}preview-ok{% else %}preview-bad{% endif %}">
-                        <b>{{ p.code }}</b> — {{ p.status }}
-                      </div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-
-                {% if preview_notfound %}
-                  <div class="preview-group-title" style="margin-top:10px;">Not Found</div>
-                  <div class="preview-list">
-                    {% for code in preview_notfound %}
-                      <div class="preview-item preview-bad"><b>{{ code }}</b> — Not found</div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              </div>
-            {% endif %}
-          </div>
-        {% endif %}
-
-        {% if return_blocks %}
-          <div class="section-title">Return Batch</div>
-
-          {% for r in return_blocks %}
-            <div class="return-card {% if r.staged_removed %}row-removed{% endif %}">
-              <div class="return-grid">
-                <div class="stack">
-                  <div class="return-key">Code</div>
-                  <div class="return-val mono">{{ r.code }}</div>
-                </div>
-
-                <div class="stack">
-                  <div class="return-key">Location</div>
-                  <div class="return-val">{{ r.address|default:"-" }}</div>
-                </div>
-
-                <div class="stack">
-                  <div class="return-key">Phone</div>
-                  <div class="return-val">{{ r.phone|default:"-" }}</div>
-                </div>
-
-                <div class="stack">
-                  <div class="return-key">PC</div>
-                  <div class="return-val">{{ r.pc }}</div>
-                </div>
-
-                <div class="stack">
-                  <div class="return-key">COD</div>
-                  <div class="return-val">{{ r.cod }}</div>
-                </div>
-
-                <div class="stack no-print" style="align-items:flex-end;">
-                  {% if r.staged_removed %}
-                    <span class="tag-remove">Marked remove</span>
-                    <form method="post" class="inline" style="margin-top:8px;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="undo_remove_return">
-                      <input type="hidden" name="label_code" value="{{ r.label_code }}">
-                      <button type="submit" class="danger-btn undo-btn">↺</button>
-                    </form>
-                  {% elif edit_mode %}
-                    <form method="post" class="inline">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="stage_remove_return">
-                      <input type="hidden" name="label_code" value="{{ r.label_code }}">
-                      <button type="submit" class="danger-btn">🗑</button>
-                    </form>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
+        <label class="shipper-label">Shipper</label>
+        <select name="shipper_id" class="shipper-select">
+          <option value="">-- Select shipper --</option>
+          {% for s in shippers %}
+            <option value="{{ s.id }}" {% if batch.shipper_id == s.id %}selected{% endif %}>
+              {{ s.name }}
+            </option>
           {% endfor %}
-        {% endif %}
+        </select>
 
-        <div class="section-title">PP Delivery</div>
+        <button class="btn btn-primary" type="submit">Update Shipper</button>
+      </form>
+    </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th class="col-n">N</th>
-                <th class="col-tracking">Tracking</th>
-                <th class="col-seller">Seller</th>
-                <th class="col-code">Order Code</th>
-                <th class="col-location">Receiver Location</th>
-                <th class="col-customer">Customer</th>
-                <th class="col-phone">Phone</th>
-                <th class="col-price">Price</th>
-                <th class="col-cod">COD</th>
-                <th class="col-reason">Reason</th>
-                <th class="col-action no-print">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for it in items %}
-                {% with o=it.order %}
-                  <tr class="{% if it.id in staged_remove %}row-removed{% endif %}">
-                    <td class="col-n">{{ forloop.counter }}</td>
-                    <td class="col-tracking">
-                      <a class="mono trk" href="{% url 'order_detail' o.id %}">{{ o.tracking_no|default:o.id }}</a>
-                    </td>
-                    <td class="col-seller">
-                      {% if o.seller %}{% firstof o.seller.seller_name o.seller.name "-" %}{% else %}-{% endif %}
-                    </td>
-                    <td class="col-code">{% firstof o.seller_order_code o.code "-" %}</td>
-                    <td class="col-location">
-                      <div class="location-cell">{% firstof o.receiver_address "-" %}</div>
-                    </td>
-                    <td class="col-customer">{% firstof o.receiver_name "-" %}</td>
-                    <td class="col-phone">{% firstof o.receiver_phone "-" %}</td>
-                    <td class="col-price">{% firstof o.price "-" %}</td>
-                    <td class="col-cod">{% firstof o.cod "0" %}</td>
-                    <td class="col-reason">
-                      <input
-                        type="text"
-                        class="reason-input"
-                        name="reason_{{ it.id }}"
-                        value="{{ it.reason|default_if_none:'' }}"
-                        placeholder="Reason..."
-                      >
-                    </td>
-                    <td class="col-action no-print">
-                      {% if edit_mode %}
-                        {% if it.id in staged_remove %}
-                          <div class="tag-remove" style="margin-bottom:6px;">Marked remove</div>
-                          <form method="post" class="inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="undo_remove">
-                            <input type="hidden" name="item_id" value="{{ it.id }}">
-                            <button type="submit" class="danger-btn undo-btn">↺</button>
-                          </form>
-                        {% else %}
-                          <form method="post" class="inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="stage_remove">
-                            <input type="hidden" name="item_id" value="{{ it.id }}">
-                            <button type="submit" class="danger-btn">🗑</button>
-                          </form>
-                        {% endif %}
+    <div class="section-title">Add / Scan Shipment</div>
+
+    <div class="edit-grid">
+      <div class="edit-box">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="stage_add">
+
+          <textarea class="scan-box" name="scan_codes" placeholder="One code per line&#10;Example:&#10;DS202603240001&#10;DS202603240002&#10;RTS-55-1">{{ staged_add_text }}</textarea>
+
+          <div class="edit-actions">
+            <button class="btn btn-primary" type="submit">➕ Preview Add</button>
+          </div>
+
+          <div class="edit-help">
+            Preview only. Nothing is saved until you click <b>Save (Done Editing)</b>.
+          </div>
+        </form>
+      </div>
+
+      <div class="preview-box">
+        <div class="preview-title">Preview</div>
+
+        {% if preview_rows %}
+          <div class="table-wrap">
+            <table class="ds-table wide">
+              <thead>
+                <tr>
+                  <th class="th-center" style="width:55px;">N</th>
+                  <th class="th-center">TRACKING</th>
+                  <th class="th-center">SELLER</th>
+                  <th class="th-center">RECEIVER LOCATION</th>
+                  <th class="th-center">CUSTOMER</th>
+                  <th class="th-center">PHONE</th>
+                  <th class="th-center">PRICE</th>
+                  <th class="th-center">COD</th>
+                  <th class="th-center">STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in preview_rows %}
+                  <tr class="{% if p.ok %}preview-row-ok{% else %}preview-row-bad{% endif %}">
+                    <td class="td-center">{{ forloop.counter }}</td>
+                    <td class="td-center">
+                      {% if p.order %}
+                        <span class="trk mono">{{ p.order.tracking_no }}</span>
                       {% else %}
-                        <span class="muted">-</span>
+                        -
+                      {% endif %}
+                    </td>
+                    <td class="td-center">
+                      {% if p.order and p.order.seller %}
+                        {{ p.order.seller.name }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td>{% if p.order %}{% firstof p.order.receiver_address "-" %}{% else %}-{% endif %}</td>
+                    <td class="td-center">{% if p.order %}{% firstof p.order.receiver_name "-" %}{% else %}-{% endif %}</td>
+                    <td class="td-center">{% if p.order %}{% firstof p.order.receiver_phone "-" %}{% else %}-{% endif %}</td>
+                    <td class="td-center">{% if p.order %}{% firstof p.order.price "-" %}{% else %}-{% endif %}</td>
+                    <td class="td-center">{% if p.order %}{{ p.order.cod|default_if_none:"0.00" }}{% else %}-{% endif %}</td>
+                    <td class="td-center">
+                      {% if p.ok %}
+                        <span class="st-ok">OK</span>
+                      {% else %}
+                        <span class="st-remove">{{ p.why }}</span>
                       {% endif %}
                     </td>
                   </tr>
-                {% endwith %}
-              {% empty %}
-                <tr>
-                  <td colspan="11">
-                    <div class="empty-box">No items</div>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </form>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+
+        {% if preview_return %}
+          <div class="preview-title" style="margin-top:12px;">Return Codes</div>
+          <div class="preview-list">
+            {% for p in preview_return %}
+              <div class="preview-item {% if p.status == 'OK' %}preview-ok{% else %}preview-warn{% endif %}">
+                <div><b>{{ p.code }}</b></div>
+                <div>{{ p.status }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if preview_notfound %}
+          <div class="preview-title" style="margin-top:12px;">Not Found</div>
+          <div class="preview-list">
+            {% for code in preview_notfound %}
+              <div class="preview-item preview-bad">
+                <b>{{ code }}</b> — Not found
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if not preview_rows and not preview_return and not preview_notfound %}
+          <div class="preview-empty">No preview yet.</div>
+        {% endif %}
+      </div>
     </div>
+  {% endif %}
+
+  {% if return_blocks %}
+    <div class="section-title">Return Batch</div>
+    <div class="table-wrap">
+      <table class="ds-table wide">
+        <thead>
+          <tr>
+            <th class="th-center" style="width:55px;">N</th>
+            <th class="th-center" style="width:190px;">Return Code</th>
+            <th class="th-center" style="width:220px;">Seller</th>
+            <th class="th-center">Location</th>
+            <th class="th-center" style="width:150px;">Phone</th>
+            <th class="th-center" style="width:110px;">Total PC</th>
+            <th class="th-center" style="width:110px;">COD</th>
+            {% if edit_mode %}
+              <th class="th-center" style="width:130px;">Action</th>
+            {% endif %}
+            <th class="th-center" style="width:120px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in return_blocks %}
+            <tr class="{% if r.staged_removed %}row-remove{% endif %}">
+              <td class="td-center">{{ forloop.counter }}</td>
+              <td class="td-center"><span class="trk mono">{{ r.code }}</span></td>
+              <td class="td-center">{% firstof r.shop "-" %}</td>
+              <td>{% firstof r.address "-" %}</td>
+              <td class="td-center">{% firstof r.phone "-" %}</td>
+              <td class="td-center"><b>{{ r.pc }}</b></td>
+              <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
+
+              {% if edit_mode %}
+                <td class="td-center">
+                  {% if r.staged_removed %}
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="undo_remove_return">
+                      <input type="hidden" name="label_code" value="{{ r.label_code }}">
+                      <button class="btn btn-ghost" type="submit">Undo</button>
+                    </form>
+                  {% else %}
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="stage_remove_return">
+                      <input type="hidden" name="label_code" value="{{ r.label_code }}">
+                      <button class="btn btn-danger" type="submit">Remove</button>
+                    </form>
+                  {% endif %}
+                </td>
+              {% endif %}
+
+              <td class="td-center">
+                {% if r.staged_removed %}
+                  <span class="st-remove">REMOVE</span>
+                {% else %}
+                  <span class="st-ok">ACTIVE</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <div class="section-title">PP Delivery</div>
+
+  <div class="table-wrap">
+    <table class="ds-table wide">
+      <thead>
+        <tr>
+          <th class="th-center" style="width:55px;">N</th>
+          <th class="th-center" style="width:180px;">TRACKING</th>
+          <th class="th-center" style="width:220px;">SELLER</th>
+          <th class="th-center">RECEIVER LOCATION</th>
+          <th class="th-center" style="width:180px;">CUSTOMER</th>
+          <th class="th-center" style="width:150px;">PHONE</th>
+          <th class="th-center" style="width:110px;">PRICE</th>
+          <th class="th-center" style="width:90px;">COD</th>
+          <th class="th-center" style="width:220px;">REASON</th>
+          {% if edit_mode %}
+            <th class="th-center" style="width:120px;">ACTION</th>
+          {% endif %}
+          <th class="th-center" style="width:120px;">STATUS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+          {% with o=it.order %}
+            <tr class="{% if it.id in staged_remove %}row-remove{% endif %}">
+              <td class="td-center">{{ forloop.counter }}</td>
+
+              <td class="td-center">
+                <a class="trk mono" href="/orders/created/{{ o.id }}/">
+                  {% firstof o.full_tracking o.tracking_no o.id %}
+                </a>
+              </td>
+
+              <td class="td-center">{% if o.seller %}{% firstof o.seller.seller_name o.seller.name "-" %}{% else %}-{% endif %}</td>
+              <td>{% firstof o.receiver_address o.address "-" %}</td>
+              <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
+              <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
+              <td class="td-center">{% firstof o.price "-" %}</td>
+              <td class="td-center"><b>{{ o.cod|default_if_none:"0.00" }}</b></td>
+
+              <td class="td-center">
+                <button type="button" class="reason-btn" data-modal-open="reasonModal{{ it.id }}">
+                  {% firstof it.reason o.reason "Click to add reason" %}
+                </button>
+              </td>
+
+              {% if edit_mode %}
+                <td class="td-center">
+                  {% if it.id in staged_remove %}
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="undo_remove">
+                      <input type="hidden" name="item_id" value="{{ it.id }}">
+                      <button class="btn btn-ghost" type="submit">Undo</button>
+                    </form>
+                  {% else %}
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="stage_remove">
+                      <input type="hidden" name="item_id" value="{{ it.id }}">
+                      <button class="btn btn-danger" type="submit">Remove</button>
+                    </form>
+                  {% endif %}
+                </td>
+              {% endif %}
+
+              <td class="td-center">
+                {% if it.id in staged_remove %}
+                  <span class="st-remove">REMOVE</span>
+                {% else %}
+                  <span class="st-ok">ACTIVE</span>
+                {% endif %}
+              </td>
+            </tr>
+
+            <div class="reason-modal" id="reasonModal{{ it.id }}">
+              <div class="reason-modal-card">
+                <div class="reason-modal-head">
+                  <div class="reason-modal-title">Update Reason</div>
+                  <button type="button" class="modal-x" data-modal-close="reasonModal{{ it.id }}">×</button>
+                </div>
+
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="save_reasons">
+
+                  <div class="reason-modal-body">
+                    <div class="reason-meta">
+                      Shipment: <b>{% firstof o.tracking_no o.id %}</b>
+                    </div>
+
+                    <textarea class="reason-area" name="reason_{{ it.id }}" placeholder="Type reason / note here...">{% firstof it.reason o.reason "" %}</textarea>
+                  </div>
+
+                  <div class="reason-modal-foot">
+                    <button type="button" class="btn btn-ghost" data-modal-close="reasonModal{{ it.id }}">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Reason</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          {% endwith %}
+        {% empty %}
+          <tr>
+            <td colspan="{% if edit_mode %}11{% else %}10{% endif %}" style="padding:14px;opacity:.7;">
+              No items.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+
 </div>
+
+<script>
+(function(){
+  document.querySelectorAll("[data-modal-open]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var id = btn.getAttribute("data-modal-open");
+      var modal = document.getElementById(id);
+      if(modal) modal.classList.add("show");
+    });
+  });
+
+  document.querySelectorAll("[data-modal-close]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var id = btn.getAttribute("data-modal-close");
+      var modal = document.getElementById(id);
+      if(modal) modal.classList.remove("show");
+    });
+  });
+
+  document.querySelectorAll(".reason-modal").forEach(function(modal){
+    modal.addEventListener("click", function(e){
+      if(e.target === modal){
+        modal.classList.remove("show");
+      }
+    });
+  });
+
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){
+      document.querySelectorAll(".reason-modal.show").forEach(function(modal){
+        modal.classList.remove("show");
+      });
+    }
+  });
+})();
+</script>
+
+<style>
+  .pp-card{padding:18px;border-radius:16px;width:100%;}
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+
+  .pp-header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
+  .pp-title{font-size:18px;font-weight:900;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .pp-meta{margin-top:6px;opacity:.85;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .meta-item{display:inline-flex;gap:6px;align-items:baseline;}
+  .sep{opacity:.5;}
+  .big-num{font-size:20px;font-weight:900;}
+  .pp-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+
+  .section-title{
+    margin-top:14px;
+    margin-bottom:8px;
+    font-weight:900;
+    color:#0f172a;
+    font-size:14px;
+  }
+
+  .btn{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    cursor:pointer;
+    text-decoration:none;
+    font-weight:800;
+  }
+  .btn-ghost{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    background:#fff;
+    color:#111;
+    cursor:pointer;
+    text-decoration:none;
+    font-weight:800;
+  }
+  .btn-primary{background:#0b5cff;border-color:#0b5cff;color:#fff;}
+  .btn-success{background:#12a150;border-color:#12a150;color:#fff;}
+  .btn-danger{background:#e11d48;border-color:#e11d48;color:#fff;}
+  .btn-warning{background:#f59e0b;border-color:#f59e0b;color:#111;}
+
+  .pp-state{
+    padding:4px 10px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:11px;
+    display:inline-block;
+  }
+  .pp-blue{background:#dbeafe;color:#1e40af;}
+  .pp-orange{background:#fff7cc;color:#92400e;}
+
+  .table-wrap{margin-top:10px;overflow-x:auto;width:100%;}
+  table.wide{width:100%;min-width:100%;}
+  .th-center{text-align:center;}
+  .td-center{text-align:center;}
+  .ds-table{width:100%;border-collapse:collapse;}
+  .ds-table th,.ds-table td{border-bottom:1px solid #eee;padding:10px;vertical-align:middle;}
+  .ds-table th{background:#fafafa;font-weight:900;}
+  .trk{font-weight:900;text-decoration:underline;color:inherit;}
+
+  .edit-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+    margin-top:10px;
+    margin-bottom:12px;
+  }
+  .edit-box,.preview-box{
+    border:1px solid #eee;
+    border-radius:14px;
+    padding:12px;
+    background:#fff;
+  }
+  .scan-box{
+    width:100%;
+    min-height:180px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    padding:12px;
+    resize:vertical;
+  }
+  .edit-actions{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;}
+  .edit-help{margin-top:8px;font-size:12px;opacity:.7;}
+  .preview-title{font-size:13px;font-weight:900;margin-bottom:8px;}
+  .preview-list{display:flex;flex-direction:column;gap:8px;}
+  .preview-item{
+    border-radius:12px;
+    padding:10px 12px;
+    border:1px solid #eee;
+    font-size:13px;
+  }
+  .preview-ok{background:#eafff1;border-color:#c7f3d4;}
+  .preview-bad{background:#fff1f2;border-color:#fecdd3;}
+  .preview-warn{background:#fff7ed;border-color:#fed7aa;}
+  .preview-empty{
+    padding:12px;
+    border-radius:12px;
+    background:#fafafa;
+    border:1px dashed #ddd;
+    opacity:.75;
+  }
+
+  .preview-row-ok{background:#f0fdf4;}
+  .preview-row-bad{background:#fff1f2;}
+
+  .shipper-form{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .shipper-label{
+    font-weight:800;
+  }
+  .shipper-select{
+    min-width:220px;
+    height:40px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    padding:0 12px;
+    background:#fff;
+    font-weight:700;
+  }
+
+  .reason-btn{
+    max-width:160px;
+    border:1px solid #ddd;
+    background:#fff;
+    border-radius:10px;
+    padding:8px 10px;
+    cursor:pointer;
+    font-weight:700;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .row-remove{background:#fff1f2;}
+  .st-ok{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:999px;
+    background:#eafff1;
+    color:#166534;
+    font-size:11px;
+    font-weight:900;
+  }
+  .st-remove{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:999px;
+    background:#ffe4e6;
+    color:#9f1239;
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .msg{
+    padding:10px 12px;
+    border-radius:12px;
+    font-weight:800;
+    border:1px solid transparent;
+  }
+  .msg-success{background:#eafff1;border-color:#c7f3d4;color:#166534;}
+  .msg-error{background:#fff1f2;border-color:#fecdd3;color:#9f1239;}
+  .msg-info{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
+
+  .reason-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:9999;
+  }
+  .reason-modal.show{display:flex;}
+  .reason-modal-card{
+    width:min(560px,100%);
+    background:#fff;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 20px 50px rgba(15,23,42,.22);
+  }
+  .reason-modal-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding:14px 16px;
+    border-bottom:1px solid #eee;
+  }
+  .reason-modal-title{
+    font-size:17px;
+    font-weight:900;
+  }
+  .reason-modal-body{
+    padding:16px;
+  }
+  .reason-modal-foot{
+    padding:14px 16px;
+    border-top:1px solid #eee;
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+  }
+  .reason-meta{margin-bottom:10px;font-size:13px;font-weight:800;}
+  .reason-area{
+    width:100%;
+    min-height:140px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    padding:12px;
+    resize:vertical;
+  }
+  .modal-x{
+    width:34px;
+    height:34px;
+    border:none;
+    border-radius:10px;
+    background:#f3f4f6;
+    font-size:18px;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  @media (max-width: 1000px){
+    .shipper-form{align-items:stretch;}
+    .shipper-select{width:100%;}
+  }
+</style>
 {% endblock %}

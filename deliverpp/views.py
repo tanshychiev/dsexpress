@@ -1043,6 +1043,105 @@ def pp_delivery_detail(request, batch_id: int):
             _clear_edit_session()
             return redirect(_detail_url(batch.id, edit=False))
 
+        if action == "change_shipper":
+            shipper_id = (request.POST.get("shipper_id") or "").strip()
+
+            if not shipper_id.isdigit():
+                messages.error(request, "Please select shipper.")
+                return redirect(_detail_url(batch.id, edit=True))
+
+            selected_shipper = Shipper.objects.filter(id=int(shipper_id)).first()
+            if not selected_shipper:
+                messages.error(request, "Selected shipper not found.")
+                return redirect(_detail_url(batch.id, edit=True))
+
+            old_batch_shipper = getattr(batch, "shipper", None)
+            if old_batch_shipper == selected_shipper:
+                messages.info(request, "Shipper unchanged.")
+                return redirect(_detail_url(batch.id, edit=True))
+
+            batch.shipper = selected_shipper
+            batch.save(update_fields=["shipper"])
+
+            active_items = list(batch.items.select_related("order").all())
+            active_orders_normal: List[Order] = []
+            active_orders_return: List[Order] = []
+
+            for it in active_items:
+                if not it.order:
+                    continue
+                if it.source_type == PPDeliveryItem.SOURCE_RETURN:
+                    active_orders_return.append(it.order)
+                else:
+                    active_orders_normal.append(it.order)
+
+            for order in active_orders_normal:
+                old_shipper = order.delivery_shipper
+                if old_shipper == selected_shipper:
+                    continue
+
+                old_status = order.status
+                order.delivery_shipper = selected_shipper
+                order.updated_at = timezone.now()
+                order.updated_by = request.user
+                order.save(update_fields=["delivery_shipper", "updated_at", "updated_by"])
+
+                add_order_activity(
+                    order=order,
+                    action=OrderActivity.ACTION_ASSIGN,
+                    user=request.user,
+                    shipper=selected_shipper,
+                    old_status=old_status,
+                    new_status=order.status,
+                    note=f"Changed PP batch shipper to {selected_shipper.name}",
+                )
+
+                add_audit_log(
+                    module=AuditLog.MODULE_ORDER,
+                    obj=order,
+                    action=AuditLog.ACTION_ASSIGN_SHIPPER,
+                    user=request.user,
+                    field_name="delivery_shipper",
+                    old_value=str(old_shipper.name if old_shipper else ""),
+                    new_value=str(selected_shipper.name),
+                    note="Updated shipper from PP batch edit",
+                )
+
+            for order in active_orders_return:
+                old_shipper = order.delivery_shipper
+                if old_shipper == selected_shipper:
+                    continue
+
+                old_status = order.status
+                order.delivery_shipper = selected_shipper
+                order.updated_at = timezone.now()
+                order.updated_by = request.user
+                order.save(update_fields=["delivery_shipper", "updated_at", "updated_by"])
+
+                add_order_activity(
+                    order=order,
+                    action=OrderActivity.ACTION_EDIT,
+                    user=request.user,
+                    shipper=selected_shipper,
+                    old_status=old_status,
+                    new_status=order.status,
+                    note=f"Changed PP return shipper to {selected_shipper.name}",
+                )
+
+                add_audit_log(
+                    module=AuditLog.MODULE_ORDER,
+                    obj=order,
+                    action=AuditLog.ACTION_ASSIGN_SHIPPER,
+                    user=request.user,
+                    field_name="delivery_shipper",
+                    old_value=str(old_shipper.name if old_shipper else ""),
+                    new_value=str(selected_shipper.name),
+                    note="Updated return shipper from PP batch edit",
+                )
+
+            messages.success(request, "Shipper updated successfully.")
+            return redirect(_detail_url(batch.id, edit=True))
+
         if action == "save_reasons":
             updates = []
             for key, val in request.POST.items():
@@ -1074,11 +1173,9 @@ def pp_delivery_detail(request, batch_id: int):
                     if old_item_reason == new_reason:
                         continue
 
-                    # 1) save snapshot reason on this PP item (history for this batch)
                     it.reason = new_reason
                     it.save(update_fields=["reason"])
 
-                    # 2) also sync latest reason to Order (current detail / current report)
                     if it.source_type == PPDeliveryItem.SOURCE_NORMAL and it.order_id:
                         order = it.order
                         old_order_reason = (order.reason or "").strip()
@@ -1114,6 +1211,7 @@ def pp_delivery_detail(request, batch_id: int):
                 messages.info(request, "No reason changes.")
 
             return redirect(_detail_url(batch.id, edit=False))
+
         if action in {
             "stage_add",
             "stage_remove",
@@ -1180,12 +1278,8 @@ def pp_delivery_detail(request, batch_id: int):
             removed_count = 0
 
             with transaction.atomic():
-                posted_shipper_id = (request.POST.get("shipper_id") or "").strip()
                 old_batch_shipper = getattr(batch, "shipper", None)
                 selected_shipper = old_batch_shipper
-
-                if posted_shipper_id.isdigit():
-                    selected_shipper = Shipper.objects.filter(id=int(posted_shipper_id)).first()
 
                 if staged_remove_ids:
                     rm_qs = PPDeliveryItem.objects.filter(batch=batch, id__in=staged_remove_ids).select_related("order")
@@ -1282,93 +1376,6 @@ def pp_delivery_detail(request, batch_id: int):
                         if created:
                             return_added += 1
                             return_to_update.append(o)
-
-                if selected_shipper and getattr(batch, "shipper_id", None) != selected_shipper.id:
-                    batch.shipper = selected_shipper
-                    batch.save(update_fields=["shipper"])
-
-                shipper_changed = (
-                    selected_shipper
-                    and old_batch_shipper
-                    and selected_shipper.id != old_batch_shipper.id
-                ) or (selected_shipper and not old_batch_shipper)
-
-                if shipper_changed:
-                    active_items = list(batch.items.select_related("order").all())
-                    active_orders_normal: List[Order] = []
-                    active_orders_return: List[Order] = []
-
-                    for it in active_items:
-                        if not it.order:
-                            continue
-                        if it.source_type == PPDeliveryItem.SOURCE_RETURN:
-                            active_orders_return.append(it.order)
-                        else:
-                            active_orders_normal.append(it.order)
-
-                    for order in active_orders_normal:
-                        old_shipper = order.delivery_shipper
-                        if old_shipper == selected_shipper:
-                            continue
-
-                        old_status = order.status
-                        order.delivery_shipper = selected_shipper
-                        order.updated_at = timezone.now()
-                        order.updated_by = request.user
-                        order.save(update_fields=["delivery_shipper", "updated_at", "updated_by"])
-
-                        add_order_activity(
-                            order=order,
-                            action=OrderActivity.ACTION_ASSIGN,
-                            user=request.user,
-                            shipper=selected_shipper,
-                            old_status=old_status,
-                            new_status=order.status,
-                            note=f"Changed PP batch shipper to {selected_shipper.name}",
-                        )
-
-                        add_audit_log(
-                            module=AuditLog.MODULE_ORDER,
-                            obj=order,
-                            action=AuditLog.ACTION_ASSIGN_SHIPPER,
-                            user=request.user,
-                            field_name="delivery_shipper",
-                            old_value=str(old_shipper.name if old_shipper else ""),
-                            new_value=str(selected_shipper.name),
-                            note="Updated shipper from PP batch edit",
-                        )
-
-                    for order in active_orders_return:
-                        old_shipper = order.delivery_shipper
-                        if old_shipper == selected_shipper:
-                            continue
-
-                        old_status = order.status
-                        order.delivery_shipper = selected_shipper
-                        order.updated_at = timezone.now()
-                        order.updated_by = request.user
-                        order.save(update_fields=["delivery_shipper", "updated_at", "updated_by"])
-
-                        add_order_activity(
-                            order=order,
-                            action=OrderActivity.ACTION_EDIT,
-                            user=request.user,
-                            shipper=selected_shipper,
-                            old_status=old_status,
-                            new_status=order.status,
-                            note=f"Changed PP return shipper to {selected_shipper.name}",
-                        )
-
-                        add_audit_log(
-                            module=AuditLog.MODULE_ORDER,
-                            obj=order,
-                            action=AuditLog.ACTION_ASSIGN_SHIPPER,
-                            user=request.user,
-                            field_name="delivery_shipper",
-                            old_value=str(old_shipper.name if old_shipper else ""),
-                            new_value=str(selected_shipper.name),
-                            note="Updated return shipper from PP batch edit",
-                        )
 
                 _set_order_status_after_pp_assign(
                     normal_to_update,

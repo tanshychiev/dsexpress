@@ -1,132 +1,306 @@
 {% extends "base.html" %}
 {% block title %}Clear Delivery PP{% endblock %}
 {% block page_title %}Clear Delivery PP{% endblock %}
-{% block page_subtitle %}Dashboard{% endblock %}
+{% block page_subtitle %}Batch List{% endblock %}
 
 {% block content %}
-<div class="card" style="padding:18px;border-radius:16px;min-height:calc(100vh - 140px);">
+<div class="page-wrap">
 
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+  <div class="page-head-row">
     <div>
-      <div style="font-weight:900;font-size:18px;">Clear Delivery PP</div>
-      <div style="opacity:.7;font-size:12px;">Search Deliver PP batches and clear step-by-step.</div>
+      <div class="content-title">Clear Delivery PP</div>
+      <div class="content-subtitle">Search Deliver PP batches and clear step-by-step.</div>
     </div>
-    <a class="btn btn-ghost" href="{% url 'clearpp_settings' %}">System Settings</a>
   </div>
 
-  <form method="get" style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
-    <input type="hidden" name="show" value="1" />
+  <div class="card filter-card">
+    <form method="get" class="filter-row">
+      <input type="hidden" name="show" value="1">
 
-    <div>
-      <div style="font-size:12px;opacity:.7;">Assign Date</div>
-      <input type="date" name="assign_date" value="{{ assign_date }}" class="input" />
-    </div>
+      <div class="field-box">
+        <label>Assign Date</label>
+        <input type="date" name="assign_date" value="{{ assign_date }}" class="input">
+      </div>
 
-    <div>
-      <div style="font-size:12px;opacity:.7;">Shipper</div>
-      <select name="shipper_id" class="input">
-        <option value="">All</option>
-        {% for s in shippers %}
-          <option value="{{ s.id }}" {% if shipper_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
-            {{ s.name }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
+      <div class="field-box">
+        <label>Shipper</label>
+        <select name="shipper_id" class="input">
+          <option value="">-- All --</option>
+          {% for s in shippers %}
+            <option value="{{ s.id }}" {% if shipper_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <div>
-      <div style="font-size:12px;opacity:.7;">Batch Search</div>
-      <input name="batch_id" value="{{ batch_id }}" class="input" placeholder="Batch id / remark" />
-    </div>
+      <div class="field-box" style="min-width:170px;">
+        <label>Batch Search</label>
+        <input name="batch_id" value="{{ batch_id }}" class="input" placeholder="Batch id / remark">
+      </div>
 
-    <div>
-      <div style="font-size:12px;opacity:.7;">Status</div>
-      <select name="status" class="input">
-        <option value="">All</option>
-        <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
-        <option value="DONE" {% if status == "DONE" %}selected{% endif %}>Done</option>
-        <option value="CANCEL" {% if status == "CANCEL" %}selected{% endif %}>Cancel</option>
-      </select>
-    </div>
+      <div class="field-box">
+        <label>Status</label>
+        <select name="status" class="input">
+          <option value="">-- All --</option>
+          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+          <option value="DONE" {% if status == "DONE" %}selected{% endif %}>Done</option>
+          <option value="CANCEL" {% if status == "CANCEL" %}selected{% endif %}>Cancel</option>
+        </select>
+      </div>
 
-    <button class="btn btn-primary" type="submit">Search</button>
-    <a class="btn btn-ghost" href="{% url 'clearpp_list' %}">Reset</a>
-  </form>
-
-  <div style="margin-top:10px;opacity:.75;font-size:12px;">
-    Rate: <b>{{ settings_obj.usd_to_khr_rate }}</b> KHR/USD • Tolerance: <b>{{ settings_obj.balance_tolerance_khr }}</b> KHR
+      <div class="field-actions">
+        <button type="submit" class="btn btn-search-black">Search</button>
+        <a href="{% url 'clearpp_list' %}" class="btn-reset-link">Reset</a>
+      </div>
+    </form>
   </div>
 
-  {% if not show %}
-    <div style="margin-top:28px;text-align:center;opacity:.7;padding:40px;border:1px dashed #e7e7e7;border-radius:16px;">
-      Select filters then click <b>Search</b>.
-    </div>
-  {% else %}
+  <div class="rate-line">
+    Rate: {{ settings_obj.usd_to_khr_rate }} KHR/USD · Tolerance: {{ settings_obj.balance_tolerance_khr }} KHR
+  </div>
 
-    <div style="margin-top:14px;overflow:auto;">
-      <table class="table" style="width:100%;min-width:1000px;">
+  <div class="card table-card">
+    <div class="table-wrap">
+      <table class="ds-table province-like">
         <thead>
           <tr>
-            <th style="text-align:center;width:60px;">N</th>
-            <th>Batch</th>
-            <th>Shipper</th>
-            <th style="text-align:center;">Batch Status</th>
-            <th style="text-align:center;">Total PC</th>
-            <th style="text-align:center;">Clear State</th>
-            <th style="text-align:center;">Cleared By</th>
-            <th style="text-align:center;width:120px;">Action</th>
+            <th>N</th>
+            <th>BATCH</th>
+            <th>SHIPPER</th>
+            <th>BATCH STATUS</th>
+            <th>TOTAL PC</th>
+            <th>CLEAR STATE</th>
+            <th>CLEARED BY</th>
+            <th>ACTION</th>
           </tr>
         </thead>
         <tbody>
-          {% for r in rows %}
+          {% if not show %}
             <tr>
-              <td style="text-align:center;">{{ forloop.counter }}</td>
-              <td><b class="mono">{{ r.batch.code }}</b></td>
-              <td>{{ r.batch.shipper.name|default:"-" }}</td>
-
-              <td style="text-align:center;">
-                <span class="pp-state
-                  {% if r.batch_status == 'DONE' %}pp-green
-                  {% elif r.batch_status == 'CANCEL' %}pp-red
-                  {% else %}pp-yellow{% endif %}">
-                  {{ r.batch_status }}
-                </span>
-              </td>
-
-              <td style="text-align:center;"><b>{{ r.batch.total_pc }}</b></td>
-
-              <td style="text-align:center;">
-                <span class="pp-state pp-{{ r.color }}">{{ r.label }}</span>
-              </td>
-
-              <td style="text-align:center;">{{ r.staff_name }}</td>
-
-              <td style="text-align:center;">
-                <a class="btn btn-ghost" href="{% url 'clearpp_detail' r.batch.id %}">Open</a>
-              </td>
+              <td colspan="8" class="empty-row">Select filters then click Search.</td>
             </tr>
-          {% empty %}
-            <tr><td colspan="8" style="text-align:center;opacity:.7;padding:20px;">No batches found</td></tr>
-          {% endfor %}
+          {% else %}
+            {% for r in rows %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><b>{{ r.batch.code }}</b></td>
+                <td>{{ r.batch.shipper.name|default:"-" }}</td>
+                <td>
+                  <span class="status-pill {% if r.batch_status == 'DONE' %}status-green{% elif r.batch_status == 'CANCEL' %}status-red{% else %}status-yellow{% endif %}">
+                    {{ r.batch_status }}
+                  </span>
+                </td>
+                <td><b>{{ r.batch.total_pc }}</b></td>
+                <td>
+                  <span class="status-pill status-{{ r.color }}">{{ r.label }}</span>
+                </td>
+                <td>{{ r.staff_name }}</td>
+                <td>
+                  <a href="{% url 'clearpp_detail' r.batch.id %}" class="action-link">Open</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8" class="empty-row">No batches found.</td>
+              </tr>
+            {% endfor %}
+          {% endif %}
         </tbody>
       </table>
     </div>
+  </div>
 
-  {% endif %}
 </div>
 
 <style>
-  .mono{font-family:ui-monospace,Consolas,monospace;}
-  .pp-state{
-    padding:4px 10px;
-    border-radius:999px;
-    font-weight:900;
-    font-size:11px;
-    display:inline-block;
+  .page-wrap{
+    width:100%;
   }
-  .pp-yellow{background:#fff7cc;color:#92400e;}
-  .pp-blue{background:#dbeafe;color:#1e40af;}
-  .pp-green{background:#dcfce7;color:#166534;}
-  .pp-red{background:#ffe4e6;color:#9f1239;}
+
+  .page-head-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+
+  .content-title{
+    font-size:32px;
+    font-weight:900;
+    color:#0f172a;
+    line-height:1.1;
+  }
+
+  .content-subtitle{
+    margin-top:4px;
+    font-size:13px;
+    color:#6b7280;
+    font-weight:700;
+  }
+
+  .filter-card{
+    padding:12px;
+    border-radius:14px;
+    margin-bottom:10px;
+  }
+
+  .filter-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:end;
+  }
+
+  .field-box{
+    min-width:120px;
+  }
+
+  .field-box label{
+    display:block;
+    margin-bottom:6px;
+    font-size:11px;
+    color:#6b7280;
+    font-weight:700;
+  }
+
+  .input{
+    width:100%;
+    min-width:120px;
+    height:38px;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    padding:0 12px;
+    background:#fff;
+  }
+
+  .field-actions{
+    display:flex;
+    align-items:end;
+    gap:10px;
+  }
+
+  .btn-search-black{
+    background:#111827;
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    height:38px;
+    padding:0 16px;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .btn-reset-link{
+    color:#111827;
+    font-weight:700;
+    text-decoration:none;
+    padding:0 2px;
+    display:inline-flex;
+    align-items:center;
+    height:38px;
+  }
+
+  .rate-line{
+    font-size:12px;
+    color:#6b7280;
+    font-weight:700;
+    margin:6px 2px 10px;
+  }
+
+  .table-card{
+    padding:10px;
+    border-radius:14px;
+  }
+
+  .table-wrap{
+    overflow:auto;
+  }
+
+  .province-like{
+    width:100%;
+    min-width:980px;
+    border-collapse:separate;
+    border-spacing:0;
+  }
+
+  .province-like th{
+    background:#f8fafc;
+    color:#111827;
+    font-size:12px;
+    font-weight:900;
+    text-align:center;
+    padding:10px 12px;
+    border-bottom:1px solid #e5e7eb;
+  }
+
+  .province-like td{
+    text-align:center;
+    padding:12px;
+    border-bottom:1px solid #e5e7eb;
+    font-size:13px;
+    background:#fff;
+  }
+
+  .empty-row{
+    text-align:center;
+    color:#6b7280;
+    padding:18px !important;
+  }
+
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:88px;
+    height:28px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+    padding:0 10px;
+  }
+
+  .status-blue{
+    background:#dbeafe;
+    color:#1d4ed8;
+  }
+
+  .status-green{
+    background:#dcfce7;
+    color:#166534;
+  }
+
+  .status-yellow{
+    background:#fef3c7;
+    color:#92400e;
+  }
+
+  .status-red{
+    background:#fee2e2;
+    color:#b91c1c;
+  }
+
+  .action-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:74px;
+  height:32px;
+  padding:0 12px;
+  border-radius:999px;
+  background:#eff6ff;
+  color:#1d4ed8;
+  font-weight:800;
+  text-decoration:none;
+  border:1px solid #bfdbfe;
+  transition:all .15s ease;
+}
+
+.action-link:hover{
+  background:#1d4ed8;
+  color:#ffffff;
+  border-color:#1d4ed8;
+  transform:translateY(-1px);
+}
 </style>
 {% endblock %}

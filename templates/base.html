@@ -1,146 +1,497 @@
-<div class="brand-sub">Management System TEST 999</div>
 {% load static %}
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}DS Express{% endblock %}</title>
 
-    <link rel="stylesheet" href="{% static 'css/ds.css' %}" />
-    {% block extra_head %}{% endblock %}
-
     <style>
-      .menu-item .tag{
-        margin-left:auto;
-        font-size:11px;
-        font-weight:900;
-        padding:3px 8px;
-        border-radius:999px;
-        border:1px solid #e7e7e7;
-        background:#fff;
-        color:#111;
-        opacity:.9;
-      }
-      .tag-new{border-color:#cfe0ff;background:#eef5ff;color:#1f4db8;}
-      .tag-ops{border-color:#bff0cf;background:#e8fff0;color:#138a3d;}
-      .tag-return{border-color:#ffd0d0;background:#fff0f0;color:#b40000;}
-      .tag-pp{border-color:#cfe0ff;background:#eef5ff;color:#1f4db8;}
-      .tag-report{border-color:#e7d8ff;background:#f5efff;color:#6b21c8;}
-      .tag-profit{border-color:#c9f1d9;background:#ebfff2;color:#0f7f50;}
-      .tag-finance{border-color:#ffe2b8;background:#fff6e8;color:#b86a00;}
-      .tag-role{border-color:#dbeafe;background:#eff6ff;color:#1d4ed8;}
+  :root{
+    --bg:#f3f4f6;
+    --card:#ffffff;
+    --line:#e5e7eb;
+    --text:#0f172a;
+    --muted:#64748b;
+    --green:#0b7a2f;
+    --yellow:#ffd54f;
+    --blue:#0b5cff;
+    --shadow:0 10px 28px rgba(15,23,42,.05);
+  }
 
-      .menu-title{
-        font-size:11px;
-        font-weight:900;
-        letter-spacing:.08em;
-        text-transform:uppercase;
-        color:rgba(255,255,255,.72);
-        margin:10px 0 8px;
-        padding:0 22px 0 6px;
-        cursor:pointer;
-        position:relative;
-        user-select:none;
-      }
-      .menu-title::after{
-        content:"▸";
-        position:absolute;
-        right:6px;
-        top:0;
-        opacity:.7;
-        font-size:12px;
-        line-height:1.2;
-      }
-      .menu-title.open::after{
-        content:"▾";
-      }
+  *{box-sizing:border-box;}
 
-      .menu-item.report-item,
-      .menu-item.finance-item{
-        display:flex;
-        align-items:center;
-        gap:10px;
-      }
-      .menu-item.report-item .icon,
-      .menu-item.finance-item .icon{
-        width:18px;
-        text-align:center;
-        opacity:.95;
-        flex:0 0 18px;
-      }
+  html,body{
+    margin:0;
+    padding:0;
+    min-height:100%;
+    background:var(--bg) !important;
+    color:var(--text);
+    font-family:Arial,sans-serif;
+  }
 
-      .menu-group{
-        display:block;
-      }
-      .menu-group.hidden-sec{
-        display:none !important;
-      }
+  body{
+    overflow-x:hidden;
+  }
 
-      .modal{display:none; position:fixed; inset:0; z-index:9999;}
-      .modal.show{display:block;}
-      .modal-backdrop{position:absolute; inset:0; background:rgba(0,0,0,.45);}
-      .modal-card{
-        position:relative;
-        margin:12vh auto 0;
-        width:min(460px,92vw);
-        background:#fff;
-        border-radius:18px;
-        padding:16px;
-        box-shadow:0 20px 60px rgba(0,0,0,.25);
-      }
-      .modal-title{
-        font-size:16px;
-        font-weight:900;
-        margin-bottom:6px;
-      }
-      .modal-text{
-        font-size:13px;
-        opacity:.85;
-        margin-bottom:14px;
-        line-height:1.4;
-      }
-      .modal-actions{
-        display:flex;
-        gap:10px;
-        justify-content:flex-end;
-      }
-      .btnx{
-        padding:10px 14px;
-        border-radius:12px;
-        border:1px solid #111;
-        background:#111;
-        color:#fff;
-        cursor:pointer;
-        font-weight:900;
-      }
-      .btnx-ghost{
-        padding:10px 14px;
-        border-radius:12px;
-        border:1px solid #e7e7e7;
-        background:#fff;
-        color:#111;
-        cursor:pointer;
-        font-weight:900;
-      }
+  a{
+    text-decoration:none;
+    color:inherit;
+  }
 
-      body.print-mode aside.sidebar,
-      body.print-mode header.topbar { display:none !important; }
-      body.print-mode main.main { margin:0 !important; }
-      body.print-mode .content { padding:0 !important; }
+  .app{
+    min-height:100vh;
+    background:var(--bg);
+  }
 
-      .logout-btn{
-        background:none;
-        border:0;
-        padding:0;
-        color:inherit;
-        font:inherit;
-        cursor:pointer;
-      }
-      .logout-form{
-        margin:0;
-      }
-    </style>
+  .sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    width:260px;
+    height:100vh;
+    background:var(--green);
+    color:#fff;
+    display:flex;
+    flex-direction:column;
+    z-index:1000;
+    overflow-y:auto;
+    overflow-x:hidden;
+    transition:width .2s ease;
+  }
+
+  .sidebar.collapsed{
+    width:84px;
+  }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:16px 14px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    min-height:72px;
+    background:var(--green);
+    position:sticky;
+    top:0;
+    z-index:3;
+  }
+
+  .brand-logo{
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    object-fit:cover;
+    background:#fff;
+    flex:0 0 auto;
+  }
+
+  .brand-text{
+    min-width:0;
+  }
+
+  .brand-name{
+    font-size:18px;
+    font-weight:900;
+    color:#fff;
+    white-space:nowrap;
+  }
+
+  .brand-sub{
+    font-size:12px;
+    color:rgba(255,255,255,.82);
+    margin-top:2px;
+    white-space:nowrap;
+  }
+
+  .sidebar.collapsed .brand-text,
+  .sidebar.collapsed .menu-title,
+  .sidebar.collapsed .menu-item .tag,
+  .sidebar.collapsed .menu-item span:not(.dot),
+  .sidebar.collapsed .sidebar-foot-text{
+    display:none;
+  }
+
+  .menu{
+    padding:12px 10px 20px;
+    background:var(--green);
+    flex:1;
+  }
+
+  .menu-title{
+    color:rgba(255,255,255,.78);
+    text-transform:uppercase;
+    font-size:11px;
+    font-weight:900;
+    letter-spacing:.5px;
+    padding:10px 8px 8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .menu-title::after{
+    content:"▾";
+    font-size:10px;
+    opacity:.85;
+    transition:transform .18s ease;
+  }
+
+  .menu-title.open::after{
+    transform:rotate(180deg);
+  }
+
+  .menu-group{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-bottom:10px;
+  }
+
+  .menu-group.hidden-sec{
+    display:none;
+  }
+
+  .menu-sep{
+    height:1px;
+    background:rgba(255,255,255,.08);
+    margin:10px 6px;
+  }
+
+  .menu-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-height:40px;
+    padding:10px 10px;
+    border-radius:12px;
+    color:#fff;
+    font-size:14px;
+    font-weight:700;
+    transition:.15s ease;
+    position:relative;
+  }
+
+  .menu-item:hover{
+    background:rgba(255,255,255,.08);
+  }
+
+  .menu-item.active{
+    background:rgba(255,255,255,.14);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+
+  .dot{
+    width:10px;
+    height:10px;
+    border-radius:999px;
+    background:var(--yellow);
+    box-shadow:0 0 0 4px rgba(255,213,79,.12);
+    flex:0 0 auto;
+  }
+
+  .tag{
+    margin-left:auto;
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:900;
+    line-height:1;
+    background:#fff;
+    color:#111827;
+  }
+
+  .tag-pp{background:#fef3c7;color:#92400e;}
+  .tag-ops{background:#dbeafe;color:#1e40af;}
+  .tag-role{background:#ede9fe;color:#6d28d9;}
+  .tag-report{background:#dcfce7;color:#166534;}
+  .tag-new{background:#fee2e2;color:#b91c1c;}
+
+  .sidebar-foot{
+    padding:12px 10px 16px;
+    border-top:1px solid rgba(255,255,255,.08);
+    background:var(--green);
+    position:sticky;
+    bottom:0;
+    z-index:3;
+  }
+
+  .logout-form{
+    margin:0;
+  }
+
+  .logout-btn{
+    width:100%;
+    min-height:42px;
+    border:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.1);
+    color:#fff;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .main{
+    margin-left:260px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:var(--bg) !important;
+    transition:margin-left .2s ease;
+  }
+
+  .sidebar.collapsed ~ .main{
+    margin-left:84px;
+  }
+
+  .topbar{
+    height:72px;
+    background:#f3f4f6;
+    border-bottom:1px solid #e5e7eb;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 18px;
+    position:sticky;
+    top:0;
+    z-index:20;
+  }
+
+  .topbar-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+
+  .toggle-btn{
+    width:38px;
+    height:38px;
+    border:none;
+    border-radius:10px;
+    background:#ffffff;
+    box-shadow:0 2px 6px rgba(0,0,0,.06);
+    font-size:18px;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+
+  .page-head{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-width:0;
+  }
+
+  .page-title{
+    font-size:20px;
+    font-weight:900;
+    color:#111827;
+    line-height:1.2;
+  }
+
+  .page-subtitle{
+    font-size:12px;
+    color:#6b7280;
+    margin-top:2px;
+    font-weight:600;
+    line-height:1.2;
+  }
+
+  .topbar-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .search-box{
+    width:240px;
+    max-width:32vw;
+    height:34px;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:0 10px;
+    background:#ffffff;
+    font-size:12px;
+    outline:none;
+  }
+
+  .user-mini{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .user-badge{
+    width:28px;
+    height:28px;
+    border-radius:999px;
+    background:#16a34a;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .user-meta{
+    line-height:1.1;
+  }
+
+  .user-name{
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .user-role{
+    font-size:10px;
+    color:#6b7280;
+    margin-top:2px;
+  }
+
+  .content{
+    flex:1;
+    min-height:calc(100vh - 72px);
+    background:var(--bg) !important;
+    padding:16px;
+    padding-bottom:28px;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:var(--shadow);
+  }
+
+  .msg{
+    padding:12px 14px;
+    border-radius:14px;
+    font-weight:800;
+    border:1px solid transparent;
+  }
+
+  .msg-success{background:#effcf3;border-color:#bfe8c8;color:#166534;}
+  .msg-error{background:#fff3f2;border-color:#fecaca;color:#b42318;}
+  .msg-info{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
+  .msg-warning{background:#fff7ed;border-color:#fed7aa;color:#9a3412;}
+
+  .modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    z-index:5000;
+  }
+
+  .modal.show{
+    display:block;
+  }
+
+  .modal-backdrop{
+    position:absolute;
+    inset:0;
+    background:rgba(15,23,42,.45);
+  }
+
+  .modal-card{
+    position:relative;
+    margin:12vh auto 0;
+    width:min(460px,92vw);
+    background:#fff;
+    border-radius:18px;
+    padding:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+    z-index:2;
+  }
+
+  .modal-title{
+    font-size:16px;
+    font-weight:900;
+    margin-bottom:6px;
+  }
+
+  .modal-text{
+    font-size:13px;
+    opacity:.85;
+    margin-bottom:14px;
+    line-height:1.4;
+  }
+
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+  }
+
+  .btnx{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    cursor:pointer;
+    font-weight:900;
+  }
+
+  .btnx-ghost{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #e7e7e7;
+    background:#fff;
+    color:#111;
+    cursor:pointer;
+    font-weight:900;
+  }
+
+  body.print-mode aside.sidebar,
+  body.print-mode header.topbar{
+    display:none !important;
+  }
+
+  body.print-mode main.main{
+    margin:0 !important;
+  }
+
+  body.print-mode .content{
+    padding:0 !important;
+  }
+
+  @media (max-width: 960px){
+    .sidebar{
+      width:84px;
+    }
+
+    .main{
+      margin-left:84px;
+    }
+
+    .brand-text,
+    .menu-title,
+    .menu-item .tag,
+    .menu-item span:not(.dot),
+    .sidebar-foot-text{
+      display:none;
+    }
+
+    .search-box{
+      display:none;
+    }
+
+    .topbar{
+      padding:10px 14px;
+      height:68px;
+    }
+
+    .page-title{
+      font-size:18px;
+    }
+
+    .page-subtitle{
+      font-size:12px;
+    }
+  }
+</style>   
   </head>
 
   <body>
@@ -212,19 +563,19 @@
               <span class="tag tag-ops">OPS</span>
             </a>
 
-            <a class="menu-item {% if request.path|slice:':17' == '/deliver-pp/clear/' %}active{% endif %}" href="{% url 'clearpp_list' %}">
+            <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'clearpp_list' or request.resolver_match and request.resolver_match.url_name == 'clearpp_settings' or request.resolver_match and request.resolver_match.url_name == 'clearpp_detail' or request.resolver_match and request.resolver_match.url_name == 'clearpp_toggle_tick' or request.resolver_match and request.resolver_match.url_name == 'clearpp_set_tick_many' or request.resolver_match and request.resolver_match.url_name == 'clearpp_clear_delivery' or request.resolver_match and request.resolver_match.url_name == 'clearpp_undo_clear' or request.resolver_match and request.resolver_match.url_name == 'clearpp_cancel' %}active{% endif %}" href="{% url 'clearpp_list' %}">
               <span class="dot"></span> Clear Delivery PP
               <span class="tag tag-pp">PP</span>
             </a>
 
-            <a class="menu-item {% if request.path|slice:':12' == '/deliver-pp/' and request.path|slice:':17' != '/deliver-pp/clear/' %}active{% endif %}" href="{% url 'deliverpp_list' %}">
+            <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'deliverpp_list' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_new' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_detail' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_print' %}active{% endif %}" href="{% url 'deliverpp_list' %}">
               <span class="dot"></span> Deliver in PP
               <span class="tag tag-pp">PP</span>
             </a>
 
-            <a class="menu-item {% if request.path|slice:':14' == '/return-shop/' %}active{% endif %}" href="{% url 'returnshop_list' %}">
+            <a class="menu-item {% if request.path|slice:':13' == '/returnshop/' %}active{% endif %}" href="{% url 'returnshop_list' %}">
               <span class="dot"></span> Return To Shop
-              <span class="tag tag-return">NEW</span>
+              <span class="tag tag-new">NEW</span>
             </a>
           </div>
 
@@ -232,86 +583,78 @@
 
           <div class="menu-title" data-target="group-reports">Reports</div>
           <div class="menu-group hidden-sec" id="group-reports">
-            <a class="menu-item report-item {% if request.resolver_match and request.resolver_match.url_name == 'delivery_report' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_upload' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_png' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_pdf' %}active{% endif %}" href="{% url 'delivery_report' %}">
-              <span class="icon">📦</span>
-              <span>Delivery Report</span>
+            <a class="menu-item {% if request.path|slice:':9' == '/reports/' %}active{% endif %}" href="{% url 'delivery_report' %}">
+              <span class="dot"></span> Delivery Report
               <span class="tag tag-report">REPORT</span>
             </a>
 
-            <a class="menu-item report-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report_pdf' %}active{% endif %}" href="{% url 'shipper_cod_report' %}">
-              <span class="icon">💰</span>
-              <span>Shipper COD</span>
+            <a class="menu-item {% if request.path|slice:':12' == '/shippercod/' %}active{% endif %}" href="{% url 'shipper_cod_report' %}">
+              <span class="dot"></span> Shipper COD
               <span class="tag tag-report">REPORT</span>
             </a>
 
-            <a class="menu-item report-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report_pdf' %}active{% endif %}" href="{% url 'shipper_commission_report' %}">
-              <span class="icon">🧾</span>
-              <span>Shipper Commission</span>
+            <a class="menu-item {% if request.path|slice:':19' == '/shippercommission/' %}active{% endif %}" href="{% url 'shipper_commission_report' %}">
+              <span class="dot"></span> Shipper Commission
               <span class="tag tag-report">REPORT</span>
             </a>
 
-            <a class="menu-item report-item {% if request.resolver_match and request.resolver_match.url_name == 'profit_dashboard' %}active{% endif %}" href="{% url 'profit_dashboard' %}">
-              <span class="icon">📊</span>
-              <span>Profit Dashboard</span>
-              <span class="tag tag-profit">NEW</span>
+            <a class="menu-item {% if request.path|slice:':8' == '/profit/' %}active{% endif %}" href="{% url 'profit_dashboard' %}">
+              <span class="dot"></span> Profit Dashboard
+              <span class="tag tag-new">NEW</span>
             </a>
           </div>
 
           <div class="menu-sep"></div>
 
-          <div class="menu-title" data-target="group-finance">Finance</div>
-          <div class="menu-group hidden-sec" id="group-finance">
-            <a class="menu-item finance-item {% if request.resolver_match and request.resolver_match.url_name == 'finance_home' %}active{% endif %}" href="{% url 'finance_home' %}">
-              <span class="icon">🏦</span>
-              <span>Finance Home</span>
-              <span class="tag tag-finance">NEW</span>
-            </a>
+        <div class="menu-title" data-target="group-finance">Finance</div>
+<div class="menu-group hidden-sec" id="group-finance">
 
-            <a class="menu-item finance-item {% if request.resolver_match and request.resolver_match.url_name == 'staff_salary_list' %}active{% endif %}" href="{% url 'staff_salary_list' %}">
-              <span class="icon">👤</span>
-              <span>Staff Salary</span>
-            </a>
+  <a class="menu-item {% if request.resolver_match.url_name == 'finance_home' %}active{% endif %}"
+     href="{% url 'finance_home' %}">
+    <span class="dot"></span> Finance Home
+    <span class="tag tag-new">NEW</span>
+  </a>
 
-            <a class="menu-item finance-item {% if request.resolver_match and request.resolver_match.url_name == 'monthly_expense_list' %}active{% endif %}" href="{% url 'monthly_expense_list' %}">
-              <span class="icon">💡</span>
-              <span>Monthly Electricity</span>
-            </a>
+  <a class="menu-item {% if request.resolver_match.url_name == 'staff_salary_list' %}active{% endif %}"
+     href="{% url 'staff_salary_list' %}">
+    <span class="dot"></span> Staff Salary
+  </a>
 
-            <a class="menu-item finance-item {% if request.resolver_match and request.resolver_match.url_name == 'province_expense_list' %}active{% endif %}" href="{% url 'province_expense_list' %}">
-              <span class="icon">🚚</span>
-              <span>Province Expense</span>
-            </a>
-          </div>
+  <a class="menu-item {% if request.resolver_match.url_name == 'monthly_expense_list' %}active{% endif %}"
+     href="{% url 'monthly_expense_list' %}">
+    <span class="dot"></span> Monthly Electricity
+  </a>
 
+  <a class="menu-item {% if request.resolver_match.url_name == 'province_expense_list' %}active{% endif %}"
+     href="{% url 'province_expense_list' %}">
+    <span class="dot"></span> Province Expense
+  </a>
+
+</div>
         </nav>
 
-        <div class="sidebar-footer">
-          <div class="pill">v1</div>
+        <div class="sidebar-foot">
           <form method="post" action="{% url 'logout' %}" class="logout-form">
             {% csrf_token %}
-            <button type="submit" class="logout logout-btn">Logout</button>
+            <button type="submit" class="logout-btn">Logout</button>
           </form>
         </div>
       </aside>
 
       <main class="main">
         <header class="topbar">
-          <button class="icon-btn" id="toggleBtn" type="button">☰</button>
-
-          <div class="topbar-title">
-            {% block page_title %}Dashboard{% endblock %}
-            <div class="topbar-sub">
-              {% block page_subtitle %}DS Express Ops{% endblock %}
+          <div class="topbar-left">
+            <button class="toggle-btn" id="toggleBtn">☰</button>
+            <div class="page-head">
+              <div class="page-title">{% block page_title %}Dashboard{% endblock %}</div>
+              <div class="page-subtitle">{% block page_subtitle %}Welcome{% endblock %}</div>
             </div>
           </div>
 
           <div class="topbar-right">
-            <div class="search">
-              <input placeholder="Search tracking / phone..." />
-            </div>
-
-            <div class="user-chip">
-              <div class="avatar">DS</div>
+            <input class="search-box" type="text" placeholder="Search tracking / phone..." />
+            <div class="user-mini">
+              <div class="user-badge">DS</div>
               <div class="user-meta">
                 <div class="user-name">{{ request.user.username|default:"admin" }}</div>
                 <div class="user-role">Online</div>
@@ -352,7 +695,10 @@
     <script>
       const toggleBtn = document.getElementById("toggleBtn");
       const sidebar = document.getElementById("sidebar");
-      toggleBtn?.addEventListener("click", () => sidebar.classList.toggle("collapsed"));
+
+      toggleBtn?.addEventListener("click", () => {
+        sidebar.classList.toggle("collapsed");
+      });
 
       (function(){
         const qs = new URLSearchParams(window.location.search);
@@ -393,13 +739,13 @@
           openModal(btn.dataset.title, btn.dataset.text, form);
         });
 
-        yesBtn.addEventListener("click", function(){
+        yesBtn?.addEventListener("click", function(){
           if(pendingForm) pendingForm.submit();
           closeModal();
         });
 
-        noBtn.addEventListener("click", closeModal);
-        backdrop.addEventListener("click", closeModal);
+        noBtn?.addEventListener("click", closeModal);
+        backdrop?.addEventListener("click", closeModal);
       })();
 
       (function(){
@@ -419,60 +765,52 @@
           const state = {};
           titles.forEach(title => {
             const target = title.dataset.target;
-            if (!target) return;
-            state[target] = title.classList.contains("open");
+            const group = document.getElementById(target);
+            if(group){
+              state[target] = !group.classList.contains("hidden-sec");
+            }
           });
-          localStorage.setItem("ds_sidebar_sections", JSON.stringify(state));
+          localStorage.setItem("ds_sidebar_state", JSON.stringify(state));
         }
 
         function loadState(){
+          let state = {};
           try{
-            return JSON.parse(localStorage.getItem("ds_sidebar_sections") || "{}");
+            state = JSON.parse(localStorage.getItem("ds_sidebar_state") || "{}");
           }catch(e){
-            return {};
+            state = {};
           }
+
+          titles.forEach(title => {
+            const target = title.dataset.target;
+            const group = document.getElementById(target);
+            if(!group) return;
+
+            if(state[target] === true){
+              openSection(title, group);
+            }else if(state[target] === false){
+              closeSection(title, group);
+            }
+          });
         }
 
-        const saved = loadState();
-
         titles.forEach(title => {
-          const target = title.dataset.target;
-          if (!target) return;
-
-          const group = document.getElementById(target);
-          if (!group) return;
-
-          if (saved[target] === true) {
-            openSection(title, group);
-          } else if (saved[target] === false) {
-            closeSection(title, group);
-          }
-
           title.addEventListener("click", function(){
-            if (group.classList.contains("hidden-sec")) {
+            const target = title.dataset.target;
+            const group = document.getElementById(target);
+            if(!group) return;
+
+            if(group.classList.contains("hidden-sec")){
               openSection(title, group);
-            } else {
+            }else{
               closeSection(title, group);
             }
             saveState();
           });
         });
 
-        titles.forEach(title => {
-          const target = title.dataset.target;
-          if (!target) return;
-
-          const group = document.getElementById(target);
-          if (!group) return;
-
-          if (group.querySelector(".menu-item.active")) {
-            openSection(title, group);
-            saveState();
-          }
-        });
+        loadState();
       })();
     </script>
-
-    {% block extra_js %}{% endblock %}
   </body>
 </html>

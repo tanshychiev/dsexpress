@@ -19,7 +19,7 @@ urlpatterns = [
     path("batch-print/", views.order_batch_print, name="order_batch_print"),
 
     path("download-excel/", views.download_orders_excel, name="download_orders_excel"),
-
+    path("api/sellers/autocomplete/", views.seller_autocomplete, name="seller_autocomplete"),
 
     # ====================================================
     # IMPORT ORDERS

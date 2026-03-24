@@ -5,6 +5,7 @@ import io
 import json
 from datetime import date, datetime, time
 from decimal import Decimal
+from urllib.parse import urlencode
 
 import qrcode
 from django.conf import settings
@@ -90,7 +91,7 @@ def _make_tracking_no(order_id: int) -> str:
     return f"DS{today}{order_id:06d}"
 
 
-def _parse_date_safe(s: str | None) -> date | None:
+def _parse_date_safe(s):
     if not s:
         return None
     try:
@@ -98,48 +99,48 @@ def _parse_date_safe(s: str | None) -> date | None:
     except Exception:
         return None
 
-
-def _parse_time_safe(s: str | None) -> time | None:
+def _parse_time_safe(s):
     if not s:
         return None
     try:
         return time.fromisoformat(str(s).strip())
     except Exception:
         return None
-
-
 def _is_search_clicked(request: HttpRequest) -> bool:
     return (request.GET.get("search") or "") == "1"
 
 
-def _dt_range_from_request(request: HttpRequest):
+def _dt_range_from_request(request):
     fd = _parse_date_safe(request.GET.get("from_date") or request.GET.get("from"))
     ft = _parse_time_safe(request.GET.get("from_time"))
     td = _parse_date_safe(request.GET.get("to_date") or request.GET.get("to"))
     tt = _parse_time_safe(request.GET.get("to_time"))
 
+    today = timezone.localdate()
+
+    # if from exists but to blank => to = today
+    if fd and not td:
+        td = today
+
+    # if to exists but from blank => search only that to date
+    if td and not fd:
+        fd = td
+
+    # if both blank => no date filter
     if not fd and not td:
         return None, None
 
-    if fd and not ft:
+    if not ft:
         ft = time(0, 0)
-    if td and not tt:
+
+    if not tt:
         tt = time(23, 59, 59)
 
-    if fd and td:
-        start_dt = datetime.combine(fd, ft or time(0, 0))
-        end_dt = datetime.combine(td, tt or time(23, 59, 59))
-    elif fd and not td:
-        start_dt = datetime.combine(fd, ft or time(0, 0))
-        end_dt = datetime.combine(fd, time(23, 59, 59))
-    else:
-        start_dt = datetime.combine(td, time(0, 0))
-        end_dt = datetime.combine(td, tt or time(23, 59, 59))
+    start_dt = datetime.combine(fd, ft)
+    end_dt = datetime.combine(td, tt)
 
     tz = timezone.get_current_timezone()
     return timezone.make_aware(start_dt, tz), timezone.make_aware(end_dt, tz)
-
-
 def _get_setting() -> OrderSetting:
     setting = OrderSetting.objects.first()
     if not setting:
@@ -178,15 +179,49 @@ def _fmt_khr_no_decimal(v: Decimal | int) -> str:
 
 def _build_params(request: HttpRequest, drop: set[str] | None = None) -> str:
     drop = drop or set()
-    items = []
-    for k, v in request.GET.items():
-        if k in drop:
+    params = []
+    for key, value in request.GET.items():
+        if key in drop:
             continue
-        items.append(f"{k}={v}")
-    return "&".join(items)
+        params.append((key, value))
+    return urlencode(params)
 
 
-def _qs_orders_filtered(request: HttpRequest, require_search_click=True):
+def _has_any_order_filter(request: HttpRequest) -> bool:
+    values = [
+        (request.GET.get("from_date") or "").strip(),
+        (request.GET.get("from_time") or "").strip(),
+        (request.GET.get("to_date") or "").strip(),
+        (request.GET.get("to_time") or "").strip(),
+        (request.GET.get("tracking") or "").strip(),
+        (request.GET.get("order_code") or request.GET.get("seller_order_code") or "").strip(),
+        (request.GET.get("seller") or "").strip(),
+        (request.GET.get("seller_id") or "").strip(),
+        (request.GET.get("receiver_name") or "").strip(),
+        (request.GET.get("receiver_phone") or "").strip(),
+        (request.GET.get("status") or "").strip(),
+        (request.GET.get("q") or "").strip(),
+    ]
+    return any(values)
+
+
+def _resolve_seller_filter(request: HttpRequest):
+    seller_id = (request.GET.get("seller_id") or "").strip()
+    seller_text = (request.GET.get("seller") or "").strip()
+
+    if seller_id.isdigit():
+        return {"seller_id": int(seller_id)}
+
+    if seller_text and seller_text.isdigit():
+        return {"seller_id": int(seller_text)}
+
+    if seller_text:
+        return {"seller_text": seller_text}
+
+    return {}
+
+
+def _qs_orders_filtered(request: HttpRequest, require_search_click: bool = True):
     if require_search_click and not _is_search_clicked(request):
         return Order.objects.none()
 
@@ -198,22 +233,34 @@ def _qs_orders_filtered(request: HttpRequest, require_search_click=True):
 
     tracking = (request.GET.get("tracking") or "").strip()
     order_code = (request.GET.get("order_code") or request.GET.get("seller_order_code") or "").strip()
-    seller_id = (request.GET.get("seller") or "").strip()
     receiver_name = (request.GET.get("receiver_name") or "").strip()
     receiver_phone = (request.GET.get("receiver_phone") or "").strip()
     status_group = (request.GET.get("status") or "").strip()
     q = (request.GET.get("q") or "").strip()
 
+    seller_filter = _resolve_seller_filter(request)
+
     if tracking:
         qs = qs.filter(tracking_no__icontains=tracking)
+
     if order_code:
         qs = qs.filter(seller_order_code__icontains=order_code)
-    if seller_id.isdigit():
-        qs = qs.filter(seller_id=int(seller_id))
+
+    if "seller_id" in seller_filter:
+        qs = qs.filter(seller_id=seller_filter["seller_id"])
+    elif "seller_text" in seller_filter:
+        seller_text = seller_filter["seller_text"]
+        qs = qs.filter(
+            Q(seller__name__icontains=seller_text)
+            | Q(seller__code__icontains=seller_text)
+        )
+
     if receiver_name:
         qs = qs.filter(receiver_name__icontains=receiver_name)
+
     if receiver_phone:
         qs = qs.filter(receiver_phone__icontains=receiver_phone)
+
     if q:
         qs = qs.filter(
             Q(tracking_no__icontains=q)
@@ -300,44 +347,79 @@ def _soft_delete_queryset(qs, user):
 # API: Seller autocomplete
 # ============================================================
 @login_required
-def seller_autocomplete(request: HttpRequest):
+def seller_autocomplete(request):
     q = (request.GET.get("q") or "").strip()
-    qs = Seller.objects.filter(is_active=True).order_by("name")
+
+    qs = Seller.objects.all().order_by("name")
+
     if q:
-        qs = qs.filter(Q(code__icontains=q) | Q(name__icontains=q) | Q(phone__icontains=q))
-    qs = qs[:50]
-    items = [{"id": s.id, "code": s.code or "", "name": s.name or "", "phone": s.phone or ""} for s in qs]
-    return JsonResponse({"items": items})
+        qs = qs.filter(
+            Q(name__icontains=q) |
+            Q(code__icontains=q)
+        )
 
+    data = []
+    for s in qs[:20]:
+        data.append({
+            "id": s.id,
+            "name": s.name,
+            "code": s.code,
+            "text": s.name,
+        })
 
+    return JsonResponse({
+        "debug_q": q,
+        "count": qs.count(),
+        "results": data,
+    })
 # ============================================================
 # Orders List + Download
 # ============================================================
 @login_required
-def order_list(request: HttpRequest):
-    sellers = Seller.objects.filter(is_active=True).order_by("name")
-    qs = _qs_orders_filtered(request, require_search_click=True)
+def order_list(request):
+    search_clicked = (request.GET.get("search") or "") == "1"
 
-    paginator = Paginator(qs, PER_PAGE)
+    filter_values = [
+        (request.GET.get("from_date") or "").strip(),
+        (request.GET.get("from_time") or "").strip(),
+        (request.GET.get("to_date") or "").strip(),
+        (request.GET.get("to_time") or "").strip(),
+        (request.GET.get("tracking") or "").strip(),
+        (request.GET.get("order_code") or "").strip(),
+        (request.GET.get("seller") or "").strip(),
+        (request.GET.get("seller_id") or "").strip(),
+        (request.GET.get("receiver_name") or "").strip(),
+        (request.GET.get("receiver_phone") or "").strip(),
+        (request.GET.get("status") or "").strip(),
+    ]
+    has_any_filter = any(v for v in filter_values)
+
+    if search_clicked and not has_any_filter:
+        messages.error(request, "Please fill at least one field before Search.")
+        qs = Order.objects.none()
+    else:
+        qs = _qs_orders_filtered(request, require_search_click=True)
+
+    total_results = qs.count()
+
+    paginator = Paginator(qs, 50)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    today = timezone.localdate().isoformat()
-    params = _build_params(request, drop={"page"})
+    params = request.GET.copy()
+    if "page" in params:
+        params.pop("page")
+    params = params.urlencode()
 
     return render(
         request,
         "orders/order_list.html",
         {
-            "sellers": sellers,
             "page_obj": page_obj,
-            "search": _is_search_clicked(request),
-            "default_from": today,
-            "default_to": today,
             "params": params,
+            "search": search_clicked,
+            "total_results": total_results,
         },
     )
-
-
 @login_required
 def download_orders_excel(request: HttpRequest):
     qs = _qs_orders_filtered(request, require_search_click=True)
@@ -852,10 +934,7 @@ def bulk_update(request: HttpRequest):
                 if not order_id or not tracking:
                     skipped_count += 1
                     errors.append(f"Row {row_idx}: Missing ID or Tracking")
-                    BulkUpdateRow.objects.create(
-                        batch=batch,
-                        status="SKIPPED",
-                    )
+                    BulkUpdateRow.objects.create(batch=batch, status="SKIPPED")
                     continue
 
                 try:
@@ -863,10 +942,7 @@ def bulk_update(request: HttpRequest):
                 except Order.DoesNotExist:
                     error_count += 1
                     errors.append(f"Row {row_idx}: Order not found (ID={order_id}, Tracking={tracking})")
-                    BulkUpdateRow.objects.create(
-                        batch=batch,
-                        status="ERROR",
-                    )
+                    BulkUpdateRow.objects.create(batch=batch, status="ERROR")
                     continue
 
                 before = _snapshot(order)
@@ -890,10 +966,7 @@ def bulk_update(request: HttpRequest):
                 if new_created_at is not None:
                     current_created_at = order.created_at
                     if current_created_at and timezone.is_naive(current_created_at):
-                        current_created_at = timezone.make_aware(
-                            current_created_at,
-                            timezone.get_current_timezone(),
-                        )
+                        current_created_at = timezone.make_aware(current_created_at, timezone.get_current_timezone())
                     if current_created_at != new_created_at:
                         order.created_at = new_created_at
                         changed = True
@@ -974,7 +1047,6 @@ def bulk_update(request: HttpRequest):
                     with transaction.atomic():
                         order.save()
                         after = _snapshot(order)
-
                         BulkUpdateRow.objects.create(
                             batch=batch,
                             order=order,
@@ -996,10 +1068,7 @@ def bulk_update(request: HttpRequest):
             except Exception as e:
                 error_count += 1
                 errors.append(f"Row {row_idx}: {str(e)}")
-                BulkUpdateRow.objects.create(
-                    batch=batch,
-                    status="ERROR",
-                )
+                BulkUpdateRow.objects.create(batch=batch, status="ERROR")
 
         request.session["bulk_update_errors"] = errors[:200]
 
@@ -1093,6 +1162,7 @@ def download_bulk_update_batch_excel(request: HttpRequest, batch_id: int):
 
 
 upload_update = bulk_update
+
 
 
 # ============================================================

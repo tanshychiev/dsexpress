@@ -117,7 +117,8 @@
 
     .rtable{
       width:100%;
-      min-width:1450px;
+      min-width:1100px;
+      table-layout:fixed;
       border-collapse:collapse;
       background:#fff;
     }
@@ -125,18 +126,23 @@
     .rtable th{
       background:#124b84;
       color:#fff;
-      padding:9px 8px;
+      padding:6px 5px;
       border:1px solid #d0d7df;
-      font-size:12px;
+      font-size:10px;
       text-align:center;
-      white-space:nowrap;
+      white-space:normal;
+      line-height:1.2;
     }
 
     .rtable td{
-      padding:8px 8px;
+      padding:5px 5px;
       border:1px solid #d9e0e8;
-      font-size:12px;
+      font-size:10px;
       vertical-align:top;
+      white-space:normal;
+      word-break:break-word;
+      overflow-wrap:break-word;
+      line-height:1.25;
     }
 
     .rtable td.num{
@@ -163,19 +169,19 @@
     }
 
     .totals-inner{
-      min-width:320px;
+      min-width:260px;
       background:#f8fafc;
       border:1px solid #dbe3ec;
       border-radius:14px;
-      padding:12px 14px;
+      padding:10px 12px;
     }
 
     .totals-row{
       display:flex;
       justify-content:space-between;
       gap:14px;
-      font-size:14px;
-      padding:4px 0;
+      font-size:12px;
+      padding:3px 0;
     }
 
     .totals-row strong{
@@ -249,30 +255,28 @@
           <table class="rtable">
             <thead>
               <tr>
-                <th>No</th>
-                <th>Code</th>
-                <th>Shipment ID</th>
-                <th>Seller</th>
-                <th>Pickup Date</th>
-                <th>Delivery Date</th>
-                <th>Location</th>
-                <th>Description</th>
-                <th>Qty</th>
-                <th>Phone Number</th>
-                <th>Receiver Name</th>
-                <th>Price</th>
-                <th>Delivery Fee</th>
-                <th>Addition Fee</th>
-                <th>Total Fee</th>
-                <th>COD</th>
-                <th>Status</th>
-                <th>Shipper name</th>
-                <th>Reason</th>
+                <th style="width:34px;">No</th>
+                <th style="width:95px;">Shipment ID</th>
+                <th style="width:65px;">Pickup Date</th>
+                <th style="width:65px;">Delivery Date</th>
+                <th style="width:130px;">Location</th>
+                <th style="width:95px;">Description</th>
+                <th style="width:34px;">Qty</th>
+                <th style="width:85px;">Phone Number</th>
+                <th style="width:85px;">Receiver Name</th>
+                <th style="width:46px;">Price</th>
+                <th style="width:52px;">Delivery Fee</th>
+                <th style="width:52px;">Addition Fee</th>
+                <th style="width:52px;">Total Fee</th>
+                <th style="width:46px;">COD</th>
+                <th style="width:58px;">Status</th>
+                <th style="width:62px;">Shipper</th>
+                <th style="width:62px;">Reason</th>
               </tr>
             </thead>
             <tbody>
               {% for o in s.rows %}
-                {% if o.clear_delivery %}
+                {% if o.status == "RETURNED" %}
                   <tr class="row-returned">
                 {% elif o.status == "DELIVERED" or o.status == "DONE" %}
                   <tr>
@@ -280,9 +284,7 @@
                   <tr class="row-pending">
                 {% endif %}
                   <td class="center">{{ forloop.counter }}</td>
-                  <td>{{ o.seller_order_code|default_if_none:"" }}</td>
                   <td>{{ o.tracking_no|default_if_none:"" }}</td>
-                  <td>{% if o.seller_name %}{{ o.seller_name }}{% else %}-{% endif %}</td>
                   <td class="center">{{ o.created_at|date:"Y-m-d" }}</td>
                   <td class="center">{{ o.done_at|date:"Y-m-d" }}</td>
                   <td>{{ o.receiver_address|default_if_none:"" }}</td>
@@ -292,24 +294,24 @@
                   <td>{{ o.receiver_name|default_if_none:"" }}</td>
                   <td class="num">{{ o.price|default_if_none:"" }}</td>
 
-                  {% if o.clear_delivery %}
+                  {% if o.status == "RETURNED" %}
                     <td class="num">0.00</td>
                     <td class="num">0.00</td>
                     <td class="num">0.00</td>
                     <td class="num">0.00</td>
-                    <td>DONE RETURN</td>
+                    <td class="center">RETURNED</td>
                   {% elif o.status == "DELIVERED" or o.status == "DONE" %}
                     <td class="num">{{ o.delivery_fee|default_if_none:"" }}</td>
                     <td class="num">{{ o.additional_fee|default_if_none:"" }}</td>
                     <td class="num">{{ o.delivery_fee|add:o.additional_fee }}</td>
                     <td class="num">{{ o.cod|default_if_none:"" }}</td>
-                    <td>DONE</td>
+                    <td class="center">DONE</td>
                   {% else %}
                     <td class="num">0.00</td>
                     <td class="num">0.00</td>
                     <td class="num">0.00</td>
                     <td class="num">0.00</td>
-                    <td>PENDING</td>
+                    <td class="center">PENDING</td>
                   {% endif %}
 
                   <td>{% if o.delivery_shipper %}{{ o.delivery_shipper.name }}{% else %}-{% endif %}</td>
@@ -317,7 +319,7 @@
                 </tr>
               {% empty %}
                 <tr>
-                  <td colspan="19">No data</td>
+                  <td colspan="17">No data</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -344,7 +346,7 @@
     {% endfor %}
 
     <div class="export-footer">
-      Thank you for supporting DS EXPRESS.
+      ❤️🙏Thank you for supporting DS EXPRESS🙏❤️.
     </div>
   </div>
 </body>

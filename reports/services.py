@@ -70,11 +70,11 @@ def classify_row(order):
 
 
 def display_status(order):
-    t = classify_row(order)
+    row_type = classify_row(order)
 
-    if t == "done_return":
+    if row_type == "done_return":
         return "RETURNED"
-    if t == "done":
+    if row_type == "done":
         return "DONE"
     return "PENDING"
 
@@ -85,9 +85,9 @@ def report_money(order):
     - PENDING and RETURNED => COD/FEE must be 0
     - DONE => show real COD/FEE
     """
-    t = classify_row(order)
+    row_type = classify_row(order)
 
-    if t in ("pending", "done_return"):
+    if row_type in ("pending", "done_return"):
         return {
             "cod": Decimal("0.00"),
             "delivery_fee": Decimal("0.00"),
@@ -145,13 +145,19 @@ def sort_report_rows(rows):
 
 
 def get_done_queryset(Order, cleaned):
+    """
+    Done rows:
+    - based on final status only
+    - DO NOT depend on clear_delivery
+    - this allows PP done, province done, and return done to appear
+    - use done_at date filter for done report
+    """
     qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")
         .filter(
             is_deleted=False,
             status__in=(DONE_STATUSES | RETURNED_STATUSES),
-            clear_delivery=True,
         )
     )
 
@@ -167,14 +173,22 @@ def get_done_queryset(Order, cleaned):
     if d_to:
         qs = qs.filter(done_at__lte=d_to)
 
-    return qs.order_by("seller_code", "seller_name", "id")
+    qs = qs.exclude(done_at__isnull=True)
+
+    return qs.distinct().order_by("seller_code", "seller_name", "id")
 
 
 def get_pending_queryset(Order, cleaned):
+    """
+    Pending rows:
+    - anything not done / not returned / not void
+    - this prevents duplicate because done/returned rows stay only in done queryset
+    """
     qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")
         .filter(is_deleted=False)
+        .exclude(status__in=(DONE_STATUSES | RETURNED_STATUSES | VOID_STATUSES))
     )
 
     seller = cleaned.get("seller")
@@ -189,9 +203,7 @@ def get_pending_queryset(Order, cleaned):
     if p_to:
         qs = qs.filter(created_at__lte=_end(p_to))
 
-    qs = qs.exclude(status__in=(DONE_STATUSES | RETURNED_STATUSES)).exclude(status__in=VOID_STATUSES)
-
-    return qs.order_by("seller_code", "seller_name", "id")
+    return qs.distinct().order_by("seller_code", "seller_name", "id")
 
 
 def group_by_seller(rows):

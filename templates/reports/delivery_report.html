@@ -36,34 +36,6 @@
     background:#fff;
   }
 
-  .filter-empty-slot{
-    min-height:1px;
-  }
-
-  .report-top-actions{
-    grid-column:1 / -1;
-    display:grid;
-    grid-template-columns:1fr auto;
-    gap:14px;
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid #e5e7eb;
-    align-items:center;
-  }
-
-  .report-top-actions-left{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:center;
-  }
-
-  .report-top-actions-right{
-    display:flex;
-    justify-content:flex-end;
-    align-items:center;
-  }
-
   .report-actions{
     grid-column:1 / -1;
     margin-top:12px;
@@ -122,11 +94,6 @@
 
   .report-btn-pdf{
     background:#dc2626;
-    color:#fff;
-  }
-
-  .report-btn-gray{
-    background:#64748b;
     color:#fff;
   }
 
@@ -325,13 +292,6 @@
     margin-bottom:2px;
   }
 
-  .shop-name{
-    font-size:16px;
-    font-weight:900;
-    color:#0f172a;
-    text-align:left;
-  }
-
   .shop-check-wrap{
     display:inline-flex;
     align-items:center;
@@ -359,23 +319,29 @@
     min-width:1450px;
     border-collapse:collapse;
     background:#fff;
+    table-layout:fixed;
   }
 
   .rtable th{
     background:#124b84;
     color:#fff;
-    padding:9px 8px;
+    padding:8px 6px;
     border:1px solid #d0d7df;
-    font-size:12px;
+    font-size:11px;
     text-align:center;
-    white-space:nowrap;
+    white-space:normal;
+    line-height:1.2;
   }
 
   .rtable td{
-    padding:8px 8px;
+    padding:6px 6px;
     border:1px solid #d9e0e8;
-    font-size:12px;
+    font-size:11px;
     vertical-align:top;
+    white-space:normal;
+    word-break:break-word;
+    overflow-wrap:break-word;
+    line-height:1.25;
   }
 
   .rtable td.num{
@@ -404,10 +370,10 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    min-width:88px;
-    padding:4px 10px;
+    min-width:72px;
+    padding:4px 8px;
     border-radius:999px;
-    font-size:11px;
+    font-size:10px;
     font-weight:900;
     line-height:1;
   }
@@ -463,6 +429,12 @@
     font-size:14px;
     font-weight:700;
   }
+  .export-mode .export-footer{
+    display:block !important;
+  }
+  .print-only-report .export-footer{
+    display:block !important;
+  }
 
   .temp-export-footer{
     text-align:center;
@@ -487,6 +459,79 @@
 
   .export-mode .export-col-hide{
     display:none !important;
+  }
+
+  .export-mode{
+    background:#ffffff !important;
+  }
+
+  .export-mode .shop-section{
+    padding:12px;
+    border-radius:14px;
+    box-shadow:none;
+  }
+
+  .export-mode .shop-header-row{
+    min-height:auto;
+    padding-bottom:8px;
+    margin-bottom:10px;
+  }
+
+  .export-mode .shop-header-left{
+    width:160px;
+  }
+
+  .export-mode .shop-header-right{
+    display:none !important;
+  }
+
+  .export-mode .shop-header-title{
+    font-size:18px;
+  }
+
+  .export-mode .shop-header-line{
+    font-size:11px;
+  }
+
+  .export-mode .shop-title-line{
+    font-size:13px;
+  }
+
+  .export-mode .table-wrap{
+    overflow:visible !important;
+  }
+
+  .export-mode .rtable{
+    min-width:1020px !important;
+    table-layout:fixed !important;
+  }
+
+  .export-mode .rtable th{
+    padding:3px 3px;
+    font-size:8px;
+    line-height:1.08;
+  }
+
+  .export-mode .rtable td{
+    padding:3px 3px;
+    font-size:8px;
+    line-height:1.08;
+  }
+
+  .export-mode .status-badge{
+    min-width:50px;
+    padding:2px 5px;
+    font-size:8px;
+  }
+
+  .export-mode .totals-inner{
+    min-width:220px;
+    padding:8px 10px;
+  }
+
+  .export-mode .totals-row{
+    font-size:11px;
+    padding:2px 0;
   }
 
   .print-only-report .report-filter-card,
@@ -578,7 +623,7 @@
   }
 
   .shop-title-line{
-    white-space: nowrap;
+    white-space:nowrap;
     font-weight:700;
     display:inline-block;
     font-size:16px;
@@ -587,7 +632,6 @@
 
 <div class="card report-filter-card">
   <form method="get" class="report-filter-grid">
-
     <div>
       <label>Shop</label>
       {{ form.seller }}
@@ -633,29 +677,21 @@
 
     <div class="report-actions">
       <div class="report-actions-left">
-        <button class="report-btn report-btn-excel report-btn-small"
-                name="action"
-                value="download_update"
-                type="submit">
+        <button class="report-btn report-btn-excel report-btn-small" name="action" value="download_update" type="submit">
           Download Update File
         </button>
 
-        <a class="report-btn report-btn-show report-btn-small"
-           href="{% url 'delivery_report_upload' %}">
+        <a class="report-btn report-btn-show report-btn-small" href="{% url 'delivery_report_upload' %}">
           Upload Update File
         </a>
       </div>
 
       <div class="report-actions-right">
-        <button class="report-btn report-btn-show report-btn-show-large"
-                name="action"
-                value="show"
-                type="submit">
+        <button class="report-btn report-btn-show report-btn-show-large" name="action" value="show" type="submit">
           Show
         </button>
       </div>
     </div>
-
   </form>
 </div>
 
@@ -738,174 +774,174 @@
     </div>
   {% endif %}
 
-{% for s in seller_summaries %}
-  <div class="shop-section" id="shopReport{{ forloop.counter }}">
-    <div class="shop-header-row">
-      <div class="shop-header-left">
-        <div>
-          <span class="shop-title-line">Shop: {{ s.seller_key }}</span>
+  {% for s in seller_summaries %}
+    <div class="shop-section" id="shopReport{{ forloop.counter }}">
+      <div class="shop-header-row">
+        <div class="shop-header-left">
+          <div>
+            <span class="shop-title-line">Shop: {{ s.seller_key }}</span>
 
-          <div class="export-hide" style="margin-top:10px;">
-            <label class="shop-check-wrap">
-              <input type="checkbox"
-                     class="shopCheck"
-                     value="{{ forloop.counter }}"
-                     data-seller-id="{% if s.rows and s.rows.0.seller_id %}{{ s.rows.0.seller_id }}{% endif %}"
-                     data-shop-name="{{ s.seller_key|default_if_none:'' }}">
-              <span>Select</span>
-            </label>
+            <div class="export-hide" style="margin-top:10px;">
+              <label class="shop-check-wrap">
+                <input type="checkbox"
+                       class="shopCheck"
+                       value="{{ forloop.counter }}"
+                       data-seller-id="{% if s.rows and s.rows.0.seller_id %}{{ s.rows.0.seller_id }}{% endif %}"
+                       data-shop-name="{{ s.seller_key|default_if_none:'' }}">
+                <span>Select</span>
+              </label>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="shop-header-center">
-        <div class="shop-header-title">Delivery Report</div>
+        <div class="shop-header-center">
+          <div class="shop-header-title">Delivery Report</div>
 
-        {% if delivery_from or delivery_to %}
+          {% if delivery_from or delivery_to %}
+            <div class="shop-header-line">
+              Delivered: {{ delivery_from|date:"M. j, Y"|default:"" }} → {{ delivery_to|date:"F j, Y"|default:"" }}
+            </div>
+          {% endif %}
+
           <div class="shop-header-line">
-            Delivered: {{ delivery_from|date:"M. j, Y"|default:"" }} → {{ delivery_to|date:"F j, Y"|default:"" }}
+            Done: <strong class="shop-done-count">0</strong>
+            &nbsp;&nbsp;
+            Returned: <strong class="shop-returned-count">0</strong>
+            &nbsp;&nbsp;
+            Pending: <strong class="shop-pending-count">0</strong>
           </div>
-        {% endif %}
+        </div>
 
-        <div class="shop-header-line">
-          Done: <strong class="shop-done-count">0</strong>
-          &nbsp;&nbsp;
-          Returned: <strong class="shop-returned-count">0</strong>
-          &nbsp;&nbsp;
-          Pending: <strong class="shop-pending-count">0</strong>
+        <div class="shop-header-right export-hide">
+          <a
+            class="report-btn report-btn-excel"
+            href="?seller={% if s.rows and s.rows.0.seller_id %}{{ s.rows.0.seller_id }}{% endif %}&shop_key={{ s.seller_key|urlencode }}&delivery_date_from={% if delivery_from %}{{ delivery_from|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&delivery_date_to={% if delivery_to %}{{ delivery_to|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&pending_date_from={% if pending_from %}{{ pending_from|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&pending_date_to={% if pending_to %}{{ pending_to|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&action=export"
+          >
+            Save Excel
+          </a>
+
+          <button type="button"
+                  class="report-btn report-btn-png shopPngBtn"
+                  data-shop="{{ forloop.counter }}"
+                  data-shop-name="{{ s.seller_key|default_if_none:'' }}">
+            Save PNG
+          </button>
+
+          <button type="button"
+                  class="report-btn report-btn-pdf shopPdfBtn"
+                  data-shop="{{ forloop.counter }}"
+                  data-shop-name="{{ s.seller_key|default_if_none:'' }}">
+            Save PDF
+          </button>
         </div>
       </div>
 
-      <div class="shop-header-right export-hide">
-        <a
-          class="report-btn report-btn-excel"
-          href="?seller={% if s.rows and s.rows.0.seller_id %}{{ s.rows.0.seller_id }}{% endif %}&shop_key={{ s.seller_key|urlencode }}&delivery_date_from={% if delivery_from %}{{ delivery_from|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&delivery_date_to={% if delivery_to %}{{ delivery_to|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&pending_date_from={% if pending_from %}{{ pending_from|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&pending_date_to={% if pending_to %}{{ pending_to|date:'Y-m-d\\TH:i'|urlencode }}{% endif %}&action=export"
-        >
-          Save Excel
-        </a>
-
-        <button type="button"
-                class="report-btn report-btn-png shopPngBtn"
-                data-shop="{{ forloop.counter }}"
-                data-shop-name="{{ s.seller_key|default_if_none:'' }}">
-          Save PNG
-        </button>
-
-        <button type="button"
-                class="report-btn report-btn-pdf shopPdfBtn"
-                data-shop="{{ forloop.counter }}"
-                data-shop-name="{{ s.seller_key|default_if_none:'' }}">
-          Save PDF
-        </button>
-      </div>
-    </div>
-
-    <div class="table-wrap">
-      <table class="rtable">
-        <thead>
-          <tr>
-            <th>No</th>
-            <th>Code</th>
-            <th>Shipment ID</th>
-            <th>Seller</th>
-            <th>Pickup Date</th>
-            <th>Delivery Date</th>
-            <th>Location</th>
-            <th class="export-col-hide">Description</th>
-            <th class="export-col-hide">Qty</th>
-            <th>Phone Number</th>
-            <th>Receiver Name</th>
-            <th>Price</th>
-            <th class="export-col-hide">Delivery Fee</th>
-            <th class="export-col-hide">Addition Fee</th>
-            <th>Total Fee</th>
-            <th>COD</th>
-            <th>Status</th>
-            <th>Shipper name</th>
-            <th>Reason</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {% for o in s.rows %}
-            {% if o.status == "RETURNED" %}
-              <tr class="row-returned" data-report-status="RETURNED">
-            {% elif o.status == "DELIVERED" or o.status == "DONE" %}
-              <tr data-report-status="DONE">
-            {% else %}
-              <tr class="row-pending" data-report-status="PENDING">
-            {% endif %}
-
-              <td class="center">{{ forloop.counter }}</td>
-              <td>{{ o.seller_order_code|default_if_none:"" }}</td>
-              <td>{{ o.tracking_no|default_if_none:"" }}</td>
-
-              <td>
-                {% if o.seller_name %}
-                  {{ o.seller_name }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-
-              <td class="center">{{ o.created_at|date:"Y-m-d" }}</td>
-              <td class="center">{{ o.done_at|date:"Y-m-d" }}</td>
-              <td>{{ o.receiver_address|default_if_none:"" }}</td>
-              <td class="export-col-hide">{{ o.product_desc|default_if_none:"" }}</td>
-              <td class="center export-col-hide">{{ o.quantity|default_if_none:"" }}</td>
-              <td>{{ o.receiver_phone|default_if_none:"" }}</td>
-              <td>{{ o.receiver_name|default_if_none:"" }}</td>
-              <td class="num">{{ o.price|default_if_none:"" }}</td>
-
-              <td class="num export-col-hide">{{ o.report_delivery_fee|floatformat:2 }}</td>
-              <td class="num export-col-hide">{{ o.report_additional_fee|floatformat:2 }}</td>
-              <td class="num">{{ o.report_total_fee|floatformat:2 }}</td>
-              <td class="num">{{ o.report_cod|floatformat:2 }}</td>
-
-              <td>
-                {% if o.status == "RETURNED" %}
-                  <span class="status-badge status-returned">RETURNED</span>
-                {% elif o.status == "DELIVERED" or o.status == "DONE" %}
-                  <span class="status-badge status-done">DONE</span>
-                {% else %}
-                  <span class="status-badge status-pending">PENDING</span>
-                {% endif %}
-              </td>
-
-              <td>{{ o.report_shipper_name|default:"-" }}</td>
-              <td>{{ o.reason|default_if_none:"" }}</td>
-            </tr>
-          {% empty %}
+      <div class="table-wrap">
+        <table class="rtable">
+          <thead>
             <tr>
-              <td colspan="19" class="empty-box">No data</td>
+              <th style="width:18px;">No</th>
+              <th class="export-col-hide" style="width:70px;">Code</th>
+              <th style="width:74px;">Shipment ID</th>
+              <th class="export-col-hide" style="width:76px;">Seller</th>
+              <th style="width:52px;">Pickup Date</th>
+              <th style="width:52px;">Delivery Date</th>
+              <th style="width:110px;">Location</th>
+              <th class="export-col-hide" style="width:72px;">Description</th>
+              <th class="export-col-hide" style="width:34px;">Qty</th>
+              <th style="width:58px;">Phone Number</th>
+              <th style="width:58px;">Receiver Name</th>
+              <th style="width:32px;">Price</th>
+              <th class="export-col-hide" style="width:32px;">Delivery Fee</th>
+              <th class="export-col-hide" style="width:32px;">Addition Fee</th>
+              <th style="width:32px;">Total Fee</th>
+              <th style="width:32px;">COD</th>
+              <th style="width:54px;">Status</th>
+              <th style="width:62px;">Shipper</th>
+              <th style="width:62px;">Reason</th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
 
-    <div class="totals-box">
-      <div class="totals-inner">
-        <div class="totals-row">
-          <span><strong>COD :</strong></span>
-          <span>{{ s.total_cod|floatformat:2 }}</span>
-        </div>
-        <div class="totals-row">
-          <span><strong>FEE :</strong></span>
-          <span>{{ s.total_fee|floatformat:2 }}</span>
-        </div>
-        <div class="totals-row">
-          <span><strong>PAY :</strong></span>
-          <span>{{ s.pay|floatformat:2 }}</span>
+          <tbody>
+            {% for o in s.rows %}
+              {% if o.status == "RETURNED" %}
+                <tr class="row-returned" data-report-status="RETURNED">
+              {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+                <tr data-report-status="DONE">
+              {% else %}
+                <tr class="row-pending" data-report-status="PENDING">
+              {% endif %}
+
+                <td class="center">{{ forloop.counter }}</td>
+                <td class="export-col-hide">{{ o.seller_order_code|default_if_none:"" }}</td>
+                <td>{{ o.tracking_no|default_if_none:"" }}</td>
+
+                <td class="export-col-hide">
+                  {% if o.seller_name %}
+                    {{ o.seller_name }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td class="center">{{ o.created_at|date:"Y-m-d" }}</td>
+                <td class="center">{{ o.done_at|date:"Y-m-d" }}</td>
+                <td>{{ o.receiver_address|default_if_none:"" }}</td>
+                <td class="export-col-hide">{{ o.product_desc|default_if_none:"" }}</td>
+                <td class="center export-col-hide">{{ o.quantity|default_if_none:"" }}</td>
+                <td>{{ o.receiver_phone|default_if_none:"" }}</td>
+                <td>{{ o.receiver_name|default_if_none:"" }}</td>
+                <td class="num">{{ o.price|default_if_none:"" }}</td>
+
+                <td class="num export-col-hide">{{ o.report_delivery_fee|floatformat:2 }}</td>
+                <td class="num export-col-hide">{{ o.report_additional_fee|floatformat:2 }}</td>
+                <td class="num">{{ o.report_total_fee|floatformat:2 }}</td>
+                <td class="num">{{ o.report_cod|floatformat:2 }}</td>
+
+                <td>
+                  {% if o.status == "RETURNED" %}
+                    <span class="status-badge status-returned">RETURNED</span>
+                  {% elif o.status == "DELIVERED" or o.status == "DONE" %}
+                    <span class="status-badge status-done">DONE</span>
+                  {% else %}
+                    <span class="status-badge status-pending">PENDING</span>
+                  {% endif %}
+                </td>
+
+                <td>{{ o.report_shipper_name|default:"-" }}</td>
+                <td>{{ o.reason|default_if_none:"" }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="19" class="empty-box">No data</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="totals-box">
+        <div class="totals-inner">
+          <div class="totals-row">
+            <span><strong>COD :</strong></span>
+            <span>{{ s.total_cod|floatformat:2 }}</span>
+          </div>
+          <div class="totals-row">
+            <span><strong>FEE :</strong></span>
+            <span>{{ s.total_fee|floatformat:2 }}</span>
+          </div>
+          <div class="totals-row">
+            <span><strong>PAY :</strong></span>
+            <span>{{ s.pay|floatformat:2 }}</span>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-{% endfor %}
 
-  <div class="export-footer">
-    Thank you for supporting DS Express.
-  </div>
+      <div class="export-footer">
+        ❤️🙏Thank you for supporting DS Express.🙏❤️
+      </div>
+    </div>
+  {% endfor %}
 </div>
 {% endblock %}
 
@@ -915,10 +951,6 @@
 <script>
   (function () {
     const { jsPDF } = window.jspdf;
-
-    const reportEl = document.getElementById("reportCapture");
-    const savePngBtn = document.getElementById("savePngBtn");
-    const savePdfBtn = document.getElementById("savePdfBtn");
 
     const toggleAllBtn = document.getElementById("toggleAllBtn");
     const selectedCountText = document.getElementById("selectedCountText");
@@ -1027,18 +1059,23 @@
       document.body.classList.add("print-only-report");
 
       try {
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        const exportWidth = 1080;
 
         const canvas = await html2canvas(el, {
-          scale: 2,
+          scale: 3,
           useCORS: true,
           backgroundColor: "#ffffff",
           scrollX: 0,
-          scrollY: -window.scrollY,
-          width: el.scrollWidth,
+          scrollY: 0,
+          x: 0,
+          y: 0,
+          width: exportWidth,
           height: el.scrollHeight,
-          windowWidth: Math.max(el.scrollWidth, document.documentElement.clientWidth),
-          windowHeight: Math.max(el.scrollHeight, document.documentElement.clientHeight),
+          windowWidth: exportWidth,
+          windowHeight: el.scrollHeight,
+          logging: false,
           onclone: function(clonedDoc) {
             const clonedEl = clonedDoc.getElementById(el.id);
             if (!clonedEl) return;
@@ -1047,9 +1084,28 @@
               node.style.display = "none";
             });
 
-            clonedEl.style.width = el.scrollWidth + "px";
+            clonedDoc.querySelectorAll(".export-cover").forEach(node => {
+              node.style.display = "flex";
+            });
+
+            clonedDoc.querySelectorAll("html, body").forEach(node => {
+              node.style.margin = "0";
+              node.style.padding = "0";
+              node.style.width = exportWidth + "px";
+              node.style.height = "auto";
+              node.style.overflow = "visible";
+              node.style.background = "#ffffff";
+            });
+
+            clonedEl.style.width = exportWidth + "px";
+            clonedEl.style.minWidth = exportWidth + "px";
+            clonedEl.style.maxWidth = exportWidth + "px";
             clonedEl.style.height = "auto";
             clonedEl.style.overflow = "visible";
+            clonedEl.style.margin = "0";
+            clonedEl.style.padding = "12px";
+            clonedEl.style.background = "#ffffff";
+            clonedEl.style.boxShadow = "none";
 
             clonedDoc.querySelectorAll(".table-wrap").forEach(wrap => {
               wrap.style.overflow = "visible";
@@ -1060,14 +1116,9 @@
 
             clonedDoc.querySelectorAll(".rtable").forEach(table => {
               table.style.width = "100%";
-              table.style.minWidth = "1450px";
-              table.style.tableLayout = "auto";
-            });
-
-            clonedDoc.querySelectorAll("body, html").forEach(node => {
-              node.style.overflow = "visible";
-              node.style.width = "auto";
-              node.style.height = "auto";
+              table.style.minWidth = "1020px";
+              table.style.maxWidth = "1020px";
+              table.style.tableLayout = "fixed";
             });
           }
         });

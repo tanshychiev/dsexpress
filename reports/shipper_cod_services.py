@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict, OrderedDict
-from datetime import time
 from decimal import Decimal
+
+from django.utils import timezone
 
 
 RATE_KHR_PER_USD = Decimal("4100")
@@ -43,19 +44,37 @@ def _append_text(old_text: str, new_text: str) -> str:
     return f"{old_text} | {new_text}"
 
 
-def _get_shift_name(assigned_at) -> str:
+def _to_local(dt_value):
+    if not dt_value:
+        return None
+    try:
+        if timezone.is_aware(dt_value):
+            return timezone.localtime(dt_value)
+    except Exception:
+        pass
+    return dt_value
+
+
+def _get_shift_name(dt_value) -> str:
     """
     Business rule:
     - morning   = 12:00 AM -> 11:59:59 AM
     - afternoon = 12:00 PM -> 11:59:59 PM
-    """
-    if not assigned_at:
-        return "afternoon"
 
-    t = assigned_at.time()
-    if time(0, 0, 0) <= t <= time(11, 59, 59):
-        return "morning"
-    return "afternoon"
+    IMPORTANT:
+    use local time before deciding shift
+    """
+    dt_value = _to_local(dt_value)
+    if not dt_value:
+        return "afternoon"
+    return "morning" if 0 <= dt_value.hour < 12 else "afternoon"
+
+
+def _get_day_key(dt_value):
+    dt_value = _to_local(dt_value)
+    if not dt_value:
+        return None
+    return dt_value.date()
 
 
 def _finalize_balance(row: dict):
@@ -87,15 +106,12 @@ def build_shipper_cod_report(clear_cod_rows):
     Group by ASSIGN DATE -> ASSIGN SHIFT -> SHIPPER
 
     Rule:
-    - record by batch assigned_at
+    - record by batch.assigned_at
     - NOT by clear COD datetime
 
     Examples:
-    - assigned 2025-03-23 08:00 AM, clear 2025-03-23 10:00 PM
-      => record in morning of 2025-03-23
-
-    - assigned 2025-03-23 08:00 AM, clear 2025-03-25 10:00 PM
-      => record in morning of 2025-03-23
+    - assign morning, clear COD afternoon => record morning on assign date
+    - assign afternoon, clear COD next day morning => record afternoon on assign date
     """
 
     grouped = OrderedDict()
@@ -109,11 +125,13 @@ def build_shipper_cod_report(clear_cod_rows):
         if not assigned_at:
             continue
 
+        day_key = _get_day_key(assigned_at)
+        shift_name = _get_shift_name(assigned_at)
+        if not day_key:
+            continue
+
         shipper = getattr(batch, "shipper", None)
         shipper_name = getattr(shipper, "name", "") or "-"
-
-        day_key = assigned_at.date()
-        shift_name = _get_shift_name(assigned_at)
 
         if day_key not in grouped:
             grouped[day_key] = {
@@ -122,7 +140,6 @@ def build_shipper_cod_report(clear_cod_rows):
             }
 
         row = grouped[day_key][shift_name][shipper_name]
-
         row["cod"] += _to_decimal(getattr(obj, "target_total_usd", 0))
         row["cash_usd"] += _to_decimal(getattr(obj, "cash_usd", 0))
         row["cash_khr"] += _to_decimal(getattr(obj, "cash_khr", 0))

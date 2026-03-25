@@ -50,6 +50,9 @@ def _get_report_data(date_from: str, date_to: str):
     dt_from = _parse_date_start(date_from)
     dt_to = _parse_date_end(date_to)
 
+    # IMPORTANT:
+    # filter by batch assigned_at
+    # NOT by COD clear time / created_at
     if dt_from:
         qs = qs.filter(batch__assigned_at__gte=dt_from)
     if dt_to:

@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import timedelta
 
+from django.utils import timezone
+
 
 COMMISSION_START_AFTER_PC = 10
 COMMISSION_PER_PC_KHR = 1500
@@ -22,15 +24,34 @@ def _new_day_row():
     }
 
 
+def _to_local(dt_value):
+    if not dt_value:
+        return None
+    try:
+        if timezone.is_aware(dt_value):
+            return timezone.localtime(dt_value)
+    except Exception:
+        pass
+    return dt_value
+
+
 def _get_shift_name(dt_value) -> str:
     """
     Business rule:
     - morning   = 12:00 AM -> 11:59:59 AM
     - afternoon = 12:00 PM -> 11:59:59 PM
     """
+    dt_value = _to_local(dt_value)
     if not dt_value:
         return "afternoon"
     return "morning" if 0 <= dt_value.hour < 12 else "afternoon"
+
+
+def _get_day_key(dt_value):
+    dt_value = _to_local(dt_value)
+    if not dt_value:
+        return None
+    return dt_value.date()
 
 
 def _finalize_day_row(row):
@@ -61,16 +82,16 @@ def _daterange(start_date, end_date):
 
 def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_date=None):
     """
-    Group by SHIPPER + ASSIGN DATE.
+    Group by SHIPPER + ASSIGN DATE
 
     IMPORTANT BUSINESS RULE:
-    - morning/afternoon is decided by batch assigned_at
-    - assign count uses batch assigned_at
-    - done count also uses batch assigned_at
+    - morning/afternoon is decided by batch.assigned_at
+    - assign count uses batch.assigned_at
+    - done count also uses batch.assigned_at
     - do NOT use delivery clear datetime
     - do NOT use clear COD datetime
-    - if batch assigned on 2025-03-25 morning and done later,
-      it still records under 2025-03-25 morning
+    - if batch assigned in morning and done in afternoon, still record done_morning
+    - if batch assigned in afternoon and done next day, still record done_afternoon on assign date
     """
     grouped = defaultdict(_new_day_row)
     shipper_names = set()
@@ -84,13 +105,16 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
         if not assigned_at:
             continue
 
+        day_key = _get_day_key(assigned_at)
+        shift = _get_shift_name(assigned_at)
+        if not day_key:
+            continue
+
         shipper = getattr(batch, "shipper", None)
         shipper_name = getattr(shipper, "name", "") or "-"
         shipper_names.add(shipper_name)
 
-        day_key = assigned_at.date()
         activity_dates.append(day_key)
-        shift = _get_shift_name(assigned_at)
 
         key = (shipper_name, day_key)
         row = grouped[key]
@@ -106,10 +130,7 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
 
     # -----------------------------
     # DONE
-    # RULE:
-    # count done by ASSIGN DATE + ASSIGN SHIFT
-    # not by delivery cleared datetime
-    # not by COD clear datetime
+    # count by ASSIGN DATE + ASSIGN SHIFT
     # -----------------------------
     for item in pp_items:
         if not getattr(item, "ticked", False):
@@ -123,13 +144,16 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
         if not assigned_at:
             continue
 
+        day_key = _get_day_key(assigned_at)
+        shift = _get_shift_name(assigned_at)
+        if not day_key:
+            continue
+
         shipper = getattr(batch, "shipper", None)
         shipper_name = getattr(shipper, "name", "") or "-"
         shipper_names.add(shipper_name)
 
-        day_key = assigned_at.date()
         activity_dates.append(day_key)
-        shift = _get_shift_name(assigned_at)
 
         key = (shipper_name, day_key)
         row = grouped[key]

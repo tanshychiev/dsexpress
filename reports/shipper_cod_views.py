@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, time
+from pathlib import Path
+import tempfile
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
@@ -8,11 +10,8 @@ from django.shortcuts import render
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from pathlib import Path
-import tempfile
-
-from playwright.sync_api import sync_playwright
 from PIL import Image
+from playwright.sync_api import sync_playwright
 
 from deliverpp.models import ClearPPCOD
 from .shipper_cod_services import build_shipper_cod_report
@@ -44,6 +43,7 @@ def _get_report_data(date_from: str, date_to: str):
     qs = (
         ClearPPCOD.objects
         .select_related("batch", "batch__shipper")
+        .filter(batch__assigned_at__isnull=False)
         .order_by("batch__assigned_at", "id")
     )
 
@@ -110,6 +110,7 @@ def shipper_cod_report_pdf(request):
 
     temp_png = f"{temp_html}.png"
     temp_pdf = f"{temp_html}.pdf"
+    pdf_bytes = b""
 
     try:
         with sync_playwright() as p:

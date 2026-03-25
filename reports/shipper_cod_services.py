@@ -44,11 +44,16 @@ def _append_text(old_text: str, new_text: str) -> str:
 
 
 def _get_shift_name(assigned_at) -> str:
+    """
+    Business rule:
+    - morning   = 12:00 AM -> 11:59:59 AM
+    - afternoon = 12:00 PM -> 11:59:59 PM
+    """
     if not assigned_at:
         return "afternoon"
 
     t = assigned_at.time()
-    if time(7, 0, 0) <= t <= time(11, 59, 59):
+    if time(0, 0, 0) <= t <= time(11, 59, 59):
         return "morning"
     return "afternoon"
 
@@ -81,9 +86,16 @@ def build_shipper_cod_report(clear_cod_rows):
     """
     Group by ASSIGN DATE -> ASSIGN SHIFT -> SHIPPER
 
-    Business rule:
-    - If assigned in morning but clear COD in afternoon, record in morning of assign date
-    - If assigned in afternoon but clear COD next day morning, record in afternoon of assign date
+    Rule:
+    - record by batch assigned_at
+    - NOT by clear COD datetime
+
+    Examples:
+    - assigned 2025-03-23 08:00 AM, clear 2025-03-23 10:00 PM
+      => record in morning of 2025-03-23
+
+    - assigned 2025-03-23 08:00 AM, clear 2025-03-25 10:00 PM
+      => record in morning of 2025-03-23
     """
 
     grouped = OrderedDict()
@@ -93,14 +105,12 @@ def build_shipper_cod_report(clear_cod_rows):
         if not batch:
             continue
 
-        shipper = getattr(batch, "shipper", None)
-        shipper_name = getattr(shipper, "name", "") or "-"
         assigned_at = getattr(batch, "assigned_at", None)
-
-        # IMPORTANT:
-        # Always use assigned_at, not COD clear time
         if not assigned_at:
             continue
+
+        shipper = getattr(batch, "shipper", None)
+        shipper_name = getattr(shipper, "name", "") or "-"
 
         day_key = assigned_at.date()
         shift_name = _get_shift_name(assigned_at)
@@ -122,7 +132,6 @@ def build_shipper_cod_report(clear_cod_rows):
         row["remark"] = _append_text(row["remark"], getattr(obj, "note", ""))
 
     report_days = []
-
     grand_morning_rows = []
     grand_afternoon_rows = []
     all_rows = []

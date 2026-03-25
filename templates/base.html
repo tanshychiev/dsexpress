@@ -518,31 +518,31 @@
         <div class="menu-sep"></div>
 
         <div class="menu-title" data-target="group-reports">Reports</div>
-        <div class="menu-group hidden-sec" id="group-reports">
-          <a class="menu-item {% if request.path|slice:':9' == '/reports/' %}active{% endif %}" href="{% url 'delivery_report' %}">
-            <span class="dot"></span>
-            <span class="menu-label">Delivery Report</span>
-            <span class="tag tag-report">REPORT</span>
-          </a>
+<div class="menu-group hidden-sec" id="group-reports">
+  <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'delivery_report' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_png' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_pdf' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_upload' %}active{% endif %}" href="{% url 'delivery_report' %}">
+    <span class="dot"></span>
+    <span class="menu-label">Delivery Report</span>
+    <span class="tag tag-report">REPORT</span>
+  </a>
 
-          <a class="menu-item {% if request.path|slice:':12' == '/shippercod/' %}active{% endif %}" href="{% url 'shipper_cod_report' %}">
-            <span class="dot"></span>
-            <span class="menu-label">Shipper COD</span>
-            <span class="tag tag-report">REPORT</span>
-          </a>
+  <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report_pdf' %}active{% endif %}" href="{% url 'shipper_cod_report' %}">
+    <span class="dot"></span>
+    <span class="menu-label">Shipper COD</span>
+    <span class="tag tag-report">REPORT</span>
+  </a>
 
-          <a class="menu-item {% if request.path|slice:':19' == '/shippercommission/' %}active{% endif %}" href="{% url 'shipper_commission_report' %}">
-            <span class="dot"></span>
-            <span class="menu-label">Shipper Commission</span>
-            <span class="tag tag-report">REPORT</span>
-          </a>
+  <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report_pdf' %}active{% endif %}" href="{% url 'shipper_commission_report' %}">
+    <span class="dot"></span>
+    <span class="menu-label">Shipper Commission</span>
+    <span class="tag tag-report">REPORT</span>
+  </a>
 
-          <a class="menu-item {% if request.path|slice:':8' == '/profit/' %}active{% endif %}" href="{% url 'profit_dashboard' %}">
-            <span class="dot"></span>
-            <span class="menu-label">Profit Dashboard</span>
-            <span class="tag tag-new">NEW</span>
-          </a>
-        </div>
+  <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'profit_dashboard' %}active{% endif %}" href="{% url 'profit_dashboard' %}">
+    <span class="dot"></span>
+    <span class="menu-label">Profit Dashboard</span>
+    <span class="tag tag-new">NEW</span>
+  </a>
+</div>
 
         <div class="menu-sep"></div>
 

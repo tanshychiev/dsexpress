@@ -39,12 +39,14 @@
       <div style="font-size:14px;opacity:.8;">
         From {{ date_from|default:"-" }} To {{ date_to|default:"-" }}
       </div>
+      <div style="font-size:13px;opacity:.7;margin-top:6px;">
+        Morning = 12:00 AM - 11:59 AM | Afternoon = 12:00 PM - 11:59 PM
+      </div>
     </div>
 
     {% for day in report.days %}
       <div class="day-title">{{ day.date|date:"Y-m-d" }}</div>
 
-      <!-- MORNING -->
       <div class="shift-title">វេនព្រឹក</div>
       <div style="overflow:auto;">
         <table class="ds-table shipper-report-table">
@@ -52,6 +54,7 @@
             <col style="width:50px;">
             <col style="width:180px;">
             <col style="width:110px;">
+            <col style="width:130px;">
             <col style="width:130px;">
             <col style="width:130px;">
             <col style="width:130px;">
@@ -68,6 +71,7 @@
               <th style="text-align:right;">Cash KHR</th>
               <th style="text-align:right;">ABA USD</th>
               <th style="text-align:right;">ABA KHR</th>
+              <th style="text-align:right;">Expense</th>
               <th style="text-align:right;">Balance ($)</th>
               <th>Remark</th>
             </tr>
@@ -82,12 +86,13 @@
                 <td class="num">{{ r.cash_khr|floatformat:0 }}</td>
                 <td class="num">{{ r.aba_usd|floatformat:2 }}</td>
                 <td class="num">{{ r.aba_khr|floatformat:0 }}</td>
+                <td class="num">{{ r.expense|floatformat:2 }}</td>
                 <td class="num {% if r.balance_usd < 0 %}neg{% endif %}">{{ r.balance_usd|floatformat:2 }}</td>
                 <td class="remark-cell">{{ r.remark|default:"-" }}</td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="9" style="text-align:center;opacity:.7;">No data.</td>
+                <td colspan="10" style="text-align:center;opacity:.7;">No data.</td>
               </tr>
             {% endfor %}
             <tr class="total-row">
@@ -98,6 +103,7 @@
               <td class="num"><b>{{ day.morning_total.cash_khr|floatformat:0 }}</b></td>
               <td class="num"><b>{{ day.morning_total.aba_usd|floatformat:2 }}</b></td>
               <td class="num"><b>{{ day.morning_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ day.morning_total.expense|floatformat:2 }}</b></td>
               <td class="num {% if day.morning_total.balance_usd < 0 %}neg{% endif %}">
                 <b>{{ day.morning_total.balance_usd|floatformat:2 }}</b>
               </td>
@@ -107,7 +113,6 @@
         </table>
       </div>
 
-      <!-- AFTERNOON -->
       <div class="shift-title">វេនល្ងាច</div>
       <div style="overflow:auto;">
         <table class="ds-table shipper-report-table">
@@ -115,6 +120,7 @@
             <col style="width:50px;">
             <col style="width:180px;">
             <col style="width:110px;">
+            <col style="width:130px;">
             <col style="width:130px;">
             <col style="width:130px;">
             <col style="width:130px;">
@@ -131,6 +137,7 @@
               <th style="text-align:right;">Cash KHR</th>
               <th style="text-align:right;">ABA USD</th>
               <th style="text-align:right;">ABA KHR</th>
+              <th style="text-align:right;">Expense</th>
               <th style="text-align:right;">Balance ($)</th>
               <th>Remark</th>
             </tr>
@@ -145,12 +152,13 @@
                 <td class="num">{{ r.cash_khr|floatformat:0 }}</td>
                 <td class="num">{{ r.aba_usd|floatformat:2 }}</td>
                 <td class="num">{{ r.aba_khr|floatformat:0 }}</td>
+                <td class="num">{{ r.expense|floatformat:2 }}</td>
                 <td class="num {% if r.balance_usd < 0 %}neg{% endif %}">{{ r.balance_usd|floatformat:2 }}</td>
                 <td class="remark-cell">{{ r.remark|default:"-" }}</td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="9" style="text-align:center;opacity:.7;">No data.</td>
+                <td colspan="10" style="text-align:center;opacity:.7;">No data.</td>
               </tr>
             {% endfor %}
             <tr class="total-row">
@@ -161,6 +169,7 @@
               <td class="num"><b>{{ day.afternoon_total.cash_khr|floatformat:0 }}</b></td>
               <td class="num"><b>{{ day.afternoon_total.aba_usd|floatformat:2 }}</b></td>
               <td class="num"><b>{{ day.afternoon_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ day.afternoon_total.expense|floatformat:2 }}</b></td>
               <td class="num {% if day.afternoon_total.balance_usd < 0 %}neg{% endif %}">
                 <b>{{ day.afternoon_total.balance_usd|floatformat:2 }}</b>
               </td>
@@ -170,7 +179,6 @@
         </table>
       </div>
 
-      <!-- DAY TOTAL -->
       <div class="shift-title">សរុបប្រចាំថ្ងៃ</div>
       <div style="overflow:auto;">
         <table class="ds-table shipper-report-table">
@@ -178,6 +186,7 @@
             <col style="width:50px;">
             <col style="width:180px;">
             <col style="width:110px;">
+            <col style="width:130px;">
             <col style="width:130px;">
             <col style="width:130px;">
             <col style="width:130px;">
@@ -194,6 +203,7 @@
               <th style="text-align:right;">Cash KHR</th>
               <th style="text-align:right;">ABA USD</th>
               <th style="text-align:right;">ABA KHR</th>
+              <th style="text-align:right;">Expense</th>
               <th style="text-align:right;">Balance ($)</th>
               <th>Remark</th>
             </tr>
@@ -207,6 +217,7 @@
               <td class="num"><b>{{ day.day_total.cash_khr|floatformat:0 }}</b></td>
               <td class="num"><b>{{ day.day_total.aba_usd|floatformat:2 }}</b></td>
               <td class="num"><b>{{ day.day_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ day.day_total.expense|floatformat:2 }}</b></td>
               <td class="num {% if day.day_total.balance_usd < 0 %}neg{% endif %}">
                 <b>{{ day.day_total.balance_usd|floatformat:2 }}</b>
               </td>
@@ -218,6 +229,100 @@
     {% empty %}
       <div style="margin-top:20px;text-align:center;opacity:.7;">No data.</div>
     {% endfor %}
+
+    {% if report.days %}
+      <div class="day-title" style="margin-top:28px;">Grand Total</div>
+
+      <div class="shift-title">សរុប ព្រឹក ទាំងអស់</div>
+      <div style="overflow:auto;">
+        <table class="ds-table shipper-report-table">
+          <thead>
+            <tr>
+              <th>COD</th>
+              <th>Cash USD</th>
+              <th>Cash KHR</th>
+              <th>ABA USD</th>
+              <th>ABA KHR</th>
+              <th>Expense</th>
+              <th>Balance ($)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="total-row">
+              <td class="num"><b>{{ report.grand_morning_total.cod|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_morning_total.cash_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_morning_total.cash_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ report.grand_morning_total.aba_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_morning_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ report.grand_morning_total.expense|floatformat:2 }}</b></td>
+              <td class="num {% if report.grand_morning_total.balance_usd < 0 %}neg{% endif %}">
+                <b>{{ report.grand_morning_total.balance_usd|floatformat:2 }}</b>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="shift-title">សរុប ល្ងាច ទាំងអស់</div>
+      <div style="overflow:auto;">
+        <table class="ds-table shipper-report-table">
+          <thead>
+            <tr>
+              <th>COD</th>
+              <th>Cash USD</th>
+              <th>Cash KHR</th>
+              <th>ABA USD</th>
+              <th>ABA KHR</th>
+              <th>Expense</th>
+              <th>Balance ($)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="total-row">
+              <td class="num"><b>{{ report.grand_afternoon_total.cod|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_afternoon_total.cash_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_afternoon_total.cash_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ report.grand_afternoon_total.aba_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_afternoon_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ report.grand_afternoon_total.expense|floatformat:2 }}</b></td>
+              <td class="num {% if report.grand_afternoon_total.balance_usd < 0 %}neg{% endif %}">
+                <b>{{ report.grand_afternoon_total.balance_usd|floatformat:2 }}</b>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="shift-title">សរុប ទាំងអស់</div>
+      <div style="overflow:auto;">
+        <table class="ds-table shipper-report-table">
+          <thead>
+            <tr>
+              <th>COD</th>
+              <th>Cash USD</th>
+              <th>Cash KHR</th>
+              <th>ABA USD</th>
+              <th>ABA KHR</th>
+              <th>Expense</th>
+              <th>Balance ($)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="total-row">
+              <td class="num"><b>{{ report.grand_total.cod|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_total.cash_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_total.cash_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ report.grand_total.aba_usd|floatformat:2 }}</b></td>
+              <td class="num"><b>{{ report.grand_total.aba_khr|floatformat:0 }}</b></td>
+              <td class="num"><b>{{ report.grand_total.expense|floatformat:2 }}</b></td>
+              <td class="num {% if report.grand_total.balance_usd < 0 %}neg{% endif %}">
+                <b>{{ report.grand_total.balance_usd|floatformat:2 }}</b>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
   {% endif %}
 </div>
 
@@ -283,7 +388,7 @@
 
   .shipper-report-table{
     width:100%;
-    min-width:1180px;
+    min-width:1280px;
     margin-top:8px;
     table-layout:fixed;
   }

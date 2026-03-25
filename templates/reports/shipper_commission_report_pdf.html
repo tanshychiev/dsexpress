@@ -13,6 +13,8 @@
       font-family: Arial, sans-serif;
       font-size:12px;
       color:#000;
+      margin:0;
+      padding:0;
     }
 
     .title{
@@ -25,7 +27,21 @@
     .subtitle{
       text-align:center;
       font-size:12px;
+      margin-bottom:4px;
+    }
+
+    .shift-note{
+      text-align:center;
+      font-size:11px;
+      margin-bottom:3px;
+      color:#333;
+    }
+
+    .rule-note{
+      text-align:center;
+      font-size:11px;
       margin-bottom:12px;
+      color:#333;
     }
 
     .shipper-title{
@@ -36,6 +52,7 @@
       font-weight:700;
       border:1px solid #000;
       background:#f2f2f2;
+      page-break-after:avoid;
     }
 
     table{
@@ -47,9 +64,11 @@
 
     th, td{
       border:1px solid #000;
-      padding:4px;
+      padding:4px 5px;
       text-align:center;
       font-size:11px;
+      vertical-align:middle;
+      word-wrap:break-word;
     }
 
     th{
@@ -60,6 +79,11 @@
 
     .num{
       text-align:right;
+      white-space:nowrap;
+    }
+
+    .date-cell{
+      white-space:nowrap;
     }
 
     .total{
@@ -72,6 +96,16 @@
       color:#c00000;
       font-weight:700;
     }
+
+    .grand-title{
+      margin-top:20px;
+      margin-bottom:6px;
+      padding:6px 10px;
+      font-size:14px;
+      font-weight:700;
+      border:1px solid #000;
+      background:#e9eef5;
+    }
   </style>
 </head>
 <body>
@@ -80,6 +114,12 @@
   <div class="subtitle">
     From {{ date_from|default:"-" }} To {{ date_to|default:"-" }}
   </div>
+  <div class="shift-note">
+    Morning = 12:00 AM - 11:59 AM &nbsp;&nbsp;|&nbsp;&nbsp; Afternoon = 12:00 PM - 11:59 PM
+  </div>
+  <div class="rule-note">
+    Rule: from 11th done pc per day × 1500៛
+  </div>
 
   {% for grp in report.shipper_groups %}
     <div class="shipper-title">{{ grp.shipper_name }}</div>
@@ -87,8 +127,8 @@
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Date</th>
+          <th style="width:40px;">#</th>
+          <th style="width:90px;">Date</th>
           <th>Morning Assign</th>
           <th>Afternoon Assign</th>
           <th>Done Morning</th>
@@ -101,13 +141,17 @@
         {% for r in grp.rows %}
         <tr{% if r.is_all_zero %} class="zero"{% endif %}>
           <td>{{ forloop.counter }}</td>
-          <td>{{ r.date }}</td>
+          <td class="date-cell">{{ r.date|date:"Y-m-d" }}</td>
           <td class="num">{{ r.morning_assign }}</td>
           <td class="num">{{ r.afternoon_assign }}</td>
           <td class="num">{{ r.done_morning }}</td>
           <td class="num">{{ r.done_afternoon }}</td>
           <td class="num"><b>{{ r.total_done_pc }}</b></td>
           <td class="num"><b>{{ r.commission_khr }}</b></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">No data.</td>
         </tr>
         {% endfor %}
 
@@ -123,9 +167,11 @@
         </tr>
       </tbody>
     </table>
+  {% empty %}
+    <div class="shipper-title">No data</div>
   {% endfor %}
 
-  <div class="shipper-title">Grand Total</div>
+  <div class="grand-title">Grand Total</div>
 
   <table>
     <thead>

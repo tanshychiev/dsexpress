@@ -40,28 +40,10 @@ def profit_dashboard(request):
     date_to = (request.GET.get("date_to") or today_str).strip()
     searched = request.GET.get("search") == "1"
 
-    report = {
-        "rows": [],
-        "total": {
-            "fee_income_usd": 0,
-            "province_expense_usd": 0,
-            "commission_usd": 0,
-            "shipper_salary_usd": 0,
-            "callcenter_salary_usd": 0,
-            "electricity_usd": 0,
-            "net_profit_usd": 0,
-        },
-    }
-
-    if searched:
-        dt_from = _parse_date_start(date_from)
-        dt_to = _parse_date_end(date_to)
-
-        if dt_from and dt_to:
-            report = build_profit_dashboard(
-                date_from=dt_from.date(),
-                date_to=dt_to.date(),
-            )
+    dashboard = build_profit_dashboard(
+        date_from=_parse_date_start(date_from).date() if _parse_date_start(date_from) else now.date(),
+        date_to=_parse_date_end(date_to).date() if _parse_date_end(date_to) else now.date(),
+    )
 
     return render(
         request,
@@ -70,6 +52,6 @@ def profit_dashboard(request):
             "searched": searched,
             "date_from": date_from,
             "date_to": date_to,
-            "report": report,
+            "dashboard": dashboard,
         },
     )

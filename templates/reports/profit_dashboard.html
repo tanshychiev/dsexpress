@@ -1,221 +1,893 @@
 {% extends "base.html" %}
 
-{% block title %}Delivery Profit Dashboard{% endblock %}
-{% block page_title %}Delivery Profit Dashboard{% endblock %}
-{% block page_subtitle %}Income / Expense / Net Profit{% endblock %}
+{% block title %}Operations Dashboard{% endblock %}
+{% block page_title %}Operations Dashboard{% endblock %}
+{% block page_subtitle %}Cool live overview for ops, money, and shipper performance{% endblock %}
 
 {% block content %}
-<div class="card" style="padding:18px;border-radius:16px;">
+<div class="dashboard-shell">
 
-  <form method="get" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
-    <input type="hidden" name="search" value="1">
-
-    <div style="min-width:180px;">
-      <div class="label">Date From</div>
-      <input class="input" type="date" name="date_from" value="{{ date_from }}">
-    </div>
-
-    <div style="min-width:180px;">
-      <div class="label">Date To</div>
-      <input class="input" type="date" name="date_to" value="{{ date_to }}">
-    </div>
-
-    <button class="btn" type="submit" style="height:40px;">Show</button>
-  </form>
-
-  {% if searched %}
-    <div class="card-grid" style="margin-top:18px;">
-      <div class="sum-card income">
-        <div class="sum-label">Fee Income</div>
-        <div class="sum-value">${{ report.total.fee_income_usd|floatformat:2 }}</div>
-      </div>
-
-      <div class="sum-card province">
-        <div class="sum-label">Province Expense</div>
-        <div class="sum-value">${{ report.total.province_expense_usd|floatformat:2 }}</div>
-      </div>
-
-      <div class="sum-card salary">
-        <div class="sum-label">Shipper Salary</div>
-        <div class="sum-value">${{ report.total.shipper_salary_usd|floatformat:2 }}</div>
-      </div>
-
-      <div class="sum-card salary">
-        <div class="sum-label">Call Center Salary</div>
-        <div class="sum-value">${{ report.total.callcenter_salary_usd|floatformat:2 }}</div>
-      </div>
-
-      <div class="sum-card utility">
-        <div class="sum-label">Electricity</div>
-        <div class="sum-value">${{ report.total.electricity_usd|floatformat:2 }}</div>
-      </div>
-
-      <div class="sum-card commission">
-        <div class="sum-label">Commission</div>
-        <div class="sum-value">${{ report.total.commission_usd|floatformat:2 }}</div>
-      </div>
-
-      <div class="sum-card profit {% if report.total.net_profit_usd < 0 %}loss{% endif %}">
-        <div class="sum-label">Net Profit</div>
-        <div class="sum-value">${{ report.total.net_profit_usd|floatformat:2 }}</div>
+  <div class="hero-card">
+    <div>
+      <div class="hero-eyebrow">DS EXPRESS CONTROL PANEL</div>
+      <div class="hero-title">Operations Dashboard</div>
+      <div class="hero-subtitle">
+        Fast overview of shipment, COD, money received, PP vs Province, and shipper performance.
       </div>
     </div>
 
-    <div class="section-title">Daily Profit Table</div>
+    <form method="get" class="filter-form">
+      <input type="hidden" name="search" value="1">
 
-    <div style="overflow:auto;">
-      <table class="ds-table profit-table">
-        <thead>
-          <tr>
-            <th style="text-align:center;">#</th>
-            <th style="text-align:center;">Date</th>
-            <th style="text-align:right;">Fee Income</th>
-            <th style="text-align:right;">Province Expense</th>
-            <th style="text-align:right;">Commission</th>
-            <th style="text-align:right;">Shipper Salary</th>
-            <th style="text-align:right;">Call Center Salary</th>
-            <th style="text-align:right;">Electricity</th>
-            <th style="text-align:right;">Net Profit</th>
-          </tr>
-        </thead>
+      <div class="field">
+        <label>Date From</label>
+        <input type="date" name="date_from" value="{{ date_from }}">
+      </div>
 
-        <tbody>
-          {% for r in report.rows %}
-            <tr class="{% if r.is_loss %}loss-row{% elif r.is_zero_day %}zero-row{% endif %}">
-              <td style="text-align:center;">{{ forloop.counter }}</td>
-              <td style="text-align:center;">{{ r.date|date:"Y-m-d" }}</td>
-              <td class="num">${{ r.fee_income_usd|floatformat:2 }}</td>
-              <td class="num">${{ r.province_expense_usd|floatformat:2 }}</td>
-              <td class="num">${{ r.commission_usd|floatformat:2 }}</td>
-              <td class="num">${{ r.shipper_salary_usd|floatformat:2 }}</td>
-              <td class="num">${{ r.callcenter_salary_usd|floatformat:2 }}</td>
-              <td class="num">${{ r.electricity_usd|floatformat:2 }}</td>
-              <td class="num"><b>${{ r.net_profit_usd|floatformat:2 }}</b></td>
-            </tr>
-          {% empty %}
+      <div class="field">
+        <label>Date To</label>
+        <input type="date" name="date_to" value="{{ date_to }}">
+      </div>
+
+      <button type="submit" class="btn-main">Show Dashboard</button>
+    </form>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Created Today</div>
+      <div class="kpi-value">{{ dashboard.today_cards.created }}</div>
+    </div>
+
+    <div class="kpi-card orange">
+      <div class="kpi-label">Sent PP</div>
+      <div class="kpi-value">{{ dashboard.today_cards.sent_pp }}</div>
+    </div>
+
+    <div class="kpi-card amber">
+      <div class="kpi-label">Sent Province</div>
+      <div class="kpi-value">{{ dashboard.today_cards.sent_province }}</div>
+    </div>
+
+    <div class="kpi-card green">
+      <div class="kpi-label">Done PP</div>
+      <div class="kpi-value">{{ dashboard.today_cards.done_pp }}</div>
+    </div>
+
+    <div class="kpi-card mint">
+      <div class="kpi-label">Done Province</div>
+      <div class="kpi-value">{{ dashboard.today_cards.done_province }}</div>
+    </div>
+
+    <div class="kpi-card purple">
+      <div class="kpi-label">COD Total</div>
+      <div class="kpi-value">${{ dashboard.today_cards.cod_total|floatformat:2 }}</div>
+    </div>
+
+    <div class="kpi-card teal">
+      <div class="kpi-label">Money Received</div>
+      <div class="kpi-value">${{ dashboard.today_cards.money_received|floatformat:2 }}</div>
+    </div>
+
+    <div class="kpi-card dark">
+      <div class="kpi-label">Revenue</div>
+      <div class="kpi-value">${{ dashboard.today_cards.revenue_total|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  <div class="mini-grid">
+    <div class="mini-card">
+      <div class="mini-title">PP Done %</div>
+      <div class="mini-big">{{ dashboard.today_cards.pp_done_percent }}%</div>
+      <div class="mini-sub">{{ dashboard.today_cards.done_pp }} / {{ dashboard.today_cards.sent_pp }}</div>
+    </div>
+
+    <div class="mini-card">
+      <div class="mini-title">Province Done %</div>
+      <div class="mini-big">{{ dashboard.today_cards.province_done_percent }}%</div>
+      <div class="mini-sub">{{ dashboard.today_cards.done_province }} / {{ dashboard.today_cards.sent_province }}</div>
+    </div>
+
+    <div class="mini-card">
+      <div class="mini-title">Overall Done %</div>
+      <div class="mini-big">{{ dashboard.today_cards.overall_done_percent }}%</div>
+      <div class="mini-sub">{{ dashboard.today_cards.total_done }} / {{ dashboard.today_cards.total_sent }}</div>
+    </div>
+
+    <div class="mini-card">
+      <div class="mini-title">Pending Total</div>
+      <div class="mini-big">{{ dashboard.today_cards.pending_pp|add:dashboard.today_cards.pending_province }}</div>
+      <div class="mini-sub">PP {{ dashboard.today_cards.pending_pp }} • Province {{ dashboard.today_cards.pending_province }}</div>
+    </div>
+  </div>
+
+  <div class="chart-grid two-col">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">30 Days Trend</div>
+          <div class="chart-note">Created, shipment fee, expense, and revenue</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="trend30Chart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">Shipper COD / Received / Paid</div>
+          <div class="chart-note">Compare money movement by shipper</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="shipperMoneyChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid two-col">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">PP Sent vs Done</div>
+          <div class="chart-note">Based on assigned day</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="ppSentDoneChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">Province Sent vs Done</div>
+          <div class="chart-note">Based on assigned day</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="provinceSentDoneChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid two-col">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">PP Done %</div>
+          <div class="chart-note">Completion quality by assigned day</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="ppDonePercentChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">Province Done %</div>
+          <div class="chart-note">Completion quality by assigned day</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="provinceDonePercentChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid one-col">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">Shipper Summary</div>
+          <div class="chart-note">Done orders, COD, received, paid, and balance</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="cool-table">
+          <thead>
             <tr>
-              <td colspan="9" style="text-align:center;opacity:.7;">No data.</td>
+              <th>#</th>
+              <th>Shipper</th>
+              <th>Done Orders</th>
+              <th>COD Total</th>
+              <th>Received</th>
+              <th>Paid</th>
+              <th>Balance</th>
             </tr>
-          {% endfor %}
-
-          <tr class="total-row">
-            <td style="text-align:center;">-</td>
-            <td><b>Total</b></td>
-            <td class="num"><b>${{ report.total.fee_income_usd|floatformat:2 }}</b></td>
-            <td class="num"><b>${{ report.total.province_expense_usd|floatformat:2 }}</b></td>
-            <td class="num"><b>${{ report.total.commission_usd|floatformat:2 }}</b></td>
-            <td class="num"><b>${{ report.total.shipper_salary_usd|floatformat:2 }}</b></td>
-            <td class="num"><b>${{ report.total.callcenter_salary_usd|floatformat:2 }}</b></td>
-            <td class="num"><b>${{ report.total.electricity_usd|floatformat:2 }}</b></td>
-            <td class="num"><b>${{ report.total.net_profit_usd|floatformat:2 }}</b></td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {% for r in dashboard.shipper_rows %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ r.shipper_name }}</td>
+                <td class="num">{{ r.done_orders }}</td>
+                <td class="num">${{ r.cod_total|floatformat:2 }}</td>
+                <td class="num">${{ r.received|floatformat:2 }}</td>
+                <td class="num">${{ r.paid|floatformat:2 }}</td>
+                <td class="num {% if r.balance < 0 %}neg{% endif %}">${{ r.balance|floatformat:2 }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7" class="empty-row">No data.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-  {% endif %}
+  </div>
+
 </div>
 
+{{ dashboard.trend_30_days|json_script:"trend30-data" }}
+{{ dashboard.pp_performance|json_script:"pp-performance-data" }}
+{{ dashboard.province_performance|json_script:"province-performance-data" }}
+{{ dashboard.shipper_rows|json_script:"shipper-rows-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script>
+  Chart.register(ChartDataLabels);
+
+  const trend30 = JSON.parse(document.getElementById("trend30-data").textContent);
+  const ppPerformance = JSON.parse(document.getElementById("pp-performance-data").textContent);
+  const provincePerformance = JSON.parse(document.getElementById("province-performance-data").textContent);
+  const shipperRows = JSON.parse(document.getElementById("shipper-rows-data").textContent);
+
+  const trendLabels = trend30.map(x => x.date);
+  const ppLabels = ppPerformance.map(x => x.date);
+  const provinceLabels = provincePerformance.map(x => x.date);
+  const shipperLabels = shipperRows.map(x => x.shipper_name);
+
+  const commonLegend = {
+    position: "bottom",
+    labels: {
+      usePointStyle: true,
+      boxWidth: 10,
+      padding: 16,
+      font: {
+        size: 11,
+        weight: "700"
+      }
+    }
+  };
+
+  const commonDatalabels = {
+    color: "#111827",
+    clamp: true,
+    clip: false,
+    font: {
+      weight: "700",
+      size: 10
+    }
+  };
+
+  new Chart(document.getElementById("trend30Chart"), {
+    type: "line",
+    data: {
+      labels: trendLabels,
+      datasets: [
+        {
+          label: "Created",
+          data: trend30.map(x => x.created),
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          datalabels: {
+            align: "top",
+            anchor: "end",
+            formatter: (v) => v ? v : ""
+          }
+        },
+        {
+          label: "Shipment Fee",
+          data: trend30.map(x => x.shipment_fee),
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          datalabels: {
+            display: false
+          }
+        },
+        {
+          label: "Expense",
+          data: trend30.map(x => x.expense),
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          datalabels: {
+            display: false
+          }
+        },
+        {
+          label: "Revenue",
+          data: trend30.map(x => x.revenue),
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          datalabels: {
+            align: "top",
+            anchor: "end",
+            formatter: (v) => v ? v : ""
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            maxRotation: 0,
+            autoSkip: true
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0
+          }
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("ppSentDoneChart"), {
+    type: "bar",
+    data: {
+      labels: ppLabels,
+      datasets: [
+        {
+          label: "Sent",
+          data: ppPerformance.map(x => x.sent),
+          borderRadius: 8,
+          maxBarThickness: 28,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: (v) => v ? v : ""
+          }
+        },
+        {
+          label: "Done",
+          data: ppPerformance.map(x => x.done),
+          borderRadius: 8,
+          maxBarThickness: 28,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: (v) => v ? v : ""
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0
+          }
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("provinceSentDoneChart"), {
+    type: "bar",
+    data: {
+      labels: provinceLabels,
+      datasets: [
+        {
+          label: "Sent",
+          data: provincePerformance.map(x => x.sent),
+          borderRadius: 8,
+          maxBarThickness: 28,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: (v) => v ? v : ""
+          }
+        },
+        {
+          label: "Done",
+          data: provincePerformance.map(x => x.done),
+          borderRadius: 8,
+          maxBarThickness: 28,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: (v) => v ? v : ""
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0
+          }
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("ppDonePercentChart"), {
+    type: "line",
+    data: {
+      labels: ppLabels,
+      datasets: [
+        {
+          label: "Done %",
+          data: ppPerformance.map(x => x.done_percent),
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          datalabels: {
+            align: "top",
+            anchor: "end",
+            formatter: (v) => v ? `${v}%` : ""
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("provinceDonePercentChart"), {
+    type: "line",
+    data: {
+      labels: provinceLabels,
+      datasets: [
+        {
+          label: "Done %",
+          data: provincePerformance.map(x => x.done_percent),
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          datalabels: {
+            align: "top",
+            anchor: "end",
+            formatter: (v) => v ? `${v}%` : ""
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("shipperMoneyChart"), {
+    type: "bar",
+    data: {
+      labels: shipperLabels,
+      datasets: [
+        {
+          label: "COD Total",
+          data: shipperRows.map(x => x.cod_total),
+          borderRadius: 8,
+          maxBarThickness: 26,
+          datalabels: {
+            anchor: "end",
+            align: "right",
+            formatter: (v) => v ? v.toFixed(2) : ""
+          }
+        },
+        {
+          label: "Received",
+          data: shipperRows.map(x => x.received),
+          borderRadius: 8,
+          maxBarThickness: 26,
+          datalabels: {
+            anchor: "end",
+            align: "right",
+            formatter: (v) => v ? v.toFixed(2) : ""
+          }
+        },
+        {
+          label: "Paid",
+          data: shipperRows.map(x => x.paid),
+          borderRadius: 8,
+          maxBarThickness: 26,
+          datalabels: {
+            anchor: "end",
+            align: "right",
+            formatter: (v) => v ? v.toFixed(2) : ""
+          }
+        }
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels
+      },
+      scales: {
+        x: {
+          beginAtZero: true
+        },
+        y: {
+          grid: {
+            display: false
+          }
+        }
+      }
+    }
+  });
+</script>
+
 <style>
-  .label{
-    font-size:12px;
-    opacity:.7;
-    margin-bottom:6px;
+  .dashboard-shell{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
   }
 
-  .input{
-    height:40px;
-    width:100%;
-    padding:8px 10px;
-    border-radius:12px;
-    border:1px solid #e6e6e6;
-    background:#fff;
-  }
-
-  .btn{
-    padding:10px 16px;
-    border-radius:12px;
-    border:1px solid #111;
-    background:#111;
+  .hero-card{
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:24px;
+    border-radius:28px;
+    background:linear-gradient(135deg, #0f172a 0%, #1e293b 52%, #334155 100%);
     color:#fff;
-    cursor:pointer;
-    font-weight:700;
+    box-shadow:0 22px 44px rgba(15, 23, 42, .18);
   }
 
-  .card-grid{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(180px,1fr));
-    gap:12px;
-  }
-
-  .sum-card{
-    border:1px solid #ececec;
-    border-radius:16px;
-    padding:16px;
-    background:#fff;
-  }
-
-  .sum-label{
+  .hero-eyebrow{
     font-size:12px;
-    opacity:.7;
+    letter-spacing:.14em;
+    opacity:.72;
+    margin-bottom:8px;
+    font-weight:900;
+  }
+
+  .hero-title{
+    font-size:36px;
+    font-weight:900;
+    line-height:1.08;
     margin-bottom:8px;
   }
 
-  .sum-value{
-    font-size:24px;
-    font-weight:900;
+  .hero-subtitle{
+    font-size:14px;
+    opacity:.84;
+    max-width:760px;
   }
 
-  .income{ background:#eefcf3; }
-  .province{ background:#fff7ed; }
-  .salary{ background:#f8f7ff; }
-  .utility{ background:#f5fbff; }
-  .commission{ background:#fff8e8; }
-  .profit{ background:#eef8ff; }
-  .profit.loss{ background:#fff1f1; color:#b00020; }
+  .filter-form{
+    display:flex;
+    gap:12px;
+    align-items:end;
+    flex-wrap:wrap;
+  }
 
-  .section-title{
-    margin-top:22px;
-    margin-bottom:10px;
-    padding:10px 14px;
+  .field label{
+    display:block;
+    font-size:12px;
+    opacity:.86;
+    margin-bottom:6px;
+    font-weight:800;
+  }
+
+  .field input{
+    height:44px;
+    min-width:170px;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.12);
+    color:#fff;
     border-radius:14px;
-    background:#eef4ff;
-    border:1px solid #cfdcff;
-    font-size:22px;
+    padding:8px 12px;
+    outline:none;
+  }
+
+  .btn-main{
+    height:44px;
+    border:none;
+    border-radius:14px;
+    padding:0 18px;
     font-weight:900;
+    cursor:pointer;
+    background:#fff;
+    color:#111827;
+    box-shadow:0 10px 20px rgba(0,0,0,.12);
   }
 
-  .profit-table{
-    width:100%;
-    min-width:1300px;
-    table-layout:fixed;
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(180px,1fr));
+    gap:14px;
   }
 
-  .profit-table th,
-  .profit-table td{
-    border:1px solid #111 !important;
-    white-space:nowrap;
+  .kpi-card{
+    padding:18px;
+    border-radius:24px;
+    box-shadow:0 10px 28px rgba(15,23,42,.06);
+    border:1px solid rgba(15,23,42,.05);
+    position:relative;
     overflow:hidden;
-    text-overflow:ellipsis;
-    vertical-align:middle;
+  }
+
+  .kpi-card::after{
+    content:"";
+    position:absolute;
+    right:-18px;
+    top:-18px;
+    width:88px;
+    height:88px;
+    border-radius:50%;
+    background:rgba(255,255,255,.45);
+  }
+
+  .kpi-label{
+    position:relative;
+    z-index:1;
+    font-size:12px;
+    font-weight:900;
+    opacity:.78;
+    margin-bottom:10px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+
+  .kpi-value{
+    position:relative;
+    z-index:1;
+    font-size:30px;
+    font-weight:900;
+    line-height:1;
+  }
+
+  .blue{ background:linear-gradient(135deg, #dbeafe, #f5f9ff); }
+  .orange{ background:linear-gradient(135deg, #ffedd5, #fff8f2); }
+  .amber{ background:linear-gradient(135deg, #fef3c7, #fffcef); }
+  .green{ background:linear-gradient(135deg, #dcfce7, #f5fff8); }
+  .mint{ background:linear-gradient(135deg, #d1fae5, #f3fffa); }
+  .purple{ background:linear-gradient(135deg, #ede9fe, #faf8ff); }
+  .teal{ background:linear-gradient(135deg, #ccfbf1, #f1fffc); }
+  .dark{ background:linear-gradient(135deg, #e0e7ff, #f4f7ff); }
+
+  .mini-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(180px,1fr));
+    gap:14px;
+  }
+
+  .mini-card{
+    background:#fff;
+    border:1px solid rgba(15,23,42,.06);
+    box-shadow:0 10px 28px rgba(15,23,42,.05);
+    border-radius:22px;
+    padding:16px;
+  }
+
+  .mini-title{
+    font-size:12px;
+    opacity:.72;
+    font-weight:900;
+    text-transform:uppercase;
+    margin-bottom:8px;
+    letter-spacing:.05em;
+  }
+
+  .mini-big{
+    font-size:28px;
+    font-weight:900;
+    line-height:1.05;
+  }
+
+  .mini-sub{
+    margin-top:6px;
+    font-size:12px;
+    color:#64748b;
+    font-weight:700;
+  }
+
+  .chart-grid{
+    display:grid;
+    gap:14px;
+  }
+
+  .two-col{
+    grid-template-columns:repeat(2, minmax(320px, 1fr));
+  }
+
+  .one-col{
+    grid-template-columns:1fr;
+  }
+
+  .chart-card{
+    background:#fff;
+    border-radius:26px;
+    padding:18px;
+    box-shadow:0 12px 30px rgba(15,23,42,.06);
+    border:1px solid rgba(15,23,42,.05);
+  }
+
+  .chart-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+    margin-bottom:12px;
+  }
+
+  .chart-title{
+    font-size:18px;
+    font-weight:900;
+    margin-bottom:3px;
+  }
+
+  .chart-note{
+    font-size:12px;
+    color:#64748b;
+    font-weight:700;
+  }
+
+  .chart-box{
+    height:340px;
+  }
+
+  canvas{
+    width:100% !important;
+    height:100% !important;
+  }
+
+  .table-wrap{
+    overflow:auto;
+  }
+
+  .cool-table{
+    width:100%;
+    min-width:900px;
+    border-collapse:collapse;
+  }
+
+  .cool-table th,
+  .cool-table td{
+    border-bottom:1px solid #e5e7eb;
+    padding:12px 10px;
+    white-space:nowrap;
+  }
+
+  .cool-table thead th{
+    text-align:left;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:#64748b;
+    font-weight:900;
+    background:#f8fafc;
+  }
+
+  .cool-table tbody tr:hover{
+    background:#f8fbff;
   }
 
   .num{
     text-align:right;
   }
 
-  .total-row{
-    background:#fafafa;
-  }
-
-  .loss-row td{
-    background:#fff1f1 !important;
+  .neg{
     color:#b00020;
-    font-weight:800;
+    font-weight:900;
   }
 
-  .zero-row td{
-    background:#fff8f0 !important;
-    color:#a04b00;
+  .empty-row{
+    text-align:center;
+    opacity:.7;
+    padding:20px 10px !important;
+  }
+
+  @media (max-width: 1100px){
+    .kpi-grid,
+    .mini-grid,
+    .two-col{
+      grid-template-columns:1fr 1fr;
+    }
+  }
+
+  @media (max-width: 720px){
+    .kpi-grid,
+    .mini-grid,
+    .two-col{
+      grid-template-columns:1fr;
+    }
+
+    .hero-title{
+      font-size:28px;
+    }
+
+    .chart-box{
+      height:300px;
+    }
   }
 </style>
 {% endblock %}

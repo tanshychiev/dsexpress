@@ -27,6 +27,8 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
     ws.cell(row=row_no, column=1, value="Shipper Commission Report").font = Font(bold=True, size=16)
     row_no += 1
     ws.cell(row=row_no, column=1, value=f"From: {date_from or '-'}   To: {date_to or '-'}")
+    row_no += 1
+    ws.cell(row=row_no, column=1, value="Morning = 12:00 AM - 11:59 AM | Afternoon = 12:00 PM - 11:59 PM")
     row_no += 2
 
     headers = [

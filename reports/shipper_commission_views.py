@@ -62,22 +62,26 @@ def _build_report(date_from="", date_to=""):
         PPDeliveryBatch.objects
         .select_related("shipper")
         .prefetch_related("items")
+        .filter(assigned_at__isnull=False)
         .order_by("assigned_at", "id")
     )
 
     item_qs = (
         PPDeliveryItem.objects
         .select_related("batch", "batch__shipper", "order")
-        .order_by("delivery_cleared_at", "id")
+        .filter(batch__assigned_at__isnull=False)
+        .order_by("batch__assigned_at", "id")
     )
 
+    # IMPORTANT:
+    # Commission report follows BATCH ASSIGN DATE/TIME for both assign and done.
     if dt_from:
         batch_qs = batch_qs.filter(assigned_at__gte=dt_from)
-        item_qs = item_qs.filter(delivery_cleared_at__gte=dt_from)
+        item_qs = item_qs.filter(batch__assigned_at__gte=dt_from)
 
     if dt_to:
         batch_qs = batch_qs.filter(assigned_at__lte=dt_to)
-        item_qs = item_qs.filter(delivery_cleared_at__lte=dt_to)
+        item_qs = item_qs.filter(batch__assigned_at__lte=dt_to)
 
     start_date = dt_from.date() if dt_from else None
     end_date = dt_to.date() if dt_to else None
@@ -145,16 +149,21 @@ def shipper_commission_report_pdf(request):
 
     temp_png = f"{temp_html}.png"
     temp_pdf = f"{temp_html}.pdf"
+    pdf_bytes = b""
 
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 1600, "height": 2400}, device_scale_factor=2)
+            page = browser.new_page(
+                viewport={"width": 1600, "height": 2400},
+                device_scale_factor=2,
+            )
             page.goto(Path(temp_html).as_uri(), wait_until="networkidle")
             page.screenshot(path=temp_png, full_page=True)
             browser.close()
 
         image = Image.open(temp_png)
+
         if image.mode == "RGBA":
             bg = Image.new("RGB", image.size, (255, 255, 255))
             bg.paste(image, mask=image.split()[3])

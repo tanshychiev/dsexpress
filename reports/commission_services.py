@@ -23,9 +23,14 @@ def _new_day_row():
 
 
 def _get_shift_name(dt_value) -> str:
+    """
+    Business rule:
+    - morning   = 12:00 AM -> 11:59:59 AM
+    - afternoon = 12:00 PM -> 11:59:59 PM
+    """
     if not dt_value:
         return "afternoon"
-    return "morning" if 7 <= dt_value.hour < 12 else "afternoon"
+    return "morning" if 0 <= dt_value.hour < 12 else "afternoon"
 
 
 def _finalize_day_row(row):
@@ -55,6 +60,18 @@ def _daterange(start_date, end_date):
 
 
 def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_date=None):
+    """
+    Group by SHIPPER + ASSIGN DATE.
+
+    IMPORTANT BUSINESS RULE:
+    - morning/afternoon is decided by batch assigned_at
+    - assign count uses batch assigned_at
+    - done count also uses batch assigned_at
+    - do NOT use delivery clear datetime
+    - do NOT use clear COD datetime
+    - if batch assigned on 2025-03-25 morning and done later,
+      it still records under 2025-03-25 morning
+    """
     grouped = defaultdict(_new_day_row)
     shipper_names = set()
     activity_dates = []
@@ -92,6 +109,7 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
     # RULE:
     # count done by ASSIGN DATE + ASSIGN SHIFT
     # not by delivery cleared datetime
+    # not by COD clear datetime
     # -----------------------------
     for item in pp_items:
         if not getattr(item, "ticked", False):
@@ -123,7 +141,7 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
             row["done_afternoon"] += 1
 
     # -----------------------------
-    # DECIDE DATE RANGE
+    # DATE RANGE
     # -----------------------------
     if activity_dates:
         min_activity_date = min(activity_dates)
@@ -134,11 +152,10 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
 
     final_start_date = start_date or min_activity_date
     final_end_date = end_date or max_activity_date
-
     all_dates = _daterange(final_start_date, final_end_date)
 
     # -----------------------------
-    # FILL MISSING DATES FOR EACH SHIPPER
+    # FILL MISSING DATES
     # -----------------------------
     if all_dates:
         for shipper_name in shipper_names:
@@ -188,11 +205,13 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
         grand_total["commission_pc"] += shipper_total["commission_pc"]
         grand_total["commission_khr"] += shipper_total["commission_khr"]
 
-        shipper_groups.append({
-            "shipper_name": shipper_name,
-            "rows": rows,
-            "shipper_total": shipper_total,
-        })
+        shipper_groups.append(
+            {
+                "shipper_name": shipper_name,
+                "rows": rows,
+                "shipper_total": shipper_total,
+            }
+        )
 
     return {
         "shipper_groups": shipper_groups,

@@ -1305,6 +1305,7 @@ def order_edit(request: HttpRequest, pk: int):
     old_status = order.status
 
     old_snapshot = {
+        "tracking_no": order.tracking_no,
         "seller_id": order.seller_id,
         "seller_code": order.seller_code,
         "seller_order_code": order.seller_order_code,
@@ -1326,6 +1327,7 @@ def order_edit(request: HttpRequest, pk: int):
     if request.method == "POST":
         seller_id = (request.POST.get("seller") or "").strip()
         override_password = (request.POST.get("override_password") or "").strip()
+        new_tracking = (request.POST.get("tracking_no") or "").strip()
 
         old_cod_decimal = order.cod
         cod_override_used = False
@@ -1340,6 +1342,19 @@ def order_edit(request: HttpRequest, pk: int):
                 else:
                     order.seller = seller
                     order.seller_code = seller.code or ""
+
+        # allow tracking edit
+        if not new_tracking:
+            errors.append("Tracking ID is required.")
+        else:
+            conflict_qs = Order.objects.filter(
+                tracking_no=new_tracking,
+                is_deleted=False,
+            ).exclude(pk=order.pk)
+            if conflict_qs.exists():
+                errors.append(f"Tracking ID already exists: {new_tracking}")
+            else:
+                order.tracking_no = new_tracking
 
         order.seller_order_code = (request.POST.get("seller_order_code") or "").strip() or None
         order.seller_name = (request.POST.get("seller_name") or "").strip() or None
@@ -1384,12 +1399,12 @@ def order_edit(request: HttpRequest, pk: int):
 
         if not errors:
             order.id = original_id
-            order.tracking_no = original_tracking
             order.updated_at = timezone.now()
             order.updated_by = request.user
             order.save()
 
             new_snapshot = {
+                "tracking_no": order.tracking_no,
                 "seller_id": order.seller_id,
                 "seller_code": order.seller_code,
                 "seller_order_code": order.seller_order_code,
@@ -1427,6 +1442,9 @@ def order_edit(request: HttpRequest, pk: int):
                 )
 
                 note_parts = []
+
+                if old_snapshot["tracking_no"] != new_snapshot["tracking_no"]:
+                    note_parts.append(f"Tracking: {old_snapshot['tracking_no']} -> {new_snapshot['tracking_no']}")
 
                 if old_snapshot["seller_id"] != new_snapshot["seller_id"]:
                     note_parts.append("Shop changed")
@@ -1504,8 +1522,6 @@ def order_edit(request: HttpRequest, pk: int):
             "is_admin_user": is_admin,
         },
     )
-
-
 @login_required
 def order_detail(request: HttpRequest, pk: int):
     order = get_object_or_404(Order, pk=pk, is_deleted=False)

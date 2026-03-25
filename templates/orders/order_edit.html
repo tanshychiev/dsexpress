@@ -111,11 +111,6 @@
     resize:vertical;
   }
 
-  .readonly{
-    background:#f8fafc;
-    color:#334155;
-  }
-
   .small-note{
     font-size:12px;
     color:#64748b;
@@ -196,7 +191,12 @@
 
             <div class="field field-full">
               <label>Tracking / SN</label>
-              <input value="{{ order.tracking_no }}" disabled class="readonly">
+              <input
+                type="text"
+                name="tracking_no"
+                value="{{ order.tracking_no }}"
+                required
+              >
             </div>
 
             <div class="field">

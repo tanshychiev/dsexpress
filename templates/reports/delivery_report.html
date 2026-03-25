@@ -842,7 +842,7 @@
             <tr>
               <th style="width:18px;">No</th>
               <th class="export-col-hide" style="width:70px;">Code</th>
-              <th style="width:74px;">Shipment ID</th>
+              <th style="width:60px;">Shipment ID</th>
               <th class="export-col-hide" style="width:76px;">Seller</th>
               <th style="width:52px;">Pickup Date</th>
               <th style="width:52px;">Delivery Date</th>
@@ -856,7 +856,7 @@
               <th class="export-col-hide" style="width:32px;">Addition Fee</th>
               <th style="width:32px;">Total Fee</th>
               <th style="width:32px;">COD</th>
-              <th style="width:54px;">Status</th>
+              <th style="width:44px;">Status</th>
               <th style="width:62px;">Shipper</th>
               <th style="width:62px;">Reason</th>
             </tr>
@@ -974,8 +974,21 @@
     }
 
     function buildFileName(shopName) {
-      return `${sanitizeName(shopName)}_${getDeliveryDateText()}`;
+      let name = sanitizeName(shopName);
+
+      const match = name.match(/^([0-9]+)_-?_(.+)$/);
+ 
+      if (match) {
+        const code = match[1];
+        const seller = match[2].replace(/^[-_]+/, "");
+        name = `${seller}_${code}`;
+      } else {
+        name = name.replace(/^[-_]+/, "");
+      }
+
+      return `${name}_${getDeliveryDateText()}`;
     }
+
 
     function countSummary() {
       const rows = Array.from(document.querySelectorAll(".rtable tbody tr[data-report-status]"));

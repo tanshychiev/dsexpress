@@ -482,7 +482,6 @@
           <a class="menu-item {% if request.path|slice:':13' == '/users/roles/' %}active{% endif %}" href="{% url 'role_list' %}">
             <span class="dot"></span>
             <span class="menu-label">Roles</span>
-            <span class="tag tag-role">ROLE</span>
           </a>
         </div>
 
@@ -493,56 +492,48 @@
           <a class="menu-item {% if request.path|slice:':10' == '/province/' %}active{% endif %}" href="{% url 'province_list' %}">
             <span class="dot"></span>
             <span class="menu-label">Deliver To Province</span>
-            <span class="tag tag-ops">OPS</span>
-          </a>
-
-          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'clearpp_list' or request.resolver_match and request.resolver_match.url_name == 'clearpp_settings' or request.resolver_match and request.resolver_match.url_name == 'clearpp_detail' or request.resolver_match and request.resolver_match.url_name == 'clearpp_toggle_tick' or request.resolver_match and request.resolver_match.url_name == 'clearpp_set_tick_many' or request.resolver_match and request.resolver_match.url_name == 'clearpp_clear_delivery' or request.resolver_match and request.resolver_match.url_name == 'clearpp_undo_clear' or request.resolver_match and request.resolver_match.url_name == 'clearpp_cancel' %}active{% endif %}" href="{% url 'clearpp_list' %}">
-            <span class="dot"></span>
-            <span class="menu-label">Clear Delivery PP</span>
-            <span class="tag tag-pp">PP</span>
-          </a>
-
-          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'deliverpp_list' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_new' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_detail' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_print' %}active{% endif %}" href="{% url 'deliverpp_list' %}">
-            <span class="dot"></span>
-            <span class="menu-label">Deliver in PP</span>
-            <span class="tag tag-pp">PP</span>
           </a>
 
           <a class="menu-item {% if request.path|slice:':13' == '/returnshop/' %}active{% endif %}" href="{% url 'returnshop_list' %}">
             <span class="dot"></span>
             <span class="menu-label">Return To Shop</span>
-            <span class="tag tag-new">NEW</span>
+          </a>
+
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'deliverpp_list' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_new' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_detail' or request.resolver_match and request.resolver_match.url_name == 'deliverpp_print' %}active{% endif %}" href="{% url 'deliverpp_list' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Deliver in PP</span>
+          </a>
+
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'clearpp_list' or request.resolver_match and request.resolver_match.url_name == 'clearpp_settings' or request.resolver_match and request.resolver_match.url_name == 'clearpp_detail' or request.resolver_match and request.resolver_match.url_name == 'clearpp_toggle_tick' or request.resolver_match and request.resolver_match.url_name == 'clearpp_set_tick_many' or request.resolver_match and request.resolver_match.url_name == 'clearpp_clear_delivery' or request.resolver_match and request.resolver_match.url_name == 'clearpp_undo_clear' or request.resolver_match and request.resolver_match.url_name == 'clearpp_cancel' %}active{% endif %}" href="{% url 'clearpp_list' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Clear Delivery PP</span>
           </a>
         </div>
 
         <div class="menu-sep"></div>
 
         <div class="menu-title" data-target="group-reports">Reports</div>
-<div class="menu-group hidden-sec" id="group-reports">
-  <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'delivery_report' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_png' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_pdf' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_upload' %}active{% endif %}" href="{% url 'delivery_report' %}">
-    <span class="dot"></span>
-    <span class="menu-label">Delivery Report</span>
-    <span class="tag tag-report">REPORT</span>
-  </a>
+        <div class="menu-group hidden-sec" id="group-reports">
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'delivery_report' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_png' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_pdf' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_upload' %}active{% endif %}" href="{% url 'delivery_report' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Delivery Report</span>
+          </a>
 
-  <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report_pdf' %}active{% endif %}" href="{% url 'shipper_cod_report' %}">
-    <span class="dot"></span>
-    <span class="menu-label">Shipper COD</span>
-    <span class="tag tag-report">REPORT</span>
-  </a>
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_cod_report_pdf' %}active{% endif %}" href="{% url 'shipper_cod_report' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Shipper COD</span>
+          </a>
 
-  <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report_pdf' %}active{% endif %}" href="{% url 'shipper_commission_report' %}">
-    <span class="dot"></span>
-    <span class="menu-label">Shipper Commission</span>
-    <span class="tag tag-report">REPORT</span>
-  </a>
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report' or request.resolver_match and request.resolver_match.url_name == 'shipper_commission_report_pdf' %}active{% endif %}" href="{% url 'shipper_commission_report' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Shipper Commission</span>
+          </a>
 
-  <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'profit_dashboard' %}active{% endif %}" href="{% url 'profit_dashboard' %}">
-    <span class="dot"></span>
-    <span class="menu-label">Profit Dashboard</span>
-    <span class="tag tag-new">NEW</span>
-  </a>
-</div>
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'profit_dashboard' %}active{% endif %}" href="{% url 'profit_dashboard' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Profit Dashboard</span>
+          </a>
+        </div>
 
         <div class="menu-sep"></div>
 
@@ -551,7 +542,6 @@
           <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'finance_home' %}active{% endif %}" href="{% url 'finance_home' %}">
             <span class="dot"></span>
             <span class="menu-label">Finance Home</span>
-            <span class="tag tag-new">NEW</span>
           </a>
 
           <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'staff_salary_list' %}active{% endif %}" href="{% url 'staff_salary_list' %}">

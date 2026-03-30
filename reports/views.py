@@ -11,6 +11,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from openpyxl import load_workbook
 from playwright.sync_api import sync_playwright
+from masterdata.models import Seller
 
 from orders.models import Order
 from .excel import export_delivery_report_xlsx
@@ -139,6 +140,20 @@ def delivery_report(request):
         data["pending_date_to"] = f"{today_str}T23:59"
 
     form = DeliveryReportFilterForm(data)
+
+    seller_id = (request.GET.get("seller") or "").strip()
+    selected_seller = None
+    selected_seller_name = ""
+
+    if seller_id:
+        selected_seller = Seller.objects.filter(id=seller_id).first()
+        if selected_seller:
+            selected_seller_name = selected_seller.name
+
+    seller_options = list(
+        Seller.objects.order_by("name").values("id", "name")
+    )
+
     action = request.GET.get("action", "").strip()
     shop_key = request.GET.get("shop_key", "").strip()
 
@@ -301,9 +316,10 @@ def delivery_report(request):
         "pending_to": p_to,
         "top_summary": top_summary,
         "show_results": show_results,
+        "selected_seller": selected_seller,
+        "selected_seller_name": selected_seller_name,
+        "seller_options": seller_options,
     })
-
-
 @login_required
 def delivery_report_upload(request):
     form = DeliveryReportUploadForm(request.POST or None, request.FILES or None)

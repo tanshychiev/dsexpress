@@ -36,6 +36,56 @@
     background:#fff;
   }
 
+  .seller-search-wrap{
+    position:relative;
+  }
+
+  .seller-search-input{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid #d8dde6;
+    border-radius:12px;
+    background:#fff;
+  }
+
+  .seller-dropdown{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    margin-top:6px;
+    background:#fff;
+    border:1px solid #d8dde6;
+    border-radius:12px;
+    box-shadow:0 10px 24px rgba(0,0,0,.08);
+    max-height:260px;
+    overflow-y:auto;
+    z-index:9999;
+  }
+
+  .seller-dropdown-item{
+    padding:10px 12px;
+    font-size:13px;
+    color:#2c3e50;
+    cursor:pointer;
+    border-bottom:1px solid #eef2f7;
+  }
+
+  .seller-dropdown-item:last-child{
+    border-bottom:none;
+  }
+
+  .seller-dropdown-item:hover,
+  .seller-dropdown-item.active{
+    background:#eef5ff;
+  }
+
+  .seller-dropdown-empty{
+    padding:10px 12px;
+    font-size:13px;
+    color:#64748b;
+  }
+
   .report-actions{
     grid-column:1 / -1;
     margin-top:12px;
@@ -429,9 +479,11 @@
     font-size:14px;
     font-weight:700;
   }
+
   .export-mode .export-footer{
     display:block !important;
   }
+
   .print-only-report .export-footer{
     display:block !important;
   }
@@ -632,9 +684,26 @@
 
 <div class="card report-filter-card">
   <form method="get" class="report-filter-grid">
-    <div>
+    <div class="seller-search-wrap">
       <label>Shop</label>
-      {{ form.seller }}
+
+      <input
+        type="text"
+        id="sellerSearchInput"
+        class="seller-search-input"
+        placeholder="Type shop name..."
+        autocomplete="off"
+        value="{{ selected_seller_name|default:'' }}"
+      >
+
+      <input
+        type="hidden"
+        name="seller"
+        id="sellerHiddenInput"
+        value="{{ request.GET.seller|default:'' }}"
+      >
+
+      <div id="sellerDropdown" class="seller-dropdown" style="display:none;"></div>
     </div>
 
     <div>
@@ -662,7 +731,7 @@
       {% if form.search %}
         {{ form.search }}
       {% else %}
-        <input type="text" placeholder="Search tracking / phone..." disabled>
+        <input type="text" placeholder="Search tracking / phone." disabled>
       {% endif %}
     </div>
 
@@ -697,7 +766,7 @@
 
 <div class="card report-wrapper" id="reportCapture">
   <div class="export-cover">
-    <img class="export-cover-logo" src="{% static 'img/ds-logo.png' %}" alt="DS Express" />
+    <img class="export-cover-logo" src="{% static 'img/ds-logo.png' %}" alt="DS Express">
     <div>
       <div class="export-cover-title">DS Express</div>
       <div class="export-cover-sub">Delivery Report</div>
@@ -842,23 +911,23 @@
             <tr>
               <th style="width:18px;">No</th>
               <th class="export-col-hide" style="width:70px;">Code</th>
-              <th style="width:60px;">Shipment ID</th>
+              <th style="width:58px;">Shipment ID</th>
               <th class="export-col-hide" style="width:76px;">Seller</th>
-              <th style="width:52px;">Pickup Date</th>
-              <th style="width:52px;">Delivery Date</th>
+              <th style="width:44px;">Pickup Date</th>
+              <th style="width:44px;">Delivery Date</th>
               <th style="width:110px;">Location</th>
               <th class="export-col-hide" style="width:72px;">Description</th>
               <th class="export-col-hide" style="width:34px;">Qty</th>
-              <th style="width:58px;">Phone Number</th>
-              <th style="width:58px;">Receiver Name</th>
+              <th style="width:52px;">Phone Number</th>
+              <th style="width:50px;">Receiver Name</th>
               <th style="width:32px;">Price</th>
               <th class="export-col-hide" style="width:32px;">Delivery Fee</th>
               <th class="export-col-hide" style="width:32px;">Addition Fee</th>
-              <th style="width:32px;">Total Fee</th>
-              <th style="width:32px;">COD</th>
+              <th style="width:30px;">Total Fee</th>
+              <th style="width:30px;">COD</th>
               <th style="width:44px;">Status</th>
-              <th style="width:62px;">Shipper</th>
-              <th style="width:62px;">Reason</th>
+              <th style="width:50px;">Shipper</th>
+              <th style="width:72px;">Reason</th>
             </tr>
           </thead>
 
@@ -871,7 +940,6 @@
               {% else %}
                 <tr class="row-pending" data-report-status="PENDING">
               {% endif %}
-
                 <td class="center">{{ forloop.counter }}</td>
                 <td class="export-col-hide">{{ o.seller_order_code|default_if_none:"" }}</td>
                 <td>{{ o.tracking_no|default_if_none:"" }}</td>
@@ -892,7 +960,6 @@
                 <td>{{ o.receiver_phone|default_if_none:"" }}</td>
                 <td>{{ o.receiver_name|default_if_none:"" }}</td>
                 <td class="num">{{ o.price|default_if_none:"" }}</td>
-
                 <td class="num export-col-hide">{{ o.report_delivery_fee|floatformat:2 }}</td>
                 <td class="num export-col-hide">{{ o.report_additional_fee|floatformat:2 }}</td>
                 <td class="num">{{ o.report_total_fee|floatformat:2 }}</td>
@@ -960,6 +1027,21 @@
     const saveSelectedPngBtn = document.getElementById("saveSelectedPngBtn");
     const saveSelectedPdfBtn = document.getElementById("saveSelectedPdfBtn");
 
+    const sellerSearchInput = document.getElementById("sellerSearchInput");
+    const sellerHiddenInput = document.getElementById("sellerHiddenInput");
+    const sellerDropdown = document.getElementById("sellerDropdown");
+
+    const sellerOptions = [
+      {% for item in seller_options %}
+        {
+          id: "{{ item.id|escapejs }}",
+          name: "{{ item.name|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    let activeSellerIndex = -1;
+
     function sanitizeName(text) {
       return (text || "shop")
         .replace(/[\\\/:*?"<>|]+/g, "")
@@ -977,7 +1059,7 @@
       let name = sanitizeName(shopName);
 
       const match = name.match(/^([0-9]+)_-?_(.+)$/);
- 
+
       if (match) {
         const code = match[1];
         const seller = match[2].replace(/^[-_]+/, "");
@@ -988,7 +1070,6 @@
 
       return `${name}_${getDeliveryDateText()}`;
     }
-
 
     function countSummary() {
       const rows = Array.from(document.querySelectorAll(".rtable tbody tr[data-report-status]"));
@@ -1054,6 +1135,77 @@
       } else {
         el.classList.remove("export-mode");
       }
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function closeSellerDropdown() {
+      if (!sellerDropdown) return;
+      sellerDropdown.style.display = "none";
+      sellerDropdown.innerHTML = "";
+      activeSellerIndex = -1;
+    }
+
+    function chooseSeller(item) {
+      if (!sellerSearchInput || !sellerHiddenInput) return;
+      sellerSearchInput.value = item.name;
+      sellerHiddenInput.value = item.id;
+      closeSellerDropdown();
+    }
+
+    function renderSellerDropdown(keyword) {
+      if (!sellerDropdown) return;
+
+      const q = (keyword || "").trim().toLowerCase();
+
+      if (!q) {
+        closeSellerDropdown();
+        return;
+      }
+
+      const filtered = sellerOptions.filter(item =>
+        (item.name || "").toLowerCase().includes(q)
+      ).slice(0, 50);
+
+      if (!filtered.length) {
+        sellerDropdown.innerHTML = '<div class="seller-dropdown-empty">No shop found</div>';
+        sellerDropdown.style.display = "block";
+        activeSellerIndex = -1;
+        return;
+      }
+
+      sellerDropdown.innerHTML = filtered.map((item, index) => `
+        <div class="seller-dropdown-item" data-index="${index}" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">
+          ${escapeHtml(item.name)}
+        </div>
+      `).join("");
+
+      sellerDropdown.style.display = "block";
+      activeSellerIndex = -1;
+
+      sellerDropdown.querySelectorAll(".seller-dropdown-item").forEach(el => {
+        el.addEventListener("click", function () {
+          chooseSeller({
+            id: this.dataset.id,
+            name: this.dataset.name
+          });
+        });
+      });
+    }
+
+    function highlightActiveSellerItem() {
+      if (!sellerDropdown) return;
+      const items = sellerDropdown.querySelectorAll(".seller-dropdown-item");
+      items.forEach((item, index) => {
+        item.classList.toggle("active", index === activeSellerIndex);
+      });
     }
 
     async function renderCanvasForExport(el) {
@@ -1167,6 +1319,67 @@
       pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
       pdf.save(`${fileName}.pdf`);
     }
+
+    if (sellerSearchInput) {
+      sellerSearchInput.addEventListener("input", function () {
+        if (sellerHiddenInput) {
+          sellerHiddenInput.value = "";
+        }
+        renderSellerDropdown(this.value);
+      });
+
+      sellerSearchInput.addEventListener("focus", function () {
+        if (this.value.trim()) {
+          renderSellerDropdown(this.value);
+        }
+      });
+
+      sellerSearchInput.addEventListener("keydown", function (e) {
+        if (!sellerDropdown || sellerDropdown.style.display === "none") {
+          return;
+        }
+
+        const items = Array.from(sellerDropdown.querySelectorAll(".seller-dropdown-item"));
+        if (!items.length) return;
+
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          activeSellerIndex = Math.min(activeSellerIndex + 1, items.length - 1);
+          highlightActiveSellerItem();
+          if (items[activeSellerIndex]) {
+            items[activeSellerIndex].scrollIntoView({ block: "nearest" });
+          }
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          activeSellerIndex = Math.max(activeSellerIndex - 1, 0);
+          highlightActiveSellerItem();
+          if (items[activeSellerIndex]) {
+            items[activeSellerIndex].scrollIntoView({ block: "nearest" });
+          }
+        } else if (e.key === "Enter") {
+          if (activeSellerIndex >= 0 && items[activeSellerIndex]) {
+            e.preventDefault();
+            chooseSeller({
+              id: items[activeSellerIndex].dataset.id,
+              name: items[activeSellerIndex].dataset.name
+            });
+          }
+        } else if (e.key === "Escape") {
+          closeSellerDropdown();
+        }
+      });
+    }
+
+    document.addEventListener("click", function (e) {
+      if (!sellerDropdown || !sellerSearchInput) return;
+
+      if (
+        e.target !== sellerSearchInput &&
+        !sellerDropdown.contains(e.target)
+      ) {
+        closeSellerDropdown();
+      }
+    });
 
     if (toggleAllBtn) {
       toggleAllBtn.addEventListener("click", function () {

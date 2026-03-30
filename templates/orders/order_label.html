@@ -5,442 +5,449 @@
 <title>Label</title>
 
 <style>
-
 @page{
-size:100mm 100mm;
-margin:0;
+  size:100mm 100mm;
+  margin:0;
 }
 
 body{
-margin:0;
-font-family:Arial,"Noto Sans Khmer","Khmer OS System","Khmer OS",sans-serif;
-color:#000;
-background:#fff;
+  margin:0;
+  font-family:Arial,"Noto Sans Khmer","Khmer OS System","Khmer OS",sans-serif;
+  color:#000;
+  background:#fff;
 }
 
 .page{
-width:100mm;
-height:100mm;
-display:flex;
-align-items:center;
-justify-content:center;
-box-sizing:border-box;
+  width:100mm;
+  height:100mm;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
 }
 
 .label{
-width:95mm;
-height:95mm;
-border:0.6mm solid #000;
-box-sizing:border-box;
-background:#fff;
-overflow:hidden;
+  width:95mm;
+  height:95mm;
+  border:0.6mm solid #000;
+  box-sizing:border-box;
+  background:#fff;
+  overflow:hidden;
 }
 
+/* ================= TOP ================= */
+
 .top{
-display:flex;
-border-bottom:0.5mm solid #000;
-height:40mm;
+  display:flex;
+  border-bottom:0.5mm solid #000;
+  height:42mm;
 }
 
 .top-left{
-width:52mm;
-padding:1mm;
-box-sizing:border-box;
-border-right:0.5mm solid #000;
+  width:58mm; /* moved divider line right */
+  padding:1mm;
+  box-sizing:border-box;
+  border-right:0.5mm solid #000;
 }
 
-.brand{
-font-size:3mm;
-font-weight:900;
-letter-spacing:0.2mm;
-line-height:1;
-margin-bottom:2.5mm;
-}
 .brand-row{
   display:flex;
   justify-content:space-between;
   align-items:center;
- 
+  gap:1mm;
+}
+
+.brand{
+  font-size:3mm;
+  font-weight:900;
+  letter-spacing:0.2mm;
+  line-height:1;
 }
 
 .print-date{
   font-size:2mm;
   font-weight:600;
   white-space:nowrap;
-
 }
 
-
 .tracking-box{
-border-top:0.4mm solid #000;
-border-bottom:0.4mm solid #000;
-padding:1.4mm 0;
-margin-bottom:2mm;
-font-size:3mm;
-font-weight:700;
+  border-top:0.4mm solid #000;
+  border-bottom:0.4mm solid #000;
+  padding:1.2mm 0;
+  margin-bottom:1.8mm;
+  font-size:3mm;
+  font-weight:700;
 }
 
 .mini-row{
-display:flex;
-align-items:flex-end;
-gap:2mm;
-margin-bottom:2mm;
+  display:flex;
+  align-items:flex-end;
+  gap:2mm;
+  margin-bottom:1.8mm;
 }
 
 .mini-row .label-text{
-flex:0 0 auto;
-font-weight:300;
-font-size:2mm;
-line-height:1;
-white-space:nowrap;
+  flex:0 0 auto;
+  font-weight:300;
+  font-size:2mm;
+  line-height:1;
+  white-space:nowrap;
 }
 
 .mini-row .value{
-border-bottom:0.35mm solid #000;
-min-height:2mm;
-display:flex;
-align-items:flex-end;
-padding:0 0.8mm 0.4mm 0.8mm;
-font-size:3mm;
-font-weight:500;
-overflow:hidden;
-white-space:nowrap;
-text-overflow:ellipsis;
-box-sizing:border-box;
+  border-bottom:0.35mm solid #000;
+  min-height:2mm;
+  display:flex;
+  align-items:flex-end;
+  padding:0 0.8mm 0.4mm 0.8mm;
+  font-size:3mm;
+  font-weight:500;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  box-sizing:border-box;
 }
 
 /* widths */
 
 .shop-value{
-flex:1;
-font-size:3mm;
+  flex:1;
+  font-size:3mm;
 }
 
 .seller-label{
-margin-left:1mm;
+  margin-left:1mm;
 }
 
 .seller-value{
-flex:0 0 7mm;
-max-width:7mm;
+  flex:0 0 8mm;
+  max-width:8mm;
 }
 
 .code-value{
-flex:1;
+  flex:1;
 }
 
 .qty-label{
-margin-left:6mm;
+  margin-left:4mm;
 }
 
 .qty-value{
-flex:0 0 4mm;
-max-width:4mm;
-justify-content:flex-start;
+  flex:0 0 4mm;
+  max-width:4mm;
+  justify-content:flex-start;
 }
 
-/* item wrap */
+/* item */
 
-.item-value{
-flex:1;
-font-size:2.6mm;
-line-height:1.1;
-white-space:normal !important;
-display:block;
-overflow:hidden;
-word-break:break-word;
-min-height:5.5mm;
-max-height:5.8mm;
-padding-top:0.2mm;
+.item-row{
+  align-items:flex-start !important;
 }
 
-/* QR */
+.item-row .label-text{
+  padding-top:0.8mm;
+}
+
+.item-row .value.item-value{
+  flex:1;
+  display:block !important;
+  white-space:normal !important;
+  word-break:break-word;
+  overflow:hidden;
+
+  font-size:2.5mm;
+  line-height:1.2;
+
+  height:11.5mm;   /* enough for 3 lines */
+  padding:0.8mm 0.8mm 0.4mm 0.8mm;
+  box-sizing:border-box;
+}
+
+/* ================= QR ================= */
 
 .top-right{
-flex:1;
-display:flex;
-align-items:center;
-justify-content:center;
-padding:2.5mm;
-box-sizing:border-box;
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:2mm;
+  box-sizing:border-box;
 }
 
 .qr-box{
-width:100%;
-height:100%;
-display:flex;
-align-items:center;
-justify-content:center;
-padding:1mm;
-box-sizing:border-box;
-background:#fff;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  background:#fff;
 }
 
 .qr-box img{
-width:120%;
-height:120%;
-object-fit:contain;
+  width:90%;
+  height:90%;
+  object-fit:contain;
 }
 
-/* middle */
+/* ================= MIDDLE ================= */
 
 .middle{
-height:30mm;
-padding:3mm;
-box-sizing:border-box;
-border-bottom:0.5mm solid #000;
+  height:31mm;
+  padding:2.6mm 3mm 2.4mm 3mm;
+  box-sizing:border-box;
+  border-bottom:0.5mm solid #000;
 }
 
 .middle-row{
-display:flex;
-align-items:flex-end;
-gap:2mm;
-margin-bottom:3.2mm;
+  display:flex;
+  align-items:flex-end;
+  gap:2mm;
+  margin-bottom:2.7mm;
 }
 
 .middle-row .label-text{
-flex:0 0 auto;
-font-size:4mm;
-line-height:1;
-font-weight:400;
-white-space:nowrap;
+  flex:0 0 auto;
+  font-size:4mm;
+  line-height:1;
+  font-weight:400;
+  white-space:nowrap;
 }
 
 .middle-row .value{
   flex:1;
   border-bottom:0.35mm solid #000;
-  min-height:4.4mm;
+  min-height:4.2mm;
   display:block;
   padding:0 0.8mm 0.4mm 0.8mm;
   font-size:3.7mm;
   font-weight:500;
   overflow:hidden;
-  white-space:normal;       /* allow wrap */
-  word-break:break-word;    /* break long words */
-  line-height:1.2;
-  max-height:9mm;           /* limit to ~2 lines */
+  white-space:normal;
+  word-break:break-word;
+  line-height:1.15;
+  max-height:8.6mm;
   box-sizing:border-box;
 }
 
 /* customer */
 
 .bottom-row{
-display:flex;
-gap:2mm;
-align-items:flex-end;
-margin-top:4mm;
+  display:flex;
+  gap:2mm;
+  align-items:flex-end;
+  margin-top:3.2mm;
 }
 
 .bottom-block{
-display:flex;
-align-items:flex-end;
-gap:2mm;
-flex:1;
+  display:flex;
+  align-items:flex-end;
+  gap:2mm;
+  flex:1;
 }
 
 .bottom-block .small-label{
-flex:0 0 auto;
-font-size:4mm;
-font-weight:400;
-line-height:1;
-white-space:nowrap;
+  flex:0 0 auto;
+  font-size:4mm;
+  font-weight:400;
+  line-height:1;
+  white-space:nowrap;
 }
 
 .bottom-block .value{
-flex:1;
-border-bottom:0.35mm solid #000;
-min-height:4mm;
-display:flex;
-align-items:flex-end;
-padding:0 0.8mm 0.4mm 0.8mm;
-font-size:3mm;
-font-weight:500;
-overflow:hidden;
-white-space:nowrap;
-text-overflow:ellipsis;
-box-sizing:border-box;
+  flex:1;
+  border-bottom:0.35mm solid #000;
+  min-height:3.6mm;
+  display:flex;
+  align-items:flex-end;
+  padding:0 0.8mm 0.35mm 0.8mm;
+  font-size:3mm;
+  font-weight:500;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  box-sizing:border-box;
 }
 
-/* COD */
+/* ================= COD ================= */
 
 .bottom{
-height:18mm;
-padding:2.5mm 3mm;
-box-sizing:border-box;
+  height:14mm;
+  padding:1.6mm 3mm 1.8mm 3mm;
+  box-sizing:border-box;
 }
 
 .cod-title{
-font-size:4mm;
-font-weight:700;
-margin-bottom:1.5mm;
+  font-size:3.8mm;
+  font-weight:700;
+  margin-bottom:0.8mm;
+  line-height:1;
 }
 
 .money-row{
-display:flex;
-align-items:flex-end;
-justify-content:space-between;
-gap:2mm;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:1.5mm;
 }
 
 .money-block{
-flex:1;
-display:flex;
-align-items:flex-end;
-gap:1.5mm;
+  flex:1;
+  display:flex;
+  align-items:flex-end;
+  gap:1.2mm;
 }
 
 .money-currency{
-font-size:4mm;
-min-width:7mm;
+  font-size:3.7mm;
+  min-width:5mm;
+  line-height:1;
 }
 
 .money-value{
-flex:1;
-border-bottom:0.45mm solid #000;
-min-height:4mm;
-display:flex;
-align-items:flex-end;
-padding:0 1mm 0.8mm 1mm;
-font-size:4mm;
-font-weight:600;
-overflow:hidden;
-white-space:nowrap;
-text-overflow:ellipsis;
-box-sizing:border-box;
+  flex:1;
+  border-bottom:0.4mm solid #000;
+  min-height:3.2mm;
+  display:flex;
+  align-items:flex-end;
+  padding:0 0.8mm 0.45mm 0.8mm;
+  font-size:3.8mm;
+  font-weight:600;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  box-sizing:border-box;
+  line-height:1;
 }
 
 .or-text{
-font-size:4mm;
-padding:0 2mm 1mm 2mm;
+  font-size:3.5mm;
+  padding:0 1.2mm 0.4mm 1.2mm;
+  line-height:1;
 }
 
-/* print button */
+/* ================= PRINT BUTTON ================= */
 
 .printBtn{
-position:fixed;
-right:10px;
-top:10px;
-z-index:9;
+  width:100%;
+  display:flex;
+  justify-content:center;
+  margin-top:10px;
 }
 
 .printBtn button{
-padding:10px 16px;
-border:none;
-border-radius:10px;
-background:#0f766e;
-color:#fff;
-font-weight:700;
-cursor:pointer;
+  padding:10px 16px;
+  border:none;
+  border-radius:10px;
+  background:#0f766e;
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
 }
 
 @media print{
-.printBtn{display:none;}
+  .printBtn{display:none;}
 }
-
 </style>
 </head>
 
 <body>
 
-<div class="printBtn">
-<button onclick="window.print()">Print</button>
-</div>
-
 <div class="page">
-<div class="label">
+  <div class="label">
 
-<div class="top">
+    <div class="top">
 
-<div class="top-left">
+      <div class="top-left">
+        <div class="brand-row">
+          <div class="brand">DS EXPRESS</div>
+          <div class="print-date">PRINT : {% now "d/m/Y H:i" %}</div>
+        </div>
 
-<div class="brand-row">
-  <div class="brand">DS EXPRESS</div>
-  <div class="print-date">PRINT : {% now "d/m/Y H:i" %}</div>
+        <div class="tracking-box">
+          Tracking: {{ sn }}
+        </div>
+
+        <div class="mini-row">
+          <div class="label-text">Shop:</div>
+          <div class="value shop-value">{{ order.seller.name|default:"" }}</div>
+
+          <div class="label-text seller-label">Seller:</div>
+          <div class="value seller-value">{{ order.seller_name|default:"" }}</div>
+        </div>
+
+        <div class="mini-row">
+          <div class="label-text">Code:</div>
+          <div class="value code-value">{{ order.seller_order_code|default:"-" }}</div>
+
+          <div class="label-text qty-label">Qty:</div>
+          <div class="value qty-value">{{ order.quantity|default:"-" }}</div>
+        </div>
+
+        <div class="mini-row item-row">
+          <div class="label-text">Item:</div>
+          <div class="value item-value">{{ order.product_desc|default:"-"|truncatechars:150 }}</div>
+        </div>
+      </div>
+
+      <div class="top-right">
+        <div class="qr-box">
+          {% if qr_src %}
+            <img src="{{ qr_src }}" alt="QR">
+          {% else %}
+            <div>No QR</div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <div class="middle">
+
+      <div class="middle-row">
+        <div class="label-text">Location:</div>
+        <div class="value">{{ order.receiver_address|default:"-" }}</div>
+      </div>
+
+      <div class="middle-row">
+        <div class="label-text">Phone:</div>
+        <div class="value">{{ order.receiver_phone|default:"-" }}</div>
+      </div>
+
+      <div class="bottom-row">
+        <div class="bottom-block">
+          <div class="small-label">Customer</div>
+          <div class="value">{{ order.receiver_name|default:"-" }}</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom">
+
+      <div class="cod-title">COD:</div>
+
+      <div class="money-row">
+        <div class="money-block">
+          <div class="money-currency">$</div>
+          <div class="money-value">{{ cod_usd|floatformat:2 }}</div>
+        </div>
+
+        <div class="or-text">or</div>
+
+        <div class="money-block">
+          <div class="money-currency">៛</div>
+          <div class="money-value">{{ cod_khr_text }}</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
 </div>
 
-<div class="tracking-box">
-Tracking: {{ sn }}
-</div>
-
-<div class="mini-row">
-<div class="label-text">Shop:</div>
-<div class="value shop-value">{{ order.seller.name|default:"" }}</div>
-
-<div class="label-text seller-label">Seller:</div>
-<div class="value seller-value">{{ order.seller_name|default:"" }}</div>
-</div>
-
-<div class="mini-row">
-<div class="label-text">Code:</div>
-<div class="value code-value">{{ order.seller_order_code|default:"-" }}</div>
-
-<div class="label-text qty-label">Qty:</div>
-<div class="value qty-value">{{ order.qty|default:"-" }}</div>
-</div>
-
-<div class="mini-row" style="margin-bottom:0;">
-<div class="label-text">Item:</div>
-<div class="value item-value">{{ order.product_desc|default:"-" }}</div>
-</div>
-
-</div>
-
-<div class="top-right">
-<div class="qr-box">
-{% if qr_src %}
-<img src="{{ qr_src }}" alt="QR">
-{% else %}
-<div>No QR</div>
-{% endif %}
-</div>
-</div>
-
-</div>
-
-<div class="middle">
-
-<div class="middle-row">
-<div class="label-text">Location:</div>
-<div class="value">{{ order.receiver_address|default:"-" }}</div>
-</div>
-
-<div class="middle-row">
-<div class="label-text">Phone:</div>
-<div class="value">{{ order.receiver_phone|default:"-" }}</div>
-</div>
-
-<div class="bottom-row">
-<div class="bottom-block">
-<div class="small-label">Customer</div>
-<div class="value">{{ order.receiver_name|default:"-" }}</div>
-</div>
-</div>
-
-</div>
-
-<div class="bottom">
-
-<div class="cod-title">COD:</div>
-
-<div class="money-row">
-
-<div class="money-block">
-<div class="money-currency">$</div>
-<div class="money-value">{{ cod_usd|floatformat:2 }}</div>
-</div>
-
-<div class="or-text">or</div>
-
-<div class="money-block">
-<div class="money-currency">៛</div>
-<div class="money-value">{{ cod_khr_text }}</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
+<div class="printBtn">
+  <button onclick="window.print()">Print</button>
 </div>
 
 </body>

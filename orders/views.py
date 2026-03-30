@@ -86,10 +86,28 @@ def _to_decimal(v, default=0) -> Decimal:
         return Decimal(str(default))
 
 
-def _make_tracking_no(order_id: int) -> str:
-    today = timezone.localdate().strftime("%Y%m%d")
-    return f"DS{today}{order_id:06d}"
+def _make_tracking_no() -> str:
+    today = timezone.localdate()
+    date_str = today.strftime("%Y%m%d")
+    prefix = f"DS{date_str}"
 
+    last_order = (
+        Order.objects
+        .select_for_update()
+        .filter(tracking_no__startswith=prefix)
+        .exclude(tracking_no__startswith="TEMP-")
+        .order_by("-tracking_no")
+        .first()
+    )
+
+    next_seq = 1
+    if last_order and last_order.tracking_no:
+        try:
+            next_seq = int(last_order.tracking_no[len(prefix):]) + 1
+        except Exception:
+            next_seq = 1
+
+    return f"{prefix}{next_seq:04d}"
 
 def _parse_date_safe(s):
     if not s:
@@ -225,7 +243,12 @@ def _qs_orders_filtered(request: HttpRequest, require_search_click: bool = True)
     if require_search_click and not _is_search_clicked(request):
         return Order.objects.none()
 
-    qs = Order.objects.filter(is_deleted=False).select_related("seller").order_by("-id")
+    qs = (
+        Order.objects
+        .filter(is_deleted=False)
+        .select_related("seller", "delivery_shipper")
+        .order_by("-id")
+    )
 
     start_dt, end_dt = _dt_range_from_request(request)
     if start_dt and end_dt:
@@ -278,7 +301,6 @@ def _qs_orders_filtered(request: HttpRequest, require_search_click: bool = True)
         qs = qs.exclude(status=Order.STATUS_DELIVERED)
 
     return qs
-
 
 def _excel_orders_response(qs, filename: str):
     wb = Workbook()
@@ -480,7 +502,6 @@ def download_import_sample_excel(request: HttpRequest):
     resp["Content-Disposition"] = 'attachment; filename="import_orders_sample.xlsx"'
     return resp
 
-
 @login_required
 def import_orders(request: HttpRequest):
     if request.method == "POST":
@@ -651,7 +672,7 @@ def import_orders(request: HttpRequest):
                         import_batch=batch,
                         status=Order.STATUS_CREATED,
                     )
-                    o.tracking_no = _make_tracking_no(o.id)
+                    o.tracking_no = _make_tracking_no()
                     o.save(update_fields=["tracking_no"])
                     success_count += 1
 
@@ -1224,29 +1245,30 @@ def create_order(request: HttpRequest):
         if not errors:
             seller = Seller.objects.get(id=int(seller_id))
 
-            o = Order.objects.create(
-                tracking_no=f"TEMP-{timezone.now().timestamp()}",
-                seller=seller,
-                seller_code=seller.code or "",
-                seller_name=seller_name or None,
-                seller_order_code=seller_order_code or None,
-                product_desc=product_desc or None,
-                quantity=quantity,
-                price=price,
-                cod=cod,
-                delivery_fee=delivery_fee,
-                additional_fee=additional_fee,
-                province_fee=province_fee,
-                receiver_name=receiver_name,
-                receiver_phone=receiver_phone,
-                receiver_address=receiver_address,
-                remark=remark or None,
-                reason=reason or None,
-                status=Order.STATUS_CREATED,
-            )
+            with transaction.atomic():
+                o = Order.objects.create(
+                    tracking_no=f"TEMP-{timezone.now().timestamp()}",
+                    seller=seller,
+                    seller_code=seller.code or "",
+                    seller_name=seller_name or None,
+                    seller_order_code=seller_order_code or None,
+                    product_desc=product_desc or None,
+                    quantity=quantity,
+                    price=price,
+                    cod=cod,
+                    delivery_fee=delivery_fee,
+                    additional_fee=additional_fee,
+                    province_fee=province_fee,
+                    receiver_name=receiver_name,
+                    receiver_phone=receiver_phone,
+                    receiver_address=receiver_address,
+                    remark=remark or None,
+                    reason=reason or None,
+                    status=Order.STATUS_CREATED,
+                )
 
-            o.tracking_no = _make_tracking_no(o.id)
-            o.save(update_fields=["tracking_no"])
+                o.tracking_no = _make_tracking_no()
+                o.save(update_fields=["tracking_no"])
 
             add_audit_log(
                 module=AuditLog.MODULE_ORDER,
@@ -1276,7 +1298,6 @@ def create_order(request: HttpRequest):
             "sellers": sellers,
         },
     )
-
 
 @login_required
 def order_edit(request: HttpRequest, pk: int):

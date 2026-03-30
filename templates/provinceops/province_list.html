@@ -1,52 +1,47 @@
 {% extends "base.html" %}
-
 {% block title %}Deliver to Province{% endblock %}
 {% block page_title %}Deliver to Province{% endblock %}
 {% block page_subtitle %}Batch List{% endblock %}
 
 {% block content %}
-<div class="pv-wrap">
+<div class="page-wrap">
 
-  <!-- HEADER -->
-  <div class="pv-head">
+  <div class="page-head-row">
     <div>
-      <div class="pv-title">Deliver to Province</div>
-      <div class="pv-sub">Batch List</div>
+      <div class="content-title">Deliver to Province</div>
+      <div class="content-subtitle">Batch List</div>
     </div>
 
-    <a class="btn btn-primary" href="{% url 'province_new' %}">
-      + Assign Ship to Province
-    </a>
+    <a class="btn btn-blue-action" href="{% url 'province_new' %}">+ Assign Ship to Province</a>
   </div>
 
-  <!-- FILTER BAR -->
-  <div class="pv-card">
-    <form method="get" class="pv-filter">
-      <input type="hidden" name="search" value="1" />
+  <div class="card filter-card">
+    <form method="get" class="filter-row">
+      <input type="hidden" name="search" value="1">
 
-      <div class="f">
-        <div class="label">Assign Date From</div>
-        <input class="input" type="date" name="date_from" value="{{ date_from }}">
+      <div class="field-box">
+        <label>Date From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="input">
       </div>
 
-      <div class="f">
-        <div class="label">Assign Date To</div>
-        <input class="input" type="date" name="date_to" value="{{ date_to }}">
+      <div class="field-box">
+        <label>Date To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="input">
       </div>
 
-      <div class="f">
-        <div class="label">Status</div>
-        <select class="input" name="status">
+      <div class="field-box">
+        <label>Status</label>
+        <select name="status" class="input">
           <option value="">-- All --</option>
-          <option value="PENDING" {% if status|upper == "PENDING" %}selected{% endif %}>PENDING</option>
-          <option value="DONE" {% if status|upper == "DONE" %}selected{% endif %}>DONE</option>
-          <option value="CANCELLED" {% if status|upper == "CANCELLED" %}selected{% endif %}>CANCELLED</option>
+          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+          <option value="DONE" {% if status == "DONE" %}selected{% endif %}>Done</option>
+          <option value="CANCELLED" {% if status == "CANCELLED" %}selected{% endif %}>Cancelled</option>
         </select>
       </div>
 
-      <div class="f">
-        <div class="label">Shipper</div>
-        <select class="input" name="shipper_id">
+      <div class="field-box">
+        <label>Shipper</label>
+        <select name="shipper_id" class="input">
           <option value="">-- All --</option>
           {% for s in shippers %}
             <option value="{{ s.id }}" {% if shipper_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
@@ -56,86 +51,61 @@
         </select>
       </div>
 
-      <div class="f f-btn">
-        <button class="btn btn-dark" type="submit">Search</button>
+      <div class="field-actions">
+        <button type="submit" class="btn btn-search-black">Search</button>
+        <a href="{% url 'province_list' %}" class="btn btn-reset-link">Reset</a>
       </div>
     </form>
   </div>
 
-  <!-- TABLE -->
-  <div class="pv-card">
-    <div class="pv-table-wrap">
-      <table class="pv-table">
+  <div class="card table-card">
+    <div class="table-wrap">
+      <table class="ds-table province-like">
         <thead>
           <tr>
-            <th style="width:60px;">N</th>
-            <th style="width:120px;">ID Batch</th>
-            <th style="width:170px;">Assign Date</th>
-            <th style="width:180px;">Shipper</th>
-            <th style="width:160px;">Assign By</th>
-            <th style="width:120px;">Total Shop</th>
-            <th style="width:120px;">Total PC</th>
-            <th style="width:140px;">Status</th>
-            <th style="width:190px;">Action</th>
+            <th>N</th>
+            <th>BATCH</th>
+            <th>DATE</th>
+            <th>SHIPPER</th>
+            <th>ASSIGN BY</th>
+            <th>TOTAL SHOP</th>
+            <th>TOTAL PC</th>
+            <th>STATUS</th>
+            <th>ACTION</th>
           </tr>
         </thead>
-
         <tbody>
           {% if not searched %}
             <tr>
-              <td colspan="9" class="pv-empty">
-                Click <b>Search</b> to show data.
-              </td>
+              <td colspan="9" class="empty-row">Click <b>Search</b> to show data.</td>
             </tr>
           {% else %}
-            {% if rows %}
-              {% for r in rows %}
-                <tr class="{% if r.status == 'CANCELLED' %}row-cancel{% endif %}">
-                  <td class="center">{{ forloop.counter }}</td>
-
-                  <td class="center">
-                    <span class="batch-pill">PV-{{ r.id }}</span>
-                  </td>
-
-                  <td class="center">
-                    {% if r.assigned_at %}
-                      {{ r.assigned_at|date:"Y-m-d H:i" }}
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-
-                  <td class="center">{{ r.shipper.name|default:"—" }}</td>
-
-                  <td class="center">{{ r.created_by.username|default:"—" }}</td>
-
-                  <td class="center">{{ r.total_shop|default:0 }}</td>
-
-                  <td class="center">{{ r.total_pc|default:0 }}</td>
-
-                  <td class="center">
-                    {% if r.status == "DONE" %}
-                      <span class="badge badge-green">DONE</span>
-                    {% elif r.status == "CANCELLED" %}
-                      <span class="badge badge-red">CANCELLED</span>
-                    {% else %}
-                      <span class="badge badge-yellow">PENDING</span>
-                    {% endif %}
-                  </td>
-
-                  <td class="center">
-                    <div class="actions">
-                      <a class="btn btn-ghost" href="{% url 'province_detail' r.id %}">Detail</a>
-                      <a class="btn btn-ghost" href="{% url 'province_print' r.id %}" target="_blank">Print</a>
-                    </div>
-                  </td>
-                </tr>
-              {% endfor %}
-            {% else %}
+            {% for r in rows %}
               <tr>
-                <td colspan="9" class="pv-empty">No result.</td>
+                <td>{{ forloop.counter }}</td>
+                <td><b>PV-{{ r.id }}</b></td>
+                <td>{{ r.assigned_at|date:"Y-m-d H:i" }}</td>
+                <td>{{ r.shipper.name|default:"-" }}</td>
+                <td>{{ r.created_by.username|default:"-" }}</td>
+                <td>{{ r.total_shop|default:0 }}</td>
+                <td><b>{{ r.total_pc|default:0 }}</b></td>
+                <td>
+                  <span class="status-pill
+                    {% if r.status == 'DONE' %}status-green
+                    {% elif r.status == 'CANCELLED' %}status-red
+                    {% else %}status-yellow{% endif %}">
+                    {{ r.status }}
+                  </span>
+                </td>
+                <td>
+                  <a href="{% url 'province_detail' r.id %}" class="action-link">Open</a>
+                </td>
               </tr>
-            {% endif %}
+            {% empty %}
+              <tr>
+                <td colspan="9" class="empty-row">No result.</td>
+              </tr>
+            {% endfor %}
           {% endif %}
         </tbody>
       </table>
@@ -145,117 +115,199 @@
 </div>
 
 <style>
-  /* full screen wide */
-  .pv-wrap{max-width:none;width:100%;}
-
-  .pv-head{
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:12px;
-  }
-  .pv-title{font-size:20px;font-weight:800;}
-  .pv-sub{font-size:12px;opacity:.7;margin-top:2px;}
-
-  .pv-card{
-    background:#fff;
-    border:1px solid #eee;
-    border-radius:16px;
-    padding:14px;
-    margin-bottom:14px;
-    box-shadow:0 8px 22px rgba(0,0,0,.04);
-  }
-
-  .pv-filter{
-    display:flex;
-    gap:12px;
-    align-items:flex-end;
-    flex-wrap:wrap;
-  }
-  .f{min-width:170px;}
-  .f-btn{min-width:auto;}
-
-  .label{font-size:12px; opacity:.7; margin-bottom:6px;}
-  .input{
-    height:40px;
-    padding:8px 10px;
-    border-radius:12px;
-    border:1px solid #e6e6e6;
-    background:#fff;
+  .page-wrap{
     width:100%;
   }
 
-  .btn{
-    padding:10px 14px;
+  .page-head-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+
+  .content-title{
+    font-size:32px;
+    font-weight:900;
+    color:#0f172a;
+    line-height:1.1;
+  }
+
+  .content-subtitle{
+    margin-top:4px;
+    font-size:13px;
+    color:#6b7280;
+    font-weight:700;
+  }
+
+  .btn-blue-action{
+    background:#2563eb;
+    color:#fff;
+    border:none;
     border-radius:12px;
-    border:1px solid #ddd;
-    background:#fff;
-    color:#111;
+    padding:12px 18px;
+    font-weight:900;
     text-decoration:none;
-    cursor:pointer;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    gap:8px;
-    white-space:nowrap;
+    min-height:44px;
   }
-  .btn-dark{border-color:#111;background:#111;color:#fff;}
-  .btn-primary{
-    border-color:#1b5cff;
-    background:#1b5cff;
-    color:#fff;
+
+  .filter-card{
+    padding:12px;
+    border-radius:14px;
+    margin-bottom:12px;
+  }
+
+  .filter-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:end;
+  }
+
+  .field-box{
+    min-width:110px;
+  }
+
+  .field-box label{
+    display:block;
+    margin-bottom:6px;
+    font-size:11px;
+    color:#6b7280;
     font-weight:700;
   }
-  .btn-ghost{background:#fff;}
 
-  .pv-table-wrap{overflow:auto;}
-  .pv-table{
+  .input{
     width:100%;
-    min-width:1250px;
+    min-width:120px;
+    height:38px;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    padding:0 12px;
+    background:#fff;
+  }
+
+  .field-actions{
+    display:flex;
+    align-items:end;
+    gap:10px;
+  }
+
+  .btn-search-black{
+    background:#111827;
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    height:38px;
+    padding:0 16px;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .btn-reset-link{
+    color:#111827;
+    font-weight:700;
+    text-decoration:none;
+    padding:0 2px;
+    display:inline-flex;
+    align-items:center;
+    height:38px;
+  }
+
+  .table-card{
+    padding:10px;
+    border-radius:14px;
+  }
+
+  .table-wrap{
+    overflow:auto;
+  }
+
+  .province-like{
+    width:100%;
+    min-width:1100px;
     border-collapse:separate;
     border-spacing:0;
   }
-  .pv-table thead th{
-    background:#f6f7f9;
-    border-bottom:1px solid #ececec;
-    padding:12px 10px;
-    font-size:12px;
-    letter-spacing:.4px;
-    text-transform:uppercase;
-    text-align:center; /* heading center */
-  }
-  .pv-table tbody td{
-    border-bottom:1px solid #f0f0f0;
-    padding:12px 10px;
-  }
-  .center{text-align:center;}
 
-  .pv-empty{padding:16px;opacity:.7;text-align:center;}
-
-  .batch-pill{
-    display:inline-block;
-    padding:6px 12px;
-    border-radius:999px;
-    background:#f3f4f6;
-    border:1px solid #e6e6e6;
-    font-weight:800;
-  }
-
-  .badge{
-    padding:6px 12px;
-    border-radius:999px;
+  .province-like th{
+    background:#f8fafc;
+    color:#111827;
     font-size:12px;
     font-weight:900;
-    display:inline-block;
-    border:1px solid transparent;
+    text-align:center;
+    padding:10px 12px;
+    border-bottom:1px solid #e5e7eb;
+    white-space:nowrap;
   }
-  .badge-green{background:#e8fff0;color:#138a3d;border-color:#bff0cf;}
-  .badge-yellow{background:#fff8e6;color:#9a6b00;border-color:#ffe2a8;}
-  .badge-red{background:#ffecec;color:#b10000;border-color:#ffc4c4;}
 
-  .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  .province-like td{
+    text-align:center;
+    padding:12px;
+    border-bottom:1px solid #e5e7eb;
+    font-size:13px;
+    background:#fff;
+    white-space:nowrap;
+  }
 
-  .row-cancel{background:#fff7f7;}
+  .empty-row{
+    text-align:center;
+    color:#6b7280;
+    padding:18px !important;
+  }
+
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:88px;
+    height:28px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+    padding:0 10px;
+  }
+
+  .status-green{
+    background:#dcfce7;
+    color:#166534;
+  }
+
+  .status-yellow{
+    background:#fef3c7;
+    color:#92400e;
+  }
+
+  .status-red{
+    background:#fee2e2;
+    color:#b91c1c;
+  }
+
+  .action-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:74px;
+    height:32px;
+    padding:0 12px;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-weight:800;
+    text-decoration:none;
+    border:1px solid #bfdbfe;
+    transition:all .15s ease;
+  }
+
+  .action-link:hover{
+    background:#1d4ed8;
+    color:#fff;
+    border-color:#1d4ed8;
+    transform:translateY(-1px);
+  }
 </style>
 {% endblock %}

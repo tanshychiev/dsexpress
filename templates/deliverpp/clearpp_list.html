@@ -18,8 +18,23 @@
       <input type="hidden" name="show" value="1">
 
       <div class="field-box">
-        <label>Assign Date</label>
-        <input type="date" name="assign_date" value="{{ assign_date }}" class="input">
+        <label>Assign Date From</label>
+        <input type="date" name="assign_date_from" value="{{ assign_date_from }}" class="input">
+      </div>
+
+      <div class="field-box">
+        <label>Assign Date To</label>
+        <input type="date" name="assign_date_to" value="{{ assign_date_to }}" class="input">
+      </div>
+
+      <div class="field-box">
+        <label>Time From</label>
+        <input type="time" name="assign_time_from" value="{{ assign_time_from }}" class="input">
+      </div>
+
+      <div class="field-box">
+        <label>Time To</label>
+        <input type="time" name="assign_time_to" value="{{ assign_time_to }}" class="input">
       </div>
 
       <div class="field-box">
@@ -66,17 +81,19 @@
             <th>N</th>
             <th>BATCH</th>
             <th>SHIPPER</th>
+            <th>CREATED DATE</th>
             <th>BATCH STATUS</th>
             <th>TOTAL PC</th>
             <th>CLEAR STATE</th>
             <th>CLEARED BY</th>
+            <th>CLEARED DATE</th>
             <th>ACTION</th>
           </tr>
         </thead>
         <tbody>
           {% if not show %}
             <tr>
-              <td colspan="8" class="empty-row">Select filters then click Search.</td>
+              <td colspan="10" class="empty-row">Select filters then click Search.</td>
             </tr>
           {% else %}
             {% for r in rows %}
@@ -84,6 +101,13 @@
                 <td>{{ forloop.counter }}</td>
                 <td><b>{{ r.batch.code }}</b></td>
                 <td>{{ r.batch.shipper.name|default:"-" }}</td>
+                <td>
+                  {% if r.batch.created_at %}
+                    {{ r.batch.created_at|date:"d/m/Y H:i" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
                 <td>
                   <span class="status-pill {% if r.batch_status == 'DONE' %}status-green{% elif r.batch_status == 'CANCEL' %}status-red{% else %}status-yellow{% endif %}">
                     {{ r.batch_status }}
@@ -93,14 +117,23 @@
                 <td>
                   <span class="status-pill status-{{ r.color }}">{{ r.label }}</span>
                 </td>
-                <td>{{ r.staff_name }}</td>
+                <td>{{ r.staff_name|default:"-" }}</td>
+                <td>
+                  {% if r.cleared_at %}
+                    {{ r.cleared_at|date:"d/m/Y H:i" }}
+                  {% elif r.batch.cleared_at %}
+                    {{ r.batch.cleared_at|date:"d/m/Y H:i" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
                 <td>
                   <a href="{% url 'clearpp_detail' r.batch.id %}" class="action-link">Open</a>
                 </td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="8" class="empty-row">No batches found.</td>
+                <td colspan="10" class="empty-row">No batches found.</td>
               </tr>
             {% endfor %}
           {% endif %}
@@ -219,7 +252,7 @@
 
   .province-like{
     width:100%;
-    min-width:980px;
+    min-width:1250px;
     border-collapse:separate;
     border-spacing:0;
   }
@@ -232,6 +265,7 @@
     text-align:center;
     padding:10px 12px;
     border-bottom:1px solid #e5e7eb;
+    white-space:nowrap;
   }
 
   .province-like td{
@@ -240,6 +274,7 @@
     border-bottom:1px solid #e5e7eb;
     font-size:13px;
     background:#fff;
+    white-space:nowrap;
   }
 
   .empty-row{
@@ -281,26 +316,26 @@
   }
 
   .action-link{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-width:74px;
-  height:32px;
-  padding:0 12px;
-  border-radius:999px;
-  background:#eff6ff;
-  color:#1d4ed8;
-  font-weight:800;
-  text-decoration:none;
-  border:1px solid #bfdbfe;
-  transition:all .15s ease;
-}
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:74px;
+    height:32px;
+    padding:0 12px;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-weight:800;
+    text-decoration:none;
+    border:1px solid #bfdbfe;
+    transition:all .15s ease;
+  }
 
-.action-link:hover{
-  background:#1d4ed8;
-  color:#ffffff;
-  border-color:#1d4ed8;
-  transform:translateY(-1px);
-}
+  .action-link:hover{
+    background:#1d4ed8;
+    color:#ffffff;
+    border-color:#1d4ed8;
+    transform:translateY(-1px);
+  }
 </style>
 {% endblock %}

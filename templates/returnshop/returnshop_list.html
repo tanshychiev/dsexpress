@@ -1,164 +1,299 @@
 {% extends "base.html" %}
-
 {% block title %}Return To Shop{% endblock %}
 {% block page_title %}Return To Shop{% endblock %}
 {% block page_subtitle %}Batch List{% endblock %}
 
 {% block content %}
-<div class="card" style="padding:18px;border-radius:16px;">
+<div class="page-wrap">
 
-  <form method="get" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-    <input type="hidden" name="search" value="1"/>
-
-    <div style="min-width:160px;">
-      <div class="label">Assign Date From</div>
-      <input class="input" type="date" name="date_from" value="{{ date_from }}">
+  <div class="page-head-row">
+    <div>
+      <div class="content-title">Return To Shop</div>
+      <div class="content-subtitle">Batch List</div>
     </div>
 
-    <div style="min-width:160px;">
-      <div class="label">Assign Date To</div>
-      <input class="input" type="date" name="date_to" value="{{ date_to }}">
-    </div>
-
-    <div style="min-width:160px;">
-      <div class="label">Status</div>
-      <select class="input" name="status">
-        <option value="">-- All --</option>
-        <option value="PENDING" {% if status|upper == "PENDING" %}selected{% endif %}>PENDING</option>
-        <option value="DONE" {% if status|upper == "DONE" %}selected{% endif %}>DONE</option>
-        <option value="CANCELLED" {% if status|upper == "CANCELLED" %}selected{% endif %}>CANCELLED</option>
-      </select>
-    </div>
-
-    <button class="btn" type="submit" style="height:40px;">Search</button>
-
-    <div style="flex:1;"></div>
-
-    <a class="btn btn-ghost" href="{% url 'returnshop_new' %}" style="height:40px;display:inline-flex;align-items:center;">
-      + New Return To Shop
-    </a>
-  </form>
-
-  <div style="margin-top:14px;overflow:auto;">
-    <table class="ds-table" style="min-width:980px;">
-      <thead>
-        <tr>
-          <th style="text-align:center;width:60px;">N</th>
-          <th style="text-align:center;width:140px;">Batch</th>
-          <th style="text-align:center;width:180px;">Assign Date</th>
-          <th style="text-align:center;width:160px;">Assign By</th>
-          <th style="text-align:center;width:120px;">Total PC</th>
-          <th style="text-align:center;width:120px;">Labels</th>
-          <th style="text-align:center;width:160px;">Status</th>
-          <th style="text-align:center;width:160px;">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if not searched %}
-          <tr>
-            <td colspan="8" style="padding:14px;opacity:.7;">Click <b>Search</b> to show data.</td>
-          </tr>
-        {% else %}
-          {% for r in rows %}
-            <tr>
-              <td style="text-align:center;">{{ forloop.counter }}</td>
-              <td style="text-align:center;"><b>RTS-{{ r.id }}</b></td>
-              <td style="text-align:center;">{{ r.assigned_at|date:"Y-m-d H:i" }}</td>
-              <td style="text-align:center;">{{ r.created_by.username|default:"-" }}</td>
-              <td style="text-align:center;"><b>{{ r.total_pc|default:0 }}</b></td>
-              <td style="text-align:center;"><b>{{ r.total_labels|default:0 }}</b></td>
-              <td style="text-align:center;">
-                {% if r.progress_label == "CANCELLED" %}
-                  <span class="badge badge-red">CANCELLED</span>
-                {% elif r.progress_label == "PENDING" %}
-                  <span class="badge badge-yellow">PENDING</span>
-                {% else %}
-                  <span class="badge badge-blue">{{ r.progress_label }}</span>
-                {% endif %}
-              </td>
-              <td style="text-align:center;">
-                <a class="btn btn-ghost" href="{% url 'returnshop_detail' r.id %}">Detail</a>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="8" style="padding:14px;opacity:.7;">No result.</td>
-            </tr>
-          {% endfor %}
-        {% endif %}
-      </tbody>
-    </table>
+    <a class="btn btn-blue-action" href="{% url 'returnshop_new' %}">+ New Return To Shop</a>
   </div>
+
+  <div class="card filter-card">
+    <form method="get" class="filter-row">
+      <input type="hidden" name="search" value="1">
+
+      <div class="field-box">
+        <label>Date From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="input">
+      </div>
+
+      <div class="field-box">
+        <label>Date To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="input">
+      </div>
+
+      <div class="field-box">
+        <label>Status</label>
+        <select name="status" class="input">
+          <option value="">-- All --</option>
+          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+          <option value="DONE" {% if status == "DONE" %}selected{% endif %}>Done</option>
+          <option value="CANCELLED" {% if status == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+        </select>
+      </div>
+
+      <div class="field-actions">
+        <button type="submit" class="btn btn-search-black">Search</button>
+        <a href="{% url 'returnshop_list' %}" class="btn btn-reset-link">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-wrap">
+      <table class="ds-table province-like">
+        <thead>
+          <tr>
+            <th>N</th>
+            <th>BATCH</th>
+            <th>DATE</th>
+            <th>ASSIGN BY</th>
+            <th>TOTAL PC</th>
+            <th>LABELS</th>
+            <th>STATUS</th>
+            <th>ACTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if not searched %}
+            <tr>
+              <td colspan="8" class="empty-row">Click <b>Search</b> to show data.</td>
+            </tr>
+          {% else %}
+            {% for r in rows %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><b>RTS-{{ r.id }}</b></td>
+                <td>{{ r.assigned_at|date:"Y-m-d H:i" }}</td>
+                <td>{{ r.created_by.username|default:"-" }}</td>
+                <td><b>{{ r.total_pc|default:0 }}</b></td>
+                <td>{{ r.total_labels|default:0 }}</td>
+                <td>
+                  <span class="status-pill
+                    {% if r.progress_label == 'CANCELLED' %}status-red
+                    {% elif r.progress_label == 'PENDING' %}status-yellow
+                    {% else %}status-green{% endif %}">
+                    {{ r.progress_label }}
+                  </span>
+                </td>
+                <td>
+                  <a href="{% url 'returnshop_detail' r.id %}" class="action-link">Open</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8" class="empty-row">No result.</td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
 <style>
-  .label{
-    font-size:12px;
-    opacity:.7;
+  .page-wrap{
+    width:100%;
+  }
+
+  .page-head-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+
+  .content-title{
+    font-size:32px;
+    font-weight:900;
+    color:#0f172a;
+    line-height:1.1;
+  }
+
+  .content-subtitle{
+    margin-top:4px;
+    font-size:13px;
+    color:#6b7280;
+    font-weight:700;
+  }
+
+  .btn-blue-action{
+    background:#2563eb;
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    padding:12px 18px;
+    font-weight:900;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:44px;
+  }
+
+  .filter-card{
+    padding:12px;
+    border-radius:14px;
+    margin-bottom:12px;
+  }
+
+  .filter-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:end;
+  }
+
+  .field-box{
+    min-width:110px;
+  }
+
+  .field-box label{
+    display:block;
     margin-bottom:6px;
+    font-size:11px;
+    color:#6b7280;
+    font-weight:700;
   }
 
   .input{
-    height:40px;
-    padding:8px 10px;
+    width:100%;
+    min-width:120px;
+    height:38px;
+    border:1px solid #d1d5db;
     border-radius:12px;
-    border:1px solid #e6e6e6;
+    padding:0 12px;
     background:#fff;
   }
 
-  .btn{
-    padding:10px 14px;
-    border-radius:12px;
-    border:1px solid #111;
-    background:#111;
+  .field-actions{
+    display:flex;
+    align-items:end;
+    gap:10px;
+  }
+
+  .btn-search-black{
+    background:#111827;
     color:#fff;
-    cursor:pointer;
-    text-decoration:none;
-  }
-
-  .btn-ghost{
-    padding:10px 14px;
+    border:none;
     border-radius:12px;
-    border:1px solid #ddd;
-    background:#fff;
-    color:#111;
+    height:38px;
+    padding:0 16px;
+    font-weight:900;
     cursor:pointer;
-    text-decoration:none;
   }
 
-  .badge{
-    display:inline-block;
-    min-width:96px;
-    padding:5px 10px;
-    border-radius:999px;
+  .btn-reset-link{
+    color:#111827;
+    font-weight:700;
+    text-decoration:none;
+    padding:0 2px;
+    display:inline-flex;
+    align-items:center;
+    height:38px;
+  }
+
+  .table-card{
+    padding:10px;
+    border-radius:14px;
+  }
+
+  .table-wrap{
+    overflow:auto;
+  }
+
+  .province-like{
+    width:100%;
+    min-width:980px;
+    border-collapse:separate;
+    border-spacing:0;
+  }
+
+  .province-like th{
+    background:#f8fafc;
+    color:#111827;
     font-size:12px;
     font-weight:900;
-    border:1px solid transparent;
     text-align:center;
+    padding:10px 12px;
+    border-bottom:1px solid #e5e7eb;
+    white-space:nowrap;
   }
 
-  .badge-green{
-    background:#e8fff0;
-    color:#138a3d;
-    border-color:#bff0cf;
+  .province-like td{
+    text-align:center;
+    padding:12px;
+    border-bottom:1px solid #e5e7eb;
+    font-size:13px;
+    background:#fff;
+    white-space:nowrap;
   }
 
-  .badge-yellow{
-    background:#fff8e6;
-    color:#9a6b00;
-    border-color:#ffe2a8;
+  .empty-row{
+    text-align:center;
+    color:#6b7280;
+    padding:18px !important;
   }
 
-  .badge-red{
-    background:#fff0f0;
-    color:#b40000;
-    border-color:#ffd0d0;
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:88px;
+    height:28px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+    padding:0 10px;
   }
 
-  .badge-blue{
-    background:#eef4ff;
-    color:#1f5eff;
-    border-color:#cfdcff;
+  .status-green{
+    background:#dcfce7;
+    color:#166534;
+  }
+
+  .status-yellow{
+    background:#fef3c7;
+    color:#92400e;
+  }
+
+  .status-red{
+    background:#fee2e2;
+    color:#b91c1c;
+  }
+
+  .action-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:74px;
+    height:32px;
+    padding:0 12px;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-weight:800;
+    text-decoration:none;
+    border:1px solid #bfdbfe;
+    transition:all .15s ease;
+  }
+
+  .action-link:hover{
+    background:#1d4ed8;
+    color:#fff;
+    border-color:#1d4ed8;
+    transform:translateY(-1px);
   }
 </style>
 {% endblock %}

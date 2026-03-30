@@ -150,7 +150,7 @@
     width:100%;
     border-collapse:collapse;
     font-size:12px;
-    min-width:1350px;
+    min-width:1450px;
   }
   .orders-table th,
   .orders-table td{
@@ -393,7 +393,6 @@
               <th style="width:150px;">Tracking</th>
               <th class="orders-more-col" style="width:150px;">Create Date</th>
               <th style="width:150px;">Shop</th>
-              <th style="width:150px;">Seller Name</th>
               <th class="orders-more-col" style="width:150px;">Order Code</th>
               <th style="width:240px;">Receiver Location</th>
               <th style="width:140px;">Receiver Phone</th>
@@ -401,7 +400,9 @@
               <th class="orders-more-col" style="width:90px;">Price</th>
               <th class="orders-more-col" style="width:90px;">COD</th>
               <th style="width:120px;">Status</th>
-              <th style="width:70px;" class="orders-center">Printed</th>
+<th style="width:150px;">Shipper</th>
+<th style="width:200px;">Reason</th>   <!-- ✅ NEW -->
+<th style="width:70px;" class="orders-center">Printed</th>
               <th style="width:55px;" class="orders-center">✓</th>
             </tr>
           </thead>
@@ -419,7 +420,6 @@
                   {% if o.created_at %}{{ o.created_at|date:"Y-m-d H:i" }}{% endif %}
                 </td>
                 <td>{% if o.seller %}{{ o.seller.name }}{% endif %}</td>
-                <td>{{ o.seller_name|default:"" }}</td>
                 <td class="orders-more-col">{{ o.seller_order_code|default:"" }}</td>
                 <td>{{ o.receiver_address|default:"" }}</td>
                 <td>{{ o.receiver_phone|default:"" }}</td>
@@ -427,7 +427,14 @@
                 <td class="orders-more-col">${{ o.price }}</td>
                 <td class="orders-more-col">${{ o.cod }}</td>
                 <td>{{ o.status }}</td>
-                <td class="orders-center">{{ o.print_count|default:0 }}</td>
+<td>{{ o.delivery_shipper.name|default:"-" }}</td>
+
+<!-- ✅ NEW -->
+<td>
+  {{ o.reason|default:"-" }}
+</td>
+
+<td class="orders-center">{{ o.print_count|default:0 }}</td>
                 <td class="orders-center">
                   <input type="checkbox" name="ids" value="{{ o.id }}" class="orders-cb">
                 </td>
@@ -435,7 +442,7 @@
               {% endfor %}
             {% else %}
               <tr>
-                <td colspan="14">
+                <td colspan="15">
                   {% if request.GET.search %}
                     No data found for this search.
                   {% else %}

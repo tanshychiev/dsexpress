@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 from deliverpp.models import Order
 from reports.forms import DeliveryReportFilterForm
@@ -15,6 +15,12 @@ from reports.excel import export_delivery_report_xlsx
 
 @login_required
 def seller_report_page(request):
+    account = getattr(request.user, "account", None)
+    seller_obj = getattr(account, "seller", None)
+
+    if not account or account.account_type != "seller" or not seller_obj:
+        return redirect("portal:login")
+
     form = DeliveryReportFilterForm(request.GET.copy())
     action = request.GET.get("action", "").strip()
 
@@ -40,11 +46,8 @@ def seller_report_page(request):
     }
 
     if form.is_valid() and action in ["show", "export"]:
-        cleaned = form.cleaned_data
-
-        seller_obj = getattr(request.user, "seller_profile", None)
-        if seller_obj:
-            cleaned["seller"] = seller_obj
+        cleaned = form.cleaned_data.copy()
+        cleaned["seller"] = seller_obj
 
         d_from = cleaned.get("delivery_date_from")
         d_to = cleaned.get("delivery_date_to")
@@ -122,5 +125,5 @@ def seller_report_page(request):
         "pending_to": p_to,
         "top_summary": top_summary,
         "show_results": show_results,
-        "seller": getattr(request.user, "seller_profile", None),
+        "seller": seller_obj,
     })

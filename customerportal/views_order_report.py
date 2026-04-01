@@ -7,11 +7,24 @@ from deliverpp.models import Order
 def _get_logged_in_seller(request):
     if not request.user.is_authenticated:
         return None
-    if not hasattr(request.user, "seller_profile"):
+
+    if request.user.is_staff:
         return None
-    seller = request.user.seller_profile
+
+    account = getattr(request.user, "account", None)
+    if not account:
+        return None
+
+    if account.account_type != "seller":
+        return None
+
+    seller = account.seller
+    if not seller:
+        return None
+
     if not seller.is_active:
         return None
+
     return seller
 
 

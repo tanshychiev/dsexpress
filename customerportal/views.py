@@ -204,6 +204,43 @@ def telegram_send_message(text, reply_markup=None):
     return None
 
 
+def telegram_send_photo(photo_file, caption=""):
+    bot_token = get_telegram_bot_token()
+    chat_id = get_telegram_chat_id()
+
+    if not bot_token or not chat_id:
+        print("Telegram bot token or chat id missing")
+        return None
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+
+    try:
+        photo_file.seek(0)
+    except Exception:
+        pass
+
+    try:
+        response = requests.post(
+            url,
+            data={
+                "chat_id": chat_id,
+                "caption": caption,
+            },
+            files={
+                "photo": photo_file,
+            },
+            timeout=20,
+        )
+        data = response.json()
+        print("TELEGRAM SEND PHOTO:", data)
+        if data.get("ok"):
+            return data.get("result")
+    except Exception as e:
+        print("Telegram send photo error:", e)
+
+    return None
+
+
 def telegram_edit_message_remove_buttons(chat_id, message_id, new_text):
     bot_token = get_telegram_bot_token()
 
@@ -225,6 +262,29 @@ def telegram_edit_message_remove_buttons(chat_id, message_id, new_text):
         print("TELEGRAM EDIT:", response.text)
     except Exception as e:
         print("Telegram edit message error:", e)
+
+
+def telegram_answer_callback(callback_query_id, text=""):
+    bot_token = get_telegram_bot_token()
+
+    if not bot_token or not callback_query_id:
+        return
+
+    url = f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery"
+
+    try:
+        response = requests.post(
+            url,
+            data={
+                "callback_query_id": callback_query_id,
+                "text": text,
+                "show_alert": False,
+            },
+            timeout=10,
+        )
+        print("TELEGRAM ANSWER CALLBACK:", response.text)
+    except Exception as e:
+        print("Telegram answer callback error:", e)
 
 
 # =========================================================
@@ -253,7 +313,15 @@ def get_cancel_status():
 # PUBLIC BOOKING TELEGRAM
 # =========================================================
 
-def send_public_booking_to_telegram(name, phone, pickup_location, total_pc, latitude="", longitude=""):
+def send_public_booking_to_telegram(
+    name,
+    phone,
+    pickup_location,
+    total_pc,
+    latitude="",
+    longitude="",
+    photo_file=None,
+):
     map_link = ""
     if latitude and longitude:
         map_link = f"\n🗺 Map: https://maps.google.com/?q={latitude},{longitude}"
@@ -266,6 +334,9 @@ def send_public_booking_to_telegram(name, phone, pickup_location, total_pc, lati
         f"📦 Total PC: {total_pc}"
         f"{map_link}"
     )
+
+    if photo_file:
+        return telegram_send_photo(photo_file, caption=message)
 
     return telegram_send_message(message)
 
@@ -309,7 +380,7 @@ def booking_public(request):
     success_popup = False
 
     if request.method == "POST":
-        form = PublicBookingForm(request.POST)
+        form = PublicBookingForm(request.POST, request.FILES)
         if form.is_valid():
             name = form.cleaned_data["name"]
             phone = form.cleaned_data["phone"]
@@ -318,6 +389,7 @@ def booking_public(request):
 
             latitude = request.POST.get("latitude", "")
             longitude = request.POST.get("longitude", "")
+            photo_file = request.FILES.get("photo")
 
             send_public_booking_to_telegram(
                 name=name,
@@ -326,6 +398,7 @@ def booking_public(request):
                 total_pc=total_pc,
                 latitude=latitude,
                 longitude=longitude,
+                photo_file=photo_file,
             )
 
             form = PublicBookingForm()
@@ -639,7 +712,7 @@ def change_password(request):
 
 
 # =========================================================
-# API FOR TELEGRAM POLLING BOT
+# TELEGRAM WEBHOOK
 # =========================================================
 
 @csrf_exempt
@@ -648,27 +721,46 @@ def telegram_update_booking(request):
         return JsonResponse({"success": False, "error": "POST only"}, status=405)
 
     try:
-        data = json.loads(request.body)
-        print("TELEGRAM UPDATE DATA:", data)
+        update = json.loads(request.body.decode("utf-8"))
+        print("TELEGRAM UPDATE DATA:", update)
 
-        booking_id = data.get("booking_id")
-        action = data.get("action")
-        telegram_user_id = data.get("telegram_user_id")
-        telegram_name = data.get("telegram_name")
-        telegram_username = data.get("telegram_username")
+        callback = update.get("callback_query")
+        if not callback:
+            return JsonResponse({"success": True, "message": "No callback_query"})
+
+        callback_id = callback.get("id")
+        callback_data = (callback.get("data") or "").strip()
+        from_user = callback.get("from") or {}
+        message = callback.get("message") or {}
+
+        telegram_user_id = from_user.get("id")
+        telegram_name = from_user.get("first_name") or ""
+        telegram_username = from_user.get("username") or ""
 
         print("telegram_user_id =", telegram_user_id)
         print("telegram_name =", telegram_name)
         print("telegram_username =", telegram_username)
+        print("callback_data =", callback_data)
+
+        if ":" not in callback_data:
+            telegram_answer_callback(callback_id, "Invalid action")
+            return JsonResponse({"success": False, "error": "Invalid callback_data"}, status=400)
+
+        action, booking_id_raw = callback_data.split(":", 1)
+        action = action.strip().lower()
+
+        try:
+            booking_id = int(booking_id_raw)
+        except Exception:
+            telegram_answer_callback(callback_id, "Invalid booking")
+            return JsonResponse({"success": False, "error": "Invalid booking id"}, status=400)
 
         booking = SellerBooking.objects.get(id=booking_id)
 
         if booking.status != SellerBooking.STATUS_PENDING:
+            telegram_answer_callback(callback_id, "Booking already processed")
             return JsonResponse(
-                {
-                    "success": False,
-                    "error": "Booking already processed",
-                },
+                {"success": False, "error": "Booking already processed"},
                 status=400,
             )
 
@@ -679,13 +771,13 @@ def telegram_update_booking(request):
             booking.status = get_cancel_status()
             action_text = "❌ Cancelled"
         else:
+            telegram_answer_callback(callback_id, "Invalid action")
             return JsonResponse({"success": False, "error": "Invalid action"}, status=400)
 
-        display_name = ""
-        if telegram_name and str(telegram_name).strip():
-            display_name = str(telegram_name).strip()
-        elif telegram_username and str(telegram_username).strip():
-            display_name = str(telegram_username).strip()
+        if telegram_name:
+            display_name = telegram_name.strip()
+        elif telegram_username:
+            display_name = telegram_username.strip()
         elif telegram_user_id:
             display_name = f"Telegram {telegram_user_id}"
         else:
@@ -713,12 +805,13 @@ def telegram_update_booking(request):
             f"{action_text}"
         )
 
-        if booking.telegram_chat_id and booking.telegram_message_id:
-            telegram_edit_message_remove_buttons(
-                booking.telegram_chat_id,
-                booking.telegram_message_id,
-                new_text,
-            )
+        chat_id = booking.telegram_chat_id or message.get("chat", {}).get("id")
+        message_id = booking.telegram_message_id or message.get("message_id")
+
+        if chat_id and message_id:
+            telegram_edit_message_remove_buttons(chat_id, message_id, new_text)
+
+        telegram_answer_callback(callback_id, action_text)
 
         return JsonResponse(
             {

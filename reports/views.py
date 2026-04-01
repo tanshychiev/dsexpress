@@ -417,8 +417,11 @@ def delivery_report_png(request):
     if form.is_valid():
         cleaned = form.cleaned_data
 
-        if hasattr(request.user, "seller_profile"):
-            cleaned["seller"] = request.user.seller_profile
+        account = getattr(request.user, "account", None)
+
+        if account and account.account_type == "seller" and account.seller and account.seller.is_active:
+
+            cleaned["seller"] = account.seller
 
         seller = cleaned.get("seller")
         seller_label = seller.name if seller else "All Shops"
@@ -551,8 +554,11 @@ def delivery_report_pdf(request):
     if form.is_valid():
         cleaned = form.cleaned_data
 
-        if hasattr(request.user, "seller_profile"):
-            cleaned["seller"] = request.user.seller_profile
+        account = getattr(request.user, "account", None)
+
+        if account and account.account_type == "seller" and account.seller and account.seller.is_active:
+
+            cleaned["seller"] = account.seller
 
         seller = cleaned.get("seller")
         seller_label = seller.name if seller else "All Shops"

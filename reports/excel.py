@@ -233,9 +233,10 @@ def export_delivery_report_xlsx(
 
 
     file_bytes = output.read()
+
     response = HttpResponse(
         file_bytes,
-        content_type="application/octet-stream"
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 
@@ -255,7 +256,7 @@ def export_delivery_report_xlsx(
     date_to_txt = d_to.strftime("%Y-%m-%d") if d_to else "no_to"
 
     filename = f"{safe_name}_{date_from_txt}_to_{date_to_txt}.xlsx"
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Content-Disposition"] = f'inline; filename="{filename}"'
     response["Content-Length"] = str(len(file_bytes))
     response["Cache-Control"] = "no-store"
 

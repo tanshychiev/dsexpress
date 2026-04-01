@@ -231,10 +231,16 @@ def export_delivery_report_xlsx(
     wb.save(output)
     output.seek(0)
 
+
+    file_bytes = output.read()
     response = HttpResponse(
-        output.read(),
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        file_bytes,
+        content_type="application/octet-stream"
     )
+
+
+
+
 
     shop_name = "All_Shops"
     if grouped_data:
@@ -250,5 +256,8 @@ def export_delivery_report_xlsx(
 
     filename = f"{safe_name}_{date_from_txt}_to_{date_to_txt}.xlsx"
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Content-Length"] = str(len(file_bytes))
+    response["Cache-Control"] = "no-store"
+
 
     return response

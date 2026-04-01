@@ -519,9 +519,12 @@ def delivery_report_png(request):
         Path(temp_html).unlink(missing_ok=True)
 
     download_name = request.GET.get("download_name", "").strip() or "report"
-    response = HttpResponse(png_bytes, content_type="image/png")
+    response = HttpResponse(png_bytes, content_type="application/octet-stream")
     response["Content-Disposition"] = f'attachment; filename="{download_name}.png"'
+    response["Content-Length"] = str(len(png_bytes))
+    response["Cache-Control"] = "no-store"
     return response
+
 
 
 @login_required
@@ -681,6 +684,8 @@ def delivery_report_pdf(request):
 
     download_name = request.GET.get("download_name", "").strip() or "report"
 
-    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response = HttpResponse(pdf_bytes, content_type="application/octet-stream")
     response["Content-Disposition"] = f'attachment; filename="{download_name}.pdf"'
+    response["Content-Length"] = str(len(pdf_bytes))
+    response["Cache-Control"] = "no-store"
     return response

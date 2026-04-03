@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Batch Label Print</title>
+
   <style>
     @page{
       size:100mm 100mm;
@@ -39,17 +40,26 @@
       overflow:hidden;
     }
 
+    /* ================= TOP ================= */
+
     .top{
       display:flex;
       border-bottom:0.5mm solid #000;
-      height:40mm;
+      height:42mm;
     }
 
     .top-left{
-      width:52mm;
+      width:58mm;
       padding:1mm;
       box-sizing:border-box;
       border-right:0.5mm solid #000;
+    }
+
+    .brand-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:1mm;
     }
 
     .brand{
@@ -57,18 +67,23 @@
       font-weight:900;
       letter-spacing:0.2mm;
       line-height:1;
-      margin-bottom:2.5mm;
+    }
+
+    .print-date{
+      font-size:2mm;
+      font-weight:600;
+      white-space:nowrap;
     }
 
     .tracking-box{
       border-top:0.4mm solid #000;
       border-bottom:0.4mm solid #000;
-      padding:1.4mm 0;
-      margin-bottom:2mm;
+      padding:1.2mm 0;
+      margin-bottom:1.8mm;
       font-size:3mm;
       font-weight:700;
-      white-space:nowrap;
       overflow:hidden;
+      white-space:nowrap;
       text-overflow:ellipsis;
     }
 
@@ -76,7 +91,7 @@
       display:flex;
       align-items:flex-end;
       gap:2mm;
-      margin-bottom:2mm;
+      margin-bottom:1.8mm;
     }
 
     .mini-row .label-text{
@@ -93,7 +108,7 @@
       display:flex;
       align-items:flex-end;
       padding:0 0.8mm 0.4mm 0.8mm;
-      font-size:2mm;
+      font-size:3mm;
       font-weight:500;
       overflow:hidden;
       white-space:nowrap;
@@ -111,8 +126,8 @@
     }
 
     .seller-value{
-      flex:0 0 7mm;
-      max-width:7mm;
+      flex:0 0 8mm;
+      max-width:8mm;
     }
 
     .code-value{
@@ -120,7 +135,7 @@
     }
 
     .qty-label{
-      margin-left:6mm;
+      margin-left:4mm;
     }
 
     .qty-value{
@@ -129,25 +144,35 @@
       justify-content:flex-start;
     }
 
-    .item-value{
-      flex:1;
-      font-size:2.6mm;
-      line-height:1.1;
-      white-space:normal !important;
-      display:block;
-      overflow:hidden;
-      word-break:break-word;
-      min-height:5.5mm;
-      max-height:5.8mm;
-      padding-top:0.2mm;
+    .item-row{
+      align-items:flex-start !important;
     }
+
+    .item-row .label-text{
+      padding-top:0.8mm;
+    }
+
+    .item-row .value.item-value{
+      flex:1;
+      display:block !important;
+      white-space:normal !important;
+      word-break:break-word;
+      overflow:hidden;
+      font-size:2.5mm;
+      line-height:1.2;
+      height:11.5mm;
+      padding:0.8mm 0.8mm 0.4mm 0.8mm;
+      box-sizing:border-box;
+    }
+
+    /* ================= QR ================= */
 
     .top-right{
       flex:1;
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:2.5mm;
+      padding:2mm;
       box-sizing:border-box;
     }
 
@@ -157,20 +182,21 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:1mm;
       box-sizing:border-box;
       background:#fff;
     }
 
     .qr-box img{
-      width:120%;
-      height:120%;
+      width:90%;
+      height:90%;
       object-fit:contain;
     }
 
+    /* ================= MIDDLE ================= */
+
     .middle{
-      height:30mm;
-      padding:3mm;
+      height:31mm;
+      padding:2.6mm 3mm 2.4mm 3mm;
       box-sizing:border-box;
       border-bottom:0.5mm solid #000;
     }
@@ -179,7 +205,7 @@
       display:flex;
       align-items:flex-end;
       gap:2mm;
-      margin-bottom:3.2mm;
+      margin-bottom:2.7mm;
     }
 
     .middle-row .label-text{
@@ -193,15 +219,16 @@
     .middle-row .value{
       flex:1;
       border-bottom:0.35mm solid #000;
-      min-height:4.4mm;
-      display:flex;
-      align-items:flex-end;
+      min-height:4.2mm;
+      display:block;
       padding:0 0.8mm 0.4mm 0.8mm;
       font-size:3.7mm;
       font-weight:500;
       overflow:hidden;
-      white-space:nowrap;
-      text-overflow:ellipsis;
+      white-space:normal;
+      word-break:break-word;
+      line-height:1.15;
+      max-height:8.6mm;
       box-sizing:border-box;
     }
 
@@ -209,7 +236,7 @@
       display:flex;
       gap:2mm;
       align-items:flex-end;
-      margin-top:4mm;
+      margin-top:3.2mm;
     }
 
     .bottom-block{
@@ -230,10 +257,10 @@
     .bottom-block .value{
       flex:1;
       border-bottom:0.35mm solid #000;
-      min-height:4mm;
+      min-height:3.6mm;
       display:flex;
       align-items:flex-end;
-      padding:0 0.8mm 0.4mm 0.8mm;
+      padding:0 0.8mm 0.35mm 0.8mm;
       font-size:3mm;
       font-weight:500;
       overflow:hidden;
@@ -242,65 +269,73 @@
       box-sizing:border-box;
     }
 
+    /* ================= COD ================= */
+
     .bottom{
-      height:18mm;
-      padding:2.5mm 3mm;
+      height:14mm;
+      padding:1.6mm 3mm 1.8mm 3mm;
       box-sizing:border-box;
     }
 
     .cod-title{
-      font-size:4mm;
+      font-size:3.8mm;
       font-weight:700;
-      margin-bottom:1.5mm;
+      margin-bottom:0.8mm;
+      line-height:1;
     }
 
     .money-row{
       display:flex;
       align-items:flex-end;
       justify-content:space-between;
-      gap:2mm;
+      gap:1.5mm;
     }
 
     .money-block{
       flex:1;
       display:flex;
       align-items:flex-end;
-      gap:1.5mm;
+      gap:1.2mm;
     }
 
     .money-currency{
-      font-size:4mm;
-      min-width:7mm;
+      font-size:3.7mm;
+      min-width:5mm;
+      line-height:1;
     }
 
     .money-value{
       flex:1;
-      border-bottom:0.45mm solid #000;
-      min-height:4mm;
+      border-bottom:0.4mm solid #000;
+      min-height:3.2mm;
       display:flex;
       align-items:flex-end;
-      padding:0 1mm 0.8mm 1mm;
-      font-size:4mm;
+      padding:0 0.8mm 0.45mm 0.8mm;
+      font-size:3.8mm;
       font-weight:600;
       overflow:hidden;
       white-space:nowrap;
       text-overflow:ellipsis;
       box-sizing:border-box;
+      line-height:1;
     }
 
     .or-text{
-      font-size:4mm;
-      padding:0 2mm 1mm 2mm;
+      font-size:3.5mm;
+      padding:0 1.2mm 0.4mm 1.2mm;
+      line-height:1;
     }
 
-    .print-toolbar{
-      position:fixed;
-      right:10px;
-      top:10px;
-      z-index:9;
+    /* ================= PRINT BUTTON ================= */
+
+    .printBtn{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      margin-top:10px;
     }
 
-    .print-toolbar button{
+    .printBtn button{
       padding:10px 16px;
       border:none;
       border-radius:10px;
@@ -311,25 +346,26 @@
     }
 
     @media print{
-      .print-toolbar{
+      .printBtn{
         display:none;
       }
     }
   </style>
 </head>
+
 <body>
-  <div class="print-toolbar">
-    <button onclick="window.print()">Print</button>
-  </div>
 
   {% for item in items %}
   <div class="page">
     <div class="label">
 
       <div class="top">
-        <div class="top-left">
 
-          <div class="brand">DS EXPRESS</div>
+        <div class="top-left">
+          <div class="brand-row">
+            <div class="brand">DS EXPRESS</div>
+            <div class="print-date">PRINT : {% now "d/m/Y H:i" %}</div>
+          </div>
 
           <div class="tracking-box">
             Tracking: {{ item.sn }}
@@ -351,11 +387,10 @@
             <div class="value qty-value">{{ item.order.quantity|default:"-" }}</div>
           </div>
 
-          <div class="mini-row" style="margin-bottom:0;">
+          <div class="mini-row item-row">
             <div class="label-text">Item:</div>
-            <div class="value item-value">{{ item.order.product_desc|default:"-" }}</div>
+            <div class="value item-value">{{ item.order.product_desc|default:"-"|truncatechars:150 }}</div>
           </div>
-
         </div>
 
         <div class="top-right">
@@ -367,6 +402,7 @@
             {% endif %}
           </div>
         </div>
+
       </div>
 
       <div class="middle">
@@ -395,7 +431,6 @@
         <div class="cod-title">COD:</div>
 
         <div class="money-row">
-
           <div class="money-block">
             <div class="money-currency">$</div>
             <div class="money-value">{{ item.cod_usd|floatformat:2 }}</div>
@@ -407,7 +442,6 @@
             <div class="money-currency">៛</div>
             <div class="money-value">{{ item.cod_khr_text }}</div>
           </div>
-
         </div>
 
       </div>
@@ -416,12 +450,9 @@
   </div>
   {% endfor %}
 
-  <script>
-    window.onload = function () {
-      setTimeout(function () {
-        window.print();
-      }, 300);
-    };
-  </script>
+  <div class="printBtn">
+    <button onclick="window.print()">Print</button>
+  </div>
+
 </body>
 </html>

@@ -167,8 +167,7 @@ def get_user_seller(user):
 # =========================================================
 
 def get_telegram_bot_token():
-    return getattr(settings, "TELEGRAM_BOT_TOKEN", "")
-
+    return getattr(settings, "TELEGRAM_BOOKING_BOT_TOKEN", "")
 
 def get_telegram_chat_id():
     return getattr(settings, "TELEGRAM_BOOKING_CHAT_ID", "")

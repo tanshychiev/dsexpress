@@ -55,15 +55,6 @@ INSTALLED_APPS = [
 
 ]
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
 
 ROOT_URLCONF = 'config.urls'
 
@@ -124,7 +115,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
-
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 TELEGRAM_BOT_TOKEN = "8022902036:AAHSJkKgMCWFwWeSBWd7oTM48RlQyJiHe_M"
 TELEGRAM_DS_TEAM_CHAT_ID = "-5060955651"

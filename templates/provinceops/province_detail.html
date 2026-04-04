@@ -5,108 +5,98 @@
 {% block page_subtitle %}Batch Detail{% endblock %}
 
 {% block content %}
-<div class="card card-pad">
+<div class="card pp-card">
 
   <!-- HEADER -->
-  <div class="top-row">
+  <div class="pp-header">
     <div>
-      <div class="h1">
-        Batch <span class="mono">PV-{{ batch.id }}</span>
+      <div class="pp-title">
+        Batch <span class="mono trk">PV-{{ batch.id }}</span>
 
         {% if batch.status == "DONE" %}
-          <span class="badge badge-green">DONE</span>
+          <span class="pp-state pp-green">DONE</span>
         {% elif batch.status == cancelled_value %}
-          <span class="badge badge-red">CANCELLED</span>
+          <span class="pp-state pp-red">CANCELLED</span>
         {% else %}
-          <span class="badge badge-yellow">PENDING</span>
+          <span class="pp-state pp-yellow">PENDING</span>
         {% endif %}
       </div>
 
-      <div class="meta-row">
-        <div class="meta">
-          <div class="meta-label">Shipper</div>
-          <div class="meta-value shipper-big">{{ batch.shipper.name|default:"-" }}</div>
-        </div>
-
-        <div class="meta">
-          <div class="meta-label">Assigned by</div>
-          <div class="meta-value">{{ batch.created_by.username|default:"-" }}</div>
-        </div>
-
-        <div class="meta">
-          <div class="meta-label">Assigned at</div>
-          <div class="meta-value">
+      <div class="pp-meta">
+        <span class="meta-item">Shipper: <b>{{ batch.shipper.name|default:"-" }}</b></span>
+        <span class="sep">•</span>
+        <span class="meta-item">Assigned by: <b>{{ batch.created_by.username|default:"-" }}</b></span>
+        <span class="sep">•</span>
+        <span class="meta-item">
+          Assigned at:
+          <b>
             {% if batch.assigned_at %}
               {{ batch.assigned_at|date:"Y-m-d H:i" }}
             {% else %}
               -
             {% endif %}
-          </div>
-        </div>
-
-        <div class="meta total-box">
-          <div class="meta-label">Total orders</div>
-          <div class="meta-value total-big">{{ total_orders }}</div>
-        </div>
+          </b>
+        </span>
+        <span class="sep">•</span>
+        <span class="meta-item">Total orders: <span class="big-num">{{ total_orders }}</span></span>
       </div>
     </div>
 
-    <div class="btns">
-
-      <!-- PRINT -->
+    <div class="pp-actions no-print">
       <a class="btn btn-ghost" href="{% url 'province_print' batch.id %}" target="_blank">🖨 Print</a>
 
-      <!-- COMPLETE / UNDO COMPLETE -->
       {% if batch.status == "DONE" %}
-        <form method="post" class="inline">
+        <form method="post" style="display:inline;">
           {% csrf_token %}
           <input type="hidden" name="action" value="undo_complete">
-          <button type="submit" class="btn btn-ghost js-confirm"
-            data-title="Undo complete?"
-            data-text="Move batch back to PENDING and allow edit.">
+          <button type="submit"
+                  class="btn btn-ghost js-confirm"
+                  data-title="Undo complete?"
+                  data-text="Move batch back to PENDING and allow edit.">
             ↩ Undo Complete
           </button>
         </form>
       {% elif batch.status == cancelled_value %}
       {% else %}
-        <form method="post" class="inline">
+        <form method="post" style="display:inline;">
           {% csrf_token %}
           <input type="hidden" name="action" value="complete">
-          <button type="submit" class="btn js-confirm"
-            data-title="Complete this batch?"
-            data-text="Orders will be marked DONE.">
+          <button type="submit"
+                  class="btn btn-success js-confirm"
+                  data-title="Complete this batch?"
+                  data-text="Orders will be marked DONE.">
             ✅ Complete
           </button>
         </form>
       {% endif %}
 
-      <!-- EDIT -->
       {% if batch.status != "DONE" and batch.status != cancelled_value %}
         {% if edit_mode %}
-          <a class="btn btn-ghost" href="{% url 'province_detail' batch.id %}">Done Editing</a>
+          <a class="btn btn-warning" href="{% url 'province_detail' batch.id %}">Done Editing</a>
         {% else %}
-          <a class="btn btn-ghost" href="?edit=1">✏ Edit</a>
+          <a class="btn btn-primary" href="?edit=1">✏ Edit</a>
         {% endif %}
       {% endif %}
 
-      <!-- CANCEL / UNDO CANCEL -->
       {% if batch.status == cancelled_value %}
-        <form method="post" class="inline">
+        <form method="post" style="display:inline;">
           {% csrf_token %}
           <input type="hidden" name="action" value="undo_cancel">
-          <button type="submit" class="btn btn-ghost js-confirm"
-            data-title="Undo cancel?"
-            data-text="Move batch back to PENDING and orders to PROCESSING.">
+          <button type="submit"
+                  class="btn btn-ghost js-confirm"
+                  data-title="Undo cancel?"
+                  data-text="Move batch back to PENDING and orders to PROCESSING.">
             ↩ Undo Cancel
           </button>
         </form>
       {% else %}
-        <form method="post" class="inline">
+        <form method="post" style="display:inline;">
           {% csrf_token %}
           <input type="hidden" name="action" value="cancel">
-          <button type="submit" class="btn btn-danger js-confirm"
-            data-title="Cancel this batch?"
-            data-text="All orders will move to INBOUND and COD restore.">
+          <button type="submit"
+                  class="btn btn-danger js-confirm"
+                  data-title="Cancel this batch?"
+                  data-text="All orders will move to INBOUND and COD restore.">
             🛑 Cancel
           </button>
         </form>
@@ -115,53 +105,44 @@
   </div>
 
   {% if edit_mode %}
-  <!-- EDIT PANEL -->
-  <div class="edit-card">
-    <div class="edit-title">Edit Mode</div>
-    <div class="edit-sub">
-      You can change shipper, scan codes to add shipments, and use trash to remove.
+    <div class="section-title">Edit Mode</div>
+
+    <div class="edit-box" style="margin-bottom:12px;">
+      <form method="post" class="shipper-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="change_shipper">
+
+        <label class="shipper-label">Change shipper</label>
+        <select name="shipper_id" class="shipper-select">
+          {% for s in shippers %}
+            <option value="{{ s.id }}" {% if batch.shipper_id == s.id %}selected{% endif %}>
+              {{ s.name }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <button class="btn btn-primary" type="submit">Save Shipper</button>
+      </form>
     </div>
 
-    <!-- CHANGE SHIPPER -->
-    <form method="post" class="shipper-form">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="change_shipper">
-      <div class="shipper-row">
-        <div class="field">
-          <div class="label">Change shipper</div>
-          <select name="shipper_id" class="input select">
-            {% for s in shippers %}
-              <option value="{{ s.id }}" {% if batch.shipper_id == s.id %}selected{% endif %}>
-                {{ s.name }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-        <button type="submit" class="btn big">Save Shipper</button>
-      </div>
-    </form>
+    <div class="edit-box">
+      <form method="post" class="scan-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="scan_add">
 
-    <!-- SCAN ADD -->
-    <form method="post" class="scan-form">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="scan_add">
+        <label class="shipper-label">Scan tracking code(s), one per line</label>
+        <textarea class="scan-box" name="scan_codes" placeholder="Scan here...">{{ edit_scan_value }}</textarea>
 
-      <div class="scan-wrap">
-        <div class="field grow">
-          <div class="label">Scan tracking code(s), one per line</div>
-          <textarea class="scan-box" name="scan_codes" placeholder="Scan here...">{{ edit_scan_value }}</textarea>
-        </div>
-
-        <div class="scan-actions">
-          <button type="submit" class="btn big">+ Add</button>
+        <div class="edit-actions">
+          <button class="btn btn-primary" type="submit">+ Add</button>
           <a class="btn btn-ghost" href="{% url 'province_detail' batch.id %}">Done Editing</a>
         </div>
-      </div>
-    </form>
-  </div>
+      </form>
+    </div>
   {% endif %}
 
   <!-- TABLE -->
+  <div class="section-title">Province Delivery</div>
   <div class="table-wrap">
     <table class="ds-table wide">
       <thead>
@@ -170,7 +151,6 @@
           <th class="th-center" style="width:175px;">TRACKING</th>
           <th class="th-center" style="width:200px;">SELLER</th>
           <th class="th-center">RECEIVER LOCATION</th>
-          <th class="th-center">RECEIVER ADDRESS</th>
           <th class="th-center" style="width:190px;">CUSTOMER</th>
           <th class="th-center" style="width:150px;">PHONE</th>
           <th class="th-center" style="width:110px;">PRICE</th>
@@ -186,14 +166,13 @@
           <td class="td-center">{{ forloop.counter }}</td>
 
           <td class="td-center">
-            <a href="{{ r.tracking_url }}" class="tracking-link">
+            <a href="{{ r.tracking_url }}" class="trk mono">
               {{ r.tracking_no }}
             </a>
           </td>
 
           <td class="td-center">{{ r.seller_name }}</td>
           <td>{{ r.receiver_location }}</td>
-          <td>{{ r.receiver_address }}</td>
           <td class="td-center">{{ r.customer_name }}</td>
           <td class="td-center">{{ r.customer_phone }}</td>
           <td class="td-center">{{ r.price }}</td>
@@ -213,14 +192,15 @@
 
           <td class="td-center">
             {% if edit_mode %}
-              <form method="post" class="inline">
+              <form method="post" style="display:inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="remove_item">
                 <input type="hidden" name="item_id" value="{{ r.item_id }}">
-                <button type="submit" class="trash-btn js-confirm"
+                <button type="submit"
+                        class="btn btn-danger js-confirm"
                         data-title="Remove this shipment?"
                         data-text="This shipment will be removed and moved to INBOUND.">
-                  🗑
+                  Remove
                 </button>
               </form>
             {% else %}
@@ -230,7 +210,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="11" style="padding:14px; opacity:.7;">No orders in this batch.</td>
+          <td colspan="10" style="padding:14px; opacity:.7;">No orders in this batch.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -253,75 +233,146 @@
 </div>
 
 <style>
-  .card-pad{padding:18px; border-radius:16px;}
-  .top-row{display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;}
-  .h1{font-size:20px; font-weight:900; display:flex; gap:10px; align-items:center;}
+  .pp-card{padding:18px;border-radius:16px;width:100%;}
   .mono{font-family:ui-monospace,Consolas,monospace;}
 
-  .meta-row{display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; align-items:flex-end;}
-  .meta{padding:10px 12px; border:1px solid #eee; border-radius:14px; background:#fff;}
-  .meta-label{font-size:12px; opacity:.7; margin-bottom:4px;}
-  .meta-value{font-size:14px; font-weight:800;}
-  .shipper-big{font-size:18px; font-weight:900;}
-  .total-box{border-color:#dbeafe; background:#eff6ff;}
-  .total-big{font-size:22px; font-weight:900;}
+  .pp-header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
+  .pp-title{font-size:18px;font-weight:900;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .pp-meta{margin-top:6px;opacity:.85;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .meta-item{display:inline-flex;gap:6px;align-items:baseline;}
+  .sep{opacity:.5;}
+  .big-num{font-size:20px;font-weight:900;}
+  .pp-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 
-  .btns{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
-  .inline{display:inline;}
-  .btn{padding:9px 14px; border-radius:12px; border:1px solid #111; background:#111; color:#fff; cursor:pointer;}
-  .btn.big{padding:12px 18px; font-size:15px; font-weight:900;}
-  .btn-ghost{padding:9px 14px; border-radius:12px; border:1px solid #ddd; background:#fff; color:#111; text-decoration:none; cursor:pointer;}
-  .btn-danger{padding:9px 14px; border-radius:12px; border:1px solid #ffb8b8; background:#fff0f0; color:#b40000; cursor:pointer; font-weight:900;}
+  .section-title{
+    margin-top:14px;
+    margin-bottom:8px;
+    font-weight:900;
+    color:#0f172a;
+    font-size:14px;
+  }
 
-  .badge{padding:4px 10px; border-radius:999px; font-size:12px; font-weight:900; display:inline-block; border:1px solid transparent;}
-  .badge-green{background:#e8fff0; color:#138a3d; border-color:#bff0cf;}
-  .badge-yellow{background:#fff8e6; color:#9a6b00; border-color:#ffe2a8;}
-  .badge-blue{background:#eef5ff; color:#1f4db8; border-color:#cfe0ff;}
-  .badge-gray{background:#f3f3f3; color:#666; border-color:#e5e5e5;}
-  .badge-red{background:#fff0f0; color:#b40000; border-color:#ffd0d0;}
+  .btn{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    cursor:pointer;
+    text-decoration:none;
+    font-weight:800;
+  }
+  .btn-ghost{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    background:#fff;
+    color:#111;
+    cursor:pointer;
+    text-decoration:none;
+    font-weight:800;
+  }
+  .btn-primary{background:#0b5cff;border-color:#0b5cff;color:#fff;}
+  .btn-success{background:#12a150;border-color:#12a150;color:#fff;}
+  .btn-danger{background:#e11d48;border-color:#e11d48;color:#fff;}
+  .btn-warning{background:#f59e0b;border-color:#f59e0b;color:#111;}
 
-  .edit-card{margin-top:14px; padding:14px; border-radius:16px; border:1px solid #eee; background:#fafafa;}
-  .edit-title{font-weight:900; margin-bottom:4px;}
-  .edit-sub{font-size:13px; opacity:.7; margin-bottom:12px;}
+  .pp-state{
+    padding:4px 10px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:11px;
+    display:inline-block;
+  }
+  .pp-blue{background:#dbeafe;color:#1e40af;}
+  .pp-orange{background:#fff7cc;color:#92400e;}
+  .pp-green{background:#dcfce7;color:#166534;}
+  .pp-red{background:#fee2e2;color:#991b1b;}
+  .pp-yellow{background:#fef3c7;color:#92400e;}
 
-  .label{font-size:12px; opacity:.7; margin-bottom:6px;}
-  .input{height:44px; padding:8px 10px; border-radius:12px; border:1px solid #e6e6e6; background:#fff;}
-  .select{min-width:280px;}
-
-  .shipper-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px;}
-  .field{min-width:240px;}
-  .grow{flex:1; min-width:320px;}
-
-  .scan-wrap{display:flex; gap:10px; align-items:stretch; flex-wrap:wrap;}
-  .scan-box{width:100%; height:160px; padding:12px; border-radius:14px; border:1px solid #e5e5e5; background:#fff; font-family:ui-monospace,Consolas,monospace;}
-  .scan-actions{display:flex; gap:10px; align-items:flex-start;}
-
-  .table-wrap{margin-top:14px; overflow:auto;}
-  table.wide{min-width:1500px;}
+  .table-wrap{margin-top:10px;overflow-x:auto;width:100%;}
+  table.wide{width:100%;min-width:100%;}
   .th-center{text-align:center;}
   .td-center{text-align:center;}
 
-  .tracking-link{font-weight:900; text-decoration:underline;}
+  .ds-table{width:100%;border-collapse:collapse;}
+  .ds-table th,
+  .ds-table td{
+    border-bottom:1px solid #eee;
+    padding:10px;
+    vertical-align:middle;
+  }
+  .ds-table th{
+    background:#fafafa;
+    white-space:nowrap;
+    font-size:12px;
+    font-weight:800;
+  }
+  .ds-table tbody tr:hover td{background:#fcfcfc;}
 
-  .trash-btn{
-    border:1px solid #ffd0d0;
-    background:#fff3f3;
-    color:#b40000;
-    border-radius:14px;
-    padding:10px 14px;
-    font-size:20px;
-    cursor:pointer;
-    font-weight:900;
+  .trk{font-weight:900;text-decoration:underline;}
+
+  .edit-box{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:14px;
   }
 
-  /* modal */
-  .modal{display:none; position:fixed; inset:0; z-index:9999;}
+  .shipper-form,
+  .scan-form{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .shipper-label{
+    font-size:12px;
+    font-weight:800;
+    color:#475569;
+  }
+
+  .shipper-select{
+    width:100%;
+    max-width:380px;
+    padding:10px 12px;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    background:#fff;
+  }
+
+  .scan-box{
+    width:100%;
+    min-height:160px;
+    padding:12px;
+    border-radius:14px;
+    border:1px solid #d1d5db;
+    background:#fff;
+    font-family:ui-monospace,Consolas,monospace;
+  }
+
+  .edit-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .modal{display:none;position:fixed;inset:0;z-index:9999;}
   .modal.show{display:block;}
-  .modal-backdrop{position:absolute; inset:0; background:rgba(0,0,0,.45);}
-  .modal-card{position:relative; margin:12vh auto 0; width:min(460px,92vw); background:#fff; border-radius:18px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.25);}
-  .modal-title{font-size:16px; font-weight:900; margin-bottom:6px;}
-  .modal-text{font-size:13px; opacity:.8; margin-bottom:14px; line-height:1.4;}
-  .modal-actions{display:flex; gap:10px; justify-content:flex-end;}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);}
+  .modal-card{
+    position:relative;
+    margin:12vh auto 0;
+    width:min(460px,92vw);
+    background:#fff;
+    border-radius:18px;
+    padding:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+  .modal-title{font-size:16px;font-weight:900;margin-bottom:6px;}
+  .modal-text{font-size:13px;opacity:.8;margin-bottom:14px;line-height:1.4;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
 </style>
 
 <script>
@@ -360,7 +411,7 @@
 
     yesBtn.addEventListener("click", function(){
       if(pendingForm){
-        pendingForm.submit();   // ✅ submit real form
+        pendingForm.submit();
       }
       closeModal();
     });

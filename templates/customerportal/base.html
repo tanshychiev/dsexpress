@@ -7,10 +7,10 @@
   <title>{% block title %}DS Express{% endblock %}</title>
 
 <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
-
 <link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}">
+{% block extra_css %}{% endblock %}
 
-  <style>
+<style>
     body{
       position:relative;
       overflow-x:hidden;

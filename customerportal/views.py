@@ -13,7 +13,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from deliverpp.models import Order
+from orders.models import Order
 from .forms import PublicBookingForm
 from .models import SellerBooking, SellerPortalSession
 

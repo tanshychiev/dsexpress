@@ -117,20 +117,6 @@
     <div class="chart-card">
       <div class="chart-head">
         <div>
-          <div class="chart-title">30 Days Trend (Goods Done)</div>
-          <div class="chart-note">Total done, done PP, and done province by day</div>
-        </div>
-      </div>
-      <div class="chart-box">
-        <canvas id="done30Chart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="chart-grid two-col">
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
           <div class="chart-title">Shipper COD / Received / Paid</div>
           <div class="chart-note">Compare money movement by shipper</div>
         </div>
@@ -139,7 +125,23 @@
         <canvas id="shipperMoneyChart"></canvas>
       </div>
     </div>
+  </div>
 
+  <div class="chart-grid one-col">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">30 Days Trend (Goods Done)</div>
+          <div class="chart-note">Stacked done PP and done province by day</div>
+        </div>
+      </div>
+      <div class="chart-box chart-box-xl">
+        <canvas id="done30Chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -151,9 +153,7 @@
         <canvas id="ppSentDoneChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -165,7 +165,9 @@
         <canvas id="provinceSentDoneChart"></canvas>
       </div>
     </div>
+  </div>
 
+  <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -177,9 +179,7 @@
         <canvas id="ppDonePercentChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -191,7 +191,9 @@
         <canvas id="provinceDonePercentChart"></canvas>
       </div>
     </div>
+  </div>
 
+  <div class="chart-grid one-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -384,26 +386,16 @@
       labels: trendLabels,
       datasets: [
         {
-          label: "Total Done",
-          data: trend30.map(x => x.total_done || 0),
-          backgroundColor: "#2563eb",
-          borderRadius: 8,
-          maxBarThickness: 24,
-          datalabels: {
-            anchor: "end",
-            align: "top",
-            formatter: (v) => v ? v : ""
-          }
-        },
-        {
           label: "Done PP",
           data: trend30.map(x => x.done_pp || 0),
-          backgroundColor: "#16a34a",
-          borderRadius: 8,
-          maxBarThickness: 24,
+          backgroundColor: "#22c55e",
+          borderRadius: 6,
+          maxBarThickness: 34,
+          stack: "done",
           datalabels: {
-            anchor: "end",
-            align: "top",
+            color: "#111827",
+            anchor: "center",
+            align: "center",
             formatter: (v) => v ? v : ""
           }
         },
@@ -411,11 +403,13 @@
           label: "Done Province",
           data: trend30.map(x => x.done_province || 0),
           backgroundColor: "#f59e0b",
-          borderRadius: 8,
-          maxBarThickness: 24,
+          borderRadius: 6,
+          maxBarThickness: 34,
+          stack: "done",
           datalabels: {
-            anchor: "end",
-            align: "top",
+            color: "#111827",
+            anchor: "center",
+            align: "center",
             formatter: (v) => v ? v : ""
           }
         }
@@ -430,10 +424,20 @@
       },
       plugins: {
         legend: commonLegend,
-        datalabels: commonDatalabels
+        datalabels: commonDatalabels,
+        tooltip: {
+          callbacks: {
+            footer: function(items) {
+              const index = items[0].dataIndex;
+              const total = trend30[index].total_done || 0;
+              return "Total Done: " + total;
+            }
+          }
+        }
       },
       scales: {
         x: {
+          stacked: true,
           grid: {
             display: false
           },
@@ -443,9 +447,14 @@
           }
         },
         y: {
+          stacked: true,
           beginAtZero: true,
           ticks: {
             precision: 0
+          },
+          title: {
+            display: true,
+            text: "Orders"
           }
         }
       }
@@ -895,6 +904,10 @@
     grid-template-columns:repeat(2, minmax(320px, 1fr));
   }
 
+  .one-col{
+    grid-template-columns:1fr;
+  }
+
   .chart-card{
     background:#fff;
     border-radius:26px;
@@ -925,6 +938,10 @@
 
   .chart-box{
     height:340px;
+  }
+
+  .chart-box-xl{
+    height:560px;
   }
 
   canvas{
@@ -999,6 +1016,10 @@
 
     .chart-box{
       height:300px;
+    }
+
+    .chart-box-xl{
+      height:420px;
     }
   }
 </style>

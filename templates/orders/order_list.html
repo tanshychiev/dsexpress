@@ -356,6 +356,9 @@
         <a class="orders-btn" href="{% url 'bulk_update' %}">Bulk Update</a>
         <a class="orders-btn" href="{% url 'order_trash' %}">Trash</a>
         <a class="orders-btn" href="{% url 'audit_log_list' %}">Audit Logs</a>
+        <a class="orders-btn orders-btn-primary" href="{% url 'receive_invoice_list' %}">
+          Receive Invoice
+        </a>
       </div>
 
       <div class="orders-toolbar-right">
@@ -400,9 +403,9 @@
               <th class="orders-more-col" style="width:90px;">Price</th>
               <th class="orders-more-col" style="width:90px;">COD</th>
               <th style="width:120px;">Status</th>
-<th style="width:150px;">Shipper</th>
-<th style="width:200px;">Reason</th>   <!-- ✅ NEW -->
-<th style="width:70px;" class="orders-center">Printed</th>
+              <th style="width:150px;">Shipper</th>
+              <th style="width:200px;">Reason</th>
+              <th style="width:70px;" class="orders-center">Printed</th>
               <th style="width:55px;" class="orders-center">✓</th>
             </tr>
           </thead>
@@ -427,14 +430,9 @@
                 <td class="orders-more-col">${{ o.price }}</td>
                 <td class="orders-more-col">${{ o.cod }}</td>
                 <td>{{ o.status }}</td>
-<td>{{ o.delivery_shipper.name|default:"-" }}</td>
-
-<!-- ✅ NEW -->
-<td>
-  {{ o.reason|default:"-" }}
-</td>
-
-<td class="orders-center">{{ o.print_count|default:0 }}</td>
+                <td>{{ o.delivery_shipper.name|default:"-" }}</td>
+                <td>{{ o.reason|default:"-" }}</td>
+                <td class="orders-center">{{ o.print_count|default:0 }}</td>
                 <td class="orders-center">
                   <input type="checkbox" name="ids" value="{{ o.id }}" class="orders-cb">
                 </td>
@@ -687,10 +685,10 @@
     }
 
     sellerTimer = setTimeout(function(){
-      fetch("/api/sellers/autocomplete/?q=" + encodeURIComponent(q))
+      fetch("{% url 'seller_autocomplete' %}?q=" + encodeURIComponent(q))
         .then(function(r){ return r.json(); })
         .then(function(data){
-          showSellerResults(data.items || []);
+          showSellerResults(data.results || []);
         })
         .catch(function(){
           hideSellerBox();

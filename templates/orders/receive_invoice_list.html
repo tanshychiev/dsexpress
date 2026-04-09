@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block page_title %}Receive Invoice{% endblock %}
+{% block page_subtitle %}Receive goods invoice list{% endblock %}
+
+{% block content %}
+<style>
+  .ri-wrap{
+    padding:18px 22px;
+  }
+  .ri-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 10px 28px rgba(15,23,42,.06);
+  }
+  .ri-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+  .ri-title{
+    font-size:20px;
+    font-weight:900;
+    color:#0f172a;
+    margin:0;
+  }
+  .ri-btn{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #0f766e;
+    background:#0f766e;
+    color:#fff;
+    font-weight:900;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    cursor:pointer;
+  }
+  .ri-summary{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .ri-box{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:14px;
+  }
+  .ri-box .k{
+    font-size:12px;
+    font-weight:800;
+    color:#64748b;
+    margin-bottom:6px;
+    text-transform:uppercase;
+  }
+  .ri-box .v{
+    font-size:24px;
+    font-weight:900;
+    color:#0f172a;
+  }
+  .ri-table-wrap{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    overflow:auto;
+  }
+  .ri-table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:1100px;
+    font-size:13px;
+  }
+  .ri-table th,
+  .ri-table td{
+    padding:10px 8px;
+    border-bottom:1px solid #eef2f7;
+    text-align:left;
+    vertical-align:top;
+  }
+  .ri-table th{
+    background:#f8fafc;
+    font-weight:900;
+    color:#0f172a;
+  }
+  .ri-link{
+    color:#0f766e;
+    font-weight:900;
+    text-decoration:none;
+  }
+  .ri-link:hover{
+    text-decoration:underline;
+  }
+  .ri-empty{
+    padding:28px 16px;
+    text-align:center;
+    color:#64748b;
+    font-weight:700;
+  }
+
+  @media (max-width: 900px){
+    .ri-summary{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+<div class="ri-wrap">
+  <div class="ri-card">
+    <div class="ri-head">
+      <h2 class="ri-title">Receive Goods Invoice</h2>
+      <button type="button" class="ri-btn" onclick="window.print()">Print</button>
+    </div>
+
+    <div class="ri-summary">
+      <div class="ri-box">
+        <div class="k">Total Orders</div>
+        <div class="v">{{ total_orders }}</div>
+      </div>
+      <div class="ri-box">
+        <div class="k">Total Goods</div>
+        <div class="v">{{ total_qty }} pcs</div>
+      </div>
+      <div class="ri-box">
+        <div class="k">Total COD</div>
+        <div class="v">${{ total_cod }}</div>
+      </div>
+    </div>
+
+    <div class="ri-table-wrap">
+      <table class="ri-table">
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Tracking</th>
+            <th>Customer</th>
+            <th>Receiver Name</th>
+            <th>Phone</th>
+            <th>Location</th>
+            <th>Qty</th>
+            <th>COD</th>
+            <th>Invoice</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ o.tracking_no }}</td>
+            <td>{% if o.seller %}{{ o.seller.name }}{% else %}-{% endif %}</td>
+            <td>{{ o.receiver_name|default:"-" }}</td>
+            <td>{{ o.receiver_phone|default:"-" }}</td>
+            <td>{{ o.receiver_address|default:"-" }}</td>
+            <td>{{ o.quantity|default:0 }}</td>
+            <td>${{ o.cod }}</td>
+            <td>
+              <a class="ri-link" href="{% url 'order_invoice_detail' o.id %}" target="_blank">
+                Open Invoice
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="ri-empty">No orders found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

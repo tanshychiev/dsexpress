@@ -1,4 +1,3 @@
-# orders/urls.py
 from django.urls import path
 from . import views
 
@@ -9,10 +8,14 @@ urlpatterns = [
     # ====================================================
     path("", views.order_list, name="order_list"),
 
+    # ✅ NEW TOP BUTTON PAGE
+    path("receive-invoice/", views.receive_invoice_list, name="receive_invoice_list"),
+
     path("create/", views.create_order, name="create_order"),
     path("created/<int:pk>/", views.order_created, name="order_created"),
     path("edit/<int:pk>/", views.order_edit, name="order_edit"),
     path("detail/<int:pk>/", views.order_detail, name="order_detail"),
+    path("invoice/<int:pk>/", views.order_invoice_detail, name="order_invoice_detail"),
     path("label/<int:pk>/", views.order_label, name="order_label"),
 
     path("bulk-action/", views.order_bulk_action, name="order_bulk_action"),
@@ -92,11 +95,12 @@ urlpatterns = [
     # ====================================================
     # API
     # ====================================================
-    path(
-        "api/sellers/autocomplete/",
-        views.seller_autocomplete,
-        name="seller_autocomplete",
-    ),
+    # seller_autocomplete already added above
+    # path(
+    #     "api/sellers/autocomplete/",
+    #     views.seller_autocomplete,
+    #     name="seller_autocomplete",
+    # ),
 
 
     # ====================================================

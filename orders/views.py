@@ -1895,3 +1895,43 @@ def order_created(request: HttpRequest, pk: int):
             "logs": logs,
         },
     )
+@login_required
+def order_invoice_detail(request, pk: int):
+    order = get_object_or_404(
+        Order.objects.select_related("seller", "delivery_shipper"),
+        pk=pk,
+        is_deleted=False,
+    )
+
+    context = {
+        "order": order,
+        "invoice_no": f"INV-{timezone.localdate().strftime('%Y%m%d')}-{order.id:05d}",
+        "receive_date": timezone.localtime(order.created_at) if order.created_at else timezone.now(),
+        "total_goods": order.quantity or 1,
+        "total_cod": order.cod or 0,
+    }
+    return render(request, "orders/order_invoice_detail.html", context)
+
+@login_required
+def receive_invoice_list(request):
+    qs = (
+        Order.objects
+        .filter(is_deleted=False)
+        .select_related("seller", "delivery_shipper")
+        .order_by("-id")[:100]
+    )
+
+    total_orders = qs.count()
+    total_qty = sum((o.quantity or 0) for o in qs)
+    total_cod = sum((o.cod or 0) for o in qs)
+
+    return render(
+        request,
+        "orders/receive_invoice_list.html",
+        {
+            "orders": qs,
+            "total_orders": total_orders,
+            "total_qty": total_qty,
+            "total_cod": total_cod,
+        },
+    )

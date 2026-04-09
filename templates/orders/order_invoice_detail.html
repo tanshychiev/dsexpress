@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block page_title %}Order Invoice{% endblock %}
+{% block page_subtitle %}Print detail invoice{% endblock %}
+
+{% block content %}
+<style>
+  .invoice-wrap{
+    padding:18px 22px;
+  }
+  .invoice-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:0 10px 28px rgba(15,23,42,.06);
+    max-width:1000px;
+    margin:0 auto;
+  }
+  .invoice-top{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+    padding-bottom:16px;
+    border-bottom:2px solid #e5e7eb;
+  }
+  .invoice-brand h2{
+    margin:0;
+    font-size:28px;
+    font-weight:900;
+    color:#0f172a;
+  }
+  .invoice-brand p{
+    margin:6px 0 0;
+    color:#475569;
+    font-size:14px;
+    font-weight:700;
+  }
+  .invoice-no{
+    text-align:right;
+  }
+  .invoice-no .label{
+    font-size:12px;
+    color:#64748b;
+    font-weight:800;
+    margin-bottom:6px;
+  }
+  .invoice-no .value{
+    font-size:20px;
+    font-weight:900;
+    color:#0f766e;
+  }
+  .invoice-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+    margin-bottom:18px;
+  }
+  .invoice-box{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:14px;
+    background:#f8fafc;
+  }
+  .invoice-box .k{
+    font-size:12px;
+    color:#64748b;
+    font-weight:800;
+    margin-bottom:6px;
+    text-transform:uppercase;
+  }
+  .invoice-box .v{
+    font-size:16px;
+    color:#0f172a;
+    font-weight:900;
+    word-break:break-word;
+  }
+  .invoice-summary{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+    margin-bottom:18px;
+  }
+  .invoice-summary-card{
+    border:1px solid #d1fae5;
+    background:#ecfdf5;
+    border-radius:14px;
+    padding:16px;
+  }
+  .invoice-summary-card .k{
+    font-size:12px;
+    color:#065f46;
+    font-weight:800;
+    margin-bottom:8px;
+    text-transform:uppercase;
+  }
+  .invoice-summary-card .v{
+    font-size:28px;
+    color:#065f46;
+    font-weight:900;
+  }
+  .invoice-table-wrap{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    overflow:auto;
+    margin-bottom:18px;
+  }
+  .invoice-table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:900px;
+  }
+  .invoice-table th,
+  .invoice-table td{
+    padding:12px 10px;
+    border-bottom:1px solid #eef2f7;
+    vertical-align:top;
+    font-size:13px;
+  }
+  .invoice-table th{
+    background:#f8fafc;
+    text-align:left;
+    font-weight:900;
+    color:#0f172a;
+  }
+  .text-right{
+    text-align:right;
+  }
+  .invoice-note{
+    border:1px dashed #cbd5e1;
+    background:#f8fafc;
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:18px;
+    color:#475569;
+    font-size:13px;
+    line-height:1.7;
+  }
+  .invoice-sign{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:18px;
+    margin-top:26px;
+  }
+  .invoice-sign-box{
+    padding-top:42px;
+    border-bottom:1px solid #94a3b8;
+    font-size:13px;
+    font-weight:800;
+    color:#334155;
+  }
+  .invoice-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .invoice-btn{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #d1d5db;
+    background:#fff;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:none;
+    color:#111827;
+  }
+  .invoice-btn-primary{
+    background:#0f766e;
+    border-color:#0f766e;
+    color:#fff;
+  }
+
+  @media (max-width: 768px){
+    .invoice-grid,
+    .invoice-summary,
+    .invoice-sign{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media print{
+    .invoice-actions,
+    .sidebar,
+    .topbar,
+    nav,
+    .page-header{
+      display:none !important;
+    }
+    .invoice-wrap{
+      padding:0;
+    }
+    .invoice-card{
+      box-shadow:none;
+      border:none;
+      border-radius:0;
+      max-width:none;
+      margin:0;
+      padding:0;
+    }
+    @page{
+      size:A4;
+      margin:10mm;
+    }
+  }
+</style>
+
+<div class="invoice-wrap">
+  <div class="invoice-actions">
+    <button type="button" class="invoice-btn invoice-btn-primary" onclick="window.print()">Print Invoice</button>
+  </div>
+
+  <div class="invoice-card">
+    <div class="invoice-top">
+      <div class="invoice-brand">
+        <h2>DS EXPRESS</h2>
+        <p>Receive Goods Invoice</p>
+      </div>
+      <div class="invoice-no">
+        <div class="label">Invoice No</div>
+        <div class="value">{{ invoice_no }}</div>
+      </div>
+    </div>
+
+    <div class="invoice-grid">
+      <div class="invoice-box">
+        <div class="k">Customer Name</div>
+        <div class="v">
+          {% if order.seller %}{{ order.seller.name }}{% else %}-{% endif %}
+        </div>
+      </div>
+      <div class="invoice-box">
+        <div class="k">Receive Date</div>
+        <div class="v">{{ receive_date|date:"Y-m-d H:i" }}</div>
+      </div>
+    </div>
+
+    <div class="invoice-summary">
+      <div class="invoice-summary-card">
+        <div class="k">Total Goods Received</div>
+        <div class="v">{{ total_goods }} pcs</div>
+      </div>
+      <div class="invoice-summary-card">
+        <div class="k">Total COD Amount</div>
+        <div class="v">${{ total_cod }}</div>
+      </div>
+    </div>
+
+    <div class="invoice-table-wrap">
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th style="width:60px;">No.</th>
+            <th style="width:150px;">Tracking No</th>
+            <th style="width:160px;">Receiver Name</th>
+            <th style="width:140px;">Receiver Phone</th>
+            <th>Receiver Location</th>
+            <th style="width:100px;" class="text-right">Qty</th>
+            <th style="width:100px;" class="text-right">COD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>{{ order.tracking_no }}</td>
+            <td>{{ order.receiver_name|default:"-" }}</td>
+            <td>{{ order.receiver_phone|default:"-" }}</td>
+            <td>{{ order.receiver_address|default:"-" }}</td>
+            <td class="text-right">{{ order.quantity|default:1 }}</td>
+            <td class="text-right">${{ order.cod }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="invoice-note">
+      <strong>Order Code:</strong> {{ order.seller_order_code|default:"-" }}<br>
+      <strong>Price:</strong> ${{ order.price }}<br>
+      <strong>Delivery Fee:</strong> ${{ order.delivery_fee }}<br>
+      <strong>Additional Fee:</strong> ${{ order.additional_fee }}<br>
+      <strong>Reason:</strong> {{ order.reason|default:"-" }}<br>
+      <strong>Remark:</strong> {{ order.remark|default:"-" }}
+    </div>
+
+    <div class="invoice-sign">
+      <div class="invoice-sign-box">Received By / Signature</div>
+      <div class="invoice-sign-box">Customer Confirmation / Signature</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

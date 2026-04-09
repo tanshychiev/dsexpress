@@ -105,7 +105,7 @@
     <div class="chart-card">
       <div class="chart-head">
         <div>
-          <div class="chart-title">30 Days Trend</div>
+          <div class="chart-title">30 Days Trend (Goods Create)</div>
           <div class="chart-note">Created, shipment fee, expense, and revenue</div>
         </div>
       </div>
@@ -117,6 +117,20 @@
     <div class="chart-card">
       <div class="chart-head">
         <div>
+          <div class="chart-title">30 Days Trend (Goods Done)</div>
+          <div class="chart-note">Total done, done PP, and done province by day</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="done30Chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid two-col">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
           <div class="chart-title">Shipper COD / Received / Paid</div>
           <div class="chart-note">Compare money movement by shipper</div>
         </div>
@@ -125,9 +139,7 @@
         <canvas id="shipperMoneyChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -139,7 +151,9 @@
         <canvas id="ppSentDoneChart"></canvas>
       </div>
     </div>
+  </div>
 
+  <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -151,9 +165,7 @@
         <canvas id="provinceSentDoneChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -165,7 +177,9 @@
         <canvas id="ppDonePercentChart"></canvas>
       </div>
     </div>
+  </div>
 
+  <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -177,9 +191,7 @@
         <canvas id="provinceDonePercentChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="chart-grid one-col">
     <div class="chart-card">
       <div class="chart-head">
         <div>
@@ -275,11 +287,14 @@
       datasets: [
         {
           label: "Created",
-          data: trend30.map(x => x.created),
+          data: trend30.map(x => x.created || 0),
+          borderColor: "#3b82f6",
+          backgroundColor: "rgba(59, 130, 246, 0.12)",
           tension: 0.35,
           borderWidth: 3,
           pointRadius: 3,
           pointHoverRadius: 5,
+          fill: false,
           datalabels: {
             align: "top",
             anchor: "end",
@@ -288,33 +303,42 @@
         },
         {
           label: "Shipment Fee",
-          data: trend30.map(x => x.shipment_fee),
+          data: trend30.map(x => x.shipment_fee || 0),
+          borderColor: "#8b5cf6",
+          backgroundColor: "rgba(139, 92, 246, 0.12)",
           tension: 0.35,
           borderWidth: 3,
           pointRadius: 3,
           pointHoverRadius: 5,
+          fill: false,
           datalabels: {
             display: false
           }
         },
         {
           label: "Expense",
-          data: trend30.map(x => x.expense),
+          data: trend30.map(x => x.expense || 0),
+          borderColor: "#f59e0b",
+          backgroundColor: "rgba(245, 158, 11, 0.12)",
           tension: 0.35,
           borderWidth: 3,
           pointRadius: 3,
           pointHoverRadius: 5,
+          fill: false,
           datalabels: {
             display: false
           }
         },
         {
           label: "Revenue",
-          data: trend30.map(x => x.revenue),
+          data: trend30.map(x => x.revenue || 0),
+          borderColor: "#10b981",
+          backgroundColor: "rgba(16, 185, 129, 0.12)",
           tension: 0.35,
           borderWidth: 3,
           pointRadius: 3,
           pointHoverRadius: 5,
+          fill: false,
           datalabels: {
             align: "top",
             anchor: "end",
@@ -354,6 +378,144 @@
     }
   });
 
+  new Chart(document.getElementById("done30Chart"), {
+    type: "bar",
+    data: {
+      labels: trendLabels,
+      datasets: [
+        {
+          label: "Total Done",
+          data: trend30.map(x => x.total_done || 0),
+          backgroundColor: "#2563eb",
+          borderRadius: 8,
+          maxBarThickness: 24,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: (v) => v ? v : ""
+          }
+        },
+        {
+          label: "Done PP",
+          data: trend30.map(x => x.done_pp || 0),
+          backgroundColor: "#16a34a",
+          borderRadius: 8,
+          maxBarThickness: 24,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: (v) => v ? v : ""
+          }
+        },
+        {
+          label: "Done Province",
+          data: trend30.map(x => x.done_province || 0),
+          backgroundColor: "#f59e0b",
+          borderRadius: 8,
+          maxBarThickness: 24,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: (v) => v ? v : ""
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            maxRotation: 0,
+            autoSkip: true
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0
+          }
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("shipperMoneyChart"), {
+    type: "bar",
+    data: {
+      labels: shipperLabels,
+      datasets: [
+        {
+          label: "COD Total",
+          data: shipperRows.map(x => x.cod_total),
+          backgroundColor: "#8b5cf6",
+          borderRadius: 8,
+          maxBarThickness: 26,
+          datalabels: {
+            anchor: "end",
+            align: "right",
+            formatter: (v) => v ? v.toFixed(2) : ""
+          }
+        },
+        {
+          label: "Received",
+          data: shipperRows.map(x => x.received),
+          backgroundColor: "#06b6d4",
+          borderRadius: 8,
+          maxBarThickness: 26,
+          datalabels: {
+            anchor: "end",
+            align: "right",
+            formatter: (v) => v ? v.toFixed(2) : ""
+          }
+        },
+        {
+          label: "Paid",
+          data: shipperRows.map(x => x.paid),
+          backgroundColor: "#334155",
+          borderRadius: 8,
+          maxBarThickness: 26,
+          datalabels: {
+            anchor: "end",
+            align: "right",
+            formatter: (v) => v ? v.toFixed(2) : ""
+          }
+        }
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels
+      },
+      scales: {
+        x: {
+          beginAtZero: true
+        },
+        y: {
+          grid: {
+            display: false
+          }
+        }
+      }
+    }
+  });
+
   new Chart(document.getElementById("ppSentDoneChart"), {
     type: "bar",
     data: {
@@ -362,6 +524,7 @@
         {
           label: "Sent",
           data: ppPerformance.map(x => x.sent),
+          backgroundColor: "#fb923c",
           borderRadius: 8,
           maxBarThickness: 28,
           datalabels: {
@@ -373,6 +536,7 @@
         {
           label: "Done",
           data: ppPerformance.map(x => x.done),
+          backgroundColor: "#22c55e",
           borderRadius: 8,
           maxBarThickness: 28,
           datalabels: {
@@ -414,6 +578,7 @@
         {
           label: "Sent",
           data: provincePerformance.map(x => x.sent),
+          backgroundColor: "#fbbf24",
           borderRadius: 8,
           maxBarThickness: 28,
           datalabels: {
@@ -425,6 +590,7 @@
         {
           label: "Done",
           data: provincePerformance.map(x => x.done),
+          backgroundColor: "#14b8a6",
           borderRadius: 8,
           maxBarThickness: 28,
           datalabels: {
@@ -466,10 +632,13 @@
         {
           label: "Done %",
           data: ppPerformance.map(x => x.done_percent),
+          borderColor: "#10b981",
+          backgroundColor: "rgba(16, 185, 129, 0.15)",
           tension: 0.35,
           borderWidth: 3,
           pointRadius: 4,
           pointHoverRadius: 6,
+          fill: false,
           datalabels: {
             align: "top",
             anchor: "end",
@@ -507,10 +676,13 @@
         {
           label: "Done %",
           data: provincePerformance.map(x => x.done_percent),
+          borderColor: "#f59e0b",
+          backgroundColor: "rgba(245, 158, 11, 0.15)",
           tension: 0.35,
           borderWidth: 3,
           pointRadius: 4,
           pointHoverRadius: 6,
+          fill: false,
           datalabels: {
             align: "top",
             anchor: "end",
@@ -535,67 +707,6 @@
         y: {
           beginAtZero: true,
           max: 100
-        }
-      }
-    }
-  });
-
-  new Chart(document.getElementById("shipperMoneyChart"), {
-    type: "bar",
-    data: {
-      labels: shipperLabels,
-      datasets: [
-        {
-          label: "COD Total",
-          data: shipperRows.map(x => x.cod_total),
-          borderRadius: 8,
-          maxBarThickness: 26,
-          datalabels: {
-            anchor: "end",
-            align: "right",
-            formatter: (v) => v ? v.toFixed(2) : ""
-          }
-        },
-        {
-          label: "Received",
-          data: shipperRows.map(x => x.received),
-          borderRadius: 8,
-          maxBarThickness: 26,
-          datalabels: {
-            anchor: "end",
-            align: "right",
-            formatter: (v) => v ? v.toFixed(2) : ""
-          }
-        },
-        {
-          label: "Paid",
-          data: shipperRows.map(x => x.paid),
-          borderRadius: 8,
-          maxBarThickness: 26,
-          datalabels: {
-            anchor: "end",
-            align: "right",
-            formatter: (v) => v ? v.toFixed(2) : ""
-          }
-        }
-      ]
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels
-      },
-      scales: {
-        x: {
-          beginAtZero: true
-        },
-        y: {
-          grid: {
-            display: false
-          }
         }
       }
     }
@@ -666,6 +777,11 @@
     border-radius:14px;
     padding:8px 12px;
     outline:none;
+  }
+
+  .field input::-webkit-calendar-picker-indicator{
+    filter:invert(1);
+    cursor:pointer;
   }
 
   .btn-main{
@@ -777,10 +893,6 @@
 
   .two-col{
     grid-template-columns:repeat(2, minmax(320px, 1fr));
-  }
-
-  .one-col{
-    grid-template-columns:1fr;
   }
 
   .chart-card{

@@ -86,6 +86,7 @@ def _build_today_cards(target_date: date):
         batch = getattr(item, "batch", None)
         shipper = getattr(batch, "shipper", None) if batch else None
         shipper_type = getattr(shipper, "shipper_type", "") or ""
+
         if shipper_type == PROVINCE_SHIPPER_TYPE:
             done_province += 1
         else:
@@ -147,14 +148,27 @@ def _build_trend_30_days(end_date: date):
     start_date = end_date - timedelta(days=29)
     days = _daterange(start_date, end_date)
 
-    order_map = {}
+    trend_map = {
+        d: {
+            "date": d.strftime("%Y-%m-%d"),
+            "created": 0,
+            "shipment_fee": 0.0,
+            "expense": 0.0,
+            "revenue": 0.0,
+            "total_done": 0,
+            "done_pp": 0,
+            "done_province": 0,
+        }
+        for d in days
+    }
+
     for d in days:
         agg = Order.objects.filter(created_at__date=d).aggregate(
-            created_count=Sum("id"),
             delivery_fee_total=Sum("delivery_fee"),
             additional_fee_total=Sum("additional_fee"),
             province_fee_total=Sum("province_fee"),
         )
+
         created_count = Order.objects.filter(created_at__date=d).count()
         delivery_fee_total = _to_decimal(agg.get("delivery_fee_total"))
         additional_fee_total = _to_decimal(agg.get("additional_fee_total"))
@@ -162,15 +176,45 @@ def _build_trend_30_days(end_date: date):
         expense_total = additional_fee_total + province_fee_total
         revenue_total = delivery_fee_total - expense_total
 
-        order_map[d] = {
-            "date": d.strftime("%Y-%m-%d"),
-            "created": created_count,
-            "shipment_fee": float(delivery_fee_total),
-            "expense": float(expense_total),
-            "revenue": float(revenue_total),
-        }
+        trend_map[d]["created"] = created_count
+        trend_map[d]["shipment_fee"] = float(delivery_fee_total)
+        trend_map[d]["expense"] = float(expense_total)
+        trend_map[d]["revenue"] = float(revenue_total)
 
-    return [order_map[d] for d in days]
+    done_item_qs = (
+        PPDeliveryItem.objects
+        .select_related("batch", "batch__shipper")
+        .filter(
+            ticked=True,
+            batch__assigned_at__date__gte=start_date,
+            batch__assigned_at__date__lte=end_date,
+            batch__assigned_at__isnull=False,
+        )
+        .order_by("batch__assigned_at", "id")
+    )
+
+    for item in done_item_qs:
+        batch = getattr(item, "batch", None)
+        assigned_at = getattr(batch, "assigned_at", None) if batch else None
+        if not assigned_at:
+            continue
+
+        d = assigned_at.date()
+        if d not in trend_map:
+            continue
+
+        shipper = getattr(batch, "shipper", None)
+        shipper_type = getattr(shipper, "shipper_type", "") or ""
+
+        if shipper_type == PROVINCE_SHIPPER_TYPE:
+            trend_map[d]["done_province"] += 1
+        else:
+            trend_map[d]["done_pp"] += 1
+
+    for d in days:
+        trend_map[d]["total_done"] = trend_map[d]["done_pp"] + trend_map[d]["done_province"]
+
+    return [trend_map[d] for d in days]
 
 
 def _build_sent_done_performance(date_from: date, date_to: date):

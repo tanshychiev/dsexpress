@@ -19,9 +19,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from openpyxl import Workbook, load_workbook
 
-from masterdata.models import Seller
+from masterdata.models import Seller, Shipper
 from .activity import add_order_activity
 from .audit import add_audit_log
+from .pricing import apply_pricing
 from .models import (
     AuditLog,
     BulkUpdateBatch,
@@ -672,8 +673,11 @@ def import_orders(request: HttpRequest):
                         import_batch=batch,
                         status=Order.STATUS_CREATED,
                     )
+
+                    apply_pricing(o)
+
                     o.tracking_no = _make_tracking_no()
-                    o.save(update_fields=["tracking_no"])
+                    o.save()
                     success_count += 1
 
                 add_audit_log(
@@ -744,7 +748,6 @@ def import_orders(request: HttpRequest):
             "total_shops_sum": total_shops_sum,
         },
     )
-
 
 @login_required
 def import_batch_detail(request: HttpRequest, batch_id: int):
@@ -987,7 +990,10 @@ def bulk_update(request: HttpRequest):
                 if new_created_at is not None:
                     current_created_at = order.created_at
                     if current_created_at and timezone.is_naive(current_created_at):
-                        current_created_at = timezone.make_aware(current_created_at, timezone.get_current_timezone())
+                        current_created_at = timezone.make_aware(
+                            current_created_at,
+                            timezone.get_current_timezone(),
+                        )
                     if current_created_at != new_created_at:
                         order.created_at = new_created_at
                         changed = True
@@ -1046,17 +1052,19 @@ def bulk_update(request: HttpRequest):
                         order.cod = new_cod
                         changed = True
 
-                if delivery_fee_cell and delivery_fee_cell.value not in (None, ""):
-                    new_delivery_fee = _to_decimal(delivery_fee_cell.value, order.delivery_fee)
-                    if order.delivery_fee != new_delivery_fee:
-                        order.delivery_fee = new_delivery_fee
-                        changed = True
+                # lock fee editing if order is locked
+                if not order.is_locked:
+                    if delivery_fee_cell and delivery_fee_cell.value not in (None, ""):
+                        new_delivery_fee = _to_decimal(delivery_fee_cell.value, order.delivery_fee)
+                        if order.delivery_fee != new_delivery_fee:
+                            order.delivery_fee = new_delivery_fee
+                            changed = True
 
-                if additional_fee_cell and additional_fee_cell.value not in (None, ""):
-                    new_additional_fee = _to_decimal(additional_fee_cell.value, order.additional_fee)
-                    if order.additional_fee != new_additional_fee:
-                        order.additional_fee = new_additional_fee
-                        changed = True
+                    if additional_fee_cell and additional_fee_cell.value not in (None, ""):
+                        new_additional_fee = _to_decimal(additional_fee_cell.value, order.additional_fee)
+                        if order.additional_fee != new_additional_fee:
+                            order.additional_fee = new_additional_fee
+                            changed = True
 
                 if province_fee_cell and province_fee_cell.value not in (None, ""):
                     new_province_fee = _to_decimal(province_fee_cell.value, order.province_fee)
@@ -1141,7 +1149,6 @@ def bulk_update(request: HttpRequest):
         },
     )
 
-
 @login_required
 def bulk_update_batch_detail(request: HttpRequest, batch_id: int):
     batch = get_object_or_404(BulkUpdateBatch, id=batch_id)
@@ -1212,6 +1219,7 @@ def create_order(request: HttpRequest):
         delivery_fee = _to_decimal(request.POST.get("delivery_fee"), 0)
         additional_fee = _to_decimal(request.POST.get("additional_fee"), 0)
         province_fee = _to_decimal(request.POST.get("province_fee"), 0)
+        shipper_id = (request.POST.get("delivery_shipper") or "").strip()
 
         remark = (request.POST.get("remark") or "").strip()
         reason = (request.POST.get("reason") or "").strip()
@@ -1229,6 +1237,7 @@ def create_order(request: HttpRequest):
             "delivery_fee": str(delivery_fee),
             "additional_fee": str(additional_fee),
             "province_fee": str(province_fee),
+            "delivery_shipper": shipper_id,
             "remark": remark,
             "reason": reason,
         }
@@ -1244,6 +1253,9 @@ def create_order(request: HttpRequest):
 
         if not errors:
             seller = Seller.objects.get(id=int(seller_id))
+            shipper = None
+            if shipper_id.isdigit():
+                shipper = Shipper.objects.filter(id=int(shipper_id), is_active=True).first()
 
             with transaction.atomic():
                 o = Order.objects.create(
@@ -1259,6 +1271,7 @@ def create_order(request: HttpRequest):
                     delivery_fee=delivery_fee,
                     additional_fee=additional_fee,
                     province_fee=province_fee,
+                    delivery_shipper=shipper,
                     receiver_name=receiver_name,
                     receiver_phone=receiver_phone,
                     receiver_address=receiver_address,
@@ -1267,8 +1280,10 @@ def create_order(request: HttpRequest):
                     status=Order.STATUS_CREATED,
                 )
 
+                apply_pricing(o)
+
                 o.tracking_no = _make_tracking_no()
-                o.save(update_fields=["tracking_no"])
+                o.save()
 
             add_audit_log(
                 module=AuditLog.MODULE_ORDER,
@@ -1298,7 +1313,6 @@ def create_order(request: HttpRequest):
             "sellers": sellers,
         },
     )
-
 @login_required
 def order_edit(request: HttpRequest, pk: int):
     order = get_object_or_404(Order, pk=pk, is_deleted=False)

@@ -8,11 +8,10 @@ from django.db.models import Sum
 
 from deliverpp.models import ClearPPCOD, PPDeliveryBatch, PPDeliveryItem
 from orders.models import Order
+from provinceops.models import ProvinceBatch, ProvinceBatchItem
 
 
 ZERO = Decimal("0.00")
-PP_SHIPPER_TYPE = "DELIVERY"
-PROVINCE_SHIPPER_TYPE = "PROVINCE"
 
 
 def _to_decimal(v):
@@ -39,21 +38,34 @@ def _calc_done_percent(done_count, sent_count):
     return round((done_count / sent_count) * 100, 2)
 
 
-def _is_normal_item(item) -> bool:
+def _is_normal_pp_item(item) -> bool:
     """
     Dashboard rule:
-    count only NORMAL done pc
-    do NOT count RETURN done pc
-    do NOT count RETURN batch
+    - count only NORMAL PP done pc
+    - do NOT count return done pc
+    - do NOT count return done batch
     """
     source_type = str(getattr(item, "source_type", "") or "").upper()
+
+    source_normal = str(getattr(PPDeliveryItem, "SOURCE_NORMAL", "NORMAL")).upper()
+    source_return = str(getattr(PPDeliveryItem, "SOURCE_RETURN", "RETURN")).upper()
+
     if source_type:
-        return source_type == str(getattr(PPDeliveryItem, "SOURCE_NORMAL", "NORMAL")).upper()
+        if source_type == source_return:
+            return False
+        if source_type == source_normal:
+            return True
 
     order = getattr(item, "order", None)
-    status = str(getattr(order, "status", "") or "").upper()
-    if status in {"RETURN_ASSIGNED", "RETURNED", "DONE_RETURN"}:
+    order_status = str(getattr(order, "status", "") or "").upper()
+    if order_status in {"RETURN_ASSIGNED", "RETURNED", "DONE_RETURN"}:
         return False
+
+    batch = getattr(item, "batch", None)
+    for attr_name in ["batch_code", "code", "name"]:
+        value = str(getattr(batch, attr_name, "") or "").upper()
+        if value.startswith("RTS-") or value.startswith("RET-"):
+            return False
 
     return True
 
@@ -61,56 +73,44 @@ def _is_normal_item(item) -> bool:
 def _build_today_cards(target_date: date):
     created_count = Order.objects.filter(created_at__date=target_date).count()
 
+    # SENT PP = PP batches assigned that day, NORMAL items only
     sent_pp = 0
-    sent_province = 0
-    done_pp = 0
-    done_province = 0
-
-    batch_qs = (
+    pp_batch_qs = (
         PPDeliveryBatch.objects
         .select_related("shipper")
-        .prefetch_related("items")
+        .prefetch_related("items", "items__order")
         .filter(assigned_at__date=target_date)
         .order_by("assigned_at", "id")
     )
 
-    for batch in batch_qs:
-        shipper = getattr(batch, "shipper", None)
-        shipper_type = getattr(shipper, "shipper_type", "") or ""
-
+    for batch in pp_batch_qs:
         prefetched_items = getattr(batch, "_prefetched_objects_cache", {}).get("items")
-        items = list(prefetched_items) if prefetched_items is not None else list(batch.items.all())
-
-        normal_count = sum(1 for item in items if _is_normal_item(item))
-
-        if shipper_type == PROVINCE_SHIPPER_TYPE:
-            sent_province += normal_count
-        else:
-            sent_pp += normal_count
-
-    done_item_qs = (
-        PPDeliveryItem.objects
-        .select_related("batch", "batch__shipper", "order")
-        .filter(
-            ticked=True,
-            batch__assigned_at__date=target_date,
-            batch__assigned_at__isnull=False,
+        items = list(prefetched_items) if prefetched_items is not None else list(
+            batch.items.select_related("order").all()
         )
-        .order_by("batch__assigned_at", "id")
+        sent_pp += sum(1 for item in items if _is_normal_pp_item(item))
+
+    # SENT PROVINCE = province batch items assigned that day
+    sent_province = ProvinceBatchItem.objects.filter(
+        batch__assigned_at__date=target_date,
+        batch__assigned_at__isnull=False,
+        batch__status__in=[ProvinceBatch.STATUS_PENDING, ProvinceBatch.STATUS_DONE],
+    ).count()
+
+    # DONE PP = ticked NORMAL PP items by assigned day
+    done_pp = PPDeliveryItem.objects.select_related("batch", "order").filter(
+        ticked=True,
+        batch__assigned_at__date=target_date,
+        batch__assigned_at__isnull=False,
     )
+    done_pp = sum(1 for item in done_pp if _is_normal_pp_item(item))
 
-    for item in done_item_qs:
-        if not _is_normal_item(item):
-            continue
-
-        batch = getattr(item, "batch", None)
-        shipper = getattr(batch, "shipper", None) if batch else None
-        shipper_type = getattr(shipper, "shipper_type", "") or ""
-
-        if shipper_type == PROVINCE_SHIPPER_TYPE:
-            done_province += 1
-        else:
-            done_pp += 1
+    # DONE PROVINCE = province batch items where batch is DONE by assigned day
+    done_province = ProvinceBatchItem.objects.filter(
+        batch__assigned_at__date=target_date,
+        batch__assigned_at__isnull=False,
+        batch__status=ProvinceBatch.STATUS_DONE,
+    ).count()
 
     order_fee_agg = Order.objects.filter(created_at__date=target_date).aggregate(
         delivery_fee_total=Sum("delivery_fee"),
@@ -201,9 +201,10 @@ def _build_trend_30_days(end_date: date):
         trend_map[d]["expense"] = float(expense_total)
         trend_map[d]["revenue"] = float(revenue_total)
 
-    done_item_qs = (
+    # DONE PP by assigned day, NORMAL only
+    done_pp_qs = (
         PPDeliveryItem.objects
-        .select_related("batch", "batch__shipper", "order")
+        .select_related("batch", "order")
         .filter(
             ticked=True,
             batch__assigned_at__date__gte=start_date,
@@ -213,26 +214,38 @@ def _build_trend_30_days(end_date: date):
         .order_by("batch__assigned_at", "id")
     )
 
-    for item in done_item_qs:
-        if not _is_normal_item(item):
+    for item in done_pp_qs:
+        if not _is_normal_pp_item(item):
             continue
-
         batch = getattr(item, "batch", None)
         assigned_at = getattr(batch, "assigned_at", None) if batch else None
         if not assigned_at:
             continue
-
         d = assigned_at.date()
-        if d not in trend_map:
-            continue
-
-        shipper = getattr(batch, "shipper", None)
-        shipper_type = getattr(shipper, "shipper_type", "") or ""
-
-        if shipper_type == PROVINCE_SHIPPER_TYPE:
-            trend_map[d]["done_province"] += 1
-        else:
+        if d in trend_map:
             trend_map[d]["done_pp"] += 1
+
+    # DONE PROVINCE by assigned day from province module
+    done_province_qs = (
+        ProvinceBatchItem.objects
+        .select_related("batch")
+        .filter(
+            batch__assigned_at__date__gte=start_date,
+            batch__assigned_at__date__lte=end_date,
+            batch__assigned_at__isnull=False,
+            batch__status=ProvinceBatch.STATUS_DONE,
+        )
+        .order_by("batch__assigned_at", "id")
+    )
+
+    for item in done_province_qs:
+        batch = getattr(item, "batch", None)
+        assigned_at = getattr(batch, "assigned_at", None) if batch else None
+        if not assigned_at:
+            continue
+        d = assigned_at.date()
+        if d in trend_map:
+            trend_map[d]["done_province"] += 1
 
     for d in days:
         trend_map[d]["total_done"] = trend_map[d]["done_pp"] + trend_map[d]["done_province"]
@@ -246,6 +259,7 @@ def _build_shipper_summary(date_from: date, date_to: date):
         "done_orders": 0,
         "cod_total": ZERO,
         "received": ZERO,
+        "balance": ZERO,
     })
 
     cod_qs = (
@@ -272,7 +286,7 @@ def _build_shipper_summary(date_from: date, date_to: date):
             + _to_decimal(getattr(row, "aba_usd", 0))
         )
 
-    done_qs = (
+    done_pp_qs = (
         PPDeliveryItem.objects
         .select_related("batch", "batch__shipper", "order")
         .filter(
@@ -283,10 +297,9 @@ def _build_shipper_summary(date_from: date, date_to: date):
         )
     )
 
-    for item in done_qs:
-        if not _is_normal_item(item):
+    for item in done_pp_qs:
+        if not _is_normal_pp_item(item):
             continue
-
         batch = getattr(item, "batch", None)
         shipper = getattr(batch, "shipper", None) if batch else None
         shipper_name = getattr(shipper, "name", "") or "-"
@@ -297,13 +310,13 @@ def _build_shipper_summary(date_from: date, date_to: date):
 
     rows = []
     for _, box in grouped.items():
-        balance = box["cod_total"] - box["received"]
+        box["balance"] = box["cod_total"] - box["received"]
         rows.append({
             "shipper_name": box["shipper_name"],
             "done_orders": box["done_orders"],
             "cod_total": float(box["cod_total"]),
             "received": float(box["received"]),
-            "balance": float(balance),
+            "balance": float(box["balance"]),
         })
 
     rows.sort(key=lambda x: (-x["done_orders"], x["shipper_name"].lower()))

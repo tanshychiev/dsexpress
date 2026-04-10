@@ -40,9 +40,12 @@ def profit_dashboard(request):
     date_to = (request.GET.get("date_to") or today_str).strip()
     searched = request.GET.get("search") == "1"
 
+    parsed_from = _parse_date_start(date_from)
+    parsed_to = _parse_date_end(date_to)
+
     dashboard = build_profit_dashboard(
-        date_from=_parse_date_start(date_from).date() if _parse_date_start(date_from) else now.date(),
-        date_to=_parse_date_end(date_to).date() if _parse_date_end(date_to) else now.date(),
+        date_from=parsed_from.date() if parsed_from else now.date(),
+        date_to=parsed_to.date() if parsed_to else now.date(),
     )
 
     return render(

@@ -2,7 +2,7 @@
 
 {% block title %}Operations Dashboard{% endblock %}
 {% block page_title %}Operations Dashboard{% endblock %}
-{% block page_subtitle %}Cool live overview for ops, money, and shipper performance{% endblock %}
+{% block page_subtitle %}Simple live overview for goods create, goods done, and shipper summary{% endblock %}
 
 {% block content %}
 <div class="dashboard-shell">
@@ -12,7 +12,7 @@
       <div class="hero-eyebrow">DS EXPRESS CONTROL PANEL</div>
       <div class="hero-title">Operations Dashboard</div>
       <div class="hero-subtitle">
-        Fast overview of shipment, COD, money received, PP vs Province, and shipper performance.
+        30-day goods create trend, 30-day goods done trend, and shipper summary.
       </div>
     </div>
 
@@ -117,88 +117,8 @@
     <div class="chart-card">
       <div class="chart-head">
         <div>
-          <div class="chart-title">Shipper COD / Received / Paid</div>
-          <div class="chart-note">Compare money movement by shipper</div>
-        </div>
-      </div>
-      <div class="chart-box">
-        <canvas id="shipperMoneyChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="chart-grid one-col">
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
-          <div class="chart-title">30 Days Trend (Goods Done)</div>
-          <div class="chart-note">Stacked done PP and done province by day</div>
-        </div>
-      </div>
-      <div class="chart-box chart-box-xl">
-        <canvas id="done30Chart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="chart-grid two-col">
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
-          <div class="chart-title">PP Sent vs Done</div>
-          <div class="chart-note">Based on assigned day</div>
-        </div>
-      </div>
-      <div class="chart-box">
-        <canvas id="ppSentDoneChart"></canvas>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
-          <div class="chart-title">Province Sent vs Done</div>
-          <div class="chart-note">Based on assigned day</div>
-        </div>
-      </div>
-      <div class="chart-box">
-        <canvas id="provinceSentDoneChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="chart-grid two-col">
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
-          <div class="chart-title">PP Done %</div>
-          <div class="chart-note">Completion quality by assigned day</div>
-        </div>
-      </div>
-      <div class="chart-box">
-        <canvas id="ppDonePercentChart"></canvas>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
-          <div class="chart-title">Province Done %</div>
-          <div class="chart-note">Completion quality by assigned day</div>
-        </div>
-      </div>
-      <div class="chart-box">
-        <canvas id="provinceDonePercentChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="chart-grid one-col">
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
           <div class="chart-title">Shipper Summary</div>
-          <div class="chart-note">Done orders, COD, received, paid, and balance</div>
+          <div class="chart-note">Normal done orders and COD summary by shipper</div>
         </div>
       </div>
 
@@ -211,7 +131,6 @@
               <th>Done Orders</th>
               <th>COD Total</th>
               <th>Received</th>
-              <th>Paid</th>
               <th>Balance</th>
             </tr>
           </thead>
@@ -223,12 +142,11 @@
                 <td class="num">{{ r.done_orders }}</td>
                 <td class="num">${{ r.cod_total|floatformat:2 }}</td>
                 <td class="num">${{ r.received|floatformat:2 }}</td>
-                <td class="num">${{ r.paid|floatformat:2 }}</td>
                 <td class="num {% if r.balance < 0 %}neg{% endif %}">${{ r.balance|floatformat:2 }}</td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="7" class="empty-row">No data.</td>
+                <td colspan="6" class="empty-row">No data.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -237,12 +155,23 @@
     </div>
   </div>
 
+  <div class="chart-grid one-col">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">30 Days Trend (Goods Done)</div>
+          <div class="chart-note">Stacked bar chart of normal done pc only: done PP + done province</div>
+        </div>
+      </div>
+      <div class="chart-box chart-box-xl">
+        <canvas id="done30Chart"></canvas>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 {{ dashboard.trend_30_days|json_script:"trend30-data" }}
-{{ dashboard.pp_performance|json_script:"pp-performance-data" }}
-{{ dashboard.province_performance|json_script:"province-performance-data" }}
-{{ dashboard.shipper_rows|json_script:"shipper-rows-data" }}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -250,14 +179,7 @@
   Chart.register(ChartDataLabels);
 
   const trend30 = JSON.parse(document.getElementById("trend30-data").textContent);
-  const ppPerformance = JSON.parse(document.getElementById("pp-performance-data").textContent);
-  const provincePerformance = JSON.parse(document.getElementById("province-performance-data").textContent);
-  const shipperRows = JSON.parse(document.getElementById("shipper-rows-data").textContent);
-
   const trendLabels = trend30.map(x => x.date);
-  const ppLabels = ppPerformance.map(x => x.date);
-  const provinceLabels = provincePerformance.map(x => x.date);
-  const shipperLabels = shipperRows.map(x => x.shipper_name);
 
   const commonLegend = {
     position: "bottom",
@@ -362,19 +284,12 @@
       },
       scales: {
         x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            maxRotation: 0,
-            autoSkip: true
-          }
+          grid: { display: false },
+          ticks: { maxRotation: 0, autoSkip: true }
         },
         y: {
           beginAtZero: true,
-          ticks: {
-            precision: 0
-          }
+          ticks: { precision: 0 }
         }
       }
     }
@@ -438,284 +353,17 @@
       scales: {
         x: {
           stacked: true,
-          grid: {
-            display: false
-          },
-          ticks: {
-            maxRotation: 0,
-            autoSkip: true
-          }
+          grid: { display: false },
+          ticks: { maxRotation: 0, autoSkip: true }
         },
         y: {
           stacked: true,
           beginAtZero: true,
-          ticks: {
-            precision: 0
-          },
+          ticks: { precision: 0 },
           title: {
             display: true,
             text: "Orders"
           }
-        }
-      }
-    }
-  });
-
-  new Chart(document.getElementById("shipperMoneyChart"), {
-    type: "bar",
-    data: {
-      labels: shipperLabels,
-      datasets: [
-        {
-          label: "COD Total",
-          data: shipperRows.map(x => x.cod_total),
-          backgroundColor: "#8b5cf6",
-          borderRadius: 8,
-          maxBarThickness: 26,
-          datalabels: {
-            anchor: "end",
-            align: "right",
-            formatter: (v) => v ? v.toFixed(2) : ""
-          }
-        },
-        {
-          label: "Received",
-          data: shipperRows.map(x => x.received),
-          backgroundColor: "#06b6d4",
-          borderRadius: 8,
-          maxBarThickness: 26,
-          datalabels: {
-            anchor: "end",
-            align: "right",
-            formatter: (v) => v ? v.toFixed(2) : ""
-          }
-        },
-        {
-          label: "Paid",
-          data: shipperRows.map(x => x.paid),
-          backgroundColor: "#334155",
-          borderRadius: 8,
-          maxBarThickness: 26,
-          datalabels: {
-            anchor: "end",
-            align: "right",
-            formatter: (v) => v ? v.toFixed(2) : ""
-          }
-        }
-      ]
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels
-      },
-      scales: {
-        x: {
-          beginAtZero: true
-        },
-        y: {
-          grid: {
-            display: false
-          }
-        }
-      }
-    }
-  });
-
-  new Chart(document.getElementById("ppSentDoneChart"), {
-    type: "bar",
-    data: {
-      labels: ppLabels,
-      datasets: [
-        {
-          label: "Sent",
-          data: ppPerformance.map(x => x.sent),
-          backgroundColor: "#fb923c",
-          borderRadius: 8,
-          maxBarThickness: 28,
-          datalabels: {
-            anchor: "end",
-            align: "top",
-            formatter: (v) => v ? v : ""
-          }
-        },
-        {
-          label: "Done",
-          data: ppPerformance.map(x => x.done),
-          backgroundColor: "#22c55e",
-          borderRadius: 8,
-          maxBarThickness: 28,
-          datalabels: {
-            anchor: "end",
-            align: "top",
-            formatter: (v) => v ? v : ""
-          }
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false
-          }
-        },
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0
-          }
-        }
-      }
-    }
-  });
-
-  new Chart(document.getElementById("provinceSentDoneChart"), {
-    type: "bar",
-    data: {
-      labels: provinceLabels,
-      datasets: [
-        {
-          label: "Sent",
-          data: provincePerformance.map(x => x.sent),
-          backgroundColor: "#fbbf24",
-          borderRadius: 8,
-          maxBarThickness: 28,
-          datalabels: {
-            anchor: "end",
-            align: "top",
-            formatter: (v) => v ? v : ""
-          }
-        },
-        {
-          label: "Done",
-          data: provincePerformance.map(x => x.done),
-          backgroundColor: "#14b8a6",
-          borderRadius: 8,
-          maxBarThickness: 28,
-          datalabels: {
-            anchor: "end",
-            align: "top",
-            formatter: (v) => v ? v : ""
-          }
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false
-          }
-        },
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0
-          }
-        }
-      }
-    }
-  });
-
-  new Chart(document.getElementById("ppDonePercentChart"), {
-    type: "line",
-    data: {
-      labels: ppLabels,
-      datasets: [
-        {
-          label: "Done %",
-          data: ppPerformance.map(x => x.done_percent),
-          borderColor: "#10b981",
-          backgroundColor: "rgba(16, 185, 129, 0.15)",
-          tension: 0.35,
-          borderWidth: 3,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          fill: false,
-          datalabels: {
-            align: "top",
-            anchor: "end",
-            formatter: (v) => v ? `${v}%` : ""
-          }
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false
-          }
-        },
-        y: {
-          beginAtZero: true,
-          max: 100
-        }
-      }
-    }
-  });
-
-  new Chart(document.getElementById("provinceDonePercentChart"), {
-    type: "line",
-    data: {
-      labels: provinceLabels,
-      datasets: [
-        {
-          label: "Done %",
-          data: provincePerformance.map(x => x.done_percent),
-          borderColor: "#f59e0b",
-          backgroundColor: "rgba(245, 158, 11, 0.15)",
-          tension: 0.35,
-          borderWidth: 3,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          fill: false,
-          datalabels: {
-            align: "top",
-            anchor: "end",
-            formatter: (v) => v ? `${v}%` : ""
-          }
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false
-          }
-        },
-        y: {
-          beginAtZero: true,
-          max: 100
         }
       }
     }
@@ -788,165 +436,134 @@
     outline:none;
   }
 
-  .field input::-webkit-calendar-picker-indicator{
-    filter:invert(1);
-    cursor:pointer;
-  }
-
   .btn-main{
     height:44px;
     border:none;
     border-radius:14px;
     padding:0 18px;
+    background:#22c55e;
+    color:#062510;
     font-weight:900;
     cursor:pointer;
-    background:#fff;
-    color:#111827;
-    box-shadow:0 10px 20px rgba(0,0,0,.12);
   }
 
   .kpi-grid{
     display:grid;
-    grid-template-columns:repeat(4, minmax(180px,1fr));
+    grid-template-columns:repeat(4, minmax(0, 1fr));
     gap:14px;
   }
 
   .kpi-card{
-    padding:18px;
+    padding:18px 18px 16px;
     border-radius:24px;
-    box-shadow:0 10px 28px rgba(15,23,42,.06);
-    border:1px solid rgba(15,23,42,.05);
-    position:relative;
-    overflow:hidden;
-  }
-
-  .kpi-card::after{
-    content:"";
-    position:absolute;
-    right:-18px;
-    top:-18px;
-    width:88px;
-    height:88px;
-    border-radius:50%;
-    background:rgba(255,255,255,.45);
+    color:#fff;
+    box-shadow:0 14px 28px rgba(15, 23, 42, .08);
   }
 
   .kpi-label{
-    position:relative;
-    z-index:1;
-    font-size:12px;
-    font-weight:900;
-    opacity:.78;
+    font-size:13px;
+    font-weight:800;
+    opacity:.92;
     margin-bottom:10px;
-    text-transform:uppercase;
-    letter-spacing:.05em;
   }
 
   .kpi-value{
-    position:relative;
-    z-index:1;
     font-size:30px;
     font-weight:900;
     line-height:1;
   }
 
-  .blue{ background:linear-gradient(135deg, #dbeafe, #f5f9ff); }
-  .orange{ background:linear-gradient(135deg, #ffedd5, #fff8f2); }
-  .amber{ background:linear-gradient(135deg, #fef3c7, #fffcef); }
-  .green{ background:linear-gradient(135deg, #dcfce7, #f5fff8); }
-  .mint{ background:linear-gradient(135deg, #d1fae5, #f3fffa); }
-  .purple{ background:linear-gradient(135deg, #ede9fe, #faf8ff); }
-  .teal{ background:linear-gradient(135deg, #ccfbf1, #f1fffc); }
-  .dark{ background:linear-gradient(135deg, #e0e7ff, #f4f7ff); }
+  .blue{ background:linear-gradient(135deg, #2563eb, #1d4ed8); }
+  .orange{ background:linear-gradient(135deg, #f97316, #ea580c); }
+  .amber{ background:linear-gradient(135deg, #f59e0b, #d97706); }
+  .green{ background:linear-gradient(135deg, #22c55e, #16a34a); }
+  .mint{ background:linear-gradient(135deg, #14b8a6, #0f766e); }
+  .purple{ background:linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  .teal{ background:linear-gradient(135deg, #06b6d4, #0891b2); }
+  .dark{ background:linear-gradient(135deg, #334155, #1f2937); }
 
   .mini-grid{
     display:grid;
-    grid-template-columns:repeat(4, minmax(180px,1fr));
+    grid-template-columns:repeat(4, minmax(0, 1fr));
     gap:14px;
   }
 
   .mini-card{
     background:#fff;
-    border:1px solid rgba(15,23,42,.06);
-    box-shadow:0 10px 28px rgba(15,23,42,.05);
-    border-radius:22px;
-    padding:16px;
+    border-radius:24px;
+    padding:18px;
+    box-shadow:0 12px 24px rgba(15, 23, 42, .06);
   }
 
   .mini-title{
-    font-size:12px;
-    opacity:.72;
-    font-weight:900;
-    text-transform:uppercase;
+    font-size:13px;
+    font-weight:800;
+    color:#64748b;
     margin-bottom:8px;
-    letter-spacing:.05em;
   }
 
   .mini-big{
-    font-size:28px;
+    font-size:32px;
     font-weight:900;
+    color:#0f172a;
     line-height:1.05;
   }
 
   .mini-sub{
-    margin-top:6px;
-    font-size:12px;
+    margin-top:8px;
+    font-size:13px;
     color:#64748b;
     font-weight:700;
   }
 
   .chart-grid{
     display:grid;
-    gap:14px;
+    gap:16px;
   }
 
-  .two-col{
-    grid-template-columns:repeat(2, minmax(320px, 1fr));
+  .chart-grid.two-col{
+    grid-template-columns:1.25fr .95fr;
   }
 
-  .one-col{
+  .chart-grid.one-col{
     grid-template-columns:1fr;
   }
 
   .chart-card{
     background:#fff;
-    border-radius:26px;
-    padding:18px;
-    box-shadow:0 12px 30px rgba(15,23,42,.06);
-    border:1px solid rgba(15,23,42,.05);
+    border-radius:30px;
+    padding:18px 18px 16px;
+    box-shadow:0 14px 28px rgba(15, 23, 42, .06);
   }
 
   .chart-head{
     display:flex;
+    align-items:center;
     justify-content:space-between;
-    align-items:flex-start;
-    gap:10px;
+    gap:12px;
     margin-bottom:12px;
   }
 
   .chart-title{
     font-size:18px;
     font-weight:900;
-    margin-bottom:3px;
+    color:#0f172a;
   }
 
   .chart-note{
-    font-size:12px;
+    margin-top:4px;
     color:#64748b;
+    font-size:12px;
     font-weight:700;
   }
 
   .chart-box{
-    height:340px;
+    position:relative;
+    height:320px;
   }
 
   .chart-box-xl{
-    height:560px;
-  }
-
-  canvas{
-    width:100% !important;
-    height:100% !important;
+    height:500px;
   }
 
   .table-wrap{
@@ -955,58 +572,55 @@
 
   .cool-table{
     width:100%;
-    min-width:900px;
     border-collapse:collapse;
   }
 
   .cool-table th,
   .cool-table td{
+    padding:12px 14px;
     border-bottom:1px solid #e5e7eb;
-    padding:12px 10px;
     white-space:nowrap;
   }
 
-  .cool-table thead th{
+  .cool-table th{
     text-align:left;
     font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.06em;
+    letter-spacing:.02em;
     color:#64748b;
     font-weight:900;
-    background:#f8fafc;
   }
 
-  .cool-table tbody tr:hover{
-    background:#f8fbff;
+  .cool-table td{
+    font-size:14px;
+    color:#0f172a;
+    font-weight:700;
   }
 
-  .num{
+  .cool-table td.num{
     text-align:right;
-  }
-
-  .neg{
-    color:#b00020;
-    font-weight:900;
   }
 
   .empty-row{
     text-align:center;
-    opacity:.7;
-    padding:20px 10px !important;
+    color:#94a3b8 !important;
   }
 
-  @media (max-width: 1100px){
+  .neg{
+    color:#dc2626 !important;
+  }
+
+  @media (max-width: 1200px){
     .kpi-grid,
     .mini-grid,
-    .two-col{
+    .chart-grid.two-col{
       grid-template-columns:1fr 1fr;
     }
   }
 
-  @media (max-width: 720px){
+  @media (max-width: 768px){
     .kpi-grid,
     .mini-grid,
-    .two-col{
+    .chart-grid.two-col{
       grid-template-columns:1fr;
     }
 
@@ -1014,12 +628,9 @@
       font-size:28px;
     }
 
-    .chart-box{
-      height:300px;
-    }
-
+    .chart-box,
     .chart-box-xl{
-      height:420px;
+      height:340px;
     }
   }
 </style>

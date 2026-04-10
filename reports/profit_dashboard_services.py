@@ -33,20 +33,29 @@ def _daterange(start_date: date, end_date: date):
     return out
 
 
-def _empty_perf_row(d):
-    return {
-        "date": d,
-        "sent": 0,
-        "done": 0,
-        "pending": 0,
-        "done_percent": 0,
-    }
-
-
 def _calc_done_percent(done_count, sent_count):
     if not sent_count:
         return 0
     return round((done_count / sent_count) * 100, 2)
+
+
+def _is_normal_item(item) -> bool:
+    """
+    Dashboard rule:
+    count only NORMAL done pc
+    do NOT count RETURN done pc
+    do NOT count RETURN batch
+    """
+    source_type = str(getattr(item, "source_type", "") or "").upper()
+    if source_type:
+        return source_type == str(getattr(PPDeliveryItem, "SOURCE_NORMAL", "NORMAL")).upper()
+
+    order = getattr(item, "order", None)
+    status = str(getattr(order, "status", "") or "").upper()
+    if status in {"RETURN_ASSIGNED", "RETURNED", "DONE_RETURN"}:
+        return False
+
+    return True
 
 
 def _build_today_cards(target_date: date):
@@ -68,21 +77,32 @@ def _build_today_cards(target_date: date):
     for batch in batch_qs:
         shipper = getattr(batch, "shipper", None)
         shipper_type = getattr(shipper, "shipper_type", "") or ""
+
         prefetched_items = getattr(batch, "_prefetched_objects_cache", {}).get("items")
-        item_count = len(prefetched_items) if prefetched_items is not None else batch.items.count()
+        items = list(prefetched_items) if prefetched_items is not None else list(batch.items.all())
+
+        normal_count = sum(1 for item in items if _is_normal_item(item))
 
         if shipper_type == PROVINCE_SHIPPER_TYPE:
-            sent_province += item_count
+            sent_province += normal_count
         else:
-            sent_pp += item_count
+            sent_pp += normal_count
 
     done_item_qs = (
         PPDeliveryItem.objects
-        .select_related("batch", "batch__shipper")
-        .filter(ticked=True, batch__assigned_at__date=target_date)
+        .select_related("batch", "batch__shipper", "order")
+        .filter(
+            ticked=True,
+            batch__assigned_at__date=target_date,
+            batch__assigned_at__isnull=False,
+        )
+        .order_by("batch__assigned_at", "id")
     )
 
     for item in done_item_qs:
+        if not _is_normal_item(item):
+            continue
+
         batch = getattr(item, "batch", None)
         shipper = getattr(batch, "shipper", None) if batch else None
         shipper_type = getattr(shipper, "shipper_type", "") or ""
@@ -183,7 +203,7 @@ def _build_trend_30_days(end_date: date):
 
     done_item_qs = (
         PPDeliveryItem.objects
-        .select_related("batch", "batch__shipper")
+        .select_related("batch", "batch__shipper", "order")
         .filter(
             ticked=True,
             batch__assigned_at__date__gte=start_date,
@@ -194,6 +214,9 @@ def _build_trend_30_days(end_date: date):
     )
 
     for item in done_item_qs:
+        if not _is_normal_item(item):
+            continue
+
         batch = getattr(item, "batch", None)
         assigned_at = getattr(batch, "assigned_at", None) if batch else None
         if not assigned_at:
@@ -217,85 +240,12 @@ def _build_trend_30_days(end_date: date):
     return [trend_map[d] for d in days]
 
 
-def _build_sent_done_performance(date_from: date, date_to: date):
-    days = _daterange(date_from, date_to)
-    pp_map = {d: _empty_perf_row(d.strftime("%Y-%m-%d")) for d in days}
-    province_map = {d: _empty_perf_row(d.strftime("%Y-%m-%d")) for d in days}
-
-    batch_qs = (
-        PPDeliveryBatch.objects
-        .select_related("shipper")
-        .prefetch_related("items")
-        .filter(
-            assigned_at__date__gte=date_from,
-            assigned_at__date__lte=date_to,
-            assigned_at__isnull=False,
-        )
-        .order_by("assigned_at", "id")
-    )
-
-    for batch in batch_qs:
-        assigned_at = getattr(batch, "assigned_at", None)
-        if not assigned_at:
-            continue
-        d = assigned_at.date()
-
-        shipper = getattr(batch, "shipper", None)
-        shipper_type = getattr(shipper, "shipper_type", "") or ""
-
-        prefetched_items = getattr(batch, "_prefetched_objects_cache", {}).get("items")
-        item_count = len(prefetched_items) if prefetched_items is not None else batch.items.count()
-
-        if shipper_type == PROVINCE_SHIPPER_TYPE:
-            province_map[d]["sent"] += item_count
-        else:
-            pp_map[d]["sent"] += item_count
-
-    item_qs = (
-        PPDeliveryItem.objects
-        .select_related("batch", "batch__shipper")
-        .filter(
-            ticked=True,
-            batch__assigned_at__date__gte=date_from,
-            batch__assigned_at__date__lte=date_to,
-            batch__assigned_at__isnull=False,
-        )
-        .order_by("batch__assigned_at", "id")
-    )
-
-    for item in item_qs:
-        batch = getattr(item, "batch", None)
-        assigned_at = getattr(batch, "assigned_at", None) if batch else None
-        if not assigned_at:
-            continue
-        d = assigned_at.date()
-
-        shipper = getattr(batch, "shipper", None)
-        shipper_type = getattr(shipper, "shipper_type", "") or ""
-
-        if shipper_type == PROVINCE_SHIPPER_TYPE:
-            province_map[d]["done"] += 1
-        else:
-            pp_map[d]["done"] += 1
-
-    for d in days:
-        pp_map[d]["pending"] = max(pp_map[d]["sent"] - pp_map[d]["done"], 0)
-        pp_map[d]["done_percent"] = _calc_done_percent(pp_map[d]["done"], pp_map[d]["sent"])
-
-        province_map[d]["pending"] = max(province_map[d]["sent"] - province_map[d]["done"], 0)
-        province_map[d]["done_percent"] = _calc_done_percent(province_map[d]["done"], province_map[d]["sent"])
-
-    return [pp_map[d] for d in days], [province_map[d] for d in days]
-
-
-def _build_shipper_money(date_from: date, date_to: date):
+def _build_shipper_summary(date_from: date, date_to: date):
     grouped = defaultdict(lambda: {
         "shipper_name": "-",
         "done_orders": 0,
         "cod_total": ZERO,
         "received": ZERO,
-        "paid": ZERO,
-        "balance": ZERO,
     })
 
     cod_qs = (
@@ -313,6 +263,7 @@ def _build_shipper_money(date_from: date, date_to: date):
         batch = getattr(row, "batch", None)
         shipper = getattr(batch, "shipper", None) if batch else None
         shipper_name = getattr(shipper, "name", "") or "-"
+
         box = grouped[shipper_name]
         box["shipper_name"] = shipper_name
         box["cod_total"] += _to_decimal(getattr(row, "target_total_usd", 0))
@@ -323,7 +274,7 @@ def _build_shipper_money(date_from: date, date_to: date):
 
     done_qs = (
         PPDeliveryItem.objects
-        .select_related("batch", "batch__shipper")
+        .select_related("batch", "batch__shipper", "order")
         .filter(
             ticked=True,
             batch__assigned_at__date__gte=date_from,
@@ -333,24 +284,26 @@ def _build_shipper_money(date_from: date, date_to: date):
     )
 
     for item in done_qs:
+        if not _is_normal_item(item):
+            continue
+
         batch = getattr(item, "batch", None)
         shipper = getattr(batch, "shipper", None) if batch else None
         shipper_name = getattr(shipper, "name", "") or "-"
+
         box = grouped[shipper_name]
         box["shipper_name"] = shipper_name
         box["done_orders"] += 1
 
     rows = []
-    for shipper_name, box in grouped.items():
-        box["paid"] = box["cod_total"] if box["received"] >= box["cod_total"] else box["received"]
-        box["balance"] = box["received"] - box["paid"]
+    for _, box in grouped.items():
+        balance = box["cod_total"] - box["received"]
         rows.append({
             "shipper_name": box["shipper_name"],
             "done_orders": box["done_orders"],
             "cod_total": float(box["cod_total"]),
             "received": float(box["received"]),
-            "paid": float(box["paid"]),
-            "balance": float(box["balance"]),
+            "balance": float(balance),
         })
 
     rows.sort(key=lambda x: (-x["done_orders"], x["shipper_name"].lower()))
@@ -360,13 +313,10 @@ def _build_shipper_money(date_from: date, date_to: date):
 def build_profit_dashboard(date_from: date, date_to: date):
     today_cards = _build_today_cards(date_to)
     trend_30_days = _build_trend_30_days(date_to)
-    pp_performance, province_performance = _build_sent_done_performance(date_from, date_to)
-    shipper_rows = _build_shipper_money(date_from, date_to)
+    shipper_rows = _build_shipper_summary(date_from, date_to)
 
     return {
         "today_cards": today_cards,
         "trend_30_days": trend_30_days,
-        "pp_performance": pp_performance,
-        "province_performance": province_performance,
         "shipper_rows": shipper_rows,
     }

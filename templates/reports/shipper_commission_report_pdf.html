@@ -1,124 +1,114 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Shipper Commission Report</title>
   <style>
     @page {
-      size: A4;
-      margin: 15mm;
+      size: A4 landscape;
+      margin: 12mm;
     }
 
-    body{
-      font-family: Arial, sans-serif;
-      font-size:12px;
-      color:#000;
-      margin:0;
-      padding:0;
+    * {
+      box-sizing: border-box;
     }
 
-    .title{
-      text-align:center;
-      font-size:20px;
-      font-weight:900;
-      margin-bottom:4px;
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #111;
+      margin: 0;
+      padding: 0;
+      font-size: 12px;
     }
 
-    .subtitle{
-      text-align:center;
-      font-size:12px;
-      margin-bottom:4px;
+    .title-wrap {
+      text-align: center;
+      margin-bottom: 14px;
     }
 
-    .shift-note{
-      text-align:center;
-      font-size:11px;
-      margin-bottom:3px;
-      color:#333;
+    .title {
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1.2;
     }
 
-    .rule-note{
-      text-align:center;
-      font-size:11px;
-      margin-bottom:12px;
-      color:#333;
+    .sub {
+      font-size: 12px;
+      margin-top: 4px;
+      color: #444;
     }
 
-    .shipper-title{
-      margin-top:18px;
-      margin-bottom:6px;
-      padding:6px 10px;
-      font-size:14px;
-      font-weight:700;
-      border:1px solid #000;
-      background:#f2f2f2;
-      page-break-after:avoid;
+    .shipper-title {
+      margin-top: 18px;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      font-size: 18px;
+      font-weight: 800;
+      background: #eef4ff;
+      border: 1px solid #cfdcff;
+      border-radius: 8px;
     }
 
-    table{
-      width:100%;
-      border-collapse:collapse;
-      margin-bottom:10px;
-      table-layout:fixed;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-top: 6px;
     }
 
-    th, td{
-      border:1px solid #000;
-      padding:4px 5px;
-      text-align:center;
-      font-size:11px;
-      vertical-align:middle;
-      word-wrap:break-word;
+    th, td {
+      border: 1px solid #111;
+      padding: 6px 6px;
+      vertical-align: middle;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    th{
-      background:#1F4E79;
-      color:#fff;
-      font-weight:700;
+    th {
+      background: #111;
+      color: #fff;
+      font-weight: 800;
+      text-align: center;
     }
 
-    .num{
-      text-align:right;
-      white-space:nowrap;
+    td.num {
+      text-align: right;
     }
 
-    .date-cell{
-      white-space:nowrap;
+    td.center {
+      text-align: center;
     }
 
-    .total{
-      background:#eee;
-      font-weight:700;
+    .total-row td {
+      background: #f3f3f3;
+      font-weight: 800;
     }
 
-    .zero{
-      background:#ffe5e5;
-      color:#c00000;
-      font-weight:700;
+    .zero-cell {
+      background: #fff1f1;
+      color: #c00000;
+      font-weight: 800;
     }
 
-    .grand-title{
-      margin-top:20px;
-      margin-bottom:6px;
-      padding:6px 10px;
-      font-size:14px;
-      font-weight:700;
-      border:1px solid #000;
-      background:#e9eef5;
+    .all-zero-row td {
+      background: #fff1f1;
+      color: #c00000;
+      font-weight: 800;
+    }
+
+    .page-break {
+      page-break-before: always;
     }
   </style>
 </head>
 <body>
-
-  <div class="title">Shipper Commission Report</div>
-  <div class="subtitle">
-    From {{ date_from|default:"-" }} To {{ date_to|default:"-" }}
-  </div>
-  <div class="shift-note">
-    Morning = 12:00 AM - 11:59 AM &nbsp;&nbsp;|&nbsp;&nbsp; Afternoon = 12:00 PM - 11:59 PM
-  </div>
-  <div class="rule-note">
-    Rule: from 11th done pc per day × 1500៛
+  <div class="title-wrap">
+    <div class="title">Delivery Commission Report</div>
+    <div class="sub">From {{ date_from|default:"-" }} To {{ date_to|default:"-" }}</div>
+    <div class="sub">Morning = 12:00 AM - 11:59 AM | Afternoon = 12:00 PM - 11:59 PM</div>
+    <div class="sub">Rule: from 11th total done × 1500៛</div>
+    <div class="sub">Total Done = Done PP PC + Done Return Batch</div>
   </div>
 
   {% for grp in report.shipper_groups %}
@@ -127,51 +117,62 @@
     <table>
       <thead>
         <tr>
-          <th style="width:40px;">#</th>
+          <th style="width:50px;">#</th>
           <th style="width:90px;">Date</th>
-          <th>Morning Assign</th>
-          <th>Afternoon Assign</th>
-          <th>Done Morning</th>
-          <th>Done Afternoon</th>
-          <th>Total Done</th>
-          <th>Commission</th>
+          <th style="width:100px;">Morning Assign</th>
+          <th style="width:110px;">Afternoon Assign</th>
+          <th style="width:90px;">Done Morning</th>
+          <th style="width:100px;">Done Afternoon</th>
+          <th style="width:90px;">Done PP PC</th>
+          <th style="width:120px;">Done Return Batch</th>
+          <th style="width:90px;">Total Done</th>
+          <th style="width:110px;">Commission (៛)</th>
         </tr>
       </thead>
       <tbody>
         {% for r in grp.rows %}
-        <tr{% if r.is_all_zero %} class="zero"{% endif %}>
-          <td>{{ forloop.counter }}</td>
-          <td class="date-cell">{{ r.date|date:"Y-m-d" }}</td>
-          <td class="num">{{ r.morning_assign }}</td>
-          <td class="num">{{ r.afternoon_assign }}</td>
-          <td class="num">{{ r.done_morning }}</td>
-          <td class="num">{{ r.done_afternoon }}</td>
-          <td class="num"><b>{{ r.total_done_pc }}</b></td>
-          <td class="num"><b>{{ r.commission_khr }}</b></td>
-        </tr>
+          <tr class="{% if r.is_all_zero %}all-zero-row{% endif %}">
+            <td class="center">{{ forloop.counter }}</td>
+            <td class="center">{{ r.date|date:"Y-m-d" }}</td>
+
+            <td class="num {% if r.morning_assign == 0 %}zero-cell{% endif %}">
+              {{ r.morning_assign }}
+            </td>
+            <td class="num {% if r.afternoon_assign == 0 %}zero-cell{% endif %}">
+              {{ r.afternoon_assign }}
+            </td>
+            <td class="num">{{ r.done_morning }}</td>
+            <td class="num">{{ r.done_afternoon }}</td>
+            <td class="num">{{ r.done_pp_pc }}</td>
+            <td class="num">{{ r.done_return_batch }}</td>
+            <td class="num"><b>{{ r.total_done }}</b></td>
+            <td class="num"><b>{{ r.commission_khr }}</b></td>
+          </tr>
         {% empty %}
-        <tr>
-          <td colspan="8">No data.</td>
-        </tr>
+          <tr>
+            <td colspan="10" class="center">No data.</td>
+          </tr>
         {% endfor %}
 
-        <tr class="total">
-          <td>-</td>
+        <tr class="total-row">
+          <td class="center">-</td>
           <td>Total</td>
           <td class="num">{{ grp.shipper_total.morning_assign }}</td>
           <td class="num">{{ grp.shipper_total.afternoon_assign }}</td>
           <td class="num">{{ grp.shipper_total.done_morning }}</td>
           <td class="num">{{ grp.shipper_total.done_afternoon }}</td>
-          <td class="num">{{ grp.shipper_total.total_done_pc }}</td>
+          <td class="num">{{ grp.shipper_total.done_pp_pc }}</td>
+          <td class="num">{{ grp.shipper_total.done_return_batch }}</td>
+          <td class="num">{{ grp.shipper_total.total_done }}</td>
           <td class="num">{{ grp.shipper_total.commission_khr }}</td>
         </tr>
       </tbody>
     </table>
   {% empty %}
-    <div class="shipper-title">No data</div>
+    <div style="text-align:center; color:#666; margin-top:20px;">No data.</div>
   {% endfor %}
 
-  <div class="grand-title">Grand Total</div>
+  <div class="shipper-title">Grand Total</div>
 
   <table>
     <thead>
@@ -181,22 +182,25 @@
         <th>Afternoon Assign</th>
         <th>Done Morning</th>
         <th>Done Afternoon</th>
+        <th>Done PP PC</th>
+        <th>Done Return Batch</th>
         <th>Total Done</th>
-        <th>Commission</th>
+        <th>Commission (៛)</th>
       </tr>
     </thead>
     <tbody>
-      <tr class="total">
+      <tr class="total-row">
         <td>Grand Total</td>
         <td class="num">{{ report.grand_total.morning_assign }}</td>
         <td class="num">{{ report.grand_total.afternoon_assign }}</td>
         <td class="num">{{ report.grand_total.done_morning }}</td>
         <td class="num">{{ report.grand_total.done_afternoon }}</td>
-        <td class="num">{{ report.grand_total.total_done_pc }}</td>
+        <td class="num">{{ report.grand_total.done_pp_pc }}</td>
+        <td class="num">{{ report.grand_total.done_return_batch }}</td>
+        <td class="num">{{ report.grand_total.total_done }}</td>
         <td class="num">{{ report.grand_total.commission_khr }}</td>
       </tr>
     </tbody>
   </table>
-
 </body>
 </html>

@@ -28,7 +28,23 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
     row_no += 1
     ws.cell(row=row_no, column=1, value=f"From: {date_from or '-'}   To: {date_to or '-'}")
     row_no += 1
-    ws.cell(row=row_no, column=1, value="Morning = 12:00 AM - 11:59 AM | Afternoon = 12:00 PM - 11:59 PM")
+    ws.cell(
+        row=row_no,
+        column=1,
+        value="Shift rule: Morning = 12:00 AM - 11:59 AM | Afternoon = 12:00 PM - 11:59 PM",
+    )
+    row_no += 1
+    ws.cell(
+        row=row_no,
+        column=1,
+        value="Total Done = Done PP PC + Done Return Batch",
+    )
+    row_no += 1
+    ws.cell(
+        row=row_no,
+        column=1,
+        value="Done counts follow ASSIGN TIME, not delivery clear time or COD clear time",
+    )
     row_no += 2
 
     headers = [
@@ -38,13 +54,15 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
         "Afternoon Assign",
         "Done Morning",
         "Done Afternoon",
-        "Total Done PC",
+        "Done PP PC",
+        "Done Return Batch",
+        "Total Done",
         "Commission (KHR)",
     ]
 
     for grp in report.get("shipper_groups", []):
         ws.cell(row=row_no, column=1, value=grp["shipper_name"]).font = Font(bold=True, size=13)
-        for c in range(1, 9):
+        for c in range(1, 11):
             ws.cell(row=row_no, column=c).fill = blue_fill
             ws.cell(row=row_no, column=c).border = border
         row_no += 1
@@ -65,7 +83,9 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
                 r["afternoon_assign"],
                 r["done_morning"],
                 r["done_afternoon"],
-                r["total_done_pc"],
+                r["done_pp_pc"],
+                r["done_return_batch"],
+                r["total_done"],
                 r["commission_khr"],
             ]
 
@@ -75,7 +95,7 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
                 cell.alignment = Alignment(horizontal="center" if col in (1, 2) else "right")
 
             if r.get("is_all_zero"):
-                for c in range(1, 9):
+                for c in range(1, 11):
                     ws.cell(row=row_no, column=c).fill = red_fill
                     ws.cell(row=row_no, column=c).font = red_font
             else:
@@ -97,7 +117,9 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
             t["afternoon_assign"],
             t["done_morning"],
             t["done_afternoon"],
-            t["total_done_pc"],
+            t["done_pp_pc"],
+            t["done_return_batch"],
+            t["total_done"],
             t["commission_khr"],
         ]
         for col, val in enumerate(total_values, start=1):
@@ -110,7 +132,7 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
         row_no += 2
 
     ws.cell(row=row_no, column=1, value="Grand Total").font = Font(bold=True, size=13)
-    for c in range(1, 8):
+    for c in range(1, 10):
         ws.cell(row=row_no, column=c).fill = blue_fill
         ws.cell(row=row_no, column=c).border = border
     row_no += 1
@@ -121,7 +143,9 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
         "Afternoon Assign",
         "Done Morning",
         "Done Afternoon",
-        "Total Done PC",
+        "Done PP PC",
+        "Done Return Batch",
+        "Total Done",
         "Commission (KHR)",
     ]
     for i, h in enumerate(summary_headers, start=1):
@@ -139,7 +163,9 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
         gt.get("afternoon_assign", 0),
         gt.get("done_morning", 0),
         gt.get("done_afternoon", 0),
-        gt.get("total_done_pc", 0),
+        gt.get("done_pp_pc", 0),
+        gt.get("done_return_batch", 0),
+        gt.get("total_done", 0),
         gt.get("commission_khr", 0),
     ]
     for col, val in enumerate(grand_values, start=1):
@@ -158,6 +184,8 @@ def export_shipper_commission_excel(report, date_from="", date_to=""):
         "F": 16,
         "G": 16,
         "H": 18,
+        "I": 16,
+        "J": 18,
     }
     for col, width in widths.items():
         ws.column_dimensions[col].width = width

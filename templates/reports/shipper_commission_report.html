@@ -45,7 +45,10 @@
         Morning = 12:00 AM - 11:59 AM | Afternoon = 12:00 PM - 11:59 PM
       </div>
       <div style="font-size:13px;opacity:.75;margin-top:2px;">
-        Rule: from 11th done pc per day × 1500៛
+        Rule: from 11th total done × 1500៛
+      </div>
+      <div style="font-size:13px;opacity:.75;margin-top:2px;">
+        Total Done = Done PP PC + Done Return Batch
       </div>
     </div>
 
@@ -56,12 +59,14 @@
         <table class="ds-table commission-table">
           <colgroup>
             <col style="width:70px;">
-            <col style="width:150px;">
-            <col style="width:150px;">
-            <col style="width:160px;">
+            <col style="width:130px;">
             <col style="width:140px;">
             <col style="width:150px;">
+            <col style="width:130px;">
             <col style="width:140px;">
+            <col style="width:140px;">
+            <col style="width:150px;">
+            <col style="width:150px;">
             <col style="width:150px;">
           </colgroup>
 
@@ -73,7 +78,9 @@
               <th style="text-align:right;">Afternoon Assign</th>
               <th style="text-align:right;">Done Morning</th>
               <th style="text-align:right;">Done Afternoon</th>
-              <th style="text-align:right;">Total Done PC</th>
+              <th style="text-align:right;">Done PP PC</th>
+              <th style="text-align:right;">Done Return Batch</th>
+              <th style="text-align:right;">Total Done</th>
               <th style="text-align:right;">Commission (៛)</th>
             </tr>
           </thead>
@@ -82,7 +89,7 @@
             {% for r in grp.rows %}
               <tr class="{% if r.is_all_zero %}all-zero-row{% endif %}">
                 <td style="text-align:center;">{{ forloop.counter }}</td>
-                <td style="text-align:center;">{{ r.date|date:"Y-m-d" }}</td>
+                <td style="text-align:center;">{{ r.date|date:'Y-m-d' }}</td>
 
                 <td class="num {% if r.morning_assign == 0 %}zero-cell{% endif %}">
                   {{ r.morning_assign }}
@@ -94,12 +101,14 @@
 
                 <td class="num">{{ r.done_morning }}</td>
                 <td class="num">{{ r.done_afternoon }}</td>
-                <td class="num"><b>{{ r.total_done_pc }}</b></td>
+                <td class="num">{{ r.done_pp_pc }}</td>
+                <td class="num">{{ r.done_return_batch }}</td>
+                <td class="num"><b>{{ r.total_done }}</b></td>
                 <td class="num"><b>{{ r.commission_khr }}</b></td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="8" style="text-align:center;opacity:.7;">No data.</td>
+                <td colspan="10" style="text-align:center;opacity:.7;">No data.</td>
               </tr>
             {% endfor %}
 
@@ -110,7 +119,9 @@
               <td class="num"><b>{{ grp.shipper_total.afternoon_assign }}</b></td>
               <td class="num"><b>{{ grp.shipper_total.done_morning }}</b></td>
               <td class="num"><b>{{ grp.shipper_total.done_afternoon }}</b></td>
-              <td class="num"><b>{{ grp.shipper_total.total_done_pc }}</b></td>
+              <td class="num"><b>{{ grp.shipper_total.done_pp_pc }}</b></td>
+              <td class="num"><b>{{ grp.shipper_total.done_return_batch }}</b></td>
+              <td class="num"><b>{{ grp.shipper_total.total_done }}</b></td>
               <td class="num"><b>{{ grp.shipper_total.commission_khr }}</b></td>
             </tr>
           </tbody>
@@ -132,6 +143,8 @@
           <col style="width:150px;">
           <col style="width:140px;">
           <col style="width:150px;">
+          <col style="width:150px;">
+          <col style="width:150px;">
         </colgroup>
 
         <thead>
@@ -141,7 +154,9 @@
             <th style="text-align:right;">Afternoon Assign</th>
             <th style="text-align:right;">Done Morning</th>
             <th style="text-align:right;">Done Afternoon</th>
-            <th style="text-align:right;">Total Done PC</th>
+            <th style="text-align:right;">Done PP PC</th>
+            <th style="text-align:right;">Done Return Batch</th>
+            <th style="text-align:right;">Total Done</th>
             <th style="text-align:right;">Commission (៛)</th>
           </tr>
         </thead>
@@ -153,7 +168,9 @@
             <td class="num"><b>{{ report.grand_total.afternoon_assign }}</b></td>
             <td class="num"><b>{{ report.grand_total.done_morning }}</b></td>
             <td class="num"><b>{{ report.grand_total.done_afternoon }}</b></td>
-            <td class="num"><b>{{ report.grand_total.total_done_pc }}</b></td>
+            <td class="num"><b>{{ report.grand_total.done_pp_pc }}</b></td>
+            <td class="num"><b>{{ report.grand_total.done_return_batch }}</b></td>
+            <td class="num"><b>{{ report.grand_total.total_done }}</b></td>
             <td class="num"><b>{{ report.grand_total.commission_khr }}</b></td>
           </tr>
         </tbody>
@@ -214,7 +231,7 @@
 
   .commission-table{
     width:100%;
-    min-width:1120px;
+    min-width:1380px;
     margin-top:8px;
     table-layout:fixed;
   }

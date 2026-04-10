@@ -47,7 +47,12 @@ def _empty_report():
             "afternoon_assign": 0,
             "done_morning": 0,
             "done_afternoon": 0,
-            "total_done_pc": 0,
+
+            # NEW
+            "done_pp_pc": 0,
+            "done_return_batch": 0,
+            "total_done": 0,
+
             "commission_pc": 0,
             "commission_khr": 0,
         },

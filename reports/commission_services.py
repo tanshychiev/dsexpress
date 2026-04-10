@@ -17,7 +17,9 @@ def _new_day_row():
         "afternoon_assign": 0,
         "done_morning": 0,
         "done_afternoon": 0,
-        "total_done_pc": 0,
+        "done_pp_pc": 0,
+        "done_return_batch": 0,
+        "total_done": 0,
         "commission_pc": 0,
         "commission_khr": 0,
         "is_all_zero": True,
@@ -54,16 +56,52 @@ def _get_day_key(dt_value):
     return dt_value.date()
 
 
+def _is_return_item(item) -> bool:
+    """
+    Detect whether this PP item should be counted as RETURN work.
+
+    Adjust this if your project has a stricter rule, but this version is
+    defensive and supports common DS Express patterns:
+    - order.status in RETURN_ASSIGNED / DONE_RETURN / RETURNED
+    - batch code starts with RTS- / RET-
+    - batch model/type name contains 'return'
+    """
+    order = getattr(item, "order", None)
+    batch = getattr(item, "batch", None)
+
+    order_status = (getattr(order, "status", "") or "").upper()
+    if order_status in {"RETURN_ASSIGNED", "DONE_RETURN", "RETURNED"}:
+        return True
+
+    for attr_name in ["batch_code", "code", "name"]:
+        value = (getattr(batch, attr_name, "") or "").upper()
+        if value.startswith("RTS-") or value.startswith("RET-"):
+            return True
+
+    for attr_name in ["batch_type", "type", "status"]:
+        value = (getattr(batch, attr_name, "") or "").lower()
+        if "return" in value:
+            return True
+
+    batch_class_name = batch.__class__.__name__.lower() if batch else ""
+    if "return" in batch_class_name:
+        return True
+
+    return False
+
+
 def _finalize_day_row(row):
-    row["total_done_pc"] = row["done_morning"] + row["done_afternoon"]
-    row["commission_pc"] = max(row["total_done_pc"] - COMMISSION_START_AFTER_PC, 0)
+    row["total_done"] = row["done_pp_pc"] + row["done_return_batch"]
+    row["commission_pc"] = max(row["total_done"] - COMMISSION_START_AFTER_PC, 0)
     row["commission_khr"] = row["commission_pc"] * COMMISSION_PER_PC_KHR
     row["is_all_zero"] = (
         row["morning_assign"] == 0
         and row["afternoon_assign"] == 0
         and row["done_morning"] == 0
         and row["done_afternoon"] == 0
-        and row["total_done_pc"] == 0
+        and row["done_pp_pc"] == 0
+        and row["done_return_batch"] == 0
+        and row["total_done"] == 0
         and row["commission_khr"] == 0
     )
 
@@ -92,10 +130,18 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
     - do NOT use clear COD datetime
     - if batch assigned in morning and done in afternoon, still record done_morning
     - if batch assigned in afternoon and done next day, still record done_afternoon on assign date
+
+    NEW COUNT RULE:
+    - Done PP = count by PC
+    - Done Return = count by BATCH
+    - Total Done = Done PP + Done Return Batch
     """
     grouped = defaultdict(_new_day_row)
     shipper_names = set()
     activity_dates = []
+
+    # track unique return batches per shipper/day so return is counted by batch, not by pc
+    return_batch_tracker = defaultdict(set)
 
     # -----------------------------
     # ASSIGN
@@ -152,17 +198,34 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
         shipper = getattr(batch, "shipper", None)
         shipper_name = getattr(shipper, "name", "") or "-"
         shipper_names.add(shipper_name)
-
         activity_dates.append(day_key)
 
         key = (shipper_name, day_key)
         row = grouped[key]
         row["date"] = day_key
 
+        is_return = _is_return_item(item)
+
+        # shift totals remain overall done activity by assign shift
         if shift == "morning":
             row["done_morning"] += 1
         else:
             row["done_afternoon"] += 1
+
+        if is_return:
+            batch_id = getattr(batch, "id", None)
+            if batch_id is not None:
+                return_batch_tracker[key].add(batch_id)
+            else:
+                # fallback if no id, use object identity string
+                return_batch_tracker[key].add(str(batch))
+        else:
+            row["done_pp_pc"] += 1
+
+    # apply deduped return batch counts
+    for key, batch_ids in return_batch_tracker.items():
+        row = grouped[key]
+        row["done_return_batch"] = len(batch_ids)
 
     # -----------------------------
     # DATE RANGE
@@ -203,7 +266,9 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
         "afternoon_assign": 0,
         "done_morning": 0,
         "done_afternoon": 0,
-        "total_done_pc": 0,
+        "done_pp_pc": 0,
+        "done_return_batch": 0,
+        "total_done": 0,
         "commission_pc": 0,
         "commission_khr": 0,
     }
@@ -216,7 +281,9 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
             "afternoon_assign": sum(x["afternoon_assign"] for x in rows),
             "done_morning": sum(x["done_morning"] for x in rows),
             "done_afternoon": sum(x["done_afternoon"] for x in rows),
-            "total_done_pc": sum(x["total_done_pc"] for x in rows),
+            "done_pp_pc": sum(x["done_pp_pc"] for x in rows),
+            "done_return_batch": sum(x["done_return_batch"] for x in rows),
+            "total_done": sum(x["total_done"] for x in rows),
             "commission_pc": sum(x["commission_pc"] for x in rows),
             "commission_khr": sum(x["commission_khr"] for x in rows),
         }
@@ -225,7 +292,9 @@ def build_shipper_commission_report(pp_batches, pp_items, start_date=None, end_d
         grand_total["afternoon_assign"] += shipper_total["afternoon_assign"]
         grand_total["done_morning"] += shipper_total["done_morning"]
         grand_total["done_afternoon"] += shipper_total["done_afternoon"]
-        grand_total["total_done_pc"] += shipper_total["total_done_pc"]
+        grand_total["done_pp_pc"] += shipper_total["done_pp_pc"]
+        grand_total["done_return_batch"] += shipper_total["done_return_batch"]
+        grand_total["total_done"] += shipper_total["total_done"]
         grand_total["commission_pc"] += shipper_total["commission_pc"]
         grand_total["commission_khr"] += shipper_total["commission_khr"]
 

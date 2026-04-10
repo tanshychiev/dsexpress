@@ -323,9 +323,18 @@
           stack: "done",
           datalabels: {
             color: "#111827",
-            anchor: "center",
-            align: "center",
-            formatter: (v) => v ? v : ""
+            anchor: "end",
+            align: "top",
+            offset: 2,
+            font: {
+              weight: "800",
+              size: 11
+            },
+            formatter: function(value, context) {
+              const index = context.dataIndex;
+              const total = trend30[index].total_done || 0;
+              return total ? total : "";
+            }
           }
         }
       ]

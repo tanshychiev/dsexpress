@@ -160,7 +160,7 @@
       <div class="chart-head">
         <div>
           <div class="chart-title">30 Days Trend (Goods Done)</div>
-          <div class="chart-note">Stacked bar chart of normal done pc only: done PP + done province</div>
+          <div class="chart-note">Show Done PP, Done Province, and Total on each stacked bar</div>
         </div>
       </div>
       <div class="chart-box chart-box-xl">
@@ -311,7 +311,13 @@
             color: "#111827",
             anchor: "center",
             align: "center",
-            formatter: (v) => v ? v : ""
+            font: {
+              weight: "700",
+              size: 10
+            },
+            formatter: function(value) {
+              return value ? value : "";
+            }
           }
         },
         {
@@ -322,18 +328,34 @@
           maxBarThickness: 34,
           stack: "done",
           datalabels: {
-            color: "#111827",
-            anchor: "end",
-            align: "top",
-            offset: 2,
-            font: {
-              weight: "800",
-              size: 11
-            },
-            formatter: function(value, context) {
-              const index = context.dataIndex;
-              const total = trend30[index].total_done || 0;
-              return total ? total : "";
+            labels: {
+              province: {
+                color: "#111827",
+                anchor: "center",
+                align: "center",
+                font: {
+                  weight: "700",
+                  size: 10
+                },
+                formatter: function(value) {
+                  return value ? value : "";
+                }
+              },
+              total: {
+                color: "#111827",
+                anchor: "end",
+                align: "top",
+                offset: 4,
+                font: {
+                  weight: "800",
+                  size: 11
+                },
+                formatter: function(value, context) {
+                  const index = context.dataIndex;
+                  const total = trend30[index].total_done || 0;
+                  return total ? total : "";
+                }
+              }
             }
           }
         }
@@ -348,13 +370,23 @@
       },
       plugins: {
         legend: commonLegend,
-        datalabels: commonDatalabels,
+        datalabels: {
+          clamp: true,
+          clip: false
+        },
         tooltip: {
           callbacks: {
             footer: function(items) {
               const index = items[0].dataIndex;
-              const total = trend30[index].total_done || 0;
-              return "Total Done: " + total;
+              const row = trend30[index] || {};
+              const total = row.total_done || 0;
+              const pp = row.done_pp || 0;
+              const province = row.done_province || 0;
+              return [
+                "Done PP: " + pp,
+                "Done Province: " + province,
+                "Total Done: " + total
+              ];
             }
           }
         }

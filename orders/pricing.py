@@ -5,10 +5,18 @@ def apply_pricing(order):
     seller = order.seller
     shipper = order.delivery_shipper
 
+    print("========== PRICING DEBUG ==========")
+    print("order id =", getattr(order, "id", None))
+    print("seller =", seller)
+    print("shipper =", shipper)
+    print("cod =", order.cod)
+
     if not seller:
+        print("STOP: no seller")
         return
 
     rule_type = "COD" if (order.cod or Decimal("0")) > 0 else "PV"
+    print("rule_type =", rule_type)
 
     rule = None
 
@@ -19,6 +27,7 @@ def apply_pricing(order):
             rule_type=rule_type,
             is_active=True
         ).first()
+        print("exact rule =", rule)
 
     if not rule:
         rule = SellerPriceRule.objects.filter(
@@ -27,8 +36,10 @@ def apply_pricing(order):
             rule_type=rule_type,
             is_active=True
         ).first()
+        print("fallback rule =", rule)
 
     if not rule:
+        print("STOP: no rule matched")
         return
 
     order.delivery_fee = rule.delivery_fee or Decimal("0")
@@ -45,3 +56,8 @@ def apply_pricing(order):
 
     if rule.is_locked:
         order.is_locked = True
+
+    print("delivery_fee =", order.delivery_fee)
+    print("additional_fee =", order.additional_fee)
+    print("is_locked =", order.is_locked)
+    print("========== END PRICING DEBUG ==========")

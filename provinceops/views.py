@@ -9,6 +9,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from orders.models import Order, OrderActivity
+from orders.pricing import apply_pricing
 from masterdata.models import Shipper
 from provinceops.models import ProvinceBatch, ProvinceBatchItem
 
@@ -91,6 +92,18 @@ def _set_order_status(order: Order, status: str):
         order.save(update_fields=update_fields)
 
 
+def _apply_order_pricing(order: Order):
+    apply_pricing(order)
+
+    update_fields = []
+    for field in ["delivery_fee", "province_fee", "additional_fee", "is_locked"]:
+        if hasattr(order, field):
+            update_fields.append(field)
+
+    if update_fields:
+        order.save(update_fields=update_fields)
+
+
 def _price(o: Order):
     v = _get_field(o, ["price", "total_price", "amount"], 0)
     try:
@@ -108,7 +121,11 @@ def _cod(o: Order):
 
 
 def _receiver_location(o: Order) -> str:
-    v = _get_field(o, ["receiver_location", "receiver_address", "address", "district", "city", "province"], "")
+    v = _get_field(
+        o,
+        ["receiver_location", "receiver_address", "address", "district", "city", "province"],
+        "",
+    )
     return v or "-"
 
 
@@ -343,6 +360,7 @@ def province_new(request):
                         _set_cod(o, 0)
                         _set_order_status(o, "PROCESSING")
                         _set_delivery_shipper(o, batch_shipper)
+                        _apply_order_pricing(o)
 
                         _log_order_change(
                             order=o,
@@ -362,6 +380,7 @@ def province_new(request):
                             _set_cod(o, 0)
                             _set_order_status(o, "DONE")
                             _set_delivery_shipper(o, batch_shipper)
+                            _apply_order_pricing(o)
 
                             _log_order_change(
                                 order=o,
@@ -475,6 +494,7 @@ def province_detail(request, pk):
             for it in batch.items.select_related("order").all():
                 o = it.order
                 _set_delivery_shipper(o, new_shipper)
+                _apply_order_pricing(o)
 
                 _log_order_change(
                     order=o,
@@ -499,6 +519,7 @@ def province_detail(request, pk):
                         _set_cod(it.order, 0)
                         _set_order_status(it.order, "DONE")
                         _set_delivery_shipper(it.order, getattr(batch, "shipper", None))
+                        _apply_order_pricing(it.order)
 
                         _log_order_change(
                             order=it.order,
@@ -525,6 +546,7 @@ def province_detail(request, pk):
                             _set_cod(it.order, it.cod_before)
                         _set_order_status(it.order, "PROCESSING")
                         _set_delivery_shipper(it.order, getattr(batch, "shipper", None))
+                        _apply_order_pricing(it.order)
 
                         _log_order_change(
                             order=it.order,
@@ -578,6 +600,7 @@ def province_detail(request, pk):
                             _set_cod(it.order, it.cod_before)
                         _set_order_status(it.order, "PROCESSING")
                         _set_delivery_shipper(it.order, getattr(batch, "shipper", None))
+                        _apply_order_pricing(it.order)
 
                         _log_order_change(
                             order=it.order,
@@ -671,6 +694,7 @@ def province_detail(request, pk):
                     _set_cod(o, 0)
                     _set_order_status(o, "PROCESSING")
                     _set_delivery_shipper(o, getattr(batch, "shipper", None))
+                    _apply_order_pricing(o)
                     added += 1
 
                     _log_order_change(

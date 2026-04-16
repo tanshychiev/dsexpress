@@ -5,32 +5,43 @@ def apply_pricing(order):
     seller = order.seller
     shipper = order.delivery_shipper
 
-    if not seller or not shipper:
+    if not seller:
         return
 
-    # detect type
-    rule_type = "COD" if order.cod and order.cod > 0 else "PV"
+    rule_type = "COD" if (order.cod or Decimal("0")) > 0 else "PV"
 
-    rule = SellerPriceRule.objects.filter(
-        seller=seller,
-        shipper=shipper,
-        rule_type=rule_type,
-        is_active=True
-    ).first()
+    rule = None
+
+    if shipper:
+        rule = SellerPriceRule.objects.filter(
+            seller=seller,
+            shipper=shipper,
+            rule_type=rule_type,
+            is_active=True
+        ).first()
+
+    if not rule:
+        rule = SellerPriceRule.objects.filter(
+            seller=seller,
+            shipper__isnull=True,
+            rule_type=rule_type,
+            is_active=True
+        ).first()
 
     if not rule:
         return
 
-    # apply fee
-    order.delivery_fee = rule.delivery_fee
+    order.delivery_fee = rule.delivery_fee or Decimal("0")
 
-    additional = rule.additional_fee
+    additional = rule.additional_fee or Decimal("0")
 
     if rule_type == "COD" and rule.percent_cod:
-        additional += (order.cod or Decimal("0")) * rule.percent_cod
+        percent = rule.percent_cod
+        if percent > 1:
+            percent = percent / Decimal("100")
+        additional += (order.cod or Decimal("0")) * percent
 
     order.additional_fee = additional
 
-    # lock order
     if rule.is_locked:
         order.is_locked = True

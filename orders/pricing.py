@@ -12,19 +12,44 @@ def apply_pricing(order):
 
     cod_value = order.cod or Decimal("0")
     price_value = order.price or Decimal("0")
+    shipper_type = (getattr(shipper, "shipper_type", "") or "").upper()
 
-    rule_type = "COD" if cod_value > 0 else "PV"
-
-    rule = (
-        SellerPriceRule.objects.filter(
-            seller=seller,
-            shipper=shipper,
-            rule_type=rule_type,
-            is_active=True,
+    # Province orders often force COD to 0 after assign,
+    # so province should try COD rule first, then fallback to PV.
+    if shipper_type == "PROVINCE":
+        rule = (
+            SellerPriceRule.objects.filter(
+                seller=seller,
+                shipper=shipper,
+                rule_type="COD",
+                is_active=True,
+            )
+            .order_by("-id")
+            .first()
         )
-        .order_by("-id")
-        .first()
-    )
+        if not rule:
+            rule = (
+                SellerPriceRule.objects.filter(
+                    seller=seller,
+                    shipper=shipper,
+                    rule_type="PV",
+                    is_active=True,
+                )
+                .order_by("-id")
+                .first()
+            )
+    else:
+        rule_type = "COD" if cod_value > 0 else "PV"
+        rule = (
+            SellerPriceRule.objects.filter(
+                seller=seller,
+                shipper=shipper,
+                rule_type=rule_type,
+                is_active=True,
+            )
+            .order_by("-id")
+            .first()
+        )
 
     if not rule:
         return
@@ -37,16 +62,12 @@ def apply_pricing(order):
         if percent_value > 1:
             percent_value = percent_value / Decimal("100")
 
-        shipper_type = (getattr(shipper, "shipper_type", "") or "").upper()
-
         if shipper_type == "PROVINCE":
             base_amount = price_value
         else:
             base_amount = cod_value
 
         additional_fee += base_amount * percent_value
-
-    shipper_type = (getattr(shipper, "shipper_type", "") or "").upper()
 
     if shipper_type == "PROVINCE":
         order.province_fee = delivery_fee

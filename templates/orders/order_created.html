@@ -420,13 +420,29 @@
     </div>
 
     <!-- BUTTONS -->
-    <div class="btn-row">
-      <a class="btn btn-primary" href="{% url 'order_label' order.id %}">Print Label</a>
-      <a class="btn" href="{% url 'order_edit' order.id %}">Edit Order</a>
-      <a class="btn" href="{% url 'create_order' %}">Create New Order</a>
-      <a class="btn" href="{% url 'order_detail' order.id %}">Order Detail</a>
-      <a class="btn btn-danger" href="{% url 'order_delete' order.id %}">Delete Order</a>
-    </div>
+    <div class="btn-row" style="justify-content:space-between;">
+  
+  <!-- LEFT SIDE -->
+  <div style="display:flex; gap:10px;">
+    <a class="btn btn-primary"
+       href="{% url 'order_label' order.id %}"
+       target="_blank"
+       rel="noopener">
+       Print Label
+    </a>
+
+    <a class="btn" href="{% url 'order_edit' order.id %}">Edit Order</a>
+    <a class="btn" href="{% url 'create_order' %}">Create New Shipment</a>
+  </div>
+
+  <!-- RIGHT SIDE -->
+  <div>
+    <a class="btn btn-danger" href="{% url 'order_delete' order.id %}">
+      Delete Order
+    </a>
+  </div>
+
+</div>
 
     <!-- ACTIVITY TIMELINE -->
     <div class="log-card">

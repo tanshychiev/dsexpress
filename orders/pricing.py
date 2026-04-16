@@ -4,13 +4,16 @@ from masterdata.models import SellerPriceRule
 
 
 def apply_pricing(order):
-    seller = order.seller
-    shipper = order.delivery_shipper
+    seller = getattr(order, "seller", None)
+    shipper = getattr(order, "delivery_shipper", None)
 
     if not seller or not shipper:
         return
 
-    rule_type = "COD" if (order.cod or Decimal("0")) > 0 else "PV"
+    cod_value = order.cod or Decimal("0")
+    price_value = order.price or Decimal("0")
+
+    rule_type = "COD" if cod_value > 0 else "PV"
 
     rule = (
         SellerPriceRule.objects.filter(
@@ -28,12 +31,20 @@ def apply_pricing(order):
 
     delivery_fee = rule.delivery_fee or Decimal("0")
     additional_fee = rule.additional_fee or Decimal("0")
-    percent_cod = rule.percent_cod or Decimal("0")
+    percent_value = rule.percent_cod or Decimal("0")
 
-    if rule_type == "COD" and percent_cod:
-        if percent_cod > 1:
-            percent_cod = percent_cod / Decimal("100")
-        additional_fee += (order.cod or Decimal("0")) * percent_cod
+    if percent_value:
+        if percent_value > 1:
+            percent_value = percent_value / Decimal("100")
+
+        shipper_type = (getattr(shipper, "shipper_type", "") or "").upper()
+
+        if shipper_type == "PROVINCE":
+            base_amount = price_value
+        else:
+            base_amount = cod_value
+
+        additional_fee += base_amount * percent_value
 
     shipper_type = (getattr(shipper, "shipper_type", "") or "").upper()
 
@@ -44,5 +55,5 @@ def apply_pricing(order):
 
     order.additional_fee = additional_fee
 
-    if rule.is_locked:
+    if getattr(rule, "is_locked", False):
         order.is_locked = True

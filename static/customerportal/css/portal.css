@@ -1992,3 +1992,54 @@ img{
     font-size:28px;
   }
 }
+/* ========================= */
+/* MOTOR + MOBILE SCROLL FIX */
+/* ========================= */
+
+.ds-rider-wrap{
+  will-change:transform;
+}
+
+/* desktop fallback: motor still moves even if JS slow */
+@media (min-width: 769px){
+  .ds-rider-wrap{
+    animation:dsMotorIdle 4.8s ease-in-out infinite;
+  }
+}
+
+@keyframes dsMotorIdle{
+  0%,100%{
+    transform:translateX(0) translateY(0) rotate(-1deg);
+  }
+  50%{
+    transform:translateX(18px) translateY(-6px) rotate(1deg);
+  }
+}
+
+/* phone: stop heavy scroll animation */
+@media (max-width: 768px){
+  .feature-scroll-box,
+  .service-scroll-item,
+  .metric-fly,
+  .contact-fly,
+  .cta-fly,
+  .reveal{
+    opacity:1 !important;
+    transform:none !important;
+    transition:none !important;
+  }
+
+  .contact-fly.show,
+  .cta-fly.show,
+  .reveal.is-visible{
+    opacity:1 !important;
+    transform:none !important;
+  }
+
+  .ds-rider-wrap{
+    transform:none !important;
+    display:block !important;
+    opacity:1 !important;
+    z-index:7 !important;
+  }
+}

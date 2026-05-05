@@ -1,6 +1,8 @@
-
 document.addEventListener("DOMContentLoaded", function () {
   document.body.classList.add("js-enabled");
+
+  const MOBILE_WIDTH = 768;
+  const isMobile = window.innerWidth <= MOBILE_WIDTH;
 
   const toggleBtn = document.getElementById("menuToggle");
   const mobileMenu = document.getElementById("mobileMenu");
@@ -9,16 +11,88 @@ document.addEventListener("DOMContentLoaded", function () {
     toggleBtn.addEventListener("click", function () {
       mobileMenu.classList.toggle("show");
     });
+
+    const mobileLinks = mobileMenu.querySelectorAll("a");
+    mobileLinks.forEach(function (link) {
+      link.addEventListener("click", function () {
+        mobileMenu.classList.remove("show");
+      });
+    });
   }
 
   const revealItems = document.querySelectorAll(".reveal");
+  const featureBoxes = document.querySelectorAll(".feature-scroll-box");
+  const serviceItems = document.querySelectorAll(".service-scroll-item");
+  const metricCards = document.querySelectorAll(".metric-fly");
+  const contactCards = document.querySelectorAll(".contact-fly");
+  const ctaCards = document.querySelectorAll(".cta-fly");
+  const rider = document.getElementById("riderMove");
 
-  revealItems.forEach((item, index) => {
-    if (!item.classList.contains("from-left") &&
-        !item.classList.contains("from-right") &&
-        !item.classList.contains("from-bottom") &&
-        !item.classList.contains("zoom-in")) {
+  function showStaticOnMobile() {
+    revealItems.forEach(function (item) {
+      item.classList.add("is-visible");
+      item.style.opacity = "1";
+      item.style.transform = "none";
+      item.style.transitionDelay = "0ms";
+    });
+
+    featureBoxes.forEach(function (box) {
+      box.style.opacity = "1";
+      box.style.transform = "none";
+    });
+
+    serviceItems.forEach(function (item) {
+      item.style.opacity = "1";
+      item.style.transform = "none";
+    });
+
+    metricCards.forEach(function (card) {
+      card.style.opacity = "1";
+      card.style.transform = "none";
+    });
+
+    contactCards.forEach(function (card) {
+      card.classList.add("show");
+      card.style.opacity = "1";
+      card.style.transform = "none";
+    });
+
+    ctaCards.forEach(function (card) {
+      card.classList.add("show");
+      card.style.opacity = "1";
+      card.style.transform = "none";
+    });
+
+    if (rider) {
+      rider.style.opacity = "1";
+      rider.style.transform = "none";
+    }
+
+    const contactTitle = document.getElementById("contactTypingTitle");
+    if (contactTitle) {
+      contactTitle.classList.remove("typing");
+      contactTitle.textContent = contactTitle.dataset.text || contactTitle.textContent || "Talk to the DS Express team";
+    }
+  }
+
+  if (isMobile) {
+    showStaticOnMobile();
+    return;
+  }
+
+  /* =========================
+     DESKTOP REVEAL ANIMATION
+     ========================= */
+
+  revealItems.forEach(function (item, index) {
+    if (
+      !item.classList.contains("from-left") &&
+      !item.classList.contains("from-right") &&
+      !item.classList.contains("from-bottom") &&
+      !item.classList.contains("zoom-in")
+    ) {
       const mode = index % 4;
+
       if (mode === 0) item.classList.add("from-bottom");
       if (mode === 1) item.classList.add("from-left");
       if (mode === 2) item.classList.add("from-right");
@@ -29,53 +103,81 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-          observer.unobserve(entry.target);
-        }
-      });
-    }, {
-      threshold: 0.14
-    });
+    const revealObserver = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        threshold: 0.14
+      }
+    );
 
-    revealItems.forEach((item) => observer.observe(item));
+    revealItems.forEach(function (item) {
+      revealObserver.observe(item);
+    });
   } else {
-    revealItems.forEach((item) => item.classList.add("is-visible"));
+    revealItems.forEach(function (item) {
+      item.classList.add("is-visible");
+    });
   }
 
-  setTimeout(() => {
-    revealItems.forEach((item) => item.classList.add("is-visible"));
+  setTimeout(function () {
+    revealItems.forEach(function (item) {
+      item.classList.add("is-visible");
+    });
   }, 450);
-});
 
-/* rider scroll animation */
-(function () {
-  const rider = document.getElementById("riderMove");
-  if (!rider) return;
+  /* =========================
+     PERFORMANCE SCROLL RAF
+     ========================= */
+
+  let ticking = false;
+
+  function onScrollOrResize() {
+    if (!ticking) {
+      window.requestAnimationFrame(function () {
+        animateRider();
+        animateFeatureBoxes();
+        animateServiceInner();
+        animateMetricFly();
+        handleFinalCta();
+        ticking = false;
+      });
+
+      ticking = true;
+    }
+  }
+
+  /* =========================
+     RIDER / MOTOR ANIMATION
+     ========================= */
 
   function animateRider() {
-    const scrollY = window.scrollY;
-    const speed = 0.8;
+    if (!rider) return;
 
-    let move = scrollY * speed;
-    if (move > 1200) move = 1200;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const moveX = Math.min(scrollY * 0.12, 120);
+    const moveY = Math.sin(scrollY / 90) * 6;
+    const rotate = Math.sin(scrollY / 160) * 2;
 
-    rider.style.transform = `translateX(${move}px)`;
+    rider.style.transform =
+      "translateX(" + moveX + "px) translateY(" + moveY + "px) rotate(" + rotate + "deg)";
   }
 
-  window.addEventListener("scroll", animateRider);
-  window.addEventListener("load", animateRider);
-})();
+  /* =========================
+     FEATURE BOXES MOVE WITH SCROLL
+     ========================= */
 
-/* feature boxes move with scroll */
-(function () {
   const featureSection = document.getElementById("featureSection");
-  const featureBoxes = document.querySelectorAll(".feature-scroll-box");
-  if (!featureSection || !featureBoxes.length) return;
 
   function animateFeatureBoxes() {
+    if (!featureSection || !featureBoxes.length) return;
+
     const rect = featureSection.getBoundingClientRect();
     const windowH = window.innerHeight;
 
@@ -87,182 +189,183 @@ document.addEventListener("DOMContentLoaded", function () {
     let progress = current / totalDistance;
     progress = Math.max(0, Math.min(1, progress));
 
-    featureBoxes.forEach((box, index) => {
-      const startOffset = 900 + (index * 200);
-      const speed = 1.6;
+    featureBoxes.forEach(function (box, index) {
+      const startOffset = 420 + index * 90;
+      const speed = 1.25;
       const moveX = (1 - progress * speed) * startOffset;
-      const opacity = 0.3 + (progress * 0.9);
+      const opacity = 0.35 + progress * 0.65;
 
-      box.style.transform = `translateX(${moveX}px)`;
+      box.style.transform = "translateX(" + Math.max(0, moveX) + "px)";
       box.style.opacity = opacity;
     });
   }
 
-  window.addEventListener("scroll", animateFeatureBoxes);
-  window.addEventListener("load", animateFeatureBoxes);
-})();
-
-/* services content move from bottom */
-(function () {
-  const serviceItems = document.querySelectorAll(".service-scroll-item");
-  if (!serviceItems.length) return;
+  /* =========================
+     SERVICE ITEMS MOVE FROM BOTTOM
+     ========================= */
 
   function animateServiceInner() {
+    if (!serviceItems.length) return;
+
     const windowH = window.innerHeight;
 
-    serviceItems.forEach((item, index) => {
+    serviceItems.forEach(function (item, index) {
       const rect = item.getBoundingClientRect();
 
       const startPoint = windowH * 1.1;
       const endPoint = windowH * 0.55;
 
       let progress = (startPoint - rect.top) / (startPoint - endPoint);
-      progress = progress - (index * 0.06);
+      progress = progress - index * 0.06;
       progress = Math.max(0, Math.min(1, progress));
 
-      const startOffset = 220 + (index * 30);
+      const startOffset = 180 + index * 25;
       const moveY = (1 - progress) * startOffset;
-      const opacity = 0.25 + (progress * 0.75);
+      const opacity = 0.25 + progress * 0.75;
 
-      item.style.transform = `translateY(${moveY}px)`;
+      item.style.transform = "translateY(" + moveY + "px)";
       item.style.opacity = opacity;
     });
   }
 
-  window.addEventListener("scroll", animateServiceInner);
-  window.addEventListener("load", animateServiceInner);
-  window.addEventListener("resize", animateServiceInner);
-})();
-
-/* metric cards fly from right continuously */
-(function () {
-  const cards = document.querySelectorAll(".metric-fly");
-  if (!cards.length) return;
+  /* =========================
+     METRIC CARDS FLY FROM RIGHT
+     ========================= */
 
   function animateMetricFly() {
+    if (!metricCards.length) return;
+
     const windowH = window.innerHeight;
 
-    cards.forEach((card, index) => {
+    metricCards.forEach(function (card, index) {
       const rect = card.getBoundingClientRect();
 
       const startPoint = windowH * 1.05;
       const endPoint = windowH * 0.45;
 
       let progress = (startPoint - rect.top) / (startPoint - endPoint);
-      progress = progress - (index * 0.08);
+      progress = progress - index * 0.08;
       progress = Math.max(0, Math.min(1, progress));
 
-      const startOffset = 420 + (index * 120);
+      const startOffset = 320 + index * 80;
       const moveX = (1 - progress) * startOffset;
-      const opacity = 0.2 + (progress * 0.8);
+      const opacity = 0.2 + progress * 0.8;
 
-      card.style.transform = `translateX(${moveX}px)`;
+      card.style.transform = "translateX(" + moveX + "px)";
       card.style.opacity = opacity;
     });
   }
 
-  window.addEventListener("scroll", animateMetricFly);
-  window.addEventListener("load", animateMetricFly);
-  window.addEventListener("resize", animateMetricFly);
-})();
+  /* =========================
+     CONTACT TYPING
+     ========================= */
 
-/* typing when contact section appears */
-/* CONTACT SECTION: type on enter, reset on leave, fly cards after typing */
-(function () {
-  const section = document.getElementById("contactSection");
-  const title = document.getElementById("contactTypingTitle");
-  const cards = document.querySelectorAll(".contact-fly");
+  const contactSection = document.getElementById("contactSection");
+  const contactTitle = document.getElementById("contactTypingTitle");
 
-  if (!section || !title) return;
+  if (contactSection && contactTitle) {
+    const fullText = contactTitle.dataset.text || "";
+    let typingTimer = null;
+    let hasEntered = false;
+    let isTyping = false;
 
-  const fullText = title.dataset.text || "";
-  let typingTimer = null;
-  let hasEntered = false;
-  let isTyping = false;
-
-  function resetContactSection() {
-    if (typingTimer) {
-      clearInterval(typingTimer);
-      typingTimer = null;
-    }
-
-    isTyping = false;
-    hasEntered = false;
-    title.classList.remove("typing");
-    title.innerHTML = "";
-
-    cards.forEach(card => {
-      card.classList.remove("show");
-    });
-  }
-
-  function showCardsAfterTyping() {
-    cards.forEach(card => card.classList.add("show"));
-  }
-
-  function startTyping() {
-    if (isTyping || hasEntered) return;
-
-    hasEntered = true;
-    isTyping = true;
-    title.classList.add("typing");
-    title.innerHTML = "";
-
-    let i = 0;
-
-    typingTimer = setInterval(() => {
-      if (i >= fullText.length) {
+    function resetContactSection() {
+      if (typingTimer) {
         clearInterval(typingTimer);
         typingTimer = null;
-        isTyping = false;
-        title.classList.remove("typing");
-        showCardsAfterTyping();
-        return;
       }
 
-      const span = document.createElement("span");
-      span.className = "contact-letter";
-      span.style.animationDelay = `${i * 0.01}s`;
-      span.textContent = fullText[i] === " " ? "\u00A0" : fullText[i];
-      title.appendChild(span);
+      isTyping = false;
+      hasEntered = false;
+      contactTitle.classList.remove("typing");
+      contactTitle.innerHTML = "";
 
-      i++;
-    }, 38);
+      contactCards.forEach(function (card) {
+        card.classList.remove("show");
+      });
+    }
+
+    function showCardsAfterTyping() {
+      contactCards.forEach(function (card) {
+        card.classList.add("show");
+      });
+    }
+
+    function startTyping() {
+      if (isTyping || hasEntered) return;
+
+      hasEntered = true;
+      isTyping = true;
+      contactTitle.classList.add("typing");
+      contactTitle.innerHTML = "";
+
+      let i = 0;
+
+      typingTimer = setInterval(function () {
+        if (i >= fullText.length) {
+          clearInterval(typingTimer);
+          typingTimer = null;
+          isTyping = false;
+          contactTitle.classList.remove("typing");
+          showCardsAfterTyping();
+          return;
+        }
+
+        const span = document.createElement("span");
+        span.className = "contact-letter";
+        span.style.animationDelay = i * 0.01 + "s";
+        span.textContent = fullText[i] === " " ? "\u00A0" : fullText[i];
+        contactTitle.appendChild(span);
+
+        i++;
+      }, 38);
+    }
+
+    if ("IntersectionObserver" in window) {
+      const contactObserver = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              startTyping();
+            } else {
+              resetContactSection();
+            }
+          });
+        },
+        {
+          threshold: 0.45
+        }
+      );
+
+      contactObserver.observe(contactSection);
+    } else {
+      startTyping();
+    }
   }
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        startTyping();
-      } else {
-        resetContactSection();
-      }
-    });
-  }, {
-    threshold: 0.45
-  });
+  /* =========================
+     FINAL CTA FLY FROM LEFT
+     ========================= */
 
-  observer.observe(section);
-})();
-/* FINAL CTA BOX fly in from left */
-(function () {
-  const section = document.getElementById("finalCtaSection");
-  const card = document.querySelector(".cta-fly");
-
-  if (!section || !card) return;
+  const finalCtaSection = document.getElementById("finalCtaSection");
+  const finalCtaCard = document.querySelector(".cta-fly");
 
   function handleFinalCta() {
-    const rect = section.getBoundingClientRect();
+    if (!finalCtaSection || !finalCtaCard) return;
+
+    const rect = finalCtaSection.getBoundingClientRect();
     const windowH = window.innerHeight;
 
     if (rect.top < windowH * 0.82) {
-      card.classList.add("show");
+      finalCtaCard.classList.add("show");
     } else {
-      card.classList.remove("show");
+      finalCtaCard.classList.remove("show");
     }
   }
 
-  window.addEventListener("scroll", handleFinalCta);
-  window.addEventListener("load", handleFinalCta);
-  window.addEventListener("resize", handleFinalCta);
-})();
+  window.addEventListener("scroll", onScrollOrResize, { passive: true });
+  window.addEventListener("resize", onScrollOrResize);
+  window.addEventListener("load", onScrollOrResize);
+
+  onScrollOrResize();
+});

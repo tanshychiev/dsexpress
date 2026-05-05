@@ -2,11 +2,16 @@
 {% load static %}
 {% block title %}DS Express{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'customerportal/css/portal_home.css' %}">
+{% endblock %}
+
 {% block content %}
 
 <section class="ds-hero">
   <div class="portal-container">
     <div class="ds-hero-grid">
+
       <div class="ds-hero-copy reveal">
         <div class="ds-kicker">SMART DELIVERY FLOW</div>
 
@@ -83,10 +88,11 @@
           <div class="ds-floating-card float-three">Fast dispatch</div>
 
           <div class="ds-rider-wrap" id="riderMove">
-  <img src="{% static 'img/motobik.png' %}" alt="Delivery rider" class="ds-rider-img">
-</div>
+            <img src="{% static 'img/motobik.png' %}" alt="Delivery rider" class="ds-rider-img">
+          </div>
         </div>
       </div>
+
     </div>
   </div>
 </section>
@@ -135,9 +141,7 @@
     <div class="ds-section-intro center">
       <div class="ds-kicker">WHAT WE HELP YOU DO</div>
       <h2>Core services for growing businesses</h2>
-      <p>
-        DS Express focuses on the operational flow that matters most for modern sellers.
-      </p>
+      <p>DS Express focuses on the operational flow that matters most for modern sellers.</p>
     </div>
 
     <div class="ds-services-grid">
@@ -146,9 +150,7 @@
         <div class="service-inner service-scroll-item">
           <div class="service-icon-wrap">📦</div>
           <h3>Pickup coordination</h3>
-          <p>
-            Submit pickup requests quickly and keep daily shipment flow moving with less friction.
-          </p>
+          <p>Submit pickup requests quickly and keep daily shipment flow moving with less friction.</p>
         </div>
       </div>
 
@@ -157,9 +159,7 @@
         <div class="service-inner service-scroll-item">
           <div class="service-icon-wrap">🚚</div>
           <h3>Last-mile delivery</h3>
-          <p>
-            Reliable Phnom Penh delivery service built for speed, consistency, and daily operations.
-          </p>
+          <p>Reliable Phnom Penh delivery service built for speed, consistency, and daily operations.</p>
         </div>
       </div>
 
@@ -168,9 +168,7 @@
         <div class="service-inner service-scroll-item">
           <div class="service-icon-wrap">📊</div>
           <h3>COD visibility</h3>
-          <p>
-            See order outcomes and COD flow more clearly through a better seller-facing experience.
-          </p>
+          <p>See order outcomes and COD flow more clearly through a better seller-facing experience.</p>
         </div>
       </div>
     </div>
@@ -186,8 +184,7 @@
         <h2>Built on delivery discipline and real operational pace</h2>
         <p>
           Numbers matter, but consistency matters more. DS Express is designed
-          to help businesses move faster with better visibility and stronger
-          daily execution.
+          to help businesses move faster with better visibility and stronger daily execution.
         </p>
       </div>
 
@@ -195,25 +192,19 @@
         <div class="metric-card metric-fly">
           <div class="metric-number">98%</div>
           <div class="metric-title">Delivery handling success</div>
-          <div class="metric-text">
-            Strong day-to-day execution across active delivery operations.
-          </div>
+          <div class="metric-text">Strong day-to-day execution across active delivery operations.</div>
         </div>
 
         <div class="metric-card metric-fly">
           <div class="metric-number">1M+</div>
           <div class="metric-title">Parcels processed</div>
-          <div class="metric-text">
-            Built through repeat seller flow and consistent daily movement.
-          </div>
+          <div class="metric-text">Built through repeat seller flow and consistent daily movement.</div>
         </div>
 
         <div class="metric-card metric-fly">
           <div class="metric-number">100%</div>
           <div class="metric-title">Focus on COD discipline</div>
-          <div class="metric-text">
-            Cleaner COD follow-up helps support seller cash flow confidence.
-          </div>
+          <div class="metric-text">Cleaner COD follow-up helps support seller cash flow confidence.</div>
         </div>
       </div>
 
@@ -223,7 +214,6 @@
 
 <section class="ds-section ds-section-white seller-roll-section">
   <div class="portal-container">
-
     <div class="ds-section-intro center">
       <div class="ds-kicker">BRANDS THAT MOVE WITH DS</div>
       <h2>Trusted by growing businesses</h2>
@@ -255,10 +245,9 @@
         <div class="seller-chip">BUBU PET STORE</div>
         <div class="seller-chip">PPF Yummy Co.Ltd</div>
         <div class="seller-chip">MAXBIT Co.Ltd</div>
-         <div class="seller-chip">H.A.G Clothing</div>
+        <div class="seller-chip">H.A.G Clothing</div>
       </div>
     </div>
-
   </div>
 </section>
 
@@ -268,20 +257,18 @@
 
       <div class="ds-contact-left">
         <div class="ds-kicker">CONTACT US</div>
-
-        <h2 id="contactTypingTitle" data-text="Talk to the DS Express team"></h2>
-
+        <h2 id="contactTypingTitle" data-text="Talk to the DS Express team">Talk to the DS Express team</h2>
         <p class="contact-fade-text">
           Reach out for booking, partnership, support, or seller account setup.
         </p>
       </div>
 
       <div class="ds-contact-links">
-        <a class="contact-link-card contact-fly" href="tel:012345678">
+        <a class="contact-link-card contact-fly" href="tel:011789955">
           <span class="contact-icon">📞</span>
           <div>
             <strong>Phone</strong>
-            <span>011 789 955/ 093 789 955</span>
+            <span>011 789 955 / 093 789 955</span>
           </div>
         </a>
 
@@ -329,4 +316,8 @@
   </div>
 </section>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'customerportal/js/portal_home.js' %}"></script>
 {% endblock %}

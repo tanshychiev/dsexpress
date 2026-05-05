@@ -64,6 +64,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     if (rider) {
+      rider.style.animation = "none";
+      rider.style.transition = "none";
       rider.style.opacity = "1";
       rider.style.transform = "none";
     }
@@ -71,7 +73,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const contactTitle = document.getElementById("contactTypingTitle");
     if (contactTitle) {
       contactTitle.classList.remove("typing");
-      contactTitle.textContent = contactTitle.dataset.text || contactTitle.textContent || "Talk to the DS Express team";
+      contactTitle.textContent =
+        contactTitle.dataset.text ||
+        contactTitle.textContent ||
+        "Talk to the DS Express team";
     }
   }
 
@@ -133,40 +138,56 @@ document.addEventListener("DOMContentLoaded", function () {
   }, 450);
 
   /* =========================
-     PERFORMANCE SCROLL RAF
+     SCROLL PERFORMANCE
      ========================= */
 
   let ticking = false;
 
   function onScrollOrResize() {
-    if (!ticking) {
-      window.requestAnimationFrame(function () {
-        animateRider();
-        animateFeatureBoxes();
-        animateServiceInner();
-        animateMetricFly();
-        handleFinalCta();
-        ticking = false;
-      });
+    if (ticking) return;
 
-      ticking = true;
-    }
+    ticking = true;
+
+    window.requestAnimationFrame(function () {
+      animateRider();
+      animateFeatureBoxes();
+      animateServiceInner();
+      animateMetricFly();
+      handleFinalCta();
+
+      ticking = false;
+    });
   }
 
   /* =========================
-     RIDER / MOTOR ANIMATION
+     RIDER / MOTOR SCROLL ON PC
      ========================= */
 
   function animateRider() {
     if (!rider) return;
 
     const scrollY = window.scrollY || window.pageYOffset || 0;
-    const moveX = Math.min(scrollY * 0.12, 120);
-    const moveY = Math.sin(scrollY / 90) * 6;
-    const rotate = Math.sin(scrollY / 160) * 2;
 
+    /*
+      Stronger PC movement:
+      Old was: scrollY * 0.12, max 120
+      New is: scrollY * 0.45, max 560
+    */
+    const moveX = Math.min(scrollY * 0.45, 560);
+    const moveY = Math.sin(scrollY / 85) * 8;
+    const rotate = Math.sin(scrollY / 140) * 3;
+
+    rider.style.animation = "none";
+    rider.style.transition = "transform .08s linear";
+    rider.style.opacity = "1";
     rider.style.transform =
-      "translateX(" + moveX + "px) translateY(" + moveY + "px) rotate(" + rotate + "deg)";
+      "translateX(" +
+      moveX +
+      "px) translateY(" +
+      moveY +
+      "px) rotate(" +
+      rotate +
+      "deg)";
   }
 
   /* =========================
@@ -201,7 +222,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /* =========================
-     SERVICE ITEMS MOVE FROM BOTTOM
+     SERVICES MOVE FROM BOTTOM
      ========================= */
 
   function animateServiceInner() {

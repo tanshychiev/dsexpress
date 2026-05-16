@@ -23,7 +23,7 @@ from .models import PPDeliveryBatch, PPDeliveryItem
 
 RET_RE = re.compile(r"^(RTS|RET)-(\d+)(?:-(\d+))?$", re.I)
 ALLOWED_ORDER_STATUS = {"CREATED", "INBOUND"}
-
+from datetime import timedelta
 
 # ============================================================
 # Helpers
@@ -956,42 +956,49 @@ def pp_delivery_create(request):
 def deliverpp_list(request):
     shippers = _get_pp_shippers()
 
-    show_results = (request.GET.get("show") or "") == "1"
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
+    today = timezone.localdate()
+    last_3_days = today - timedelta(days=2)
+
+    # ✅ Default open page = show last 3 days to today
+    show_results = True
+
+    date_from = (request.GET.get("date_from") or last_3_days.strftime("%Y-%m-%d")).strip()
+    date_to = (request.GET.get("date_to") or today.strftime("%Y-%m-%d")).strip()
+
     status = (request.GET.get("status") or "").strip()
     shipper_id = (request.GET.get("shipper_id") or "").strip()
 
-    batches = PPDeliveryBatch.objects.none()
+    qs = PPDeliveryBatch.objects.all()
 
-    if show_results:
-        qs = PPDeliveryBatch.objects.all()
-        if date_from:
-            qs = qs.filter(created_at__date__gte=date_from)
-        if date_to:
-            qs = qs.filter(created_at__date__lte=date_to)
-        if status:
-            qs = qs.filter(status=status)
-        if shipper_id.isdigit():
-            qs = qs.filter(shipper_id=int(shipper_id))
+    if date_from:
+        qs = qs.filter(created_at__date__gte=date_from)
 
-        batches = (
-            qs.select_related("created_by", "shipper")
-            .annotate(
-                total_pc_cnt=Count("items", distinct=True),
-                shipment_cnt=Count(
-                    "items",
-                    filter=Q(items__source_type=PPDeliveryItem.SOURCE_NORMAL),
-                    distinct=True,
-                ),
-                return_batch_cnt=Coalesce(
-                    F("return_batch_count"),
-                    Value(0),
-                    output_field=IntegerField(),
-                ),
-            )
-            .order_by("-id")
+    if date_to:
+        qs = qs.filter(created_at__date__lte=date_to)
+
+    if status:
+        qs = qs.filter(status=status)
+
+    if shipper_id.isdigit():
+        qs = qs.filter(shipper_id=int(shipper_id))
+
+    batches = (
+        qs.select_related("created_by", "shipper")
+        .annotate(
+            total_pc_cnt=Count("items", distinct=True),
+            shipment_cnt=Count(
+                "items",
+                filter=Q(items__source_type=PPDeliveryItem.SOURCE_NORMAL),
+                distinct=True,
+            ),
+            return_batch_cnt=Coalesce(
+                F("return_batch_count"),
+                Value(0),
+                output_field=IntegerField(),
+            ),
         )
+        .order_by("-id")
+    )
 
     return render(request, "deliverpp/list.html", {
         "show_results": show_results,
@@ -1003,7 +1010,6 @@ def deliverpp_list(request):
         "status": status,
         "shipper_id": shipper_id,
     })
-
 
 # ============================================================
 # DETAIL / EDIT

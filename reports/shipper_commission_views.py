@@ -39,6 +39,23 @@ def _parse_date_end(value: str):
         return None
 
 
+def _get_default_month_dates(request):
+    today = timezone.localdate()
+    month_start = today.replace(day=1)
+
+    date_from = (
+        request.GET.get("date_from")
+        or month_start.strftime("%Y-%m-%d")
+    ).strip()
+
+    date_to = (
+        request.GET.get("date_to")
+        or today.strftime("%Y-%m-%d")
+    ).strip()
+
+    return date_from, date_to
+
+
 def _empty_report():
     return {
         "shipper_groups": [],
@@ -47,12 +64,9 @@ def _empty_report():
             "afternoon_assign": 0,
             "done_morning": 0,
             "done_afternoon": 0,
-
-            # NEW
             "done_pp_pc": 0,
             "done_return_batch": 0,
             "total_done": 0,
-
             "commission_pc": 0,
             "commission_khr": 0,
         },
@@ -66,23 +80,28 @@ def _build_report(date_from="", date_to=""):
     batch_qs = (
         PPDeliveryBatch.objects
         .select_related("shipper")
-        .prefetch_related("items")
+        .prefetch_related("items", "items__order")
+        .filter(assigned_at__isnull=False)
         .order_by("assigned_at", "id")
     )
 
     item_qs = (
         PPDeliveryItem.objects
         .select_related("batch", "batch__shipper", "order")
-        .order_by("delivery_cleared_at", "id")
+        .filter(batch__assigned_at__isnull=False)
+        .order_by("batch__assigned_at", "id")
     )
 
+    # IMPORTANT:
+    # Commission report must filter by batch assigned_at,
+    # not delivery_cleared_at.
     if dt_from:
         batch_qs = batch_qs.filter(assigned_at__gte=dt_from)
-        item_qs = item_qs.filter(delivery_cleared_at__gte=dt_from)
+        item_qs = item_qs.filter(batch__assigned_at__gte=dt_from)
 
     if dt_to:
         batch_qs = batch_qs.filter(assigned_at__lte=dt_to)
-        item_qs = item_qs.filter(delivery_cleared_at__lte=dt_to)
+        item_qs = item_qs.filter(batch__assigned_at__lte=dt_to)
 
     start_date = dt_from.date() if dt_from else None
     end_date = dt_to.date() if dt_to else None
@@ -97,22 +116,21 @@ def _build_report(date_from="", date_to=""):
 
 @login_required
 def shipper_commission_report(request):
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
-    searched = request.GET.get("search") == "1"
+    date_from, date_to = _get_default_month_dates(request)
+
+    # ✅ Default open page = already searched this month
+    searched = True
+
     action = (request.GET.get("action") or "show").strip().lower()
 
-    report = _empty_report()
+    report = _build_report(date_from=date_from, date_to=date_to)
 
-    if searched:
-        report = _build_report(date_from=date_from, date_to=date_to)
-
-        if action == "excel":
-            return export_shipper_commission_excel(
-                report=report,
-                date_from=date_from,
-                date_to=date_to,
-            )
+    if action == "excel":
+        return export_shipper_commission_excel(
+            report=report,
+            date_from=date_from,
+            date_to=date_to,
+        )
 
     return render(
         request,
@@ -128,8 +146,7 @@ def shipper_commission_report(request):
 
 @login_required
 def shipper_commission_report_pdf(request):
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
+    date_from, date_to = _get_default_month_dates(request)
 
     report = _build_report(date_from=date_from, date_to=date_to)
 
@@ -144,22 +161,32 @@ def shipper_commission_report_pdf(request):
         request=request,
     )
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as f:
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".html",
+        mode="w",
+        encoding="utf-8",
+    ) as f:
         f.write(html)
         temp_html = f.name
 
     temp_png = f"{temp_html}.png"
     temp_pdf = f"{temp_html}.pdf"
+    pdf_bytes = b""
 
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 1600, "height": 2400}, device_scale_factor=2)
+            page = browser.new_page(
+                viewport={"width": 1600, "height": 2400},
+                device_scale_factor=2,
+            )
             page.goto(Path(temp_html).as_uri(), wait_until="networkidle")
             page.screenshot(path=temp_png, full_page=True)
             browser.close()
 
         image = Image.open(temp_png)
+
         if image.mode == "RGBA":
             bg = Image.new("RGB", image.size, (255, 255, 255))
             bg.paste(image, mask=image.split()[3])

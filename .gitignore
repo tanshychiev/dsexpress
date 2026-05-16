@@ -5,4 +5,5 @@ db.sqlite3
 .env
 media/
 staticfiles/
-*.log
+*.log__pycache__/
+*.pyc

@@ -39,6 +39,32 @@ def _parse_date_end(value: str):
         return None
 
 
+def _get_today_str() -> str:
+    return timezone.localdate().strftime("%Y-%m-%d")
+
+
+def _get_report_dates(request):
+    """
+    Default report date = today.
+    If user selects date_from/date_to, use selected date.
+    """
+    today_str = _get_today_str()
+
+    date_from = (request.GET.get("date_from") or today_str).strip()
+    date_to = (request.GET.get("date_to") or today_str).strip()
+
+    return date_from, date_to
+
+
+def _get_empty_report():
+    return {
+        "days": [],
+        "grand_morning_total": {},
+        "grand_afternoon_total": {},
+        "grand_total": {},
+    }
+
+
 def _get_report_data(date_from: str, date_to: str):
     qs = (
         ClearPPCOD.objects
@@ -51,10 +77,11 @@ def _get_report_data(date_from: str, date_to: str):
     dt_to = _parse_date_end(date_to)
 
     # IMPORTANT:
-    # filter by batch assigned_at
-    # NOT by COD clear time / created_at
+    # Filter by batch assigned_at,
+    # NOT by COD clear time / created_at.
     if dt_from:
         qs = qs.filter(batch__assigned_at__gte=dt_from)
+
     if dt_to:
         qs = qs.filter(batch__assigned_at__lte=dt_to)
 
@@ -63,16 +90,12 @@ def _get_report_data(date_from: str, date_to: str):
 
 @login_required
 def shipper_cod_report(request):
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
-    searched = request.GET.get("search") == "1"
+    date_from, date_to = _get_report_dates(request)
 
-    report = {
-        "days": [],
-        "grand_morning_total": {},
-        "grand_afternoon_total": {},
-        "grand_total": {},
-    }
+    # ✅ Default page open = searched today
+    searched = True
+
+    report = _get_empty_report()
 
     if searched:
         report = _get_report_data(date_from, date_to)
@@ -91,8 +114,7 @@ def shipper_cod_report(request):
 
 @login_required
 def shipper_cod_report_pdf(request):
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
+    date_from, date_to = _get_report_dates(request)
 
     report = _get_report_data(date_from, date_to)
 
@@ -107,7 +129,12 @@ def shipper_cod_report_pdf(request):
         request=request,
     )
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as f:
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".html",
+        mode="w",
+        encoding="utf-8",
+    ) as f:
         f.write(html)
         temp_html = f.name
 

@@ -5,34 +5,428 @@
 {% block page_subtitle %}Upload edited Excel file to update orders{% endblock %}
 
 {% block content %}
-<div class="card" style="padding:16px;">
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div style="margin-bottom:12px;">
-      <label>Update Excel File</label>
-      {{ form.file }}
+
+<div class="upload-report-page">
+
+  <!-- HERO -->
+  <div class="upload-hero">
+    <div>
+      <div class="upload-kicker">DELIVERY REPORT UPDATE</div>
+      <h2>Upload Edited Excel File</h2>
+      <p>Upload the delivery report Excel file after editing. The system will update matching orders and show skipped or not-found rows.</p>
     </div>
-    <button class="btn" type="submit">Upload and Update</button>
-    <a class="btn" href="{% url 'delivery_report' %}">Back</a>
-  </form>
-</div>
 
-{% if summary %}
-<div class="card" style="padding:16px; margin-top:12px;">
-  <h3>Upload Summary</h3>
-  <p>Total Rows: {{ summary.total_rows }}</p>
-  <p>Updated Rows: {{ summary.updated_rows }}</p>
-  <p>Skipped Rows: {{ summary.skipped_rows }}</p>
-  <p>Not Found Rows: {{ summary.not_found_rows }}</p>
+    <div class="upload-hero-icon">
+      📊
+    </div>
+  </div>
 
-  {% if summary.errors %}
-    <h4>Errors</h4>
-    <ul>
-      {% for e in summary.errors %}
-        <li>{{ e }}</li>
-      {% endfor %}
-    </ul>
+  <!-- UPLOAD CARD -->
+  <div class="upload-card">
+    <div class="upload-section-head">
+      <div>
+        <h3>Upload Excel</h3>
+        <p>Please choose the edited delivery report Excel file.</p>
+      </div>
+
+      <a class="upload-btn upload-btn-light" href="{% url 'delivery_report' %}">
+        ← Back to Report
+      </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="upload-form">
+      {% csrf_token %}
+
+      <div class="upload-box">
+        <div class="upload-box-icon">⬆</div>
+
+        <div class="upload-box-text">
+          <label class="upload-label">Update Excel File</label>
+          <p>Accepted file should be the edited delivery report Excel format.</p>
+        </div>
+
+        <div class="upload-file-input">
+          {{ form.file }}
+        </div>
+      </div>
+
+      <div class="upload-actions">
+        <button class="upload-btn upload-btn-primary" type="submit">
+          Upload and Update
+        </button>
+
+        <a class="upload-btn upload-btn-light" href="{% url 'delivery_report' %}">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+  {% if summary %}
+    <!-- SUMMARY CARD -->
+    <div class="upload-card summary-card">
+      <div class="upload-section-head">
+        <div>
+          <h3>Upload Summary</h3>
+          <p>Result from the latest uploaded Excel file.</p>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span>Total Rows</span>
+          <strong>{{ summary.total_rows }}</strong>
+        </div>
+
+        <div class="summary-item green">
+          <span>Updated Rows</span>
+          <strong>{{ summary.updated_rows }}</strong>
+        </div>
+
+        <div class="summary-item orange">
+          <span>Skipped Rows</span>
+          <strong>{{ summary.skipped_rows }}</strong>
+        </div>
+
+        <div class="summary-item red">
+          <span>Not Found Rows</span>
+          <strong>{{ summary.not_found_rows }}</strong>
+        </div>
+      </div>
+
+      {% if summary.errors %}
+        <div class="error-panel">
+          <div class="error-title">
+            Errors
+          </div>
+
+          <ul class="error-list">
+            {% for e in summary.errors %}
+              <li>{{ e }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
   {% endif %}
+
 </div>
-{% endif %}
+
+
+<style>
+  .upload-report-page {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 6px 0 28px;
+  }
+
+  .upload-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 24px;
+    border-radius: 24px;
+    margin-bottom: 18px;
+    background:
+      radial-gradient(circle at top left, rgba(34, 197, 94, .25), transparent 36%),
+      linear-gradient(135deg, #0b7f35 0%, #129847 44%, #075c2b 100%);
+    color: #fff;
+    box-shadow: 0 18px 45px rgba(8, 83, 40, .22);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-hero:after {
+    content: "";
+    position: absolute;
+    width: 280px;
+    height: 280px;
+    border-radius: 999px;
+    right: -100px;
+    top: -120px;
+    background: rgba(255,255,255,.12);
+  }
+
+  .upload-kicker {
+    font-size: 12px;
+    font-weight: 950;
+    letter-spacing: .13em;
+    opacity: .85;
+    margin-bottom: 8px;
+  }
+
+  .upload-hero h2 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.15;
+    font-weight: 950;
+  }
+
+  .upload-hero p {
+    margin: 8px 0 0;
+    max-width: 650px;
+    font-size: 14px;
+    opacity: .86;
+  }
+
+  .upload-hero-icon {
+    width: 82px;
+    height: 82px;
+    border-radius: 24px;
+    display: grid;
+    place-items: center;
+    font-size: 38px;
+    background: rgba(255,255,255,.16);
+    border: 1px solid rgba(255,255,255,.22);
+    backdrop-filter: blur(12px);
+    z-index: 1;
+  }
+
+  .upload-card {
+    background: #fff;
+    border: 1px solid #e8edf1;
+    border-radius: 22px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .06);
+  }
+
+  .upload-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .upload-section-head h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 950;
+    color: #0f172a;
+  }
+
+  .upload-section-head p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 13px;
+  }
+
+  .upload-form {
+    margin: 0;
+  }
+
+  .upload-box {
+    display: grid;
+    grid-template-columns: 58px 1fr minmax(260px, 420px);
+    gap: 14px;
+    align-items: center;
+    padding: 18px;
+    border-radius: 20px;
+    border: 1px dashed #9bd8b2;
+    background: linear-gradient(180deg, #fbfefc 0%, #f8fafc 100%);
+  }
+
+  .upload-box-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    background: #ecfdf3;
+    color: #07843a;
+    font-size: 24px;
+    font-weight: 950;
+    border: 1px solid #bbf7d0;
+  }
+
+  .upload-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 950;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  .upload-box-text p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+  }
+
+  .upload-file-input input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid #d9e2ea;
+    background: #fff;
+    color: #334155;
+    font-size: 13px;
+  }
+
+  .upload-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .upload-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 14px;
+    border: 0;
+    font-weight: 950;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: .16s ease;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+  }
+
+  .upload-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, .13);
+    text-decoration: none;
+  }
+
+  .upload-btn-primary {
+    background: linear-gradient(135deg, #16a34a, #0f8f3c);
+    color: #fff;
+  }
+
+  .upload-btn-light {
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+  }
+
+  .summary-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfefc 100%);
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .summary-item {
+    padding: 16px;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #edf1f5;
+    text-align: center;
+  }
+
+  .summary-item span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 850;
+    margin-bottom: 5px;
+  }
+
+  .summary-item strong {
+    color: #0f172a;
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 950;
+  }
+
+  .summary-item.green {
+    background: #ecfdf3;
+    border-color: #bbf7d0;
+  }
+
+  .summary-item.green strong {
+    color: #07843a;
+  }
+
+  .summary-item.orange {
+    background: #fff7ed;
+    border-color: #fed7aa;
+  }
+
+  .summary-item.orange strong {
+    color: #c2410c;
+  }
+
+  .summary-item.red {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+
+  .summary-item.red strong {
+    color: #be123c;
+  }
+
+  .error-panel {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 18px;
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+  }
+
+  .error-title {
+    color: #be123c;
+    font-weight: 950;
+    margin-bottom: 8px;
+  }
+
+  .error-list {
+    margin: 0;
+    padding-left: 18px;
+    color: #9f1239;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 900px) {
+    .upload-hero {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 20px;
+    }
+
+    .upload-hero-icon {
+      width: 64px;
+      height: 64px;
+      font-size: 30px;
+    }
+
+    .upload-section-head {
+      flex-direction: column;
+    }
+
+    .upload-box {
+      grid-template-columns: 1fr;
+    }
+
+    .upload-actions {
+      flex-direction: column;
+    }
+
+    .upload-btn {
+      width: 100%;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 560px) {
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
 {% endblock %}

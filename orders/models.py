@@ -215,8 +215,23 @@ class Order(models.Model):
         self.save(update_fields=["is_locked", "locked_at", "locked_by"])
 
     def save(self, *args, **kwargs):
-        if self.status == self.STATUS_DELIVERED and not self.done_at:
+        """
+        done_at is used by Delivery Report.
+
+        DELIVERED and RETURNED are done statuses.
+        Other statuses should not keep done_at, otherwise they may wrongly appear
+        in the done/return-done report.
+        """
+        done_statuses = [
+            self.STATUS_DELIVERED,
+            self.STATUS_RETURNED,
+        ]
+
+        if self.status in done_statuses and not self.done_at:
             self.done_at = timezone.localdate()
+
+        if self.status not in done_statuses and self.done_at:
+            self.done_at = None
 
         super().save(*args, **kwargs)
 

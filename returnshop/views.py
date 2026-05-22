@@ -12,7 +12,7 @@ from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from orders.models import Order
+from orders.models import Order, OrderActivity
 from .models import ReturnShopBatch, ReturnShopBatchItem, ReturnShopLabel, ReturnShopLabelItem
 
 
@@ -69,10 +69,6 @@ def _order_status(o: Order) -> str:
 
 
 def _display_status(st: str) -> str:
-    """
-    Preview should show REAL order status.
-    Only map PROCESSING -> RETURNING for Return module display.
-    """
     st = (st or "").upper()
     if st == "PROCESSING":
         return "RETURNING"
@@ -80,39 +76,140 @@ def _display_status(st: str) -> str:
 
 
 def _status_returning() -> str:
-    """
-    Internal Order status used for Returning.
-    We store PROCESSING in DB, but display as RETURNING.
-    """
-    return "PROCESSING"
+    return getattr(Order, "STATUS_RETURNING", "RETURNING")
 
 
 def _status_returned() -> str:
-    """Internal Order status used for Returned."""
-    return "RETURNED"
+    return getattr(Order, "STATUS_RETURNED", "RETURNED")
 
 
 def _can_assign_status(st: str) -> bool:
     """
-    Allow these to be included in Return-To-Shop batch (preview + save):
-    - INBOUND, CREATED (normal)
-    - DONE / DELIVERED (rare edge case: cash closed but goods remain)
-    - RETURNED (allowed to preview)
+    Allow these to be included in Return-To-Shop batch:
+    - INBOUND / CREATED normal pending orders
+    - DELIVERED / DONE edge case
+    - RETURNED can preview/add again if needed
+    - RETURNING can remain in return workflow
     """
     st = (st or "").upper()
-    return st in ("INBOUND", "CREATED", "DONE", "DELIVERED", "RETURNED")
+    return st in (
+        "INBOUND",
+        "CREATED",
+        "DONE",
+        "DELIVERED",
+        "RETURNED",
+        "RETURNING",
+        "PROCESSING",
+    )
 
 
-def _set_cod(order: Order, value):
-    if hasattr(order, "cod"):
-        order.cod = value
-        order.save(update_fields=["cod"])
+def _activity_action_for_status(status: str):
+    st = (status or "").upper()
+
+    if st == getattr(Order, "STATUS_RETURNED", "RETURNED"):
+        return getattr(OrderActivity, "ACTION_RETURNED", "returned")
+
+    if st == getattr(Order, "STATUS_RETURNING", "RETURNING"):
+        return getattr(OrderActivity, "ACTION_RETURN_ASSIGNED", "return_assigned")
+
+    return getattr(OrderActivity, "ACTION_EDIT", "edit")
 
 
-def _set_order_status(order: Order, status: str):
-    if hasattr(order, "status"):
-        order.status = status
-        order.save(update_fields=["status"])
+def _create_order_activity(order: Order, old_status: str, new_status: str, user=None, note: str = ""):
+    if old_status == new_status:
+        return
+
+    try:
+        OrderActivity.objects.create(
+            order=order,
+            action=_activity_action_for_status(new_status),
+            old_status=old_status,
+            new_status=new_status,
+            actor=user,
+            note=note or f"Return To Shop: {old_status} → {new_status}",
+        )
+    except Exception:
+        # Do not break return workflow if timeline insert has issue.
+        pass
+
+
+def _set_cod(order: Order, value, user=None):
+    if not hasattr(order, "cod"):
+        return
+
+    update_fields = ["cod"]
+    order.cod = value
+
+    if hasattr(order, "updated_at"):
+        order.updated_at = timezone.now()
+        update_fields.append("updated_at")
+
+    if hasattr(order, "updated_by"):
+        order.updated_by = user
+        update_fields.append("updated_by")
+
+    order.save(update_fields=list(dict.fromkeys(update_fields)))
+
+
+def _set_order_status(order: Order, status: str, user=None, note: str = "", force_done_date: bool = False):
+    """
+    Important:
+    - RETURNED must set done_at so Delivery Report can show as return done.
+    - RETURNING should clear done_at because it is not done yet.
+    - Every status change creates OrderActivity.
+    """
+    if not hasattr(order, "status"):
+        return
+
+    old_status = _order_status(order)
+    new_status = (status or "").upper()
+
+    update_fields = ["status"]
+    order.status = new_status
+
+    if hasattr(order, "done_at"):
+        done_statuses = {
+            getattr(Order, "STATUS_RETURNED", "RETURNED"),
+            getattr(Order, "STATUS_DELIVERED", "DELIVERED"),
+            "DONE",
+        }
+
+        not_done_statuses = {
+            getattr(Order, "STATUS_RETURNING", "RETURNING"),
+            getattr(Order, "STATUS_INBOUND", "INBOUND"),
+            getattr(Order, "STATUS_CREATED", "CREATED"),
+            getattr(Order, "STATUS_RETURN_ASSIGNED", "RETURN_ASSIGNED"),
+            getattr(Order, "STATUS_PROVINCE_ASSIGNED", "PROVINCE_ASSIGNED"),
+            getattr(Order, "STATUS_OUT_FOR_DELIVERY", "OUT_FOR_DELIVERY"),
+            "PROCESSING",
+        }
+
+        if new_status in done_statuses:
+            if force_done_date or not order.done_at:
+                order.done_at = timezone.localdate()
+            update_fields.append("done_at")
+
+        elif new_status in not_done_statuses:
+            order.done_at = None
+            update_fields.append("done_at")
+
+    if hasattr(order, "updated_at"):
+        order.updated_at = timezone.now()
+        update_fields.append("updated_at")
+
+    if hasattr(order, "updated_by"):
+        order.updated_by = user
+        update_fields.append("updated_by")
+
+    order.save(update_fields=list(dict.fromkeys(update_fields)))
+
+    _create_order_activity(
+        order=order,
+        old_status=old_status,
+        new_status=new_status,
+        user=user,
+        note=note,
+    )
 
 
 def _receiver_location(o: Order) -> str:
@@ -203,7 +300,7 @@ def _get_done_label_codes_from_pp(label_codes):
     if not codes:
         return set()
 
-    # TODO: connect to real Deliver PP done/ticked rows
+    # TODO: connect to real Deliver PP done/ticked rows later
     return set()
 
 
@@ -217,6 +314,7 @@ def _build_batch_progress_map(batches):
         labels_qs = getattr(batch, "_prefetched_objects_cache", {}).get("labels")
         if labels_qs is None:
             labels_qs = batch.labels.all()
+
         for lb in labels_qs:
             code = (getattr(lb, "code", "") or "").strip()
             if code:
@@ -226,18 +324,33 @@ def _build_batch_progress_map(batches):
 
     progress_map = {}
     for batch in batches:
-        counts = batch.get_progress_counts(done_codes=done_codes)
+        if batch.status == _batch_status_cancelled():
+            label = "CANCELLED"
+            counts = {"total_count": 0, "done_count": 0, "pending_count": 0}
+        elif batch.status == _batch_status_done():
+            labels_qs = getattr(batch, "_prefetched_objects_cache", {}).get("labels")
+            if labels_qs is None:
+                labels_qs = batch.labels.all()
+
+            total = len(list(labels_qs))
+            label = "DONE" if total <= 0 else f"{total}/{total} DONE"
+            counts = {"total_count": total, "done_count": total, "pending_count": 0}
+        else:
+            counts = batch.get_progress_counts(done_codes=done_codes)
+            label = batch.get_progress_label(done_codes=done_codes)
+
         progress_map[batch.id] = {
             "total_count": counts["total_count"],
             "done_count": counts["done_count"],
             "pending_count": counts["pending_count"],
-            "label": batch.get_progress_label(done_codes=done_codes),
+            "label": label,
         }
+
     return progress_map
 
 
 # =========================
-# LIST (Batch list)
+# LIST
 # =========================
 @login_required
 def returnshop_list(request):
@@ -260,8 +373,10 @@ def returnshop_list(request):
 
     if status:
         qs = qs.filter(status=status.upper())
+
     if date_from:
         qs = qs.filter(assigned_at__date__gte=date_from)
+
     if date_to:
         qs = qs.filter(assigned_at__date__lte=date_to)
 
@@ -278,6 +393,8 @@ def returnshop_list(request):
 
         if batch.status == _batch_status_cancelled():
             progress_label = "CANCELLED"
+        elif batch.status == _batch_status_done():
+            progress_label = "DONE"
         elif total_labels <= 0:
             progress_label = "PENDING"
         else:
@@ -309,7 +426,7 @@ def returnshop_list(request):
 
 
 # =========================
-# HISTORY (Label archive)
+# HISTORY
 # =========================
 @login_required
 def returnshop_history(request):
@@ -352,8 +469,8 @@ def returnshop_history(request):
         li_qs = ReturnShopLabelItem.objects.filter(label=lb).select_related("batch_item__order__seller")
         for li in li_qs:
             seller_set.add(_seller_name(li.batch_item.order))
-        shop_names = " + ".join(sorted(seller_set)) if seller_set else "-"
 
+        shop_names = " + ".join(sorted(seller_set)) if seller_set else "-"
         created_at = getattr(lb, "created_at", None) or (lb.batch.assigned_at if lb.batch else None)
         batch_progress = progress_map.get(lb.batch_id or 0, {})
         progress_label = batch_progress.get("label", lb.batch.status if lb.batch else "-")
@@ -373,7 +490,7 @@ def returnshop_history(request):
 
 
 # =========================
-# NEW (SCAN / CREATE Batch)
+# NEW
 # =========================
 @login_required
 def returnshop_new(request):
@@ -401,6 +518,7 @@ def returnshop_new(request):
 
         if action == "scan_add":
             codes = _parse_codes(posted_scan)
+
             if not codes:
                 messages.error(request, "Please scan tracking code(s).")
                 return redirect("returnshop_new")
@@ -408,6 +526,7 @@ def returnshop_new(request):
             existing = request.session.get(codes_key, [])
             seen = set(existing)
             added = 0
+
             for c in codes:
                 if c not in seen:
                     existing.append(c)
@@ -416,6 +535,7 @@ def returnshop_new(request):
 
             request.session[codes_key] = existing
             request.session.modified = True
+
             messages.success(request, f"Added {added} code(s).")
             return redirect("returnshop_new")
 
@@ -423,6 +543,7 @@ def returnshop_new(request):
             request.session[codes_key] = []
             request.session[text_key] = ""
             request.session.modified = True
+
             messages.success(request, "Cleared scanned list.")
             return redirect("returnshop_new")
 
@@ -432,12 +553,14 @@ def returnshop_new(request):
 
             checked_ids = request.POST.getlist("checked_ids")
             checked_ids = [int(x) for x in checked_ids if str(x).isdigit()]
+
             if not checked_ids:
                 messages.error(request, "Please tick at least 1 shipment.")
                 return redirect("returnshop_new")
 
             allowed_map = {o.id: o for o in allowed_orders}
             selected_orders = [allowed_map.get(i) for i in checked_ids if allowed_map.get(i)]
+
             if not selected_orders:
                 messages.error(request, "Selected shipments are not allowed. Remove red rows.")
                 return redirect("returnshop_new")
@@ -457,18 +580,33 @@ def returnshop_new(request):
                         cod_before=_cod(o),
                         status_before=_order_status(o),
                     )
-                    _set_cod(o, 0)
-                    _set_order_status(o, _status_returning())
+
+                    _set_cod(o, 0, user=request.user)
+                    _set_order_status(
+                        o,
+                        _status_returning(),
+                        user=request.user,
+                        note=f"Assigned to Return To Shop batch RTS-{batch.id}",
+                    )
 
                 request.session[codes_key] = []
+                request.session[text_key] = ""
                 request.session.modified = True
 
                 if mode == "complete":
                     batch.status = _batch_status_done()
                     batch.save(update_fields=["status"])
+
                     for o in selected_orders:
-                        _set_cod(o, 0)
-                        _set_order_status(o, _status_returned())
+                        _set_cod(o, 0, user=request.user)
+                        _set_order_status(
+                            o,
+                            _status_returned(),
+                            user=request.user,
+                            note=f"Return To Shop batch RTS-{batch.id} completed",
+                            force_done_date=True,
+                        )
+
                     messages.success(request, "Return to Shop batch created and completed.")
                     return redirect("returnshop_detail", pk=batch.id)
 
@@ -529,7 +667,7 @@ def returnshop_new(request):
 
 
 # =========================
-# DETAIL (Batch detail)
+# DETAIL
 # =========================
 @login_required
 def returnshop_detail(request, pk):
@@ -537,11 +675,18 @@ def returnshop_detail(request, pk):
         ReturnShopBatch.objects.prefetch_related(
             Prefetch(
                 "labels",
-                queryset=ReturnShopLabel.objects.only("id", "batch_id", "code", "mode", "shop_name").order_by("id"),
+                queryset=ReturnShopLabel.objects.only(
+                    "id",
+                    "batch_id",
+                    "code",
+                    "mode",
+                    "shop_name",
+                ).order_by("id"),
             )
         ),
         pk=pk,
     )
+
     cancelled = _batch_status_cancelled()
 
     edit_mode = request.GET.get("edit") == "1"
@@ -561,9 +706,17 @@ def returnshop_detail(request, pk):
                 with transaction.atomic():
                     batch.status = _batch_status_done()
                     batch.save(update_fields=["status"])
+
                     for it in batch.items.select_related("order").all():
-                        _set_cod(it.order, 0)
-                        _set_order_status(it.order, _status_returned())
+                        _set_cod(it.order, 0, user=request.user)
+                        _set_order_status(
+                            it.order,
+                            _status_returned(),
+                            user=request.user,
+                            note=f"Return To Shop batch RTS-{batch.id} completed",
+                            force_done_date=True,
+                        )
+
             messages.success(request, "Batch completed.")
             return redirect("returnshop_detail", pk=batch.id)
 
@@ -572,10 +725,18 @@ def returnshop_detail(request, pk):
                 with transaction.atomic():
                     batch.status = _batch_status_pending()
                     batch.save(update_fields=["status"])
+
                     for it in batch.items.select_related("order").all():
                         if it.cod_before is not None:
-                            _set_cod(it.order, it.cod_before)
-                        _set_order_status(it.order, _status_returning())
+                            _set_cod(it.order, it.cod_before, user=request.user)
+
+                        _set_order_status(
+                            it.order,
+                            _status_returning(),
+                            user=request.user,
+                            note=f"Undo Return To Shop complete RTS-{batch.id}",
+                        )
+
             messages.success(request, "Undo complete success.")
             return redirect("returnshop_detail", pk=batch.id)
 
@@ -583,10 +744,18 @@ def returnshop_detail(request, pk):
             with transaction.atomic():
                 batch.status = cancelled
                 batch.save(update_fields=["status"])
+
                 for it in batch.items.select_related("order").all():
                     if it.cod_before is not None:
-                        _set_cod(it.order, it.cod_before)
-                    _set_order_status(it.order, it.status_before or "INBOUND")
+                        _set_cod(it.order, it.cod_before, user=request.user)
+
+                    _set_order_status(
+                        it.order,
+                        it.status_before or getattr(Order, "STATUS_INBOUND", "INBOUND"),
+                        user=request.user,
+                        note=f"Return To Shop batch RTS-{batch.id} cancelled",
+                    )
+
             messages.success(request, "Batch cancelled. Orders restored to previous status.")
             return redirect("returnshop_detail", pk=batch.id)
 
@@ -595,10 +764,18 @@ def returnshop_detail(request, pk):
                 with transaction.atomic():
                     batch.status = _batch_status_pending()
                     batch.save(update_fields=["status"])
+
                     for it in batch.items.select_related("order").all():
                         if it.cod_before is not None:
-                            _set_cod(it.order, it.cod_before)
-                        _set_order_status(it.order, _status_returning())
+                            _set_cod(it.order, it.cod_before, user=request.user)
+
+                        _set_order_status(
+                            it.order,
+                            _status_returning(),
+                            user=request.user,
+                            note=f"Undo cancel Return To Shop batch RTS-{batch.id}",
+                        )
+
             messages.success(request, "Undo cancel success.")
             return redirect("returnshop_detail", pk=batch.id)
 
@@ -608,22 +785,33 @@ def returnshop_detail(request, pk):
                 return redirect("returnshop_detail", pk=batch.id)
 
             item_id = request.POST.get("item_id") or ""
+
             if item_id.isdigit():
                 it = (
                     ReturnShopBatchItem.objects.filter(batch=batch, id=int(item_id))
                     .select_related("order")
                     .first()
                 )
+
                 if it:
                     with transaction.atomic():
                         if it.cod_before is not None:
-                            _set_cod(it.order, it.cod_before)
-                        _set_order_status(it.order, it.status_before or "INBOUND")
+                            _set_cod(it.order, it.cod_before, user=request.user)
+
+                        _set_order_status(
+                            it.order,
+                            it.status_before or getattr(Order, "STATUS_INBOUND", "INBOUND"),
+                            user=request.user,
+                            note=f"Removed from Return To Shop batch RTS-{batch.id}",
+                        )
+
                         it.delete()
+
             messages.success(request, "Removed shipment (restored previous status).")
             return redirect(f"{request.path}?edit=1")
 
     items = batch.items.select_related("order", "order__seller").all().order_by("id")
+
     rows = []
     for it in items:
         o = it.order
@@ -647,7 +835,12 @@ def returnshop_detail(request, pk):
     progress_map = _build_batch_progress_map([batch])
     batch_progress = progress_map.get(
         batch.id,
-        {"total_count": 0, "done_count": 0, "pending_count": 0, "label": batch.status},
+        {
+            "total_count": 0,
+            "done_count": 0,
+            "pending_count": 0,
+            "label": batch.status,
+        },
     )
 
     return render(
@@ -667,13 +860,14 @@ def returnshop_detail(request, pk):
 
 
 # =========================
-# LABELS (Merge / No Merge)
+# LABELS
 # =========================
 @login_required
 def returnshop_labels(request, pk):
     batch = get_object_or_404(ReturnShopBatch, pk=pk)
 
     items = list(batch.items.select_related("order", "order__seller").all().order_by("id"))
+
     if not items:
         messages.error(request, "No orders in this batch.")
         return redirect("returnshop_detail", pk=batch.id)
@@ -682,10 +876,15 @@ def returnshop_labels(request, pk):
 
     shop_label_map = {}
     merge_label = None
+
     for lb in existing_labels:
-        if getattr(lb, "mode", "") == getattr(ReturnShopLabel, "MODE_SHOP", "SHOP") and getattr(lb, "shop_name", ""):
+        if (
+            getattr(lb, "mode", "") == getattr(ReturnShopLabel, "MODE_SHOP", "SHOP")
+            and getattr(lb, "shop_name", "")
+        ):
             if lb.shop_name not in shop_label_map:
                 shop_label_map[lb.shop_name] = lb
+
         if merge_label is None and getattr(lb, "mode", "") == getattr(ReturnShopLabel, "MODE_MERGE", "MERGE"):
             merge_label = lb
 
@@ -705,22 +904,33 @@ def returnshop_labels(request, pk):
 
     shop_groups = []
     gid = 0
+
     for shop, all_items in sorted(by_shop_all.items(), key=lambda x: x[0].lower()):
         gid += 1
         rem_items = by_shop_remaining.get(shop, [])
+
         shop_groups.append(
             {
                 "gid": str(gid),
                 "shop": shop,
                 "count_all": len(all_items),
                 "remaining_count": len(rem_items),
-                "orders": [{"tracking": it.order.tracking_no, "tracking_url": _order_detail_url(it.order)} for it in all_items],
+                "orders": [
+                    {
+                        "tracking": it.order.tracking_no,
+                        "tracking_url": _order_detail_url(it.order),
+                    }
+                    for it in all_items
+                ],
                 "remaining_item_ids": [it.id for it in rem_items],
                 "saved_label": shop_label_map.get(shop),
             }
         )
 
-    shop_groups_no_merge = [g for g in shop_groups if (g["saved_label"] is not None) or (g["remaining_count"] > 0)]
+    shop_groups_no_merge = [
+        g for g in shop_groups
+        if (g["saved_label"] is not None) or (g["remaining_count"] > 0)
+    ]
 
     total_shops = len(shop_groups)
     total_pc = len(items)
@@ -732,20 +942,30 @@ def returnshop_labels(request, pk):
 
         if action == "delete_label":
             label_id = request.POST.get("label_id") or ""
+
             if label_id.isdigit():
                 lb = ReturnShopLabel.objects.filter(id=int(label_id), batch=batch).first()
                 if lb:
                     lb.delete()
                     messages.success(request, "Undo save success.")
+
             return redirect("returnshop_labels", pk=batch.id)
 
         if action == "undo_merge_all":
-            ReturnShopLabel.objects.filter(batch=batch, mode=getattr(ReturnShopLabel, "MODE_MERGE", "MERGE")).delete()
+            ReturnShopLabel.objects.filter(
+                batch=batch,
+                mode=getattr(ReturnShopLabel, "MODE_MERGE", "MERGE"),
+            ).delete()
+
             messages.success(request, "Undo Merge All success.")
             return redirect("returnshop_labels", pk=batch.id)
 
         if action == "undo_no_merge_all":
-            ReturnShopLabel.objects.filter(batch=batch, mode=getattr(ReturnShopLabel, "MODE_SHOP", "SHOP")).delete()
+            ReturnShopLabel.objects.filter(
+                batch=batch,
+                mode=getattr(ReturnShopLabel, "MODE_SHOP", "SHOP"),
+            ).delete()
+
             messages.success(request, "Undo No Merge All success.")
             return redirect("returnshop_labels", pk=batch.id)
 
@@ -757,9 +977,11 @@ def returnshop_labels(request, pk):
             if not ship_to_address:
                 messages.error(request, "Please input Destination Location.")
                 return False
+
             if not ship_to_phone:
                 messages.error(request, "Please input Phone Number.")
                 return False
+
             return True
 
         if action == "create_shop_label":
@@ -769,16 +991,19 @@ def returnshop_labels(request, pk):
             gid_value = (request.POST.get("gid") or "").strip()
             gid_map = {g["gid"]: g for g in shop_groups}
             g = gid_map.get(gid_value)
+
             if not g:
                 messages.error(request, "Shop group not found.")
                 return redirect("returnshop_labels", pk=batch.id)
 
             remaining_ids = g["remaining_item_ids"]
+
             if not remaining_ids:
-                messages.error(request, "This shop has no remaining items (maybe already merged).")
+                messages.error(request, "This shop has no remaining items.")
                 return redirect("returnshop_labels", pk=batch.id)
 
             remaining_shop_items = [it for it in remaining_items if it.id in set(remaining_ids)]
+
             if not remaining_shop_items:
                 messages.error(request, "No remaining items to save.")
                 return redirect("returnshop_labels", pk=batch.id)
@@ -792,6 +1017,7 @@ def returnshop_labels(request, pk):
                     mode=getattr(ReturnShopLabel, "MODE_SHOP", "SHOP"),
                     shop_name=g["shop"],
                 )
+
                 lb.code = _label_code(batch.id, lb.id)
                 lb.save(update_fields=["code"])
 
@@ -807,6 +1033,7 @@ def returnshop_labels(request, pk):
 
             selected_gids = request.POST.getlist("selected_gid")
             selected_gids = [str(x).strip() for x in selected_gids if str(x).strip()]
+
             if not selected_gids:
                 messages.error(request, "Please select at least 1 shop group to merge.")
                 return redirect("returnshop_labels", pk=batch.id)
@@ -819,15 +1046,18 @@ def returnshop_labels(request, pk):
                 g = gid_map.get(sgid)
                 if not g:
                     continue
+
                 selected_shop_names.append(g["shop"])
                 selected_item_ids += g["remaining_item_ids"]
 
             selected_item_ids = list(dict.fromkeys(selected_item_ids))
+
             if not selected_item_ids:
-                messages.error(request, "Selected shops have no remaining items (already saved/merged).")
+                messages.error(request, "Selected shops have no remaining items.")
                 return redirect("returnshop_labels", pk=batch.id)
 
             selected_items = [it for it in remaining_items if it.id in set(selected_item_ids)]
+
             if not selected_items:
                 messages.error(request, "No remaining items to merge.")
                 return redirect("returnshop_labels", pk=batch.id)
@@ -841,6 +1071,7 @@ def returnshop_labels(request, pk):
                     mode=getattr(ReturnShopLabel, "MODE_MERGE", "MERGE"),
                     shop_name=" + ".join(selected_shop_names),
                 )
+
                 lb.code = _label_code(batch.id, lb.id)
                 lb.save(update_fields=["code"])
 
@@ -875,15 +1106,24 @@ def returnshop_label_detail(request, pk):
     label = get_object_or_404(ReturnShopLabel, pk=pk)
 
     li = ReturnShopLabelItem.objects.filter(label=label).select_related(
-        "batch_item__order", "batch_item__order__seller"
+        "batch_item__order",
+        "batch_item__order__seller",
     )
 
     seller_set = set()
     rows = []
+
     for x in li:
         o = x.batch_item.order
         seller_set.add(_seller_name(o))
-        rows.append({"tracking": getattr(o, "tracking_no", "-"), "tracking_url": _order_detail_url(o), "seller": _seller_name(o)})
+
+        rows.append(
+            {
+                "tracking": getattr(o, "tracking_no", "-"),
+                "tracking_url": _order_detail_url(o),
+                "seller": _seller_name(o),
+            }
+        )
 
     shop_names = " + ".join(sorted(seller_set)) if seller_set else "-"
     total_pc = len(rows)
@@ -891,7 +1131,13 @@ def returnshop_label_detail(request, pk):
     return render(
         request,
         "returnshop/returnshop_label_detail.html",
-        {"label": label, "batch": label.batch, "shop_names": shop_names, "total_pc": total_pc, "rows": rows},
+        {
+            "label": label,
+            "batch": label.batch,
+            "shop_names": shop_names,
+            "total_pc": total_pc,
+            "rows": rows,
+        },
     )
 
 
@@ -903,7 +1149,8 @@ def returnshop_label_print(request, pk):
     label = get_object_or_404(ReturnShopLabel, pk=pk)
 
     li = ReturnShopLabelItem.objects.filter(label=label).select_related(
-        "batch_item__order", "batch_item__order__seller"
+        "batch_item__order",
+        "batch_item__order__seller",
     )
 
     seller_set = set()
@@ -920,4 +1167,5 @@ def returnshop_label_print(request, pk):
         "total_pc": total_pc,
         "qr_data_uri": _qr_data_uri(label.code),
     }
+
     return render(request, "returnshop/returnshop_label_print.html", context)

@@ -4,95 +4,156 @@
 {% block page_subtitle %}New Batch{% endblock %}
 
 {% block content %}
-<div class="card" style="padding:18px;border-radius:16px;">
 
-  <div style="font-weight:900;margin-bottom:10px;">
-    Scan → Add → Review → Save
+<div class="pp-page">
+
+  <!-- HERO -->
+  <div class="pp-hero">
+    <div class="pp-hero-left">
+      <div class="pp-kicker">PP DELIVERY BATCH</div>
+      <h2>Scan, Review &amp; Assign Shipper</h2>
+      <p>
+        Scan shipment tracking numbers or return batch codes, review the result,
+        then save one clean delivery batch.
+      </p>
+    </div>
+
+    <div class="pp-hero-stats">
+      <div class="pp-stat">
+        <span>Total</span>
+        <strong>{{ total_count }}</strong>
+      </div>
+
+      <div class="pp-stat">
+        <span>Shipment</span>
+        <strong>{{ shipment_delivery_count }}</strong>
+      </div>
+
+      <div class="pp-stat">
+        <span>Return</span>
+        <strong>{{ return_batch_count }}</strong>
+      </div>
+    </div>
   </div>
 
-  <!-- SCAN -->
-  <form method="post" style="margin-bottom:10px;">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="scan_add">
-    <div class="label">Scan tracking OR return (RTS-17 / RTS-17-58) (one per line)</div>
-    <textarea
-      name="scan_codes"
-      class="input"
-      style="height:110px;width:100%;font-family:ui-monospace,Consolas,monospace;"
-    >{{ scan_value }}</textarea>
+  <!-- SCAN CARD -->
+  <div class="pp-card pp-scan-card">
+    <div class="pp-card-head">
+      <div>
+        <h3>Scan Codes</h3>
+        <p>Tracking number or return code format: RTS-17 / RTS-17-58</p>
+      </div>
 
-    <div style="display:flex;gap:10px;justify-content:space-between;margin-top:10px;">
-      <button class="btn btn-primary" type="submit" style="min-width:200px;">Add</button>
+      <form method="post" class="pp-clear-form" onsubmit="return confirm('Clear all scanned codes?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="scan_clear">
+        <button class="pp-btn pp-btn-clear" type="submit">
+          Clear All
+        </button>
+      </form>
     </div>
-  </form>
 
-  <!-- CLEAR -->
-  <form method="post" style="text-align:right;margin-bottom:14px;" onsubmit="return confirm('Clear all scanned codes?');">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="scan_clear">
-    <button class="btn btn-danger" type="submit">Clear</button>
-  </form>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="scan_add">
 
-  <!-- TOTALS -->
-  <div style="padding:10px;border:1px solid #eee;border-radius:12px;margin-bottom:10px;text-align:center;">
-    <b>Total:</b> {{ total_count }}
-    &nbsp;&nbsp;<b style="color:#0a7;">Shipment:</b> {{ shipment_delivery_count }}
-    &nbsp;&nbsp;<b style="color:#06c;">Return batch:</b> {{ return_batch_count }}
+      <label class="pp-label">Scan tracking OR return code</label>
+
+      <textarea
+        name="scan_codes"
+        class="pp-textarea"
+        placeholder="Example:
+DS00001234
+RTS-17
+RTS-17-58"
+      >{{ scan_value }}</textarea>
+
+      <button class="pp-btn pp-btn-primary pp-btn-full" type="submit">
+        + Add Codes
+      </button>
+    </form>
   </div>
 
   <!-- RETURN PREVIEW -->
-  <div class="card" style="margin-top:14px;padding:14px;border-radius:14px;">
-    <div style="font-weight:900;margin-bottom:10px;text-align:center;">Return Batch Preview</div>
+  <div class="pp-card">
+    <div class="pp-section-head">
+      <div>
+        <h3>Return Batch Preview</h3>
+        <p>All scanned return batch codes will show here.</p>
+      </div>
 
-    <div style="overflow:auto;">
-      <table class="ds-table" style="min-width:1100px;">
+      <div class="pp-mini-badge blue">
+        {{ return_batch_count }} Return{{ return_batch_count|pluralize }}
+      </div>
+    </div>
+
+    <div class="pp-table-wrap">
+      <table class="pp-table pp-return-table">
         <thead>
           <tr>
-            <th style="text-align:center;">N</th>
-            <th style="text-align:center;">RETURN CODE</th>
-            <th style="text-align:center;">CREATE DATE</th>
-            <th style="text-align:center;">SELLER</th>
-            <th style="text-align:center;">LOCATION</th>
-            <th style="text-align:center;">PHONE</th>
-            <th style="text-align:center;">TOTAL PC</th>
-            <th style="text-align:center;">COD</th>
-            <th style="text-align:center;">STATUS</th>
-            <th style="text-align:center;">ACTION</th>
+            <th>N</th>
+            <th>Return Code</th>
+            <th>Create Date</th>
+            <th>Seller</th>
+            <th>Location</th>
+            <th>Phone</th>
+            <th>Total PC</th>
+            <th>COD</th>
+            <th>Status</th>
+            <th>Action</th>
           </tr>
         </thead>
+
         <tbody>
           {% for r in rows_return_found %}
-            <tr{% if not r.ok %} style="background:#ffecec;"{% endif %}>
-              <td style="text-align:center;">{{ forloop.counter }}</td>
-              <td style="text-align:center;"><b>{{ r.code }}</b></td>
-              <td style="text-align:center;">
-                {% if r.created_at %}{{ r.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}
+            <tr{% if not r.ok %} class="row-error"{% endif %}>
+              <td>{{ forloop.counter }}</td>
+
+              <td>
+                <span class="pp-code blue">{{ r.code }}</span>
               </td>
-              <td style="text-align:center;">{{ r.shop|default:"-" }}</td>
-              <td style="text-align:center;">{{ r.address|default:"-" }}</td>
-              <td style="text-align:center;">{{ r.phone|default:"-" }}</td>
-              <td style="text-align:center;"><b>{{ r.total_pc }}</b></td>
-              <td style="text-align:center;"><b>{{ r.cod }}</b></td>
-              <td style="text-align:center;">
-                {% if r.ok %}
-                  <span class="badge badge-ok">OK</span>
+
+              <td>
+                {% if r.created_at %}
+                  {{ r.created_at|date:"Y-m-d H:i" }}
                 {% else %}
-                  <span class="badge badge-bad">NOT ALLOWED</span>
-                  <div style="font-size:11px;opacity:.75;margin-top:4px;">{{ r.why }}</div>
+                  -
                 {% endif %}
               </td>
-              <td style="text-align:center;">
+
+              <td>{{ r.shop|default:"-" }}</td>
+              <td class="text-left">{{ r.address|default:"-" }}</td>
+              <td>{{ r.phone|default:"-" }}</td>
+              <td><strong>{{ r.total_pc }}</strong></td>
+              <td><strong>{{ r.cod }}</strong></td>
+
+              <td>
+                {% if r.ok %}
+                  <span class="pp-badge ok">OK</span>
+                {% else %}
+                  <span class="pp-badge bad">NOT ALLOWED</span>
+                  <div class="pp-reason">{{ r.why }}</div>
+                {% endif %}
+              </td>
+
+              <td>
                 <form method="post" onsubmit="return confirm('Remove this code?');">
                   {% csrf_token %}
                   <input type="hidden" name="action" value="remove_scan">
                   <input type="hidden" name="code" value="{{ r.code }}">
-                  <button class="trash-mini" type="submit" title="Remove">🗑</button>
+                  <button class="pp-trash" type="submit" title="Remove">🗑</button>
                 </form>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="10" style="text-align:center;padding:14px;opacity:.7;">No return codes.</td>
+              <td colspan="10">
+                <div class="pp-empty">
+                  <div class="pp-empty-icon">↩</div>
+                  <strong>No return codes.</strong>
+                  <span>Scan return batch code to preview here.</span>
+                </div>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -100,67 +161,96 @@
     </div>
 
     {% if rows_return_notfound %}
-      <div style="color:#c00;margin-top:10px;text-align:center;">
-        <b>Return not found:</b> {{ rows_return_notfound|join:", " }}
+      <div class="pp-alert">
+        <strong>Return not found:</strong> {{ rows_return_notfound|join:", " }}
       </div>
     {% endif %}
   </div>
 
   <!-- PP DELIVERY PREVIEW -->
-  <div class="card" style="margin-top:14px;padding:14px;border-radius:14px;">
-    <div style="font-weight:900;margin-bottom:10px;text-align:center;">PP Delivery Preview</div>
+  <div class="pp-card">
+    <div class="pp-section-head">
+      <div>
+        <h3>PP Delivery Preview</h3>
+        <p>Normal shipment tracking numbers will show here.</p>
+      </div>
 
-    <div style="overflow:auto;">
-      <table class="ds-table" style="min-width:1200px;">
+      <div class="pp-mini-badge green">
+        {{ shipment_delivery_count }} Shipment{{ shipment_delivery_count|pluralize }}
+      </div>
+    </div>
+
+    <div class="pp-table-wrap">
+      <table class="pp-table pp-delivery-table">
         <thead>
           <tr>
-            <th style="text-align:center;">N</th>
-            <th style="text-align:center;">TRACKING</th>
-            <th style="text-align:center;">SHOP</th>
-            <th style="text-align:center;">CODE</th>
-            <th style="text-align:center;">LOCATION</th>
-            <th style="text-align:center;">RECEIVER</th>
-            <th style="text-align:center;">PHONE</th>
-            <th style="text-align:center;">PRICE</th>
-            <th style="text-align:center;">COD</th>
-            <th style="text-align:center;">STATUS</th>
-            <th style="text-align:center;">ACTION</th>
+            <th>N</th>
+            <th>Tracking</th>
+            <th>Shop</th>
+            <th>Code</th>
+            <th>Location</th>
+            <th>Receiver</th>
+            <th>Phone</th>
+            <th>Price</th>
+            <th>COD</th>
+            <th>Status</th>
+            <th>Action</th>
           </tr>
         </thead>
+
         <tbody>
           {% for row in rows_normal_found %}
             {% with o=row.order %}
-              <tr{% if not row.ok %} style="background:#ffecec;"{% endif %}>
-                <td style="text-align:center;">{{ forloop.counter }}</td>
-                <td style="text-align:center;"><b>{{ o.tracking_no }}</b></td>
-                <td style="text-align:center;">{% if o.seller %}{{ o.seller.name }}{% else %}-{% endif %}</td>
-                <td style="text-align:center;">{{ o.seller_code|default:"-" }}</td>
-                <td style="text-align:center;">{% firstof o.receiver_address "-" %}</td>
-                <td style="text-align:center;">{% firstof o.receiver_name "-" %}</td>
-                <td style="text-align:center;">{% firstof o.receiver_phone "-" %}</td>
-                <td style="text-align:center;">{{ o.price|default:"-" }}</td>
-                <td style="text-align:center;">{{ o.cod|default:"0" }}</td>
-                <td style="text-align:center;">
-                  {% if row.ok %}
-                    <span class="badge badge-ok">{{ o.status }}</span>
+              <tr{% if not row.ok %} class="row-error"{% endif %}>
+                <td>{{ forloop.counter }}</td>
+
+                <td>
+                  <span class="pp-code green">{{ o.tracking_no }}</span>
+                </td>
+
+                <td>
+                  {% if o.seller %}
+                    {{ o.seller.name }}
                   {% else %}
-                    <span class="badge badge-bad">{{ o.status }}</span>
-                    <div style="font-size:11px;opacity:.75;margin-top:4px;">{{ row.why }}</div>
+                    -
                   {% endif %}
                 </td>
-                <td style="text-align:center;">
+
+                <td>{{ o.seller_code|default:"-" }}</td>
+                <td class="text-left">{% firstof o.receiver_address "-" %}</td>
+                <td>{% firstof o.receiver_name "-" %}</td>
+                <td>{% firstof o.receiver_phone "-" %}</td>
+                <td>{{ o.price|default:"-" }}</td>
+                <td><strong>{{ o.cod|default:"0" }}</strong></td>
+
+                <td>
+                  {% if row.ok %}
+                    <span class="pp-badge ok">{{ o.status }}</span>
+                  {% else %}
+                    <span class="pp-badge bad">{{ o.status }}</span>
+                    <div class="pp-reason">{{ row.why }}</div>
+                  {% endif %}
+                </td>
+
+                <td>
                   <form method="post" onsubmit="return confirm('Remove this code?');">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="remove_scan">
                     <input type="hidden" name="code" value="{{ o.tracking_no }}">
-                    <button class="trash-mini" type="submit" title="Remove">🗑</button>
+                    <button class="pp-trash" type="submit" title="Remove">🗑</button>
                   </form>
                 </td>
               </tr>
             {% endwith %}
           {% empty %}
             <tr>
-              <td colspan="11" style="text-align:center;padding:14px;opacity:.7;">No shipment codes.</td>
+              <td colspan="11">
+                <div class="pp-empty">
+                  <div class="pp-empty-icon">📦</div>
+                  <strong>No shipment codes.</strong>
+                  <span>Scan tracking number to preview here.</span>
+                </div>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -168,63 +258,587 @@
     </div>
 
     {% if rows_normal_notfound %}
-      <div style="color:#c00;margin-top:10px;text-align:center;">
-        <b>Not found:</b> {{ rows_normal_notfound|join:", " }}
+      <div class="pp-alert">
+        <strong>Not found:</strong> {{ rows_normal_notfound|join:", " }}
       </div>
     {% endif %}
   </div>
 
   <!-- SAVE -->
-  <form method="post" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:14px;">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="confirm_create">
-
-    <div style="min-width:260px;">
-      <div class="label">Assign shipper</div>
-      <select class="input" name="shipper_id">
-        <option value="">-- Select shipper --</option>
-        {% for s in shippers %}
-          <option value="{{ s.id }}">{{ s.name }}</option>
-        {% endfor %}
-      </select>
+  <div class="pp-card pp-save-card">
+    <div class="pp-section-head">
+      <div>
+        <h3>Save Delivery Batch</h3>
+        <p>Choose shipper and add remark before creating this batch.</p>
+      </div>
     </div>
 
-    <div style="flex:1;min-width:320px;">
-      <div class="label">Remark</div>
-      <input class="input" name="remark" placeholder="Remark...">
-    </div>
+    <form method="post" class="pp-save-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="confirm_create">
 
-    <button class="btn" type="submit" style="background:#159a43;border:none;">Save</button>
-  </form>
+      <div class="pp-field">
+        <label class="pp-label">Assign Shipper</label>
+        <select class="pp-input" name="shipper_id">
+          <option value="">-- Select shipper --</option>
+          {% for s in shippers %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="pp-field pp-field-grow">
+        <label class="pp-label">Remark</label>
+        <input class="pp-input" name="remark" placeholder="Remark...">
+      </div>
+
+      <button class="pp-btn pp-btn-save" type="submit">
+        Save
+      </button>
+    </form>
+  </div>
 
 </div>
 
+
 <style>
-  .badge {
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-weight: 800;
+  .pp-page {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 8px 0 28px;
+  }
+
+  .pp-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 18px;
+    padding: 18px;
+    border-radius: 22px;
+    margin-bottom: 14px;
+    background:
+      radial-gradient(circle at top left, rgba(34,197,94,.22), transparent 34%),
+      linear-gradient(135deg, #0fa846 0%, #129a44 48%, #167d42 100%);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 24px rgba(16,120,62,.16);
+    transition: .18s ease;
+  }
+
+  .pp-hero:hover {
+    box-shadow: 0 15px 35px rgba(16,120,62,.22);
+    transform: translateY(-1px);
+  }
+
+  .pp-hero:after {
+    content: "";
+    position: absolute;
+    right: -50px;
+    top: -35px;
+    width: 190px;
+    height: 190px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+  }
+
+  .pp-kicker {
+    font-size: 11px;
+    letter-spacing: .12em;
+    font-weight: 900;
+    opacity: .95;
+    margin-bottom: 7px;
+  }
+
+  .pp-hero h2 {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.2;
+    font-weight: 900;
+  }
+
+  .pp-hero p {
+    margin: 8px 0 0;
+    max-width: 580px;
     font-size: 12px;
-    display: inline-block;
+    line-height: 1.35;
+    opacity: .95;
   }
-  .badge-ok {
-    background: #eafff0;
-    color: #0a7;
-    border: 1px solid #a7f0c0;
+
+  .pp-hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1;
   }
-  .badge-bad {
-    background: #ffecec;
-    color: #c00;
-    border: 1px solid #ffb4b4;
+
+  .pp-stat {
+    min-width: 92px;
+    padding: 12px;
+    border-radius: 16px;
+    text-align: center;
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.22);
+    backdrop-filter: blur(8px);
+    transition: .18s ease;
   }
-  .trash-mini {
-    width: 42px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1px solid #ffd0d0;
-    background: #fff3f3;
-    color: #b10000;
+
+  .pp-stat:hover {
+    background: rgba(255,255,255,.22);
+    transform: translateY(-2px);
+  }
+
+  .pp-stat span {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    opacity: .9;
+    margin-bottom: 5px;
+  }
+
+  .pp-stat strong {
+    display: block;
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 900;
+  }
+
+  .pp-card {
+    background: #fff;
+    border: 1px solid #e7edf3;
+    border-radius: 20px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 20px rgba(15,23,42,.05);
+    transition: .18s ease;
+  }
+
+  .pp-card:hover {
+    box-shadow: 0 12px 28px rgba(15,23,42,.08);
+  }
+
+  .pp-card-head,
+  .pp-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .pp-card-head h3,
+  .pp-section-head h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 900;
+    color: #172033;
+  }
+
+  .pp-card-head p,
+  .pp-section-head p {
+    margin: 3px 0 0;
+    font-size: 11px;
+    color: #66758b;
+  }
+
+  .pp-clear-form {
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .pp-label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #172033;
+  }
+
+  .pp-textarea {
+    width: 100%;
+    min-height: 102px;
+    resize: vertical;
+    border-radius: 14px;
+    border: 1px solid #d8e0ea;
+    background: #f7f9fc;
+    padding: 12px 13px;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #334155;
+    outline: none;
+    margin-bottom: 10px;
+    transition: .18s ease;
+  }
+
+  .pp-textarea:hover {
+    border-color: #b8c7d8;
+    background: #fbfdff;
+  }
+
+  .pp-textarea:focus,
+  .pp-input:focus {
+    border-color: #22a553;
+    box-shadow: 0 0 0 4px rgba(34,165,83,.12);
+    background: #fff;
+  }
+
+  .pp-btn {
+    border: none;
+    border-radius: 13px;
+    font-weight: 900;
+    font-size: 13px;
     cursor: pointer;
+    transition: .18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pp-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .pp-btn:active {
+    transform: translateY(0);
+  }
+
+  .pp-btn-full {
+    width: 100%;
+    height: 40px;
+  }
+
+  .pp-btn-primary {
+    background: #19a94a;
+    color: #fff;
+    box-shadow: 0 8px 16px rgba(25,169,74,.18);
+  }
+
+  .pp-btn-primary:hover {
+    background: #118c3b;
+    box-shadow: 0 10px 22px rgba(25,169,74,.28);
+  }
+
+  .pp-btn-clear {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #e11d48;
+    min-height: 34px;
+    padding: 0 16px;
+    box-shadow: 0 5px 12px rgba(225,29,72,.06);
+  }
+
+  .pp-btn-clear:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+    color: #be123c;
+    box-shadow: 0 8px 18px rgba(225,29,72,.12);
+  }
+
+  .pp-btn-save {
+    background: #169747;
+    color: #fff;
+    min-width: 110px;
+    min-height: 42px;
+    padding: 0 18px;
+    box-shadow: 0 8px 16px rgba(22,151,71,.18);
+  }
+
+  .pp-btn-save:hover {
+    background: #0f7f39;
+    box-shadow: 0 10px 22px rgba(22,151,71,.28);
+  }
+
+  .pp-mini-badge {
+    white-space: nowrap;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+    transition: .16s ease;
+  }
+
+  .pp-mini-badge:hover {
+    transform: translateY(-1px);
+  }
+
+  .pp-mini-badge.green {
+    background: #eafbf0;
+    border: 1px solid #bef0cd;
+    color: #149145;
+  }
+
+  .pp-mini-badge.blue {
+    background: #eef4ff;
+    border: 1px solid #cfe0ff;
+    color: #2b67d9;
+  }
+
+  .pp-table-wrap {
+    overflow: auto;
+    border: 1px solid #e9eef5;
+    border-radius: 16px;
+  }
+
+  .pp-table {
+    width: 100%;
+    min-width: 1150px;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+  }
+
+  .pp-delivery-table {
+    min-width: 1200px;
+  }
+
+  .pp-table thead th {
+    background: #f5f8fc;
+    color: #22314a;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 1px solid #e6edf5;
+    white-space: nowrap;
+  }
+
+  .pp-table tbody td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #edf2f7;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 12px;
+    color: #243247;
+    transition: .14s ease;
+  }
+
+  .pp-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .pp-table tbody tr:hover td {
+    background: #f8fbff;
+  }
+
+  .pp-table .text-left {
+    text-align: left;
+    min-width: 220px;
+  }
+
+  .pp-code {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 900;
+    transition: .16s ease;
+  }
+
+  .pp-code.green {
+    background: #eafbf0;
+    color: #149145;
+  }
+
+  .pp-code.blue {
+    background: #eef4ff;
+    color: #2b67d9;
+  }
+
+  .pp-code:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15,143,60,.12);
+  }
+
+  .pp-code.green:hover {
+    background: #d9fbe5;
+    color: #087534;
+  }
+
+  .pp-code.blue:hover {
+    background: #dfeaff;
+    color: #1d4ed8;
+    box-shadow: 0 6px 14px rgba(43,103,217,.12);
+  }
+
+  .pp-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .pp-badge.ok {
+    background: #eafbf0;
+    color: #149145;
+    border: 1px solid #bef0cd;
+  }
+
+  .pp-badge.bad {
+    background: #fff1f2;
+    color: #e11d48;
+    border: 1px solid #fecdd3;
+  }
+
+  .pp-reason {
+    font-size: 11px;
+    color: #c81e4c;
+    margin-top: 4px;
+    line-height: 1.3;
+  }
+
+  .row-error td {
+    background: #fff8f8 !important;
+  }
+
+  .pp-trash {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #fecdd3;
+    background: #fff1f2;
+    color: #e11d48;
+    cursor: pointer;
+    transition: .16s ease;
+  }
+
+  .pp-trash:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 8px 18px rgba(225,29,72,.13);
+  }
+
+  .pp-trash:active {
+    transform: translateY(0) scale(.98);
+  }
+
+  .pp-empty {
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: #748399;
+  }
+
+  .pp-empty-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: #f2f5f9;
+    font-size: 20px;
+  }
+
+  .pp-empty strong {
+    color: #2b3748;
+    font-size: 13px;
+  }
+
+  .pp-empty span {
+    font-size: 11px;
+  }
+
+  .pp-alert {
+    margin-top: 10px;
+    padding: 11px 13px;
+    border-radius: 14px;
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #be123c;
+    font-size: 12px;
+  }
+
+  .pp-save-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfefc 100%);
+  }
+
+  .pp-save-form {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .pp-field {
+    min-width: 240px;
+  }
+
+  .pp-field-grow {
+    flex: 1;
+    min-width: 300px;
+  }
+
+  .pp-input {
+    width: 100%;
+    height: 42px;
+    border-radius: 13px;
+    border: 1px solid #d8e0ea;
+    background: #f7f9fc;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #334155;
+    outline: none;
+    transition: .18s ease;
+  }
+
+  .pp-input:hover {
+    border-color: #b8c7d8;
+    background: #fbfdff;
+  }
+
+  @media (max-width: 980px) {
+    .pp-hero {
+      flex-direction: column;
+    }
+
+    .pp-hero-stats {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .pp-card-head,
+    .pp-section-head {
+      flex-direction: column;
+    }
+
+    .pp-clear-form {
+      width: 100%;
+    }
+
+    .pp-btn-clear {
+      width: 100%;
+    }
+
+    .pp-save-form {
+      display: block;
+    }
+
+    .pp-field,
+    .pp-field-grow {
+      min-width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .pp-btn-save {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .pp-hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .pp-stat {
+      min-width: 0;
+    }
   }
 </style>
+
 {% endblock %}

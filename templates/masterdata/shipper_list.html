@@ -3,119 +3,599 @@
 {% block page_subtitle %}Drivers / Partners{% endblock %}
 
 {% block content %}
-<style>
-  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;font-size:12px}
-  .badge-green{background:#dcfce7;color:#166534}
-  .badge-red{background:#fee2e2;color:#991b1b}
-</style>
 
-<div class="page-head">
-  <div class="left">
-    <form class="search-row filters" method="get">
-      <input class="input" name="q" value="{{ q }}" placeholder="Search code / name / phone..." />
+<div class="master-page">
 
-      <select class="input" name="status" style="max-width:160px;">
-        <option value="all" {% if status == "all" %}selected{% endif %}>All</option>
-        <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
-        <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
-      </select>
+  <!-- HERO -->
+  <div class="master-hero">
+    <div>
+      <div class="master-kicker">MASTER DATA</div>
+      <h2>Shippers</h2>
+      <p>Manage delivery drivers and logistics partners for PP, Province, and Return operations.</p>
+    </div>
+
+    <a class="master-btn master-btn-primary" href="{% url 'shipper_create' %}">
+      + New Shipper
+    </a>
+  </div>
+
+  <!-- FILTER -->
+  <div class="master-card">
+    <div class="master-card-head">
+      <div>
+        <h3>Search Shippers</h3>
+        <p>Search by code, name, or phone number.</p>
+      </div>
+    </div>
+
+    <form class="master-filter" method="get">
+      <div class="master-field master-field-grow">
+        <label>Keyword</label>
+        <input class="master-input" name="q" value="{{ q }}" placeholder="Search code / name / phone..." />
+      </div>
+
+      <div class="master-field">
+        <label>Status</label>
+        <select class="master-input" name="status">
+          <option value="all" {% if status == "all" %}selected{% endif %}>All</option>
+          <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
 
       <input type="hidden" name="search" value="1" />
-      <button class="btn" type="submit">Search</button>
 
-      {% if search %}
-        <a class="btn btn-ghost" href="{% url 'shipper_list' %}">Clear</a>
-      {% endif %}
+      <div class="master-filter-actions">
+        <button class="master-btn master-btn-dark" type="submit">Search</button>
+
+        {% if search %}
+          <a class="master-btn master-btn-light" href="{% url 'shipper_list' %}">Clear</a>
+        {% endif %}
+      </div>
     </form>
   </div>
 
-  <div class="right">
-    <a class="btn btn-primary" href="{% url 'shipper_create' %}">+ New Shipper</a>
-  </div>
-</div>
+  <!-- TABLE -->
+  <div class="master-card">
+    <div class="master-card-head">
+      <div>
+        <h3>Shipper List</h3>
+        <p>{% if search %}Showing shipper results.{% else %}Click search to show data.{% endif %}</p>
+      </div>
 
-<div class="card">
-  <div class="card-title">Shipper List</div>
-
-  <div class="table-wrap">
-    <table class="ds-table">
-      <thead>
-        <tr>
-          <th style="width:70px;">No</th>
-          <th style="width:120px;">Code</th>
-          <th>Name</th>
-          <th style="width:160px;">Phone</th>
-          <th style="width:140px;">Type</th>
-          <th style="width:110px;">Status</th>
-          <th style="width:170px;">Created</th>
-          <th style="width:260px;">Action</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {% if not search %}
-          <tr><td colspan="8">Click <b>Search</b> to show data.</td></tr>
-        {% else %}
-          {% for s in page_obj %}
-            <tr>
-              <td>{{ forloop.counter }}</td>
-              <td>{{ s.code }}</td>
-              <td>{{ s.name }}</td>
-              <td>{{ s.phone|default:"-" }}</td>
-              <td>{{ s.get_shipper_type_display }}</td>
-              <td>
-                {% if s.is_active %}
-                  <span class="badge badge-green">Active</span>
-                {% else %}
-                  <span class="badge badge-red">Inactive</span>
-                {% endif %}
-              </td>
-              <td>{{ s.created_at|date:"Y-m-d H:i" }}</td>
-
-              <td class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">
-                <a class="btn btn-ghost" href="{% url 'shipper_edit' s.id %}">Edit</a>
-
-                <!-- Toggle Active (POST) -->
-                <form method="post" action="{% url 'shipper_toggle_active' s.id %}" style="display:inline;">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.number }}">
-                  <button class="btn btn-ghost" type="submit"
-                          onclick="return confirm('{% if s.is_active %}Deactivate{% else %}Activate{% endif %} shipper {{ s.name }} ?');">
-                    {% if s.is_active %}Deactivate{% else %}Activate{% endif %}
-                  </button>
-                </form>
-
-                <!-- Delete (POST) -->
-                <form method="post" action="{% url 'shipper_delete' s.id %}" style="display:inline;">
-                  {% csrf_token %}
-                  <button class="btn btn-danger" type="submit"
-                          onclick="return confirm('Delete this shipper?');">
-                    Delete
-                  </button>
-                </form>
-              </td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="8">No shippers found</td></tr>
-          {% endfor %}
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-
-  {% if search and page_obj.paginator.num_pages > 1 %}
-    <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      {% if page_obj.has_previous %}
-        <a class="btn btn-ghost" href="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.previous_page_number }}">Prev</a>
-      {% endif %}
-
-      <div>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
-
-      {% if page_obj.has_next %}
-        <a class="btn btn-ghost" href="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.next_page_number }}">Next</a>
+      {% if search %}
+        <div class="master-mini-badge">
+          {{ page_obj.paginator.count }} Result{{ page_obj.paginator.count|pluralize }}
+        </div>
       {% endif %}
     </div>
-  {% endif %}
+
+    <div class="master-table-wrap">
+      <table class="master-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% if not search %}
+            <tr>
+              <td colspan="8">
+                <div class="master-empty">
+                  <div class="master-empty-icon">🚚</div>
+                  <strong>No data loaded.</strong>
+                  <span>Click Search to show shipper data.</span>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            {% for s in page_obj %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><span class="master-code">{{ s.code }}</span></td>
+                <td class="text-strong">{{ s.name }}</td>
+                <td>{{ s.phone|default:"-" }}</td>
+                <td>{{ s.get_shipper_type_display }}</td>
+                <td>
+                  {% if s.is_active %}
+                    <span class="master-badge green">Active</span>
+                  {% else %}
+                    <span class="master-badge red">Inactive</span>
+                  {% endif %}
+                </td>
+                <td>{{ s.created_at|date:"Y-m-d H:i" }}</td>
+
+                <td>
+                  <div class="master-actions">
+                    <a class="master-small-btn light" href="{% url 'shipper_edit' s.id %}">Edit</a>
+
+                    <form method="post" action="{% url 'shipper_toggle_active' s.id %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.number }}">
+                      <button class="master-small-btn warning" type="submit"
+                              onclick="return confirm('{% if s.is_active %}Deactivate{% else %}Activate{% endif %} shipper {{ s.name }} ?');">
+                        {% if s.is_active %}Deactivate{% else %}Activate{% endif %}
+                      </button>
+                    </form>
+
+                    <form method="post" action="{% url 'shipper_delete' s.id %}">
+                      {% csrf_token %}
+                      <button class="master-small-btn danger" type="submit"
+                              onclick="return confirm('Delete this shipper?');">
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8">
+                  <div class="master-empty">
+                    <div class="master-empty-icon">🔍</div>
+                    <strong>No shippers found.</strong>
+                    <span>Try another keyword or status.</span>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if search and page_obj.paginator.num_pages > 1 %}
+      <div class="master-pagination">
+        {% if page_obj.has_previous %}
+          <a class="master-btn master-btn-light" href="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.previous_page_number }}">Prev</a>
+        {% endif %}
+
+        <div class="master-page-count">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
+
+        {% if page_obj.has_next %}
+          <a class="master-btn master-btn-light" href="?search=1&q={{ q }}&status={{ status }}&page={{ page_obj.next_page_number }}">Next</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
 </div>
+
+<style>
+  .master-page {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 8px 0 28px;
+  }
+
+  .master-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 20px;
+    border-radius: 22px;
+    margin-bottom: 14px;
+    background:
+      radial-gradient(circle at top left, rgba(34,197,94,.22), transparent 34%),
+      linear-gradient(135deg, #0fa846 0%, #129a44 48%, #167d42 100%);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 24px rgba(16,120,62,.16);
+    transition: .18s ease;
+  }
+
+  .master-hero:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 15px 35px rgba(16,120,62,.22);
+  }
+
+  .master-hero:after {
+    content: "";
+    position: absolute;
+    right: -55px;
+    top: -45px;
+    width: 190px;
+    height: 190px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.09);
+  }
+
+  .master-kicker {
+    font-size: 11px;
+    letter-spacing: .12em;
+    font-weight: 900;
+    opacity: .95;
+    margin-bottom: 7px;
+  }
+
+  .master-hero h2 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.15;
+    font-weight: 950;
+  }
+
+  .master-hero p {
+    margin: 7px 0 0;
+    max-width: 650px;
+    font-size: 13px;
+    opacity: .94;
+  }
+
+  .master-card {
+    background: #fff;
+    border: 1px solid #e7edf3;
+    border-radius: 20px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 20px rgba(15,23,42,.05);
+    transition: .18s ease;
+  }
+
+  .master-card:hover {
+    box-shadow: 0 12px 28px rgba(15,23,42,.08);
+  }
+
+  .master-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .master-card-head h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 900;
+    color: #172033;
+  }
+
+  .master-card-head p {
+    margin: 3px 0 0;
+    font-size: 11px;
+    color: #66758b;
+  }
+
+  .master-filter {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .master-field {
+    min-width: 180px;
+  }
+
+  .master-field-grow {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  .master-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 850;
+    color: #172033;
+  }
+
+  .master-input {
+    width: 100%;
+    height: 42px;
+    border-radius: 13px;
+    border: 1px solid #d8e0ea;
+    background: #f7f9fc;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #334155;
+    outline: none;
+    transition: .18s ease;
+  }
+
+  .master-input:hover {
+    border-color: #b8c7d8;
+    background: #fbfdff;
+  }
+
+  .master-input:focus {
+    border-color: #22a553;
+    box-shadow: 0 0 0 4px rgba(34,165,83,.12);
+    background: #fff;
+  }
+
+  .master-filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .master-btn {
+    min-height: 42px;
+    padding: 0 18px;
+    border-radius: 13px;
+    border: none;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: .18s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .master-btn:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+
+  .master-btn-primary {
+    background: #2563eb;
+    color: #fff;
+    box-shadow: 0 8px 16px rgba(37,99,235,.22);
+  }
+
+  .master-btn-primary:hover {
+    background: #1d4ed8;
+    box-shadow: 0 10px 22px rgba(37,99,235,.30);
+  }
+
+  .master-btn-dark {
+    background: #0f172a;
+    color: #fff;
+    box-shadow: 0 8px 16px rgba(15,23,42,.18);
+  }
+
+  .master-btn-dark:hover {
+    background: #111827;
+    box-shadow: 0 10px 22px rgba(15,23,42,.25);
+  }
+
+  .master-btn-light {
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+  }
+
+  .master-btn-light:hover {
+    background: #eef4fa;
+    border-color: #cbd5e1;
+  }
+
+  .master-mini-badge {
+    white-space: nowrap;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+    background: #eafbf0;
+    border: 1px solid #bef0cd;
+    color: #149145;
+  }
+
+  .master-table-wrap {
+    overflow: auto;
+    border: 1px solid #e9eef5;
+    border-radius: 16px;
+  }
+
+  .master-table {
+    width: 100%;
+    min-width: 1080px;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+  }
+
+  .master-table thead th {
+    background: #f5f8fc;
+    color: #22314a;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 1px solid #e6edf5;
+    white-space: nowrap;
+  }
+
+  .master-table tbody td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #edf2f7;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 12px;
+    color: #243247;
+    transition: .14s ease;
+  }
+
+  .master-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .master-table tbody tr:hover td {
+    background: #f8fbff;
+  }
+
+  .text-strong {
+    font-weight: 900;
+    color: #172033 !important;
+  }
+
+  .master-code {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 10px;
+    background: #ecfdf3;
+    color: #0f8f3c;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .master-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 74px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+  }
+
+  .master-badge.green {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+  }
+
+  .master-badge.red {
+    background: #ffe4e6;
+    color: #be123c;
+    border: 1px solid #fecdd3;
+  }
+
+  .master-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .master-actions form {
+    margin: 0;
+  }
+
+  .master-small-btn {
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 11px;
+    border: none;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: .16s ease;
+  }
+
+  .master-small-btn:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+
+  .master-small-btn.light {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+  }
+
+  .master-small-btn.light:hover {
+    background: #dbeafe;
+  }
+
+  .master-small-btn.warning {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #c2410c;
+  }
+
+  .master-small-btn.warning:hover {
+    background: #ffedd5;
+  }
+
+  .master-small-btn.danger {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #e11d48;
+  }
+
+  .master-small-btn.danger:hover {
+    background: #ffe4e6;
+  }
+
+  .master-empty {
+    padding: 26px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: #748399;
+  }
+
+  .master-empty-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: #f2f5f9;
+    font-size: 22px;
+  }
+
+  .master-empty strong {
+    color: #2b3748;
+    font-size: 13px;
+  }
+
+  .master-empty span {
+    font-size: 11px;
+  }
+
+  .master-pagination {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .master-page-count {
+    padding: 9px 13px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 850;
+  }
+
+  @media (max-width: 900px) {
+    .master-hero,
+    .master-card-head,
+    .master-filter {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .master-field,
+    .master-field-grow {
+      min-width: 100%;
+    }
+
+    .master-filter-actions,
+    .master-filter-actions .master-btn,
+    .master-hero .master-btn {
+      width: 100%;
+    }
+  }
+</style>
+
 {% endblock %}

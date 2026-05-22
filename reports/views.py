@@ -325,6 +325,29 @@ def delivery_report_upload(request):
     form = DeliveryReportUploadForm(request.POST or None, request.FILES or None)
     summary = None
 
+    def _clean_header(value):
+        return str(value or "").strip().lower()
+
+    def _get(row_map, *names, default=""):
+        for name in names:
+            key = _clean_header(name)
+            if key in row_map:
+                value = row_map.get(key)
+                return default if value is None else value
+        return default
+
+    def _to_decimal(value):
+        try:
+            return Decimal(str(value or 0))
+        except Exception:
+            return Decimal("0")
+
+    def _to_int(value):
+        try:
+            return int(value or 0)
+        except Exception:
+            return 0
+
     if request.method == "POST" and form.is_valid():
         f = form.cleaned_data["file"]
         wb = load_workbook(f)
@@ -336,33 +359,56 @@ def delivery_report_upload(request):
         not_found_rows = 0
         error_rows = []
 
-        for row in ws.iter_rows(min_row=2, values_only=True):
+        headers = []
+        for cell in ws[1]:
+            headers.append(_clean_header(cell.value))
+
+        for excel_row_no, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
             total_rows += 1
 
-            tracking_no = (row[0] or "").strip() if row[0] else ""
+            row_map = {}
+            for idx, header in enumerate(headers):
+                if header:
+                    row_map[header] = row[idx] if idx < len(row) else None
+
+            tracking_no = str(_get(row_map, "Tracking No", "tracking_no", default="") or "").strip()
+
             if not tracking_no:
                 skipped_rows += 1
-                error_rows.append("Row without tracking number")
+                error_rows.append(f"Row {excel_row_no}: without tracking number")
                 continue
 
             try:
                 order = Order.objects.filter(tracking_no=tracking_no).first()
+
                 if not order:
                     not_found_rows += 1
                     error_rows.append(f"{tracking_no}: not found")
                     continue
 
-                order.receiver_name = row[3] or ""
-                order.receiver_phone = row[4] or ""
-                order.receiver_address = row[5] or ""
-                order.product_desc = row[6] or ""
-                order.quantity = int(row[7] or 0)
-                order.price = Decimal(str(row[8] or 0))
-                order.delivery_fee = Decimal(str(row[9] or 0))
-                order.additional_fee = Decimal(str(row[10] or 0))
-                order.cod = Decimal(str(row[11] or 0))
-                order.status = row[12] or order.status
-                order.reason = row[13] or ""
+                # Seller columns are for display/checking only.
+                # We do NOT change seller FK here to avoid wrong seller changes by Excel typo.
+                seller_name = str(_get(row_map, "Seller Name", default="") or "").strip()
+                if seller_name and hasattr(order, "seller_name"):
+                    order.seller_name = seller_name
+
+                order.seller_order_code = str(_get(row_map, "Seller Order Code", default=getattr(order, "seller_order_code", "") or "") or "")
+                order.receiver_name = str(_get(row_map, "Receiver Name", default="") or "")
+                order.receiver_phone = str(_get(row_map, "Receiver Phone", default="") or "")
+                order.receiver_address = str(_get(row_map, "Receiver Address", default="") or "")
+                order.product_desc = str(_get(row_map, "Product Desc", default="") or "")
+
+                order.quantity = _to_int(_get(row_map, "Qty", default=0))
+                order.price = _to_decimal(_get(row_map, "Price", default=0))
+                order.delivery_fee = _to_decimal(_get(row_map, "Delivery Fee", default=0))
+                order.additional_fee = _to_decimal(_get(row_map, "Additional Fee", default=0))
+                order.cod = _to_decimal(_get(row_map, "COD", default=0))
+
+                status_value = str(_get(row_map, "Status", default="") or "").strip().upper()
+                if status_value:
+                    order.status = status_value
+
+                order.reason = str(_get(row_map, "Reason", default="") or "")
 
                 order.save()
                 updated_rows += 1

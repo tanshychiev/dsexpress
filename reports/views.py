@@ -320,6 +320,8 @@ def delivery_report(request):
         "selected_seller_name": selected_seller_name,
         "seller_options": seller_options,
     })
+
+
 @login_required
 def delivery_report_upload(request):
     form = DeliveryReportUploadForm(request.POST or None, request.FILES or None)
@@ -371,7 +373,9 @@ def delivery_report_upload(request):
                 if header:
                     row_map[header] = row[idx] if idx < len(row) else None
 
-            tracking_no = str(_get(row_map, "Tracking No", "tracking_no", default="") or "").strip()
+            tracking_no = str(
+                _get(row_map, "Tracking No", "tracking_no", default="") or ""
+            ).strip()
 
             if not tracking_no:
                 skipped_rows += 1
@@ -386,13 +390,23 @@ def delivery_report_upload(request):
                     error_rows.append(f"{tracking_no}: not found")
                     continue
 
-                # Seller columns are for display/checking only.
-                # We do NOT change seller FK here to avoid wrong seller changes by Excel typo.
-                seller_name = str(_get(row_map, "Seller Name", default="") or "").strip()
-                if seller_name and hasattr(order, "seller_name"):
+                # Shop Code and Shop Name are for checking only.
+                # Do NOT change order.seller FK from Excel to avoid wrong shop update.
+                seller_name = str(
+                    _get(row_map, "Seller Name", default=getattr(order, "seller_name", "") or "") or ""
+                ).strip()
+
+                if hasattr(order, "seller_name"):
                     order.seller_name = seller_name
 
-                order.seller_order_code = str(_get(row_map, "Seller Order Code", default=getattr(order, "seller_order_code", "") or "") or "")
+                order.seller_order_code = str(
+                    _get(
+                        row_map,
+                        "Seller Order Code",
+                        default=getattr(order, "seller_order_code", "") or "",
+                    ) or ""
+                )
+
                 order.receiver_name = str(_get(row_map, "Receiver Name", default="") or "")
                 order.receiver_phone = str(_get(row_map, "Receiver Phone", default="") or "")
                 order.receiver_address = str(_get(row_map, "Receiver Address", default="") or "")
@@ -431,7 +445,6 @@ def delivery_report_upload(request):
         "form": form,
         "summary": summary,
     })
-
 
 @login_required
 def delivery_report_png(request):

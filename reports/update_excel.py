@@ -8,7 +8,8 @@ from openpyxl.utils import get_column_letter
 
 HEADERS = [
     "Tracking No",
-    "Seller Code",
+    "Shop Code",
+    "Shop Name",
     "Seller Name",
     "Seller Order Code",
     "Receiver Name",
@@ -26,23 +27,27 @@ HEADERS = [
 ]
 
 
-def _seller_code(order):
+def _shop_code(order):
     seller = getattr(order, "seller", None)
     if seller:
         return getattr(seller, "code", "") or ""
     return ""
 
 
-def _seller_name(order):
-    seller_name = getattr(order, "seller_name", "") or ""
-    if seller_name:
-        return seller_name
-
+def _shop_name(order):
     seller = getattr(order, "seller", None)
     if seller:
         return getattr(seller, "name", "") or ""
-
     return ""
+
+
+def _seller_name(order):
+    """
+    Seller Name here means the order-level seller/staff/name text,
+    for example: Ngoc / An / Labut.
+    Shop Name means the masterdata Seller shop/business name.
+    """
+    return getattr(order, "seller_name", "") or ""
 
 
 def _shipper_name(order):
@@ -78,7 +83,8 @@ def export_update_template_xlsx(rows):
     for i, o in enumerate(rows, start=2):
         values = [
             getattr(o, "tracking_no", "") or "",
-            _seller_code(o),
+            _shop_code(o),
+            _shop_name(o),
             _seller_name(o),
             getattr(o, "seller_order_code", "") or "",
             getattr(o, "receiver_name", "") or "",
@@ -99,17 +105,18 @@ def export_update_template_xlsx(rows):
             c = ws.cell(row=i, column=col, value=value)
             c.border = border
 
-            if col in [1, 2, 9, 14]:
+            if col in [1, 2, 10, 15]:
                 c.alignment = center
-            elif col in [10, 11, 12, 13]:
+            elif col in [11, 12, 13, 14]:
                 c.alignment = right
             else:
                 c.alignment = left
 
     widths = [
         20,  # Tracking No
-        16,  # Seller Code
-        24,  # Seller Name
+        16,  # Shop Code
+        26,  # Shop Name
+        18,  # Seller Name
         18,  # Seller Order Code
         18,  # Receiver Name
         16,  # Receiver Phone
@@ -125,8 +132,8 @@ def export_update_template_xlsx(rows):
         20,  # Delivery Shipper
     ]
 
-    for idx, w in enumerate(widths, start=1):
-        ws.column_dimensions[get_column_letter(idx)].width = w
+    for idx, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
 
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = f"A1:{get_column_letter(len(HEADERS))}1"

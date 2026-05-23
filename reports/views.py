@@ -11,9 +11,11 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from openpyxl import load_workbook
 from playwright.sync_api import sync_playwright
-from masterdata.models import Seller
 
+from masterdata.models import Seller
 from orders.models import Order
+from provinceops.models import ProvinceBatchItem
+
 from .excel import export_delivery_report_xlsx
 from .forms import DeliveryReportFilterForm, DeliveryReportUploadForm
 from .services import (
@@ -26,6 +28,7 @@ from .services import (
     report_money,
 )
 from .update_excel import export_update_template_xlsx
+
 
 def apply_keyword_filter(rows, keyword):
     if not keyword:
@@ -50,6 +53,7 @@ def apply_keyword_filter(rows, keyword):
         seller_obj = getattr(o, "seller", None)
         if seller_obj:
             values.append(getattr(seller_obj, "name", ""))
+            values.append(getattr(seller_obj, "code", ""))
 
         haystack = " ".join([str(v or "") for v in values]).lower()
         if keyword in haystack:
@@ -104,21 +108,60 @@ def build_top_summary(rows, seller_count=0):
     }
 
 
+def _build_province_date_map(rows):
+    """
+    Runtime helper only. Does not save DB.
+
+    Province orders may not have done_at.
+    Province delivery date should come from ProvinceBatch.assigned_at.
+    """
+    order_ids = [o.id for o in rows if getattr(o, "id", None)]
+    if not order_ids:
+        return {}
+
+    province_items = (
+        ProvinceBatchItem.objects
+        .select_related("batch")
+        .filter(order_id__in=order_ids)
+        .order_by("-batch__assigned_at", "-id")
+    )
+
+    province_date_map = {}
+    for it in province_items:
+        if it.order_id not in province_date_map:
+            province_date_map[it.order_id] = getattr(it.batch, "assigned_at", None)
+
+    return province_date_map
+
+
 def enrich_report_rows(rows):
     """
     Add runtime-only helpers for template display.
     Does not save to DB.
+
+    Important:
+    - report_pickup_date = Order.created_at
+    - report_delivery_date = Order.done_at, fallback to ProvinceBatch.assigned_at
     """
+    province_date_map = _build_province_date_map(rows)
+
     for o in rows:
         o.report_shipper_name = get_shipper_name(o)
 
         money = report_money(o)
-        o.report_delivery_fee = money["delivery_fee"]
-        o.report_additional_fee = money["additional_fee"]
-        o.report_total_fee = money["total_fee"]
-        o.report_cod = money["cod"]
+        o.report_delivery_fee = money.get("delivery_fee", Decimal("0.00"))
+        o.report_additional_fee = money.get("additional_fee", Decimal("0.00"))
+        o.report_province_fee = money.get("province_fee", Decimal("0.00"))
+        o.report_total_fee = money.get("total_fee", Decimal("0.00"))
+        o.report_cod = money.get("cod", Decimal("0.00"))
+
+        province_date = province_date_map.get(getattr(o, "id", None))
+
+        o.report_pickup_date = getattr(o, "created_at", None)
+        o.report_delivery_date = getattr(o, "done_at", None) or province_date
 
     return rows
+
 
 @login_required
 def delivery_report(request):
@@ -290,21 +333,6 @@ def delivery_report(request):
                 "total_return": len([o for o in seller_rows if classify_row(o) == "done_return"]),
             })
 
-    else:
-        mode = "EMPTY"
-        grouped = {}
-        seller_summaries = []
-        top_summary = {
-            "total_sent": 0,
-            "total_done": 0,
-            "total_pending": 0,
-            "total_return": 0,
-            "total_cod": 0,
-            "total_fee": 0,
-            "total_pay": 0,
-            "total_selected_shops": 0,
-        }
-
     return render(request, "reports/delivery_report.html", {
         "form": form,
         "report_title": report_title,
@@ -390,8 +418,6 @@ def delivery_report_upload(request):
                     error_rows.append(f"{tracking_no}: not found")
                     continue
 
-                # Shop Code and Shop Name are for checking only.
-                # Do NOT change order.seller FK from Excel to avoid wrong shop update.
                 seller_name = str(
                     _get(row_map, "Seller Name", default=getattr(order, "seller_name", "") or "") or ""
                 ).strip()
@@ -446,6 +472,7 @@ def delivery_report_upload(request):
         "summary": summary,
     })
 
+
 @login_required
 def delivery_report_png(request):
     form = DeliveryReportFilterForm(request.GET.copy())
@@ -477,9 +504,7 @@ def delivery_report_png(request):
         cleaned = form.cleaned_data
 
         account = getattr(request.user, "account", None)
-
         if account and account.account_type == "seller" and account.seller and account.seller.is_active:
-
             cleaned["seller"] = account.seller
 
         seller = cleaned.get("seller")
@@ -583,8 +608,6 @@ def delivery_report_png(request):
     return response
 
 
-
-
 @login_required
 def delivery_report_pdf(request):
     form = DeliveryReportFilterForm(request.GET.copy())
@@ -616,9 +639,7 @@ def delivery_report_pdf(request):
         cleaned = form.cleaned_data
 
         account = getattr(request.user, "account", None)
-
         if account and account.account_type == "seller" and account.seller and account.seller.is_active:
-
             cleaned["seller"] = account.seller
 
         seller = cleaned.get("seller")
@@ -745,4 +766,3 @@ def delivery_report_pdf(request):
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="{download_name}.pdf"'
     return response
-

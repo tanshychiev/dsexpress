@@ -4,25 +4,12 @@ from decimal import Decimal
 
 from django.db.models import Q
 
+from provinceops.models import ProvinceBatch, ProvinceBatchItem
+
 
 # =========================================================
 # REPORT STATUS RULES
 # =========================================================
-# DS Express Order.status examples:
-# CREATED
-# OUT_FOR_DELIVERY
-# DELIVERED
-# PROVINCE_ASSIGNED
-# RETURN_ASSIGNED
-# VOID
-#
-# Business rule for report:
-# - DELIVERED / DONE / PROVINCE_ASSIGNED = DONE
-# - RETURNED / RETURN_ASSIGNED = DONE RETURN
-# - VOID = not pending
-# - everything else = PENDING
-# =========================================================
-
 DONE_STATUSES = {
     "DELIVERED",
     "DONE",
@@ -32,6 +19,7 @@ DONE_STATUSES = {
 RETURNED_STATUSES = {
     "RETURNED",
     "RETURN_ASSIGNED",
+    "DONE_RETURN",
 }
 
 VOID_STATUSES = {
@@ -40,10 +28,6 @@ VOID_STATUSES = {
 
 
 def _start(d):
-    """
-    Convert date to start datetime.
-    If already datetime, keep it.
-    """
     if not d:
         return None
 
@@ -54,10 +38,6 @@ def _start(d):
 
 
 def _end(d):
-    """
-    Convert date to end datetime.
-    If already datetime, keep it.
-    """
     if not d:
         return None
 
@@ -79,12 +59,6 @@ def safe_decimal(v):
 
 
 def get_shipper_name(order):
-    """
-    Report shipper display priority:
-    1. delivery_shipper FK
-    2. province / assigned shipper fallback
-    3. text fallback
-    """
     delivery_shipper = getattr(order, "delivery_shipper", None)
     if delivery_shipper:
         name = getattr(delivery_shipper, "name", "") or ""
@@ -118,16 +92,6 @@ def get_shipper_name(order):
 
 
 def classify_row(order):
-    """
-    Internal row type used for row color + money rules:
-    - done_return
-    - done
-    - pending
-
-    Important:
-    ProvinceOps completed orders use PROVINCE_ASSIGNED,
-    so PROVINCE_ASSIGNED must count as done.
-    """
     status = (getattr(order, "status", "") or "").upper().strip()
 
     if status in RETURNED_STATUSES:
@@ -152,14 +116,6 @@ def display_status(order):
 
 
 def report_money(order):
-    """
-    Display-only money values for report.
-    Do NOT change DB.
-
-    Business rule:
-    - PENDING and RETURNED => COD/FEE show 0
-    - DONE => show real COD/FEE
-    """
     row_type = classify_row(order)
 
     if row_type in ("pending", "done_return"):
@@ -167,29 +123,27 @@ def report_money(order):
             "cod": Decimal("0.00"),
             "delivery_fee": Decimal("0.00"),
             "additional_fee": Decimal("0.00"),
+            "province_fee": Decimal("0.00"),
             "total_fee": Decimal("0.00"),
         }
 
     delivery_fee = safe_decimal(getattr(order, "delivery_fee", 0))
     additional_fee = safe_decimal(getattr(order, "additional_fee", 0))
-    total_fee = (delivery_fee + additional_fee).quantize(Decimal("0.00"))
+    province_fee = safe_decimal(getattr(order, "province_fee", 0))
+
+    total_fee = (delivery_fee + additional_fee + province_fee).quantize(Decimal("0.00"))
     cod = safe_decimal(getattr(order, "cod", 0))
 
     return {
         "cod": cod,
         "delivery_fee": delivery_fee,
         "additional_fee": additional_fee,
+        "province_fee": province_fee,
         "total_fee": total_fee,
     }
 
 
 def get_status_sort_key(order):
-    """
-    Sort order:
-    1. DONE
-    2. RETURNED
-    3. PENDING
-    """
     row_type = classify_row(order)
 
     if row_type == "done":
@@ -221,70 +175,104 @@ def sort_report_rows(rows):
     return sorted(rows, key=_key)
 
 
-def get_done_queryset(Order, cleaned):
+def _province_done_order_ids(d_from=None, d_to=None, seller=None):
     """
-    Done rows:
-    - based on final status
-    - includes PP done, province done, and return done
-    - PP done usually has done_at
-    - ProvinceOps done may not have done_at
-    - ProvinceOps can fallback to delivery_date / created_at
+    Important fix:
+    ProvinceOps completed orders may not match delivery_date.
+    So delivery report must also include orders from ProvinceBatchItem
+    where ProvinceBatch.status = DONE and assigned_at is inside report date range.
     """
     qs = (
-        Order.objects
-        .select_related("seller", "delivery_shipper")
+        ProvinceBatchItem.objects
+        .select_related("batch", "order", "order__seller")
         .filter(
-            is_deleted=False,
-            status__in=(DONE_STATUSES | RETURNED_STATUSES),
+            batch__status=ProvinceBatch.STATUS_DONE,
+            batch__assigned_at__isnull=False,
+            order__is_deleted=False,
         )
     )
 
-    seller = cleaned.get("seller")
-    if seller:
-        qs = qs.filter(seller=seller)
+    if d_from:
+        qs = qs.filter(batch__assigned_at__gte=_start(d_from))
 
+    if d_to:
+        qs = qs.filter(batch__assigned_at__lte=_end(d_to))
+
+    if seller:
+        qs = qs.filter(order__seller=seller)
+
+    return qs.values_list("order_id", flat=True)
+
+
+def get_done_queryset(Order, cleaned):
+    """
+    Done rows:
+    - PP done / normal done from Order date fields
+    - Province done from ProvinceBatchItem.batch.assigned_at
+    """
+    seller = cleaned.get("seller")
     d_from = cleaned.get("delivery_date_from")
     d_to = cleaned.get("delivery_date_to")
+
+    normal_done_q = Q(
+        is_deleted=False,
+        status__in=(DONE_STATUSES | RETURNED_STATUSES),
+    )
 
     date_q = Q()
 
     if d_from and d_to:
         date_q = (
-            Q(done_at__gte=d_from, done_at__lte=d_to)
-            | Q(done_at__isnull=True, delivery_date__gte=d_from, delivery_date__lte=d_to)
-            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__gte=d_from, created_at__lte=d_to)
+            Q(done_at__gte=_start(d_from), done_at__lte=_end(d_to))
+            | Q(done_at__isnull=True, delivery_date__gte=_start(d_from), delivery_date__lte=_end(d_to))
+            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__gte=_start(d_from), created_at__lte=_end(d_to))
         )
 
     elif d_from:
         date_q = (
-            Q(done_at__gte=d_from)
-            | Q(done_at__isnull=True, delivery_date__gte=d_from)
-            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__gte=d_from)
+            Q(done_at__gte=_start(d_from))
+            | Q(done_at__isnull=True, delivery_date__gte=_start(d_from))
+            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__gte=_start(d_from))
         )
 
     elif d_to:
         date_q = (
-            Q(done_at__lte=d_to)
-            | Q(done_at__isnull=True, delivery_date__lte=d_to)
-            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__lte=d_to)
+            Q(done_at__lte=_end(d_to))
+            | Q(done_at__isnull=True, delivery_date__lte=_end(d_to))
+            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__lte=_end(d_to))
         )
+
+    qs = (
+        Order.objects
+        .select_related("seller", "delivery_shipper")
+        .filter(normal_done_q)
+    )
 
     if date_q:
         qs = qs.filter(date_q)
 
-    return qs.distinct().order_by("seller_code", "seller_name", "id")
+    if seller:
+        qs = qs.filter(seller=seller)
+
+    province_ids = _province_done_order_ids(
+        d_from=d_from,
+        d_to=d_to,
+        seller=seller,
+    )
+
+    province_qs = (
+        Order.objects
+        .select_related("seller", "delivery_shipper")
+        .filter(
+            is_deleted=False,
+            id__in=province_ids,
+        )
+    )
+
+    return (qs | province_qs).distinct().order_by("seller_code", "seller_name", "id")
 
 
 def get_pending_queryset(Order, cleaned):
-    """
-    Pending rows:
-    - anything not done / not returned / not void
-    - prevents duplicate because done/returned rows stay only in done queryset
-
-    Important:
-    PROVINCE_ASSIGNED is excluded from pending.
-    RETURN_ASSIGNED is excluded from pending.
-    """
     qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")

@@ -2,19 +2,25 @@ from collections import OrderedDict
 from datetime import datetime, time
 from decimal import Decimal
 
+from django.db.models import Q
+
 
 # =========================================================
 # REPORT STATUS RULES
 # =========================================================
-# Order.status choices in your DS Express system include:
-# CREATED, OUT_FOR_DELIVERY, DELIVERED,
-# PROVINCE_ASSIGNED, RETURN_ASSIGNED, VOID
+# DS Express Order.status examples:
+# CREATED
+# OUT_FOR_DELIVERY
+# DELIVERED
+# PROVINCE_ASSIGNED
+# RETURN_ASSIGNED
+# VOID
 #
-# Business meaning for report:
-# - DELIVERED / DONE / PROVINCE_ASSIGNED = DONE report
-# - RETURNED / RETURN_ASSIGNED = DONE RETURN report
-# - VOID = excluded from pending
-# - everything else = pending
+# Business rule for report:
+# - DELIVERED / DONE / PROVINCE_ASSIGNED = DONE
+# - RETURNED / RETURN_ASSIGNED = DONE RETURN
+# - VOID = not pending
+# - everything else = PENDING
 # =========================================================
 
 DONE_STATUSES = {
@@ -65,11 +71,18 @@ def safe_text(v):
     return "" if v is None else str(v)
 
 
+def safe_decimal(v):
+    try:
+        return Decimal(str(v or 0)).quantize(Decimal("0.00"))
+    except Exception:
+        return Decimal("0.00")
+
+
 def get_shipper_name(order):
     """
     Report shipper display priority:
     1. delivery_shipper FK
-    2. other possible FK fallback
+    2. province / assigned shipper fallback
     3. text fallback
     """
     delivery_shipper = getattr(order, "delivery_shipper", None)
@@ -78,14 +91,25 @@ def get_shipper_name(order):
         if name.strip():
             return name.strip()
 
-    for attr in ["shipper", "assigned_shipper", "province_shipper"]:
+    for attr in [
+        "shipper",
+        "assigned_shipper",
+        "province_shipper",
+        "province_assigned_shipper",
+        "return_shipper",
+    ]:
         obj = getattr(order, attr, None)
         if obj:
             name = getattr(obj, "name", "") or ""
             if name.strip():
                 return name.strip()
 
-    for attr in ["shipper_name", "delivery_shipper_name"]:
+    for attr in [
+        "shipper_name",
+        "delivery_shipper_name",
+        "province_shipper_name",
+        "assigned_shipper_name",
+    ]:
         value = getattr(order, attr, "") or ""
         if str(value).strip():
             return str(value).strip()
@@ -95,13 +119,13 @@ def get_shipper_name(order):
 
 def classify_row(order):
     """
-    Internal types used for row color + money rules:
+    Internal row type used for row color + money rules:
     - done_return
     - done
     - pending
 
     Important:
-    Province completed orders use PROVINCE_ASSIGNED in your system,
+    ProvinceOps completed orders use PROVINCE_ASSIGNED,
     so PROVINCE_ASSIGNED must count as done.
     """
     status = (getattr(order, "status", "") or "").upper().strip()
@@ -133,7 +157,7 @@ def report_money(order):
     Do NOT change DB.
 
     Business rule:
-    - PENDING and RETURNED => COD/FEE must show 0
+    - PENDING and RETURNED => COD/FEE show 0
     - DONE => show real COD/FEE
     """
     row_type = classify_row(order)
@@ -146,14 +170,10 @@ def report_money(order):
             "total_fee": Decimal("0.00"),
         }
 
-    delivery_fee = Decimal(str(getattr(order, "delivery_fee", 0) or 0)).quantize(
-        Decimal("0.00")
-    )
-    additional_fee = Decimal(str(getattr(order, "additional_fee", 0) or 0)).quantize(
-        Decimal("0.00")
-    )
+    delivery_fee = safe_decimal(getattr(order, "delivery_fee", 0))
+    additional_fee = safe_decimal(getattr(order, "additional_fee", 0))
     total_fee = (delivery_fee + additional_fee).quantize(Decimal("0.00"))
-    cod = Decimal(str(getattr(order, "cod", 0) or 0)).quantize(Decimal("0.00"))
+    cod = safe_decimal(getattr(order, "cod", 0))
 
     return {
         "cod": cod,
@@ -204,14 +224,11 @@ def sort_report_rows(rows):
 def get_done_queryset(Order, cleaned):
     """
     Done rows:
-    - based on final status only
-    - does not depend on clear_delivery
+    - based on final status
     - includes PP done, province done, and return done
-    - uses done_at date filter for done report
-
-    Fixed:
-    PROVINCE_ASSIGNED is now included as done.
-    RETURN_ASSIGNED is now included as done_return.
+    - PP done usually has done_at
+    - ProvinceOps done may not have done_at
+    - ProvinceOps can fallback to delivery_date / created_at
     """
     qs = (
         Order.objects
@@ -229,14 +246,31 @@ def get_done_queryset(Order, cleaned):
     d_from = cleaned.get("delivery_date_from")
     d_to = cleaned.get("delivery_date_to")
 
-    if d_from:
-        qs = qs.filter(done_at__gte=d_from)
+    date_q = Q()
 
-    if d_to:
-        qs = qs.filter(done_at__lte=d_to)
+    if d_from and d_to:
+        date_q = (
+            Q(done_at__gte=d_from, done_at__lte=d_to)
+            | Q(done_at__isnull=True, delivery_date__gte=d_from, delivery_date__lte=d_to)
+            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__gte=d_from, created_at__lte=d_to)
+        )
 
-    # Done report should only show rows that have completed date.
-    qs = qs.exclude(done_at__isnull=True)
+    elif d_from:
+        date_q = (
+            Q(done_at__gte=d_from)
+            | Q(done_at__isnull=True, delivery_date__gte=d_from)
+            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__gte=d_from)
+        )
+
+    elif d_to:
+        date_q = (
+            Q(done_at__lte=d_to)
+            | Q(done_at__isnull=True, delivery_date__lte=d_to)
+            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__lte=d_to)
+        )
+
+    if date_q:
+        qs = qs.filter(date_q)
 
     return qs.distinct().order_by("seller_code", "seller_name", "id")
 
@@ -247,7 +281,7 @@ def get_pending_queryset(Order, cleaned):
     - anything not done / not returned / not void
     - prevents duplicate because done/returned rows stay only in done queryset
 
-    Fixed:
+    Important:
     PROVINCE_ASSIGNED is excluded from pending.
     RETURN_ASSIGNED is excluded from pending.
     """
@@ -281,7 +315,16 @@ def group_by_seller(rows):
         if getattr(o, "seller", None):
             shop_code = getattr(o.seller, "code", "") or ""
             shop_name = getattr(o.seller, "name", "") or ""
-            key = f"{shop_code} - {shop_name}" if shop_code else shop_name
+
+            if shop_code and shop_name:
+                key = f"{shop_code} - {shop_name}"
+            elif shop_name:
+                key = shop_name
+            elif shop_code:
+                key = shop_code
+            else:
+                key = "No Shop"
+
         else:
             seller_code = getattr(o, "seller_code", "") or ""
             seller_name = getattr(o, "seller_name", "") or ""

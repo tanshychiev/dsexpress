@@ -3,16 +3,61 @@ from datetime import datetime, time
 from decimal import Decimal
 
 
-DONE_STATUSES = {"DELIVERED", "DONE"}
-RETURNED_STATUSES = {"RETURNED"}
-VOID_STATUSES = {"VOID"}
+# =========================================================
+# REPORT STATUS RULES
+# =========================================================
+# Order.status choices in your DS Express system include:
+# CREATED, OUT_FOR_DELIVERY, DELIVERED,
+# PROVINCE_ASSIGNED, RETURN_ASSIGNED, VOID
+#
+# Business meaning for report:
+# - DELIVERED / DONE / PROVINCE_ASSIGNED = DONE report
+# - RETURNED / RETURN_ASSIGNED = DONE RETURN report
+# - VOID = excluded from pending
+# - everything else = pending
+# =========================================================
+
+DONE_STATUSES = {
+    "DELIVERED",
+    "DONE",
+    "PROVINCE_ASSIGNED",
+}
+
+RETURNED_STATUSES = {
+    "RETURNED",
+    "RETURN_ASSIGNED",
+}
+
+VOID_STATUSES = {
+    "VOID",
+}
 
 
 def _start(d):
+    """
+    Convert date to start datetime.
+    If already datetime, keep it.
+    """
+    if not d:
+        return None
+
+    if isinstance(d, datetime):
+        return d
+
     return datetime.combine(d, time.min)
 
 
 def _end(d):
+    """
+    Convert date to end datetime.
+    If already datetime, keep it.
+    """
+    if not d:
+        return None
+
+    if isinstance(d, datetime):
+        return d
+
     return datetime.combine(d, time.max)
 
 
@@ -51,14 +96,15 @@ def get_shipper_name(order):
 def classify_row(order):
     """
     Internal types used for row color + money rules:
-    - done_return (green)
-    - done (white)
-    - pending (yellow)
+    - done_return
+    - done
+    - pending
 
-    Business rule:
-    - report follows current order status
+    Important:
+    Province completed orders use PROVINCE_ASSIGNED in your system,
+    so PROVINCE_ASSIGNED must count as done.
     """
-    status = (getattr(order, "status", "") or "").upper()
+    status = (getattr(order, "status", "") or "").upper().strip()
 
     if status in RETURNED_STATUSES:
         return "done_return"
@@ -74,15 +120,20 @@ def display_status(order):
 
     if row_type == "done_return":
         return "RETURNED"
+
     if row_type == "done":
         return "DONE"
+
     return "PENDING"
 
 
 def report_money(order):
     """
-    Display-only money values for report (do NOT change DB):
-    - PENDING and RETURNED => COD/FEE must be 0
+    Display-only money values for report.
+    Do NOT change DB.
+
+    Business rule:
+    - PENDING and RETURNED => COD/FEE must show 0
     - DONE => show real COD/FEE
     """
     row_type = classify_row(order)
@@ -95,8 +146,12 @@ def report_money(order):
             "total_fee": Decimal("0.00"),
         }
 
-    delivery_fee = Decimal(str(getattr(order, "delivery_fee", 0) or 0)).quantize(Decimal("0.00"))
-    additional_fee = Decimal(str(getattr(order, "additional_fee", 0) or 0)).quantize(Decimal("0.00"))
+    delivery_fee = Decimal(str(getattr(order, "delivery_fee", 0) or 0)).quantize(
+        Decimal("0.00")
+    )
+    additional_fee = Decimal(str(getattr(order, "additional_fee", 0) or 0)).quantize(
+        Decimal("0.00")
+    )
     total_fee = (delivery_fee + additional_fee).quantize(Decimal("0.00"))
     cod = Decimal(str(getattr(order, "cod", 0) or 0)).quantize(Decimal("0.00"))
 
@@ -119,8 +174,10 @@ def get_status_sort_key(order):
 
     if row_type == "done":
         return 1
+
     if row_type == "done_return":
         return 2
+
     return 3
 
 
@@ -148,9 +205,13 @@ def get_done_queryset(Order, cleaned):
     """
     Done rows:
     - based on final status only
-    - DO NOT depend on clear_delivery
-    - this allows PP done, province done, and return done to appear
-    - use done_at date filter for done report
+    - does not depend on clear_delivery
+    - includes PP done, province done, and return done
+    - uses done_at date filter for done report
+
+    Fixed:
+    PROVINCE_ASSIGNED is now included as done.
+    RETURN_ASSIGNED is now included as done_return.
     """
     qs = (
         Order.objects
@@ -170,9 +231,11 @@ def get_done_queryset(Order, cleaned):
 
     if d_from:
         qs = qs.filter(done_at__gte=d_from)
+
     if d_to:
         qs = qs.filter(done_at__lte=d_to)
 
+    # Done report should only show rows that have completed date.
     qs = qs.exclude(done_at__isnull=True)
 
     return qs.distinct().order_by("seller_code", "seller_name", "id")
@@ -182,7 +245,11 @@ def get_pending_queryset(Order, cleaned):
     """
     Pending rows:
     - anything not done / not returned / not void
-    - this prevents duplicate because done/returned rows stay only in done queryset
+    - prevents duplicate because done/returned rows stay only in done queryset
+
+    Fixed:
+    PROVINCE_ASSIGNED is excluded from pending.
+    RETURN_ASSIGNED is excluded from pending.
     """
     qs = (
         Order.objects
@@ -200,6 +267,7 @@ def get_pending_queryset(Order, cleaned):
 
     if p_from:
         qs = qs.filter(created_at__gte=_start(p_from))
+
     if p_to:
         qs = qs.filter(created_at__lte=_end(p_to))
 
@@ -215,11 +283,22 @@ def group_by_seller(rows):
             shop_name = getattr(o.seller, "name", "") or ""
             key = f"{shop_code} - {shop_name}" if shop_code else shop_name
         else:
-            key = "No Shop"
+            seller_code = getattr(o, "seller_code", "") or ""
+            seller_name = getattr(o, "seller_name", "") or ""
+
+            if seller_code and seller_name:
+                key = f"{seller_code} - {seller_name}"
+            elif seller_name:
+                key = seller_name
+            elif seller_code:
+                key = seller_code
+            else:
+                key = "No Shop"
 
         grouped.setdefault(key, []).append(o)
 
     sorted_grouped = OrderedDict()
+
     for key, seller_rows in grouped.items():
         sorted_grouped[key] = sort_report_rows(seller_rows)
 
@@ -231,9 +310,12 @@ def calc_totals(rows):
     total_fee = Decimal("0.00")
 
     for o in rows:
-        m = report_money(o)
-        total_cod += Decimal(str(m["cod"] or 0))
-        total_fee += Decimal(str(m["total_fee"] or 0))
+        money = report_money(o)
+        total_cod += Decimal(str(money["cod"] or 0))
+        total_fee += Decimal(str(money["total_fee"] or 0))
 
+    total_cod = total_cod.quantize(Decimal("0.00"))
+    total_fee = total_fee.quantize(Decimal("0.00"))
     pay = (total_cod - total_fee).quantize(Decimal("0.00"))
+
     return total_cod, total_fee, pay

@@ -207,52 +207,48 @@ def _province_done_order_ids(d_from=None, d_to=None, seller=None):
 def get_done_queryset(Order, cleaned):
     """
     Done rows:
-    - PP done / normal done from Order date fields
+    - Normal done / PP done from Order.done_at
     - Province done from ProvinceBatchItem.batch.assigned_at
+    - NO delivery_date field because this Order model does not have it.
     """
     seller = cleaned.get("seller")
     d_from = cleaned.get("delivery_date_from")
     d_to = cleaned.get("delivery_date_to")
 
-    normal_done_q = Q(
-        is_deleted=False,
-        status__in=(DONE_STATUSES | RETURNED_STATUSES),
+    qs = (
+        Order.objects
+        .select_related("seller", "delivery_shipper")
+        .filter(
+            is_deleted=False,
+            status__in=(DONE_STATUSES | RETURNED_STATUSES),
+        )
     )
+
+    if seller:
+        qs = qs.filter(seller=seller)
 
     date_q = Q()
 
     if d_from and d_to:
         date_q = (
             Q(done_at__gte=_start(d_from), done_at__lte=_end(d_to))
-            | Q(done_at__isnull=True, delivery_date__gte=_start(d_from), delivery_date__lte=_end(d_to))
-            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__gte=_start(d_from), created_at__lte=_end(d_to))
+            | Q(done_at__isnull=True, created_at__gte=_start(d_from), created_at__lte=_end(d_to))
         )
 
     elif d_from:
         date_q = (
             Q(done_at__gte=_start(d_from))
-            | Q(done_at__isnull=True, delivery_date__gte=_start(d_from))
-            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__gte=_start(d_from))
+            | Q(done_at__isnull=True, created_at__gte=_start(d_from))
         )
 
     elif d_to:
         date_q = (
             Q(done_at__lte=_end(d_to))
-            | Q(done_at__isnull=True, delivery_date__lte=_end(d_to))
-            | Q(done_at__isnull=True, delivery_date__isnull=True, created_at__lte=_end(d_to))
+            | Q(done_at__isnull=True, created_at__lte=_end(d_to))
         )
-
-    qs = (
-        Order.objects
-        .select_related("seller", "delivery_shipper")
-        .filter(normal_done_q)
-    )
 
     if date_q:
         qs = qs.filter(date_q)
-
-    if seller:
-        qs = qs.filter(seller=seller)
 
     province_ids = _province_done_order_ids(
         d_from=d_from,

@@ -59,6 +59,12 @@ def safe_decimal(v):
 
 
 def get_shipper_name(order):
+    """
+    Report shipper display priority:
+    1. delivery_shipper FK
+    2. province / assigned shipper fallback
+    3. text fallback
+    """
     delivery_shipper = getattr(order, "delivery_shipper", None)
     if delivery_shipper:
         name = getattr(delivery_shipper, "name", "") or ""
@@ -92,6 +98,12 @@ def get_shipper_name(order):
 
 
 def classify_row(order):
+    """
+    Internal row type:
+    - done_return
+    - done
+    - pending
+    """
     status = (getattr(order, "status", "") or "").upper().strip()
 
     if status in RETURNED_STATUSES:
@@ -116,6 +128,13 @@ def display_status(order):
 
 
 def report_money(order):
+    """
+    Display-only money values for report.
+    Do NOT change DB.
+
+    Pending and returned rows show 0.
+    Done rows show real money.
+    """
     row_type = classify_row(order)
 
     if row_type in ("pending", "done_return"):
@@ -157,7 +176,6 @@ def get_status_sort_key(order):
 
 def sort_report_rows(rows):
     def _key(o):
-        delivery_date = getattr(o, "delivery_date", None)
         done_at = getattr(o, "done_at", None)
         created_at = getattr(o, "created_at", None)
         tracking_no = getattr(o, "tracking_no", "") or ""
@@ -165,7 +183,6 @@ def sort_report_rows(rows):
 
         return (
             get_status_sort_key(o),
-            str(delivery_date or ""),
             str(done_at or ""),
             str(created_at or ""),
             str(tracking_no),
@@ -177,10 +194,12 @@ def sort_report_rows(rows):
 
 def _province_done_order_ids(d_from=None, d_to=None, seller=None):
     """
-    Important fix:
-    ProvinceOps completed orders may not match delivery_date.
-    So delivery report must also include orders from ProvinceBatchItem
-    where ProvinceBatch.status = DONE and assigned_at is inside report date range.
+    Province DONE fix:
+    Delivery Report must include orders from province batches where:
+    - ProvinceBatch.status = DONE
+    - ProvinceBatch.assigned_at is inside the report delivery date range
+
+    This avoids using Order.delivery_date because your Order model does not have it.
     """
     qs = (
         ProvinceBatchItem.objects
@@ -207,15 +226,15 @@ def _province_done_order_ids(d_from=None, d_to=None, seller=None):
 def get_done_queryset(Order, cleaned):
     """
     Done rows:
-    - Normal done / PP done from Order.done_at
-    - Province done from ProvinceBatchItem.batch.assigned_at
-    - NO delivery_date field because this Order model does not have it.
+    - Normal / PP done: from Order.done_at
+    - Province done: from ProvinceBatchItem.batch.assigned_at
+    - No delivery_date field used.
     """
     seller = cleaned.get("seller")
     d_from = cleaned.get("delivery_date_from")
     d_to = cleaned.get("delivery_date_to")
 
-    qs = (
+    base_qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")
         .filter(
@@ -225,7 +244,7 @@ def get_done_queryset(Order, cleaned):
     )
 
     if seller:
-        qs = qs.filter(seller=seller)
+        base_qs = base_qs.filter(seller=seller)
 
     date_q = Q()
 
@@ -247,8 +266,9 @@ def get_done_queryset(Order, cleaned):
             | Q(done_at__isnull=True, created_at__lte=_end(d_to))
         )
 
+    normal_done_qs = base_qs
     if date_q:
-        qs = qs.filter(date_q)
+        normal_done_qs = normal_done_qs.filter(date_q)
 
     province_ids = _province_done_order_ids(
         d_from=d_from,
@@ -256,7 +276,7 @@ def get_done_queryset(Order, cleaned):
         seller=seller,
     )
 
-    province_qs = (
+    province_done_qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")
         .filter(
@@ -265,10 +285,17 @@ def get_done_queryset(Order, cleaned):
         )
     )
 
-    return (qs | province_qs).distinct().order_by("seller_code", "seller_name", "id")
+    return (
+        normal_done_qs
+        | province_done_qs
+    ).distinct().order_by("seller_code", "seller_name", "id")
 
 
 def get_pending_queryset(Order, cleaned):
+    """
+    Pending rows:
+    anything not done / not returned / not void.
+    """
     qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")

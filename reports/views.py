@@ -139,26 +139,61 @@ def enrich_report_rows(rows):
     Add runtime-only helpers for template display.
     Does not save to DB.
 
-    Important:
-    - report_pickup_date = Order.created_at
-    - report_delivery_date = Order.done_at, fallback to ProvinceBatch.assigned_at
+    Important fix:
+    Existing report HTML may still use o.done_at or o.delivery_date.
+    So we set those runtime-only fallback values too.
     """
-    province_date_map = _build_province_date_map(rows)
+    from provinceops.models import ProvinceBatch, ProvinceBatchItem
+
+    order_ids = [o.id for o in rows if getattr(o, "id", None)]
+
+    province_date_map = {}
+    if order_ids:
+        province_items = (
+            ProvinceBatchItem.objects
+            .select_related("batch")
+            .filter(
+                order_id__in=order_ids,
+                batch__status=ProvinceBatch.STATUS_DONE,
+                batch__assigned_at__isnull=False,
+            )
+            .order_by("-batch__assigned_at", "-id")
+        )
+
+        for it in province_items:
+            if it.order_id not in province_date_map:
+                province_date_map[it.order_id] = getattr(it.batch, "assigned_at", None)
 
     for o in rows:
         o.report_shipper_name = get_shipper_name(o)
 
         money = report_money(o)
-        o.report_delivery_fee = money.get("delivery_fee", Decimal("0.00"))
-        o.report_additional_fee = money.get("additional_fee", Decimal("0.00"))
-        o.report_province_fee = money.get("province_fee", Decimal("0.00"))
-        o.report_total_fee = money.get("total_fee", Decimal("0.00"))
-        o.report_cod = money.get("cod", Decimal("0.00"))
+        o.report_delivery_fee = money.get("delivery_fee", 0)
+        o.report_additional_fee = money.get("additional_fee", 0)
+        o.report_province_fee = money.get("province_fee", 0)
+        o.report_total_fee = money.get("total_fee", 0)
+        o.report_cod = money.get("cod", 0)
 
         province_date = province_date_map.get(getattr(o, "id", None))
+        original_done_at = getattr(o, "done_at", None)
 
+        final_delivery_date = original_done_at or province_date
+
+        # New helper fields
         o.report_pickup_date = getattr(o, "created_at", None)
-        o.report_delivery_date = getattr(o, "done_at", None) or province_date
+        o.report_delivery_date = final_delivery_date
+
+        # ✅ Important: old HTML compatibility
+        # This only changes the Python object in memory. It does NOT save DB.
+        if not original_done_at and province_date:
+            o.done_at = province_date
+
+        # ✅ If old HTML uses delivery_date, make it work too
+        if not getattr(o, "delivery_date", None):
+            o.delivery_date = final_delivery_date
+
+        if not getattr(o, "pickup_date", None):
+            o.pickup_date = getattr(o, "created_at", None)
 
     return rows
 

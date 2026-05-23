@@ -73,7 +73,6 @@ def _is_normal_pp_item(item) -> bool:
 def _build_today_cards(target_date: date):
     created_count = Order.objects.filter(created_at__date=target_date).count()
 
-    # SENT PP = PP batches assigned that day, NORMAL items only
     sent_pp = 0
     pp_batch_qs = (
         PPDeliveryBatch.objects
@@ -90,22 +89,19 @@ def _build_today_cards(target_date: date):
         )
         sent_pp += sum(1 for item in items if _is_normal_pp_item(item))
 
-    # SENT PROVINCE = province batch items assigned that day
     sent_province = ProvinceBatchItem.objects.filter(
         batch__assigned_at__date=target_date,
         batch__assigned_at__isnull=False,
         batch__status__in=[ProvinceBatch.STATUS_PENDING, ProvinceBatch.STATUS_DONE],
     ).count()
 
-    # DONE PP = ticked NORMAL PP items by assigned day
-    done_pp = PPDeliveryItem.objects.select_related("batch", "order").filter(
+    done_pp_qs = PPDeliveryItem.objects.select_related("batch", "order").filter(
         ticked=True,
         batch__assigned_at__date=target_date,
         batch__assigned_at__isnull=False,
     )
-    done_pp = sum(1 for item in done_pp if _is_normal_pp_item(item))
+    done_pp = sum(1 for item in done_pp_qs if _is_normal_pp_item(item))
 
-    # DONE PROVINCE = province batch items where batch is DONE by assigned day
     done_province = ProvinceBatchItem.objects.filter(
         batch__assigned_at__date=target_date,
         batch__assigned_at__isnull=False,
@@ -121,6 +117,7 @@ def _build_today_cards(target_date: date):
     delivery_fee_total = _to_decimal(order_fee_agg.get("delivery_fee_total"))
     additional_fee_total = _to_decimal(order_fee_agg.get("additional_fee_total"))
     province_fee_total = _to_decimal(order_fee_agg.get("province_fee_total"))
+
     expense_total = additional_fee_total + province_fee_total
     revenue_total = delivery_fee_total - expense_total
 
@@ -193,6 +190,7 @@ def _build_trend_30_days(end_date: date):
         delivery_fee_total = _to_decimal(agg.get("delivery_fee_total"))
         additional_fee_total = _to_decimal(agg.get("additional_fee_total"))
         province_fee_total = _to_decimal(agg.get("province_fee_total"))
+
         expense_total = additional_fee_total + province_fee_total
         revenue_total = delivery_fee_total - expense_total
 
@@ -201,7 +199,6 @@ def _build_trend_30_days(end_date: date):
         trend_map[d]["expense"] = float(expense_total)
         trend_map[d]["revenue"] = float(revenue_total)
 
-    # DONE PP by assigned day, NORMAL only
     done_pp_qs = (
         PPDeliveryItem.objects
         .select_related("batch", "order")
@@ -217,15 +214,16 @@ def _build_trend_30_days(end_date: date):
     for item in done_pp_qs:
         if not _is_normal_pp_item(item):
             continue
+
         batch = getattr(item, "batch", None)
         assigned_at = getattr(batch, "assigned_at", None) if batch else None
         if not assigned_at:
             continue
+
         d = assigned_at.date()
         if d in trend_map:
             trend_map[d]["done_pp"] += 1
 
-    # DONE PROVINCE by assigned day from province module
     done_province_qs = (
         ProvinceBatchItem.objects
         .select_related("batch")
@@ -243,6 +241,7 @@ def _build_trend_30_days(end_date: date):
         assigned_at = getattr(batch, "assigned_at", None) if batch else None
         if not assigned_at:
             continue
+
         d = assigned_at.date()
         if d in trend_map:
             trend_map[d]["done_province"] += 1
@@ -300,6 +299,7 @@ def _build_shipper_summary(date_from: date, date_to: date):
     for item in done_pp_qs:
         if not _is_normal_pp_item(item):
             continue
+
         batch = getattr(item, "batch", None)
         shipper = getattr(batch, "shipper", None) if batch else None
         shipper_name = getattr(shipper, "name", "") or "-"
@@ -323,13 +323,111 @@ def _build_shipper_summary(date_from: date, date_to: date):
     return rows
 
 
+def _build_province_send_report(date_from: date, date_to: date):
+    total_send = 0
+
+    shipper_map = defaultdict(int)
+    shop_map = defaultdict(lambda: {
+        "shop_name": "-",
+        "total": 0,
+        "shipper_counts": defaultdict(int),
+    })
+
+    qs = (
+        ProvinceBatchItem.objects
+        .select_related("batch", "batch__shipper", "order", "order__seller")
+        .filter(
+            batch__assigned_at__date__gte=date_from,
+            batch__assigned_at__date__lte=date_to,
+            batch__assigned_at__isnull=False,
+            batch__status__in=[
+                ProvinceBatch.STATUS_PENDING,
+                ProvinceBatch.STATUS_DONE,
+            ],
+        )
+        .order_by("batch__assigned_at", "id")
+    )
+
+    for item in qs:
+        batch = getattr(item, "batch", None)
+        order = getattr(item, "order", None)
+
+        shipper = getattr(batch, "shipper", None) if batch else None
+        shipper_name = getattr(shipper, "name", "") or "No Shipper"
+
+        seller = getattr(order, "seller", None) if order else None
+        shop_name = (
+            getattr(seller, "name", "")
+            or getattr(order, "seller_name", "")
+            or "No Shop"
+        )
+
+        total_send += 1
+        shipper_map[shipper_name] += 1
+
+        shop_box = shop_map[shop_name]
+        shop_box["shop_name"] = shop_name
+        shop_box["total"] += 1
+        shop_box["shipper_counts"][shipper_name] += 1
+
+    shipper_rows = [
+        {
+            "shipper_name": name,
+            "total": count,
+        }
+        for name, count in shipper_map.items()
+    ]
+    shipper_rows.sort(key=lambda x: (-x["total"], x["shipper_name"].lower()))
+
+    shipper_columns = [r["shipper_name"] for r in shipper_rows]
+
+    shop_rows = []
+    for _, box in shop_map.items():
+        shop_rows.append({
+            "shop_name": box["shop_name"],
+            "total": box["total"],
+            "shipper_counts": [
+                box["shipper_counts"].get(shipper_name, 0)
+                for shipper_name in shipper_columns
+            ],
+        })
+
+    shop_rows.sort(key=lambda x: (-x["total"], x["shop_name"].lower()))
+
+    shop_shipper_chart = []
+    for row in shop_rows:
+        for idx, shipper_name in enumerate(shipper_columns):
+            count = row["shipper_counts"][idx]
+            if count:
+                shop_shipper_chart.append({
+                    "label": f"{row['shop_name']} - {shipper_name}",
+                    "total": count,
+                })
+
+    return {
+        "total_send": total_send,
+
+        "shipper_rows": shipper_rows,
+        "shipper_columns": shipper_columns,
+        "shop_rows": shop_rows,
+
+        "shipper_chart_labels": [r["shipper_name"] for r in shipper_rows],
+        "shipper_chart_data": [r["total"] for r in shipper_rows],
+
+        "shop_shipper_chart_labels": [r["label"] for r in shop_shipper_chart],
+        "shop_shipper_chart_data": [r["total"] for r in shop_shipper_chart],
+    }
+
+
 def build_profit_dashboard(date_from: date, date_to: date):
     today_cards = _build_today_cards(date_to)
     trend_30_days = _build_trend_30_days(date_to)
     shipper_rows = _build_shipper_summary(date_from, date_to)
+    province_send_report = _build_province_send_report(date_from, date_to)
 
     return {
         "today_cards": today_cards,
         "trend_30_days": trend_30_days,
         "shipper_rows": shipper_rows,
+        "province_send_report": province_send_report,
     }

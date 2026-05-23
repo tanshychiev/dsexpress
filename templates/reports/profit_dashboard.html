@@ -2,7 +2,7 @@
 
 {% block title %}Operations Dashboard{% endblock %}
 {% block page_title %}Operations Dashboard{% endblock %}
-{% block page_subtitle %}Simple live overview for goods create, goods done, and shipper summary{% endblock %}
+{% block page_subtitle %}Province send report, goods create, goods done, and shipper summary{% endblock %}
 
 {% block content %}
 <div class="dashboard-shell">
@@ -12,7 +12,7 @@
       <div class="hero-eyebrow">DS EXPRESS CONTROL PANEL</div>
       <div class="hero-title">Operations Dashboard</div>
       <div class="hero-subtitle">
-        30-day goods create trend, 30-day goods done trend, and shipper summary.
+        Today province report, shipper summary, 30-day goods create trend, and 30-day goods done trend.
       </div>
     </div>
 
@@ -101,6 +101,99 @@
     </div>
   </div>
 
+  <div class="chart-grid one-col">
+    <div class="chart-card province-report-card">
+      <div class="chart-head province-head">
+        <div>
+          <div class="chart-title">Province Send Report</div>
+          <div class="chart-note">
+            Total send to province by shipper and by shop for selected date range.
+          </div>
+        </div>
+
+        <div class="province-total-pill">
+          Total Send To Province
+          <strong>{{ dashboard.province_send_report.total_send }}</strong>
+        </div>
+      </div>
+
+      <div class="province-grid">
+        <div class="province-panel">
+          <div class="sub-title">Total Send By Shipper</div>
+
+          <div class="chart-box province-chart-box">
+            <canvas id="provinceShipperChart"></canvas>
+          </div>
+
+          <div class="table-wrap">
+            <table class="cool-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Shipper</th>
+                  <th>Total Send</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in dashboard.province_send_report.shipper_rows %}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ r.shipper_name }}</td>
+                    <td class="num">{{ r.total }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="empty-row">No province send data.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="province-panel">
+          <div class="sub-title">Shop Send By Shipper</div>
+
+          <div class="chart-box province-chart-box">
+            <canvas id="provinceShopShipperChart"></canvas>
+          </div>
+
+          <div class="table-wrap">
+            <table class="cool-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Shop</th>
+                  <th>Total</th>
+                  {% for shipper_name in dashboard.province_send_report.shipper_columns %}
+                    <th>{{ shipper_name }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in dashboard.province_send_report.shop_rows %}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ r.shop_name }}</td>
+                    <td class="num">{{ r.total }}</td>
+                    {% for count in r.shipper_counts %}
+                      <td class="num">{{ count }}</td>
+                    {% endfor %}
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="10" class="empty-row">No shop province data.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="chart-grid two-col">
     <div class="chart-card">
       <div class="chart-head">
@@ -172,6 +265,7 @@
 </div>
 
 {{ dashboard.trend_30_days|json_script:"trend30-data" }}
+{{ dashboard.province_send_report|json_script:"province-send-data" }}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -179,6 +273,8 @@
   Chart.register(ChartDataLabels);
 
   const trend30 = JSON.parse(document.getElementById("trend30-data").textContent);
+  const provinceSend = JSON.parse(document.getElementById("province-send-data").textContent);
+
   const trendLabels = trend30.map(x => x.date);
 
   const commonLegend = {
@@ -203,6 +299,125 @@
       size: 10
     }
   };
+
+  new Chart(document.getElementById("provinceShipperChart"), {
+    type: "bar",
+    data: {
+      labels: provinceSend.shipper_chart_labels || [],
+      datasets: [
+        {
+          label: "Total Send",
+          data: provinceSend.shipper_chart_data || [],
+          backgroundColor: "#16a34a",
+          borderRadius: 8,
+          maxBarThickness: 52,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: function(value) {
+              return value ? value : "";
+            }
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels,
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return "Total Send: " + (context.raw || 0);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            maxRotation: 0,
+            autoSkip: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          title: {
+            display: true,
+            text: "Parcels"
+          }
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("provinceShopShipperChart"), {
+    type: "bar",
+    data: {
+      labels: provinceSend.shop_shipper_chart_labels || [],
+      datasets: [
+        {
+          label: "Shop / Shipper Send",
+          data: provinceSend.shop_shipper_chart_data || [],
+          backgroundColor: "#f59e0b",
+          borderRadius: 8,
+          maxBarThickness: 42,
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            formatter: function(value) {
+              return value ? value : "";
+            }
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: commonLegend,
+        datalabels: commonDatalabels,
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return "Total Send: " + (context.raw || 0);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 0,
+            autoSkip: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          title: {
+            display: true,
+            text: "Parcels"
+          }
+        }
+      }
+    }
+  });
 
   new Chart(document.getElementById("trend30Chart"), {
     type: "line",
@@ -477,6 +692,10 @@
     outline:none;
   }
 
+  .field input::-webkit-calendar-picker-indicator{
+    filter:invert(1);
+  }
+
   .btn-main{
     height:44px;
     border:none;
@@ -486,6 +705,10 @@
     color:#062510;
     font-weight:900;
     cursor:pointer;
+  }
+
+  .btn-main:hover{
+    background:#4ade80;
   }
 
   .kpi-grid{
@@ -607,6 +830,57 @@
     height:500px;
   }
 
+  .province-report-card{
+    border:2px solid #dcfce7;
+    background:linear-gradient(180deg, #ffffff 0%, #f8fffb 100%);
+  }
+
+  .province-head{
+    align-items:flex-start;
+  }
+
+  .province-total-pill{
+    background:#dcfce7;
+    color:#14532d;
+    padding:12px 16px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:900;
+    white-space:nowrap;
+    box-shadow:0 8px 18px rgba(34, 197, 94, .14);
+  }
+
+  .province-total-pill strong{
+    font-size:24px;
+    margin-left:8px;
+  }
+
+  .province-grid{
+    display:grid;
+    grid-template-columns:1fr 1.35fr;
+    gap:18px;
+  }
+
+  .province-panel{
+    min-width:0;
+  }
+
+  .sub-title{
+    font-size:15px;
+    font-weight:900;
+    color:#0f172a;
+    margin-bottom:10px;
+  }
+
+  .province-chart-box{
+    height:280px;
+    margin-bottom:14px;
+    padding:8px;
+    border-radius:22px;
+    background:#ffffff;
+    border:1px solid #e5e7eb;
+  }
+
   .table-wrap{
     overflow:auto;
   }
@@ -629,6 +903,7 @@
     letter-spacing:.02em;
     color:#64748b;
     font-weight:900;
+    background:#f8fafc;
   }
 
   .cool-table td{
@@ -656,6 +931,10 @@
     .chart-grid.two-col{
       grid-template-columns:1fr 1fr;
     }
+
+    .province-grid{
+      grid-template-columns:1fr;
+    }
   }
 
   @media (max-width: 768px){
@@ -669,9 +948,25 @@
       font-size:28px;
     }
 
+    .chart-head,
+    .province-head{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+
+    .province-total-pill{
+      width:100%;
+      white-space:normal;
+      border-radius:18px;
+    }
+
     .chart-box,
     .chart-box-xl{
       height:340px;
+    }
+
+    .province-chart-box{
+      height:320px;
     }
   }
 </style>

@@ -3,209 +3,481 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+  >
+
   <title>{% block title %}DS Express{% endblock %}</title>
 
-<link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
-<link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}">
-{% block extra_css %}{% endblock %}
+  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  <link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}">
+  {% block extra_css %}{% endblock %}
 
-<style>
-    body{
-      position:relative;
-      overflow-x:hidden;
-      background:
-        radial-gradient(circle at top left, rgba(35,184,119,.08), transparent 28%),
-        radial-gradient(circle at top right, rgba(22,154,101,.08), transparent 24%),
-        linear-gradient(180deg,#f4fbf7 0%, #eef6f1 45%, #f7faf8 100%);
-      min-height:100vh;
+  <style>
+    :root {
+      --portal-green: #0f7a45;
+      --portal-green-dark: #075c34;
+      --portal-green-soft: #eaf8f0;
+      --portal-bg: #f3fbf7;
+      --portal-text: #0f172a;
+      --portal-muted: #64748b;
+      --portal-border: rgba(15, 122, 69, 0.14);
+      --portal-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
     }
 
-    .portal-bg{
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      overflow:hidden;
-      z-index:0;
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      width: 100%;
+      min-height: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--portal-text);
+      background:
+        radial-gradient(circle at top left, rgba(35,184,119,.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(22,154,101,.08), transparent 24%),
+        linear-gradient(180deg, #f7fffb 0%, #eef8f2 46%, #f7faf8 100%);
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .portal-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
     }
 
     .bg-bubble,
-    .bg-parcel{
-      position:absolute;
-      display:block;
-      pointer-events:none;
-      user-select:none;
+    .bg-parcel {
+      position: absolute;
+      display: block;
+      pointer-events: none;
+      user-select: none;
     }
 
-    .bg-bubble{
-      border-radius:50%;
-      filter:blur(1px);
-      opacity:.35;
-      animation:floatBubble linear infinite;
+    .bg-bubble {
+      border-radius: 50%;
+      filter: blur(1px);
+      opacity: .32;
+      animation: floatBubble linear infinite;
     }
 
-    .bubble-1{
-      width:140px;
-      height:140px;
-      left:-20px;
-      top:10%;
-      background:radial-gradient(circle at 30% 30%, rgba(64,211,141,.28), rgba(64,211,141,.05) 70%, transparent 72%);
-      animation-duration:18s;
+    .bubble-1 {
+      width: 140px;
+      height: 140px;
+      left: -28px;
+      top: 12%;
+      background: radial-gradient(circle at 30% 30%, rgba(64,211,141,.30), rgba(64,211,141,.05) 70%, transparent 72%);
+      animation-duration: 18s;
     }
 
-    .bubble-2{
-      width:100px;
-      height:100px;
-      right:6%;
-      top:18%;
-      background:radial-gradient(circle at 35% 35%, rgba(54,191,126,.24), rgba(54,191,126,.04) 70%, transparent 72%);
-      animation-duration:14s;
-      animation-delay:-4s;
+    .bubble-2 {
+      width: 100px;
+      height: 100px;
+      right: 6%;
+      top: 20%;
+      background: radial-gradient(circle at 35% 35%, rgba(54,191,126,.24), rgba(54,191,126,.04) 70%, transparent 72%);
+      animation-duration: 14s;
+      animation-delay: -4s;
     }
 
-    .bubble-3{
-      width:180px;
-      height:180px;
-      left:8%;
-      bottom:12%;
-      background:radial-gradient(circle at 30% 30%, rgba(29,167,108,.16), rgba(29,167,108,.03) 72%, transparent 75%);
-      animation-duration:21s;
-      animation-delay:-7s;
+    .bubble-3 {
+      width: 180px;
+      height: 180px;
+      left: 8%;
+      bottom: 12%;
+      background: radial-gradient(circle at 30% 30%, rgba(29,167,108,.16), rgba(29,167,108,.03) 72%, transparent 75%);
+      animation-duration: 21s;
+      animation-delay: -7s;
     }
 
-    .bubble-4{
-      width:120px;
-      height:120px;
-      right:-10px;
-      bottom:20%;
-      background:radial-gradient(circle at 35% 35%, rgba(79,217,150,.18), rgba(79,217,150,.03) 70%, transparent 72%);
-      animation-duration:17s;
-      animation-delay:-2s;
+    .bubble-4 {
+      width: 120px;
+      height: 120px;
+      right: -10px;
+      bottom: 20%;
+      background: radial-gradient(circle at 35% 35%, rgba(79,217,150,.18), rgba(79,217,150,.03) 70%, transparent 72%);
+      animation-duration: 17s;
+      animation-delay: -2s;
     }
 
-    .bubble-5{
-      width:70px;
-      height:70px;
-      left:50%;
-      top:38%;
-      background:radial-gradient(circle at 35% 35%, rgba(43,190,120,.18), rgba(43,190,120,.03) 70%, transparent 72%);
-      animation-duration:12s;
-      animation-delay:-5s;
+    .bubble-5 {
+      width: 70px;
+      height: 70px;
+      left: 50%;
+      top: 38%;
+      background: radial-gradient(circle at 35% 35%, rgba(43,190,120,.18), rgba(43,190,120,.03) 70%, transparent 72%);
+      animation-duration: 12s;
+      animation-delay: -5s;
     }
 
-    .bubble-6{
-      width:90px;
-      height:90px;
-      left:72%;
-      bottom:8%;
-      background:radial-gradient(circle at 35% 35%, rgba(61,194,130,.18), rgba(61,194,130,.03) 70%, transparent 72%);
-      animation-duration:16s;
-      animation-delay:-8s;
+    .bubble-6 {
+      width: 90px;
+      height: 90px;
+      left: 72%;
+      bottom: 8%;
+      background: radial-gradient(circle at 35% 35%, rgba(61,194,130,.18), rgba(61,194,130,.03) 70%, transparent 72%);
+      animation-duration: 16s;
+      animation-delay: -8s;
     }
 
-    .bg-parcel{
-      font-size:22px;
-      opacity:.14;
-      animation:floatParcel linear infinite;
+    .bg-parcel {
+      font-size: 22px;
+      opacity: .13;
+      animation: floatParcel linear infinite;
     }
 
-    .parcel-1{
-      left:6%;
-      top:22%;
-      animation-duration:20s;
+    .parcel-1 {
+      left: 6%;
+      top: 22%;
+      animation-duration: 20s;
     }
 
-    .parcel-2{
-      right:9%;
-      top:52%;
-      font-size:26px;
-      animation-duration:17s;
-      animation-delay:-6s;
+    .parcel-2 {
+      right: 9%;
+      top: 52%;
+      font-size: 26px;
+      animation-duration: 17s;
+      animation-delay: -6s;
     }
 
-    .parcel-3{
-      left:16%;
-      bottom:14%;
-      font-size:20px;
-      animation-duration:23s;
-      animation-delay:-10s;
+    .parcel-3 {
+      left: 16%;
+      bottom: 14%;
+      font-size: 20px;
+      animation-duration: 23s;
+      animation-delay: -10s;
     }
 
-    .parcel-4{
-      right:20%;
-      bottom:24%;
-      font-size:18px;
-      animation-duration:19s;
-      animation-delay:-3s;
+    .parcel-4 {
+      right: 20%;
+      bottom: 24%;
+      font-size: 18px;
+      animation-duration: 19s;
+      animation-delay: -3s;
     }
 
-    .parcel-5{
-      left:62%;
-      top:14%;
-      font-size:24px;
-      animation-duration:15s;
-      animation-delay:-8s;
+    .parcel-5 {
+      left: 62%;
+      top: 14%;
+      font-size: 24px;
+      animation-duration: 15s;
+      animation-delay: -8s;
     }
 
-    @keyframes floatBubble{
-      0%{
-        transform:translate3d(0,0,0) scale(1);
-      }
-      25%{
-        transform:translate3d(10px,-18px,0) scale(1.04);
-      }
-      50%{
-        transform:translate3d(-6px,-32px,0) scale(.98);
-      }
-      75%{
-        transform:translate3d(12px,-14px,0) scale(1.03);
-      }
-      100%{
-        transform:translate3d(0,0,0) scale(1);
-      }
+    @keyframes floatBubble {
+      0% { transform: translate3d(0,0,0) scale(1); }
+      25% { transform: translate3d(10px,-18px,0) scale(1.04); }
+      50% { transform: translate3d(-6px,-32px,0) scale(.98); }
+      75% { transform: translate3d(12px,-14px,0) scale(1.03); }
+      100% { transform: translate3d(0,0,0) scale(1); }
     }
 
-    @keyframes floatParcel{
-      0%{
-        transform:translate3d(0,0,0) rotate(0deg);
-      }
-      20%{
-        transform:translate3d(8px,-18px,0) rotate(6deg);
-      }
-      40%{
-        transform:translate3d(-8px,-34px,0) rotate(-5deg);
-      }
-      60%{
-        transform:translate3d(10px,-18px,0) rotate(4deg);
-      }
-      80%{
-        transform:translate3d(-4px,-8px,0) rotate(-3deg);
-      }
-      100%{
-        transform:translate3d(0,0,0) rotate(0deg);
-      }
+    @keyframes floatParcel {
+      0% { transform: translate3d(0,0,0) rotate(0deg); }
+      20% { transform: translate3d(8px,-18px,0) rotate(6deg); }
+      40% { transform: translate3d(-8px,-34px,0) rotate(-5deg); }
+      60% { transform: translate3d(10px,-18px,0) rotate(4deg); }
+      80% { transform: translate3d(-4px,-8px,0) rotate(-3deg); }
+      100% { transform: translate3d(0,0,0) rotate(0deg); }
     }
 
     .portal-header,
     .portal-main,
-    .site-footer{
-      position:relative;
-      z-index:1;
+    .site-footer {
+      position: relative;
+      z-index: 1;
     }
 
-    .portal-main{
-      min-height:calc(100vh - 180px);
+    .portal-container {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
     }
 
-    @media (prefers-reduced-motion: reduce){
+    .portal-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.86);
+      border-bottom: 1px solid rgba(15, 122, 69, 0.10);
+      backdrop-filter: blur(16px);
+    }
+
+    .header-inner {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: #065f3b;
+      text-decoration: none;
+      font-size: 24px;
+      font-weight: 950;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #ffffff;
+      background: linear-gradient(135deg, #0f8f4c, #075c34);
+      font-size: 13px;
+      font-weight: 950;
+      box-shadow: 0 10px 22px rgba(15, 122, 69, 0.22);
+    }
+
+    .top-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .top-nav a {
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #0f172a;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 900;
+      transition: 0.18s ease;
+    }
+
+    .top-nav a:hover {
+      background: #eaf8f0;
+      color: #08733e;
+      transform: translateY(-1px);
+    }
+
+    .menu-toggle {
+      display: none;
+      width: 44px;
+      height: 44px;
+      border: 1px solid rgba(15, 122, 69, 0.14);
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .menu-toggle span {
+      width: 18px;
+      height: 2px;
+      border-radius: 999px;
+      background: #075c34;
+      transition: 0.18s ease;
+    }
+
+    .mobile-menu {
+      display: none;
+      width: min(420px, calc(100% - 32px));
+      margin: 0 auto 12px;
+      padding: 10px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(15, 122, 69, 0.12);
+      box-shadow: var(--portal-shadow);
+    }
+
+    .mobile-menu a {
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 14px;
+      color: #0f172a;
+      font-size: 14px;
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .mobile-menu a:hover {
+      background: #eaf8f0;
+      color: #08733e;
+    }
+
+    .mobile-menu.is-open {
+      display: block;
+    }
+
+    .portal-main {
+      min-height: calc(100vh - 156px);
+    }
+
+    .site-footer {
+      padding: 24px 0;
+      border-top: 1px solid rgba(15, 122, 69, 0.08);
+      background: rgba(255,255,255,0.62);
+      backdrop-filter: blur(10px);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: #0f7a45;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .footer-title {
+      color: #064e32;
+      font-weight: 950;
+      font-size: 15px;
+    }
+
+    .footer-sub {
+      margin-top: 2px;
+      color: var(--portal-muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: #08733e;
+      text-decoration: underline;
+    }
+
+    body.portal-login .site-footer {
+      display: none;
+    }
+
+    body.portal-login .portal-main {
+      min-height: calc(100vh - 72px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
       .bg-bubble,
-      .bg-parcel{
-        animation:none !important;
+      .bg-parcel {
+        animation: none !important;
+      }
+
+      * {
+        scroll-behavior: auto !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .portal-container {
+        width: min(430px, calc(100% - 24px));
+      }
+
+      .portal-header {
+        position: sticky;
+        top: 0;
+        background: rgba(255,255,255,0.92);
+      }
+
+      .header-inner {
+        height: 64px;
+      }
+
+      .brand {
+        gap: 10px;
+        font-size: 20px;
+      }
+
+      .logo {
+        width: 38px;
+        height: 38px;
+        border-radius: 13px;
+        font-size: 12px;
+      }
+
+      .top-nav {
+        display: none;
+      }
+
+      .menu-toggle {
+        display: inline-flex;
+      }
+
+      .menu-toggle.is-open span:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+      }
+
+      .menu-toggle.is-open span:nth-child(2) {
+        opacity: 0;
+      }
+
+      .menu-toggle.is-open span:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+      }
+
+      .footer-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      body.portal-login .portal-main {
+        min-height: calc(100vh - 64px);
       }
     }
   </style>
 </head>
-<body>
+
+<body class="{% block body_class %}{% endblock %}">
 
 <div class="portal-bg" aria-hidden="true">
   <span class="bg-bubble bubble-1"></span>
@@ -251,14 +523,14 @@
 
   <div class="mobile-menu" id="mobileMenu">
     <a href="{% url 'portal:home' %}">Home</a>
-    <a href="{% url 'portal:booking_public' %}">Book a Pickup</a>
+    <a href="{% url 'portal:booking_public' %}">Request Pickup</a>
 
     {% if request.user.is_authenticated %}
       <a href="{% url 'portal:dashboard' %}">Dashboard</a>
       <a href="{% url 'portal:change_password' %}">Change Password</a>
       <a href="{% url 'portal:logout' %}">Logout</a>
     {% else %}
-      <a href="{% url 'portal:login' %}">Seller Portal</a>
+      <a href="{% url 'portal:login' %}">Seller Login</a>
     {% endif %}
   </div>
 </header>
@@ -285,6 +557,20 @@
 </footer>
 
 <script src="{% static 'customerportal/js/portal.js' %}"></script>
+
+<script>
+(function () {
+  const btn = document.getElementById("menuToggle");
+  const menu = document.getElementById("mobileMenu");
+
+  if (btn && menu) {
+    btn.addEventListener("click", function () {
+      btn.classList.toggle("is-open");
+      menu.classList.toggle("is-open");
+    });
+  }
+})();
+</script>
 
 {% if request.user.is_authenticated %}
 <script>

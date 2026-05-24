@@ -38,12 +38,35 @@ def _calc_done_percent(done_count, sent_count):
     return round((done_count / sent_count) * 100, 2)
 
 
+def _get_obj_date(obj, field_names):
+    """
+    Get date from the first existing datetime/date field.
+    This makes the report safe even if some models do not have ticked_at/done_at.
+    """
+    if not obj:
+        return None
+
+    for field in field_names:
+        value = getattr(obj, field, None)
+        if not value:
+            continue
+
+        try:
+            if hasattr(value, "date"):
+                return value.date()
+            return value
+        except Exception:
+            continue
+
+    return None
+
+
 def _is_normal_pp_item(item) -> bool:
     """
     Dashboard rule:
-    - count only NORMAL PP done pc
-    - do NOT count return done pc
-    - do NOT count return done batch
+    - count only NORMAL PP item
+    - do NOT count return item
+    - do NOT count return batch
     """
     source_type = str(getattr(item, "source_type", "") or "").upper()
 
@@ -80,105 +103,74 @@ def _get_shop_name(order) -> str:
     )
 
 
-def _is_order_province(order) -> bool:
-    """
-    Safe province checker.
-    Uses Python getattr so it will not crash if your Order model does not have some fields.
-    """
-    status = str(getattr(order, "status", "") or "").upper()
-
-    if "PROVINCE" in status:
-        return True
-
-    province_shipper = getattr(order, "province_shipper", None)
-    if province_shipper:
-        return True
-
-    delivery_shipper = getattr(order, "delivery_shipper", None)
-    shipper_type = str(getattr(delivery_shipper, "shipper_type", "") or "").upper()
-    if shipper_type == "PROVINCE":
-        return True
-
-    delivery_type = str(
-        getattr(order, "delivery_type", "")
-        or getattr(order, "shipment_type", "")
-        or getattr(order, "order_type", "")
-        or ""
-    ).upper()
-
-    if "PROVINCE" in delivery_type:
-        return True
-
-    return False
-
-
 def _is_order_done(order) -> bool:
     status = str(getattr(order, "status", "") or "").upper()
-    return status in {"DELIVERED", "DONE", "COMPLETED", "COMPLETE"}
+    return status in {
+        "DELIVERED",
+        "DONE",
+        "COMPLETED",
+        "COMPLETE",
+        "PROVINCE_DONE",
+        "DONE_PROVINCE",
+    }
 
 
 def _build_customer_send_report(date_from: date, date_to: date):
     """
     Customer Send Report:
-    - Count by Order.created_at date.
-    - Group by customer/shop/seller.
-    - This answers: Created Today 188 was sent by which customer?
+    - Send Today / selected range = orders created in selected date range.
+    - Done Today / selected range = parcels completed in selected date range,
+      even if they were sent before.
+    - Pending Today = selected range created orders that are still not done.
+    - All Pending = all not-done orders grouped by customer/shop.
     """
+
     grouped = defaultdict(lambda: {
         "shop_name": "-",
-        "total": 0,
-        "pp_total": 0,
-        "province_total": 0,
-        "done_pp": 0,
-        "done_province": 0,
-        "pending": 0,
+        "send_today": 0,
+        "done_today": 0,
+        "pending_today": 0,
+        "all_pending": 0,
     })
 
-    # Province batch info for created orders in selected date range.
-    province_order_ids = set()
-    done_province_order_ids = set()
-
-    province_items = (
-        ProvinceBatchItem.objects
-        .select_related("batch", "order")
+    # =========================
+    # 1) SEND TODAY / SELECTED RANGE
+    # =========================
+    created_orders = (
+        Order.objects
+        .select_related("seller")
         .filter(
-            order__created_at__date__gte=date_from,
-            order__created_at__date__lte=date_to,
-            batch__assigned_at__isnull=False,
-            batch__status__in=[
-                ProvinceBatch.STATUS_PENDING,
-                ProvinceBatch.STATUS_DONE,
-            ],
+            created_at__date__gte=date_from,
+            created_at__date__lte=date_to,
         )
+        .order_by("seller__name", "id")
     )
 
-    for item in province_items:
-        order = getattr(item, "order", None)
-        batch = getattr(item, "batch", None)
+    selected_created_order_ids = set()
 
-        if not order:
-            continue
+    for order in created_orders:
+        selected_created_order_ids.add(order.id)
 
-        province_order_ids.add(order.id)
+        shop_name = _get_shop_name(order)
+        box = grouped[shop_name]
+        box["shop_name"] = shop_name
+        box["send_today"] += 1
 
-        if batch and getattr(batch, "status", "") == ProvinceBatch.STATUS_DONE:
-            done_province_order_ids.add(order.id)
+    # =========================
+    # 2) DONE TODAY / SELECTED RANGE
+    # PP done today by ticked date / updated fallback
+    # =========================
+    done_order_ids_selected_range = set()
+    done_order_ids_all = set()
 
-    # PP batch info for created orders in selected date range.
-    pp_order_ids = set()
-    done_pp_order_ids = set()
-
-    pp_items = (
+    pp_done_items = (
         PPDeliveryItem.objects
-        .select_related("batch", "order")
-        .filter(
-            order__created_at__date__gte=date_from,
-            order__created_at__date__lte=date_to,
-            batch__assigned_at__isnull=False,
-        )
+        .select_related("batch", "order", "order__seller")
+        .filter(ticked=True)
+        .order_by("id")
     )
 
-    for item in pp_items:
+    for item in pp_done_items:
         if not _is_normal_pp_item(item):
             continue
 
@@ -186,66 +178,291 @@ def _build_customer_send_report(date_from: date, date_to: date):
         if not order:
             continue
 
-        pp_order_ids.add(order.id)
+        done_order_ids_all.add(order.id)
 
-        if getattr(item, "ticked", False):
-            done_pp_order_ids.add(order.id)
+        done_date = _get_obj_date(item, [
+            "ticked_at",
+            "done_at",
+            "delivered_at",
+            "completed_at",
+            "updated_at",
+            "created_at",
+        ])
 
-    orders = (
-        Order.objects
-        .select_related("seller", "delivery_shipper")
-        .filter(
-            created_at__date__gte=date_from,
-            created_at__date__lte=date_to,
-        )
-        .order_by("seller__name", "created_at", "id")
+        if not done_date:
+            batch = getattr(item, "batch", None)
+            done_date = _get_obj_date(batch, [
+                "done_at",
+                "completed_at",
+                "delivered_at",
+                "updated_at",
+                "created_at",
+                "assigned_at",
+            ])
+
+        if not done_date:
+            continue
+
+        if date_from <= done_date <= date_to:
+            shop_name = _get_shop_name(order)
+            box = grouped[shop_name]
+            box["shop_name"] = shop_name
+            box["done_today"] += 1
+            done_order_ids_selected_range.add(order.id)
+
+    # =========================
+    # Province done today by batch done date / updated fallback
+    # =========================
+    province_done_items = (
+        ProvinceBatchItem.objects
+        .select_related("batch", "order", "order__seller")
+        .filter(batch__status=ProvinceBatch.STATUS_DONE)
+        .order_by("id")
     )
 
-    total_send = 0
+    for item in province_done_items:
+        order = getattr(item, "order", None)
+        batch = getattr(item, "batch", None)
 
-    for order in orders:
+        if not order or not batch:
+            continue
+
+        done_order_ids_all.add(order.id)
+
+        done_date = _get_obj_date(batch, [
+            "done_at",
+            "completed_at",
+            "delivered_at",
+            "updated_at",
+            "created_at",
+            "assigned_at",
+        ])
+
+        if not done_date:
+            done_date = _get_obj_date(item, [
+                "done_at",
+                "completed_at",
+                "delivered_at",
+                "updated_at",
+                "created_at",
+            ])
+
+        if not done_date:
+            continue
+
+        if date_from <= done_date <= date_to:
+            shop_name = _get_shop_name(order)
+            box = grouped[shop_name]
+            box["shop_name"] = shop_name
+            box["done_today"] += 1
+            done_order_ids_selected_range.add(order.id)
+
+    # =========================
+    # 3) PENDING TODAY
+    # Today/selected created orders that are not done now
+    # =========================
+    for order in created_orders:
+        if _is_order_done(order):
+            continue
+
+        if order.id in done_order_ids_all:
+            continue
+
         shop_name = _get_shop_name(order)
         box = grouped[shop_name]
         box["shop_name"] = shop_name
+        box["pending_today"] += 1
 
-        total_send += 1
-        box["total"] += 1
+    # =========================
+    # 4) ALL PENDING
+    # All orders that are not done now
+    # =========================
+    all_orders = (
+        Order.objects
+        .select_related("seller")
+        .all()
+        .order_by("seller__name", "id")
+    )
 
-        order_is_province = (
-            order.id in province_order_ids
-            or _is_order_province(order)
-        )
+    for order in all_orders:
+        if _is_order_done(order):
+            continue
 
-        if order_is_province:
-            box["province_total"] += 1
+        if order.id in done_order_ids_all:
+            continue
 
-            if order.id in done_province_order_ids or _is_order_done(order):
-                box["done_province"] += 1
-        else:
-            box["pp_total"] += 1
-
-            if order.id in done_pp_order_ids or _is_order_done(order):
-                box["done_pp"] += 1
+        shop_name = _get_shop_name(order)
+        box = grouped[shop_name]
+        box["shop_name"] = shop_name
+        box["all_pending"] += 1
 
     rows = []
+    total_send = 0
+    total_done_today = 0
+    total_pending_today = 0
+    total_all_pending = 0
+
     for _, box in grouped.items():
-        done_total = box["done_pp"] + box["done_province"]
-        box["pending"] = max(box["total"] - done_total, 0)
+        if (
+            box["send_today"] == 0
+            and box["done_today"] == 0
+            and box["pending_today"] == 0
+            and box["all_pending"] == 0
+        ):
+            continue
+
+        total_send += box["send_today"]
+        total_done_today += box["done_today"]
+        total_pending_today += box["pending_today"]
+        total_all_pending += box["all_pending"]
 
         rows.append({
             "shop_name": box["shop_name"],
-            "total": box["total"],
-            "pp_total": box["pp_total"],
-            "province_total": box["province_total"],
-            "done_pp": box["done_pp"],
-            "done_province": box["done_province"],
-            "pending": box["pending"],
+            "send_today": box["send_today"],
+            "done_today": box["done_today"],
+            "pending_today": box["pending_today"],
+            "all_pending": box["all_pending"],
         })
 
-    rows.sort(key=lambda x: (-x["total"], x["shop_name"].lower()))
+    rows.sort(key=lambda x: (
+        -x["send_today"],
+        -x["done_today"],
+        -x["pending_today"],
+        x["shop_name"].lower(),
+    ))
 
     return {
         "total_send": total_send,
+        "total_done_today": total_done_today,
+        "total_pending_today": total_pending_today,
+        "total_all_pending": total_all_pending,
+        "rows": rows,
+    }
+
+
+def _build_shipper_done_today_report(date_from: date, date_to: date):
+    """
+    Shipper Done Today Report:
+    - Done PP = PPDeliveryItem ticked in selected date range.
+    - Done PV = ProvinceBatchItem under done ProvinceBatch in selected date range.
+    - Count by actual done/ticked date if field exists, otherwise fallback to updated date.
+    """
+
+    grouped = defaultdict(lambda: {
+        "shipper_name": "-",
+        "done_pp": 0,
+        "done_pv": 0,
+        "total_done": 0,
+    })
+
+    # PP done today
+    pp_done_items = (
+        PPDeliveryItem.objects
+        .select_related("batch", "batch__shipper", "order")
+        .filter(ticked=True)
+        .order_by("id")
+    )
+
+    for item in pp_done_items:
+        if not _is_normal_pp_item(item):
+            continue
+
+        batch = getattr(item, "batch", None)
+        shipper = getattr(batch, "shipper", None) if batch else None
+        shipper_name = getattr(shipper, "name", "") or "No Shipper"
+
+        done_date = _get_obj_date(item, [
+            "ticked_at",
+            "done_at",
+            "delivered_at",
+            "completed_at",
+            "updated_at",
+            "created_at",
+        ])
+
+        if not done_date:
+            done_date = _get_obj_date(batch, [
+                "done_at",
+                "completed_at",
+                "delivered_at",
+                "updated_at",
+                "created_at",
+                "assigned_at",
+            ])
+
+        if not done_date:
+            continue
+
+        if date_from <= done_date <= date_to:
+            box = grouped[shipper_name]
+            box["shipper_name"] = shipper_name
+            box["done_pp"] += 1
+
+    # Province done today
+    pv_done_items = (
+        ProvinceBatchItem.objects
+        .select_related("batch", "batch__shipper", "order")
+        .filter(batch__status=ProvinceBatch.STATUS_DONE)
+        .order_by("id")
+    )
+
+    for item in pv_done_items:
+        batch = getattr(item, "batch", None)
+        if not batch:
+            continue
+
+        shipper = getattr(batch, "shipper", None)
+        shipper_name = getattr(shipper, "name", "") or "No Shipper"
+
+        done_date = _get_obj_date(batch, [
+            "done_at",
+            "completed_at",
+            "delivered_at",
+            "updated_at",
+            "created_at",
+            "assigned_at",
+        ])
+
+        if not done_date:
+            done_date = _get_obj_date(item, [
+                "done_at",
+                "completed_at",
+                "delivered_at",
+                "updated_at",
+                "created_at",
+            ])
+
+        if not done_date:
+            continue
+
+        if date_from <= done_date <= date_to:
+            box = grouped[shipper_name]
+            box["shipper_name"] = shipper_name
+            box["done_pv"] += 1
+
+    rows = []
+    total_done_pp = 0
+    total_done_pv = 0
+
+    for _, box in grouped.items():
+        box["total_done"] = box["done_pp"] + box["done_pv"]
+
+        total_done_pp += box["done_pp"]
+        total_done_pv += box["done_pv"]
+
+        rows.append({
+            "shipper_name": box["shipper_name"],
+            "done_pp": box["done_pp"],
+            "done_pv": box["done_pv"],
+            "total_done": box["total_done"],
+        })
+
+    rows.sort(key=lambda x: (-x["total_done"], x["shipper_name"].lower()))
+
+    return {
+        "total_done_pp": total_done_pp,
+        "total_done_pv": total_done_pv,
+        "total_done": total_done_pp + total_done_pv,
         "rows": rows,
     }
 
@@ -535,12 +752,7 @@ def _build_province_send_report(date_from: date, date_to: date):
         shipper = getattr(batch, "shipper", None) if batch else None
         shipper_name = getattr(shipper, "name", "") or "No Shipper"
 
-        seller = getattr(order, "seller", None) if order else None
-        shop_name = (
-            getattr(seller, "name", "")
-            or getattr(order, "seller_name", "")
-            or "No Shop"
-        )
+        shop_name = _get_shop_name(order) if order else "No Shop"
 
         total_send += 1
         shipper_map[shipper_name] += 1
@@ -605,6 +817,7 @@ def build_profit_dashboard(date_from: date, date_to: date):
     shipper_rows = _build_shipper_summary(date_from, date_to)
     province_send_report = _build_province_send_report(date_from, date_to)
     customer_send_report = _build_customer_send_report(date_from, date_to)
+    shipper_done_today_report = _build_shipper_done_today_report(date_from, date_to)
 
     return {
         "today_cards": today_cards,
@@ -612,4 +825,5 @@ def build_profit_dashboard(date_from: date, date_to: date):
         "shipper_rows": shipper_rows,
         "province_send_report": province_send_report,
         "customer_send_report": customer_send_report,
+        "shipper_done_today_report": shipper_done_today_report,
     }

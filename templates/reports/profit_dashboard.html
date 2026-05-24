@@ -2,7 +2,7 @@
 
 {% block title %}Operations Dashboard{% endblock %}
 {% block page_title %}Operations Dashboard{% endblock %}
-{% block page_subtitle %}Customer send report, province send report, goods create, goods done, and shipper summary{% endblock %}
+{% block page_subtitle %}Customer send report, shipper done report, province send report, goods create, goods done, and shipper summary{% endblock %}
 
 {% block content %}
 <div class="dashboard-shell">
@@ -12,7 +12,7 @@
       <div class="hero-eyebrow">DS EXPRESS CONTROL PANEL</div>
       <div class="hero-title">Operations Dashboard</div>
       <div class="hero-subtitle">
-        Customer send report, province report, shipper summary, 30-day goods create trend, and 30-day goods done trend.
+        Customer send report, shipper done report, province report, shipper summary, 30-day goods create trend, and 30-day goods done trend.
       </div>
     </div>
 
@@ -107,13 +107,30 @@
         <div>
           <div class="chart-title">Customer Send Report</div>
           <div class="chart-note">
-            Shows created orders grouped by customer/shop for the selected date range.
+            Send today, done today, today pending, and all pending grouped by customer/shop.
           </div>
         </div>
 
-        <div class="customer-send-pill">
-          Total Customer Send
-          <strong>{{ dashboard.customer_send_report.total_send|default:0 }}</strong>
+        <div class="customer-summary-pills">
+          <div class="customer-send-pill">
+            Send Today
+            <strong>{{ dashboard.customer_send_report.total_send|default:0 }}</strong>
+          </div>
+
+          <div class="customer-done-pill">
+            Done Today
+            <strong>{{ dashboard.customer_send_report.total_done_today|default:0 }}</strong>
+          </div>
+
+          <div class="customer-pending-pill">
+            Pending Today
+            <strong>{{ dashboard.customer_send_report.total_pending_today|default:0 }}</strong>
+          </div>
+
+          <div class="customer-all-pending-pill">
+            All Pending
+            <strong>{{ dashboard.customer_send_report.total_all_pending|default:0 }}</strong>
+          </div>
         </div>
       </div>
 
@@ -123,12 +140,10 @@
             <tr>
               <th>#</th>
               <th>Customer / Shop</th>
-              <th>Total Send</th>
-              <th>PP</th>
-              <th>Province</th>
-              <th>Done PP</th>
-              <th>Done Province</th>
-              <th>Pending</th>
+              <th>Send Today</th>
+              <th>Done Today</th>
+              <th>Pending Today</th>
+              <th>All Pending</th>
             </tr>
           </thead>
           <tbody>
@@ -136,16 +151,73 @@
               <tr>
                 <td>{{ forloop.counter }}</td>
                 <td><strong>{{ r.shop_name }}</strong></td>
-                <td class="num"><strong>{{ r.total }}</strong></td>
-                <td class="num">{{ r.pp_total }}</td>
-                <td class="num">{{ r.province_total }}</td>
-                <td class="num">{{ r.done_pp }}</td>
-                <td class="num">{{ r.done_province }}</td>
-                <td class="num">{{ r.pending }}</td>
+                <td class="num"><strong>{{ r.send_today }}</strong></td>
+                <td class="num">{{ r.done_today }}</td>
+                <td class="num">{{ r.pending_today }}</td>
+                <td class="num"><strong>{{ r.all_pending }}</strong></td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="8" class="empty-row">No customer send data.</td>
+                <td colspan="6" class="empty-row">No customer send data.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid one-col">
+    <div class="chart-card shipper-done-card">
+      <div class="chart-head shipper-done-head">
+        <div>
+          <div class="chart-title">Shipper Done Today Report</div>
+          <div class="chart-note">
+            PP and Province shipments completed today by shipper.
+          </div>
+        </div>
+
+        <div class="shipper-done-pills">
+          <div class="shipper-pp-pill">
+            Done PP
+            <strong>{{ dashboard.shipper_done_today_report.total_done_pp|default:0 }}</strong>
+          </div>
+
+          <div class="shipper-pv-pill">
+            Done PV
+            <strong>{{ dashboard.shipper_done_today_report.total_done_pv|default:0 }}</strong>
+          </div>
+
+          <div class="shipper-total-pill">
+            Total Done
+            <strong>{{ dashboard.shipper_done_today_report.total_done|default:0 }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="cool-table shipper-done-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Shipper</th>
+              <th>Done Today PP</th>
+              <th>Done Today PV</th>
+              <th>Total Done Today</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in dashboard.shipper_done_today_report.rows %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ r.shipper_name }}</strong></td>
+                <td class="num">{{ r.done_pp }}</td>
+                <td class="num">{{ r.done_pv }}</td>
+                <td class="num"><strong>{{ r.total_done }}</strong></td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="empty-row">No shipper done today data.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -892,25 +964,78 @@
     align-items:flex-start;
   }
 
-  .customer-send-pill{
-    background:#dbeafe;
-    color:#1e3a8a;
+  .customer-summary-pills,
+  .shipper-done-pills{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+
+  .customer-send-pill,
+  .customer-done-pill,
+  .customer-pending-pill,
+  .customer-all-pending-pill,
+  .shipper-pp-pill,
+  .shipper-pv-pill,
+  .shipper-total-pill{
     padding:12px 16px;
     border-radius:999px;
     font-size:14px;
     font-weight:900;
     white-space:nowrap;
-    box-shadow:0 8px 18px rgba(37, 99, 235, .12);
+    box-shadow:0 8px 18px rgba(15, 23, 42, .08);
   }
 
-  .customer-send-pill strong{
+  .customer-send-pill{
+    background:#dbeafe;
+    color:#1e3a8a;
+  }
+
+  .customer-done-pill,
+  .shipper-pp-pill{
+    background:#dcfce7;
+    color:#14532d;
+  }
+
+  .customer-pending-pill{
+    background:#ffedd5;
+    color:#9a3412;
+  }
+
+  .customer-all-pending-pill{
+    background:#fee2e2;
+    color:#991b1b;
+  }
+
+  .customer-send-pill strong,
+  .customer-done-pill strong,
+  .customer-pending-pill strong,
+  .customer-all-pending-pill strong,
+  .shipper-pp-pill strong,
+  .shipper-pv-pill strong,
+  .shipper-total-pill strong{
     font-size:24px;
     margin-left:8px;
   }
 
-  .customer-send-table td:first-child,
-  .customer-send-table th:first-child{
-    width:55px;
+  .shipper-done-card{
+    border:2px solid #ede9fe;
+    background:linear-gradient(180deg, #ffffff 0%, #fbfaff 100%);
+  }
+
+  .shipper-done-head{
+    align-items:flex-start;
+  }
+
+  .shipper-pv-pill{
+    background:#fef3c7;
+    color:#92400e;
+  }
+
+  .shipper-total-pill{
+    background:#ede9fe;
+    color:#5b21b6;
   }
 
   .province-report-card{
@@ -1033,13 +1158,26 @@
 
     .chart-head,
     .province-head,
-    .customer-send-head{
+    .customer-send-head,
+    .shipper-done-head{
       flex-direction:column;
       align-items:flex-start;
     }
 
+    .customer-summary-pills,
+    .shipper-done-pills{
+      width:100%;
+      flex-direction:column;
+    }
+
     .province-total-pill,
-    .customer-send-pill{
+    .customer-send-pill,
+    .customer-done-pill,
+    .customer-pending-pill,
+    .customer-all-pending-pill,
+    .shipper-pp-pill,
+    .shipper-pv-pill,
+    .shipper-total-pill{
       width:100%;
       white-space:normal;
       border-radius:18px;

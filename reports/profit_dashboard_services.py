@@ -41,7 +41,7 @@ def _calc_done_percent(done_count, sent_count):
 def _get_obj_date(obj, field_names):
     """
     Get date from the first existing datetime/date field.
-    This makes the report safe even if some models do not have ticked_at/done_at.
+    Safe when some models do not have ticked_at/done_at.
     """
     if not obj:
         return None
@@ -59,6 +59,37 @@ def _get_obj_date(obj, field_names):
             continue
 
     return None
+
+
+def _is_return_order(order) -> bool:
+    """
+    Do not count return orders in customer pending report.
+    """
+    if not order:
+        return False
+
+    status = str(getattr(order, "status", "") or "").upper()
+    if status in {
+        "RETURN_ASSIGNED",
+        "RETURNED",
+        "DONE_RETURN",
+        "RETURN",
+        "RTS",
+        "RET",
+    }:
+        return True
+
+    tracking = str(
+        getattr(order, "tracking_number", "")
+        or getattr(order, "code", "")
+        or getattr(order, "order_code", "")
+        or ""
+    ).upper()
+
+    if tracking.startswith("RTS-") or tracking.startswith("RET-"):
+        return True
+
+    return False
 
 
 def _is_normal_pp_item(item) -> bool:
@@ -80,8 +111,7 @@ def _is_normal_pp_item(item) -> bool:
             return True
 
     order = getattr(item, "order", None)
-    order_status = str(getattr(order, "status", "") or "").upper()
-    if order_status in {"RETURN_ASSIGNED", "RETURNED", "DONE_RETURN"}:
+    if _is_return_order(order):
         return False
 
     batch = getattr(item, "batch", None)
@@ -118,11 +148,14 @@ def _is_order_done(order) -> bool:
 def _build_customer_send_report(date_from: date, date_to: date):
     """
     Customer Send Report:
-    - Send Today / selected range = orders created in selected date range.
-    - Done Today / selected range = parcels completed in selected date range,
-      even if they were sent before.
-    - Pending Today = selected range created orders that are still not done.
-    - All Pending = all not-done orders grouped by customer/shop.
+    - Send Today = orders created in selected date range.
+    - Done Today = parcels completed in selected date range, even if sent before.
+    - Pending Today = selected range created orders still not done.
+    - All Pending = all not-done orders, excluding return orders.
+    - Show only shops that:
+        1) send today / selected range, OR
+        2) no send today but have done today.
+      Hide shops that only have old pending.
     """
 
     grouped = defaultdict(lambda: {
@@ -146,10 +179,9 @@ def _build_customer_send_report(date_from: date, date_to: date):
         .order_by("seller__name", "id")
     )
 
-    selected_created_order_ids = set()
-
     for order in created_orders:
-        selected_created_order_ids.add(order.id)
+        if _is_return_order(order):
+            continue
 
         shop_name = _get_shop_name(order)
         box = grouped[shop_name]
@@ -157,10 +189,8 @@ def _build_customer_send_report(date_from: date, date_to: date):
         box["send_today"] += 1
 
     # =========================
-    # 2) DONE TODAY / SELECTED RANGE
-    # PP done today by ticked date / updated fallback
+    # 2) DONE TODAY / SELECTED RANGE - PP
     # =========================
-    done_order_ids_selected_range = set()
     done_order_ids_all = set()
 
     pp_done_items = (
@@ -175,7 +205,7 @@ def _build_customer_send_report(date_from: date, date_to: date):
             continue
 
         order = getattr(item, "order", None)
-        if not order:
+        if not order or _is_return_order(order):
             continue
 
         done_order_ids_all.add(order.id)
@@ -208,10 +238,9 @@ def _build_customer_send_report(date_from: date, date_to: date):
             box = grouped[shop_name]
             box["shop_name"] = shop_name
             box["done_today"] += 1
-            done_order_ids_selected_range.add(order.id)
 
     # =========================
-    # Province done today by batch done date / updated fallback
+    # 3) DONE TODAY / SELECTED RANGE - PROVINCE
     # =========================
     province_done_items = (
         ProvinceBatchItem.objects
@@ -224,7 +253,7 @@ def _build_customer_send_report(date_from: date, date_to: date):
         order = getattr(item, "order", None)
         batch = getattr(item, "batch", None)
 
-        if not order or not batch:
+        if not order or not batch or _is_return_order(order):
             continue
 
         done_order_ids_all.add(order.id)
@@ -255,13 +284,15 @@ def _build_customer_send_report(date_from: date, date_to: date):
             box = grouped[shop_name]
             box["shop_name"] = shop_name
             box["done_today"] += 1
-            done_order_ids_selected_range.add(order.id)
 
     # =========================
-    # 3) PENDING TODAY
-    # Today/selected created orders that are not done now
+    # 4) PENDING TODAY
+    # Created in selected range but not done now
     # =========================
     for order in created_orders:
+        if _is_return_order(order):
+            continue
+
         if _is_order_done(order):
             continue
 
@@ -274,8 +305,8 @@ def _build_customer_send_report(date_from: date, date_to: date):
         box["pending_today"] += 1
 
     # =========================
-    # 4) ALL PENDING
-    # All orders that are not done now
+    # 5) ALL PENDING
+    # All not-done orders, excluding return
     # =========================
     all_orders = (
         Order.objects
@@ -285,6 +316,9 @@ def _build_customer_send_report(date_from: date, date_to: date):
     )
 
     for order in all_orders:
+        if _is_return_order(order):
+            continue
+
         if _is_order_done(order):
             continue
 
@@ -303,12 +337,10 @@ def _build_customer_send_report(date_from: date, date_to: date):
     total_all_pending = 0
 
     for _, box in grouped.items():
-        if (
-            box["send_today"] == 0
-            and box["done_today"] == 0
-            and box["pending_today"] == 0
-            and box["all_pending"] == 0
-        ):
+        # IMPORTANT:
+        # show only shops that send today OR have done today.
+        # hide shops that only have old pending.
+        if box["send_today"] == 0 and box["done_today"] == 0:
             continue
 
         total_send += box["send_today"]
@@ -345,7 +377,6 @@ def _build_shipper_done_today_report(date_from: date, date_to: date):
     Shipper Done Today Report:
     - Done PP = PPDeliveryItem ticked in selected date range.
     - Done PV = ProvinceBatchItem under done ProvinceBatch in selected date range.
-    - Count by actual done/ticked date if field exists, otherwise fallback to updated date.
     """
 
     grouped = defaultdict(lambda: {
@@ -355,7 +386,9 @@ def _build_shipper_done_today_report(date_from: date, date_to: date):
         "total_done": 0,
     })
 
-    # PP done today
+    # =========================
+    # PP DONE TODAY
+    # =========================
     pp_done_items = (
         PPDeliveryItem.objects
         .select_related("batch", "batch__shipper", "order")
@@ -398,7 +431,9 @@ def _build_shipper_done_today_report(date_from: date, date_to: date):
             box["shipper_name"] = shipper_name
             box["done_pp"] += 1
 
-    # Province done today
+    # =========================
+    # PROVINCE DONE TODAY
+    # =========================
     pv_done_items = (
         ProvinceBatchItem.objects
         .select_related("batch", "batch__shipper", "order")
@@ -748,6 +783,9 @@ def _build_province_send_report(date_from: date, date_to: date):
     for item in qs:
         batch = getattr(item, "batch", None)
         order = getattr(item, "order", None)
+
+        if _is_return_order(order):
+            continue
 
         shipper = getattr(batch, "shipper", None) if batch else None
         shipper_name = getattr(shipper, "name", "") or "No Shipper"

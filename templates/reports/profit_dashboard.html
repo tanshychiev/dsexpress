@@ -2,7 +2,7 @@
 
 {% block title %}Operations Dashboard{% endblock %}
 {% block page_title %}Operations Dashboard{% endblock %}
-{% block page_subtitle %}Province send report, goods create, goods done, and shipper summary{% endblock %}
+{% block page_subtitle %}Customer send report, province send report, goods create, goods done, and shipper summary{% endblock %}
 
 {% block content %}
 <div class="dashboard-shell">
@@ -12,7 +12,7 @@
       <div class="hero-eyebrow">DS EXPRESS CONTROL PANEL</div>
       <div class="hero-title">Operations Dashboard</div>
       <div class="hero-subtitle">
-        Today province report, shipper summary, 30-day goods create trend, and 30-day goods done trend.
+        Customer send report, province report, shipper summary, 30-day goods create trend, and 30-day goods done trend.
       </div>
     </div>
 
@@ -98,6 +98,59 @@
       <div class="mini-title">Pending Total</div>
       <div class="mini-big">{{ dashboard.today_cards.pending_pp|add:dashboard.today_cards.pending_province }}</div>
       <div class="mini-sub">PP {{ dashboard.today_cards.pending_pp }} • Province {{ dashboard.today_cards.pending_province }}</div>
+    </div>
+  </div>
+
+  <div class="chart-grid one-col">
+    <div class="chart-card customer-send-card">
+      <div class="chart-head customer-send-head">
+        <div>
+          <div class="chart-title">Customer Send Report</div>
+          <div class="chart-note">
+            Shows created orders grouped by customer/shop for the selected date range.
+          </div>
+        </div>
+
+        <div class="customer-send-pill">
+          Total Customer Send
+          <strong>{{ dashboard.customer_send_report.total_send|default:0 }}</strong>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="cool-table customer-send-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer / Shop</th>
+              <th>Total Send</th>
+              <th>PP</th>
+              <th>Province</th>
+              <th>Done PP</th>
+              <th>Done Province</th>
+              <th>Pending</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in dashboard.customer_send_report.rows %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ r.shop_name }}</strong></td>
+                <td class="num"><strong>{{ r.total }}</strong></td>
+                <td class="num">{{ r.pp_total }}</td>
+                <td class="num">{{ r.province_total }}</td>
+                <td class="num">{{ r.done_pp }}</td>
+                <td class="num">{{ r.done_province }}</td>
+                <td class="num">{{ r.pending }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8" class="empty-row">No customer send data.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -830,6 +883,36 @@
     height:500px;
   }
 
+  .customer-send-card{
+    border:2px solid #dbeafe;
+    background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  }
+
+  .customer-send-head{
+    align-items:flex-start;
+  }
+
+  .customer-send-pill{
+    background:#dbeafe;
+    color:#1e3a8a;
+    padding:12px 16px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:900;
+    white-space:nowrap;
+    box-shadow:0 8px 18px rgba(37, 99, 235, .12);
+  }
+
+  .customer-send-pill strong{
+    font-size:24px;
+    margin-left:8px;
+  }
+
+  .customer-send-table td:first-child,
+  .customer-send-table th:first-child{
+    width:55px;
+  }
+
   .province-report-card{
     border:2px solid #dcfce7;
     background:linear-gradient(180deg, #ffffff 0%, #f8fffb 100%);
@@ -949,12 +1032,14 @@
     }
 
     .chart-head,
-    .province-head{
+    .province-head,
+    .customer-send-head{
       flex-direction:column;
       align-items:flex-start;
     }
 
-    .province-total-pill{
+    .province-total-pill,
+    .customer-send-pill{
       width:100%;
       white-space:normal;
       border-radius:18px;

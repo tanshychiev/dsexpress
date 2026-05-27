@@ -12,6 +12,7 @@ from .profit_dashboard_services import build_profit_dashboard
 def _parse_date_start(value: str):
     if not value:
         return None
+
     try:
         d = datetime.strptime(value, "%Y-%m-%d").date()
         dt = datetime.combine(d, time.min)
@@ -23,6 +24,7 @@ def _parse_date_start(value: str):
 def _parse_date_end(value: str):
     if not value:
         return None
+
     try:
         d = datetime.strptime(value, "%Y-%m-%d").date()
         dt = datetime.combine(d, time.max)
@@ -34,7 +36,8 @@ def _parse_date_end(value: str):
 @login_required
 def profit_dashboard(request):
     now = timezone.localtime()
-    today_str = now.strftime("%Y-%m-%d")
+    today = now.date()
+    today_str = today.strftime("%Y-%m-%d")
 
     date_from = (request.GET.get("date_from") or today_str).strip()
     date_to = (request.GET.get("date_to") or today_str).strip()
@@ -43,9 +46,12 @@ def profit_dashboard(request):
     parsed_from = _parse_date_start(date_from)
     parsed_to = _parse_date_end(date_to)
 
+    final_date_from = parsed_from.date() if parsed_from else today
+    final_date_to = parsed_to.date() if parsed_to else today
+
     dashboard = build_profit_dashboard(
-        date_from=parsed_from.date() if parsed_from else now.date(),
-        date_to=parsed_to.date() if parsed_to else now.date(),
+        date_from=final_date_from,
+        date_to=final_date_to,
     )
 
     return render(

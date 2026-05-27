@@ -214,23 +214,53 @@ def clearpp_list(request: HttpRequest) -> HttpResponse:
     settings_obj = SystemSetting.get_solo()
     shippers = Shipper.objects.all().order_by("name")
 
-    show = request.GET.get("show") == "1"
-    assign_date_raw = (request.GET.get("assign_date") or "").strip()
-    shipper_id_raw = (request.GET.get("shipper_id") or "").strip()
-    batch_kw = (request.GET.get("batch_id") or "").strip()
-    status = (request.GET.get("status") or "").strip()
+    today = timezone.localdate()
+    last_3_days = today - datetime.timedelta(days=2)  # today + previous 2 days
 
-    if not show:
-        return render(request, "deliverpp/clearpp_list.html", {
-            "settings_obj": settings_obj,
-            "shippers": shippers,
-            "rows": [],
-            "show": False,
-            "assign_date": "",
-            "shipper_id": "",
-            "batch_id": "",
-            "status": "",
-        })
+    # Default open page = search automatically
+    show = True
+
+    assign_date_from_raw = (
+        request.GET.get("assign_date_from")
+        or request.GET.get("date_from")
+        or ""
+    ).strip()
+
+    assign_date_to_raw = (
+        request.GET.get("assign_date_to")
+        or request.GET.get("date_to")
+        or ""
+    ).strip()
+
+    # Support old single date input too
+    old_assign_date_raw = (request.GET.get("assign_date") or "").strip()
+
+    if old_assign_date_raw and not assign_date_from_raw and not assign_date_to_raw:
+        assign_date_from_raw = old_assign_date_raw
+        assign_date_to_raw = old_assign_date_raw
+
+    if not assign_date_from_raw:
+        assign_date_from_raw = last_3_days.strftime("%Y-%m-%d")
+
+    if not assign_date_to_raw:
+        assign_date_to_raw = today.strftime("%Y-%m-%d")
+
+    time_from = (request.GET.get("time_from") or "").strip()
+    time_to = (request.GET.get("time_to") or "").strip()
+
+    shipper_id_raw = (
+        request.GET.get("shipper_id")
+        or request.GET.get("shipper")
+        or ""
+    ).strip()
+
+    batch_kw = (
+        request.GET.get("batch_id")
+        or request.GET.get("batch_search")
+        or ""
+    ).strip()
+
+    status = (request.GET.get("status") or "").strip()
 
     qs = (
         PPDeliveryBatch.objects
@@ -239,15 +269,37 @@ def clearpp_list(request: HttpRequest) -> HttpResponse:
         .order_by("-id")
     )
 
-    if assign_date_raw and assign_date_raw.lower() not in ("mm/dd/yyyy", "dd/mm/yyyy"):
-        d = parse_date(assign_date_raw)
-        if not d:
-            try:
-                d = datetime.datetime.strptime(assign_date_raw, "%m/%d/%Y").date()
-            except Exception:
-                d = None
+    def parse_any_date(value: str):
+        value = (value or "").strip()
+        if not value or value.lower() in ("mm/dd/yyyy", "dd/mm/yyyy"):
+            return None
+
+        d = parse_date(value)
         if d:
-            qs = qs.filter(assigned_at__date=d)
+            return d
+
+        for fmt in ("%m/%d/%Y", "%d/%m/%Y"):
+            try:
+                return datetime.datetime.strptime(value, fmt).date()
+            except Exception:
+                pass
+
+        return None
+
+    assign_date_from = parse_any_date(assign_date_from_raw)
+    assign_date_to = parse_any_date(assign_date_to_raw)
+
+    if assign_date_from:
+        qs = qs.filter(assigned_at__date__gte=assign_date_from)
+
+    if assign_date_to:
+        qs = qs.filter(assigned_at__date__lte=assign_date_to)
+
+    if time_from:
+        qs = qs.filter(assigned_at__time__gte=time_from)
+
+    if time_to:
+        qs = qs.filter(assigned_at__time__lte=time_to)
 
     if shipper_id_raw.isdigit():
         qs = qs.filter(shipper_id=int(shipper_id_raw))
@@ -294,9 +346,12 @@ def clearpp_list(request: HttpRequest) -> HttpResponse:
             batch_status = "PENDING"
 
         staff_name = "-"
+        cleared_date = None
+
         clear_cod = ClearPPCOD.objects.filter(batch=b).first()
         if clear_cod and clear_cod.finalized_by:
             staff_name = clear_cod.finalized_by.get_username()
+            cleared_date = clear_cod.finalized_at
 
         rows.append({
             "batch": b,
@@ -304,19 +359,35 @@ def clearpp_list(request: HttpRequest) -> HttpResponse:
             "color": color,
             "batch_status": batch_status,
             "staff_name": staff_name,
+            "cleared_date": cleared_date,
         })
 
     return render(request, "deliverpp/clearpp_list.html", {
         "settings_obj": settings_obj,
         "shippers": shippers,
         "rows": rows,
-        "show": True,
-        "assign_date": assign_date_raw,
+        "show": show,
+
+        # New range filter values
+        "assign_date_from": assign_date_from_raw,
+        "assign_date_to": assign_date_to_raw,
+
+        # Keep old template compatibility
+        "assign_date": assign_date_from_raw,
+        "date_from": assign_date_from_raw,
+        "date_to": assign_date_to_raw,
+
+        "time_from": time_from,
+        "time_to": time_to,
+
         "shipper_id": shipper_id_raw,
+        "shipper": shipper_id_raw,
+
         "batch_id": batch_kw,
+        "batch_search": batch_kw,
+
         "status": status,
     })
-
 
 # =========================================================
 # 2) SETTINGS

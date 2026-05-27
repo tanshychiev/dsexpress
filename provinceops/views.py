@@ -12,7 +12,7 @@ from orders.models import Order, OrderActivity
 from orders.pricing import apply_pricing
 from masterdata.models import Shipper
 from provinceops.models import ProvinceBatch, ProvinceBatchItem
-
+from datetime import timedelta
 
 # ==========================================================
 # Helpers
@@ -215,11 +215,25 @@ def _log_order_change(order, user=None, action="", old_status="", new_status="",
 # ==========================================================
 @login_required
 def province_list(request):
+    today = timezone.localdate()
+    last_3_days = today - timedelta(days=2)  # today + previous 2 days
+
     status = (request.GET.get("status") or "").strip()
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
+
+    date_from = (
+        request.GET.get("date_from")
+        or last_3_days.strftime("%Y-%m-%d")
+    ).strip()
+
+    date_to = (
+        request.GET.get("date_to")
+        or today.strftime("%Y-%m-%d")
+    ).strip()
+
     shipper_id = (request.GET.get("shipper_id") or "").strip()
-    searched = request.GET.get("search") == "1"
+
+    # Default open page = search automatically
+    searched = True
 
     qs = ProvinceBatch.objects.select_related("shipper", "created_by").order_by("-id")
 
@@ -229,15 +243,17 @@ def province_list(request):
     if shipper_id.isdigit():
         qs = qs.filter(shipper_id=int(shipper_id))
 
+    # Province Ops uses assign date
     if date_from:
         qs = qs.filter(assigned_at__date__gte=date_from)
+
     if date_to:
         qs = qs.filter(assigned_at__date__lte=date_to)
 
     qs = qs.annotate(total_pc=Count("items", distinct=True))
     qs = qs.annotate(total_shop=Count("items__order__seller", distinct=True))
 
-    rows = qs if searched else ProvinceBatch.objects.none()
+    rows = qs
 
     return render(request, "provinceops/province_list.html", {
         "rows": rows,

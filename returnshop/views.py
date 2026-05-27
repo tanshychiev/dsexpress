@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from orders.models import Order, OrderActivity
 from .models import ReturnShopBatch, ReturnShopBatchItem, ReturnShopLabel, ReturnShopLabelItem
-
+from datetime import timedelta
 
 # =========================
 # Helpers
@@ -354,10 +354,23 @@ def _build_batch_progress_map(batches):
 # =========================
 @login_required
 def returnshop_list(request):
+    today = timezone.localdate()
+    last_3_days = today - timedelta(days=2)  # today + previous 2 days
+
     status = (request.GET.get("status") or "").strip()
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
-    searched = request.GET.get("search") == "1"
+
+    date_from = (
+        request.GET.get("date_from")
+        or last_3_days.strftime("%Y-%m-%d")
+    ).strip()
+
+    date_to = (
+        request.GET.get("date_to")
+        or today.strftime("%Y-%m-%d")
+    ).strip()
+
+    # Default open page = search automatically
+    searched = True
 
     qs = (
         ReturnShopBatch.objects
@@ -374,6 +387,7 @@ def returnshop_list(request):
     if status:
         qs = qs.filter(status=status.upper())
 
+    # Return To Shop uses assign date
     if date_from:
         qs = qs.filter(assigned_at__date__gte=date_from)
 
@@ -385,7 +399,7 @@ def returnshop_list(request):
         total_labels=Count("labels", distinct=True),
     )
 
-    batch_rows = list(qs) if searched else []
+    batch_rows = list(qs)
 
     rows = []
     for batch in batch_rows:

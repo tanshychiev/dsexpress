@@ -1,0 +1,45 @@
+{% extends "inventory/base_inventory.html" %}
+
+{% block title %}Seller Stock Setting - DS Express{% endblock %}
+
+{% block inventory_content %}
+<div class="inv-head">
+  <div>
+    <h1 class="inv-title">{{ seller.name }} - Stock Setting</h1>
+    <div class="inv-sub">Control if this seller is strict stock, optional stock, or no stock.</div>
+  </div>
+</div>
+
+<div class="inv-card">
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Stock Mode</label>
+        {{ form.stock_mode }}
+        {{ form.stock_mode.errors }}
+      </div>
+
+      <div class="form-row">
+        <label>Show Stock in Seller Portal</label>
+        {{ form.show_stock_in_portal }}
+        {{ form.show_stock_in_portal.errors }}
+        <div class="form-help">Seller can see current stock only, not history.</div>
+      </div>
+
+      <div class="form-row">
+        <label>Note</label>
+        {{ form.note }}
+        {{ form.note.errors }}
+      </div>
+    </div>
+
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn-green" type="submit">Save Setting</button>
+      <a class="btn-soft" href="{% url 'inventory:list' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

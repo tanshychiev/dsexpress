@@ -1,0 +1,127 @@
+{% extends "inventory/base_inventory.html" %}
+
+{% block title %}Inventory History - DS Express{% endblock %}
+
+{% block inventory_content %}
+<div class="inv-head">
+  <div>
+    <h1 class="inv-title">Inventory History</h1>
+    <div class="inv-sub">Internal only. Customers cannot see this page.</div>
+  </div>
+</div>
+
+<div class="inv-card">
+  <form method="get" class="inv-filter">
+    <div>
+      <label class="muted">Search</label>
+      <input class="ds-input" name="q" value="{{ q }}" placeholder="Shop / product / SKU / note">
+    </div>
+
+    <div>
+      <label class="muted">Tracking No</label>
+      <input class="ds-input" name="tracking" value="{{ tracking }}" placeholder="DS2026...">
+    </div>
+
+    <div>
+      <button class="btn-green" type="submit">Search</button>
+      <a class="btn-soft" href="{% url 'inventory:history' %}">Reset</a>
+    </div>
+  </form>
+</div>
+
+<div class="inv-card">
+  <div class="inv-table-wrap">
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Seller</th>
+          <th>Product</th>
+          <th>Type</th>
+          <th>Qty</th>
+          <th>Order</th>
+          <th>Staff</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for m in page_obj %}
+          <tr>
+            <td>{{ m.created_at|date:"d-m-Y H:i" }}</td>
+            <td>
+              <strong>{{ m.seller.name }}</strong>
+              <div class="muted">{{ m.seller.code }}</div>
+            </td>
+            <td>
+              {% if m.product %}
+                <strong>{{ m.product.name }}</strong>
+                <div class="muted">{{ m.product.sku }}</div>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if m.movement_type == "STOCK_IN" %}
+                <span class="badge badge-green">{{ m.get_movement_type_display }}</span>
+              {% elif m.movement_type == "STOCK_LACK" %}
+                <span class="badge badge-red">{{ m.get_movement_type_display }}</span>
+              {% elif m.movement_type == "IMPORT_UNMATCHED" %}
+                <span class="badge badge-yellow">{{ m.get_movement_type_display }}</span>
+              {% elif m.movement_type == "ADJUSTMENT" %}
+                <span class="badge badge-blue">{{ m.get_movement_type_display }}</span>
+              {% else %}
+                <span class="badge badge-gray">{{ m.get_movement_type_display }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if m.qty_delta > 0 %}
+                <span class="badge badge-green">+{{ m.qty_delta }}</span>
+              {% elif m.qty_delta < 0 %}
+                <span class="badge badge-red">{{ m.qty_delta }}</span>
+              {% else %}
+                <span class="badge badge-gray">0</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if m.order %}
+                {{ m.order.tracking_no }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if m.created_by %}
+                {{ m.created_by.username }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ m.note|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="muted">No stock history yet.</div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+    <div style="display:flex; gap:8px; justify-content:center; margin-top:14px;">
+      {% if page_obj.has_previous %}
+        <a class="btn-soft" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&tracking={{ tracking }}">Previous</a>
+      {% endif %}
+
+      <span class="btn-soft">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+
+      {% if page_obj.has_next %}
+        <a class="btn-soft" href="?page={{ page_obj.next_page_number }}&q={{ q }}&tracking={{ tracking }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

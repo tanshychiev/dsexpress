@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+  .inv-wrap{max-width:1400px;margin:0 auto}
+  .inv-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+  .inv-title{font-size:24px;font-weight:950;color:#111827;margin:0}
+  .inv-sub{color:#6b7280;font-size:13px;font-weight:700;margin-top:4px}
+  .inv-card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:16px;box-shadow:0 10px 30px rgba(15,23,42,.06);margin-bottom:14px}
+  .inv-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .inv-tab{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:999px;background:#fff;border:1px solid #d1d5db;color:#111827;text-decoration:none;font-size:13px;font-weight:900}
+  .inv-tab:hover,.inv-tab.active{background:#0f8a3b;border-color:#0f8a3b;color:#fff}
+  .inv-filter{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end}
+  .ds-input{width:100%;min-height:42px;border:1px solid #d1d5db;border-radius:12px;padding:8px 12px;background:#fff;font-size:13px;outline:none}
+  .ds-input:focus{border-color:#0f8a3b;box-shadow:0 0 0 3px rgba(15,138,59,.12)}
+  .btn-green{min-height:42px;border:0;border-radius:12px;padding:0 16px;background:#0f8a3b;color:#fff;font-size:13px;font-weight:950;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+  .btn-green:hover{background:#0a6d2e}
+  .btn-soft{min-height:42px;border:1px solid #d1d5db;border-radius:12px;padding:0 16px;background:#fff;color:#111827;font-size:13px;font-weight:950;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+  .btn-soft:hover{background:#f3f4f6}
+  .inv-table-wrap{overflow:auto;border-radius:16px;border:1px solid #e5e7eb}
+  .inv-table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;min-width:900px}
+  .inv-table th{background:#f9fafb;color:#374151;font-size:12px;text-align:left;padding:12px;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+  .inv-table td{padding:12px;border-bottom:1px solid #f1f5f9;font-size:13px;vertical-align:middle}
+  .inv-photo{width:58px;height:58px;border-radius:14px;object-fit:cover;background:#f3f4f6;display:grid;place-items:center;color:#9ca3af;font-size:11px;font-weight:900}
+  .badge{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:950}
+  .badge-green{background:#dcfce7;color:#166534}.badge-yellow{background:#fef3c7;color:#92400e}.badge-red{background:#fee2e2;color:#991b1b}.badge-blue{background:#dbeafe;color:#1d4ed8}.badge-gray{background:#f3f4f6;color:#374151}
+  .num-big{font-size:18px;font-weight:950}.muted{color:#6b7280;font-size:12px;font-weight:700}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .form-row label{display:block;color:#374151;font-size:12px;font-weight:950;margin-bottom:6px}
+  .form-help{color:#6b7280;font-size:12px;margin-top:6px}
+  .errorlist{color:#b91c1c;font-weight:800;font-size:12px;margin:6px 0;padding-left:18px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inv-wrap">
+  <div class="inv-tabs">
+    <a class="inv-tab {% if request.path == '/inventory/' %}active{% endif %}" href="{% url 'inventory:list' %}">Inventory</a>
+    <a class="inv-tab {% if request.path == '/inventory/stock-in/' %}active{% endif %}" href="{% url 'inventory:stock_in' %}">Stock In</a>
+    <a class="inv-tab {% if request.path == '/inventory/adjust/' %}active{% endif %}" href="{% url 'inventory:adjust' %}">Adjust</a>
+    <a class="inv-tab {% if request.path == '/inventory/confirm/' %}active{% endif %}" href="{% url 'inventory:confirm' %}">Confirm Stock</a>
+    <a class="inv-tab {% if request.path == '/inventory/history/' %}active{% endif %}" href="{% url 'inventory:history' %}">History</a>
+  </div>
+  {% block inventory_content %}{% endblock %}
+</div>
+{% endblock %}

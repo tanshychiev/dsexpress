@@ -1,0 +1,308 @@
+{% extends "inventory/base_inventory.html" %}
+
+{% block title %}Stock In - DS Express{% endblock %}
+
+{% block inventory_content %}
+<div class="inv-head">
+  <div>
+    <h1 class="inv-title">Stock In</h1>
+    <div class="inv-sub">Record customer stock sent to DS Express warehouse.</div>
+  </div>
+</div>
+
+<div class="inv-card">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {{ form.non_field_errors }}
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Seller / Shop</label>
+        {{ form.seller }}
+        {{ form.seller.errors }}
+      </div>
+
+      <div class="form-row">
+        <label>Choose Existing Product</label>
+        {{ form.product }}
+        {{ form.product.errors }}
+        <div class="form-help">Choose if product already exists.</div>
+      </div>
+
+      <div class="form-row">
+        <label>New Product Name</label>
+        {{ form.new_product_name }}
+        {{ form.new_product_name.errors }}
+        <div class="form-help">Fill this only for new product.</div>
+      </div>
+
+      <div class="form-row">
+        <label>Product Type</label>
+        {{ form.product_type }}
+        {{ form.product_type.errors }}
+      </div>
+
+      <div class="form-row">
+        <label>Location</label>
+        {{ form.location }}
+        {{ form.location.errors }}
+      </div>
+
+      <div class="form-row">
+        <label>Qty In</label>
+        {{ form.qty }}
+        {{ form.qty.errors }}
+      </div>
+
+      <div class="form-row">
+        <label>Note</label>
+        {{ form.note }}
+        {{ form.note.errors }}
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top:16px;">
+      <label>Product Photo</label>
+
+      <div id="photoDrop" class="photo-drop" tabindex="0">
+        <input
+          id="stockPhotoInput"
+          type="file"
+          name="photo"
+          accept="image/*"
+          hidden
+        >
+
+        <div id="photoEmpty" class="photo-empty">
+          <div class="photo-icon">＋</div>
+          <div class="photo-title">Drag photo here, click to upload, or press Ctrl+V</div>
+          <div class="photo-sub">PNG, JPG, JPEG supported</div>
+        </div>
+
+        <div id="photoPreviewWrap" class="photo-preview-wrap" style="display:none;">
+          <button id="removePhotoBtn" type="button" class="remove-photo">×</button>
+          <img id="photoPreview" class="photo-preview" src="" alt="Preview">
+        </div>
+      </div>
+
+      <div class="form-help">
+        You can screenshot/copy an image, click the upload box, then press Ctrl+V.
+      </div>
+
+      {{ form.photo.errors }}
+    </div>
+
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn-green" type="submit">Save Stock In</button>
+      <a class="btn-soft" href="{% url 'inventory:list' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<style>
+  .photo-drop{
+    min-height:220px;
+    border:2px dashed #86efac;
+    border-radius:20px;
+    background:linear-gradient(135deg,#f0fdf4,#ffffff);
+    display:grid;
+    place-items:center;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition:.18s ease;
+    outline:none;
+  }
+
+  .photo-drop.dragging,
+  .photo-drop:focus{
+    border-color:#0f8a3b;
+    background:#dcfce7;
+    transform:scale(.995);
+  }
+
+  .photo-empty{
+    text-align:center;
+    padding:24px;
+  }
+
+  .photo-icon{
+    width:58px;
+    height:58px;
+    border-radius:999px;
+    background:#0f8a3b;
+    color:#fff;
+    display:grid;
+    place-items:center;
+    margin:0 auto 10px;
+    font-size:32px;
+    font-weight:950;
+  }
+
+  .photo-title{
+    font-size:15px;
+    font-weight:950;
+    color:#064e3b;
+  }
+
+  .photo-sub{
+    margin-top:4px;
+    font-size:12px;
+    font-weight:750;
+    color:#6b7280;
+  }
+
+  .photo-preview-wrap{
+    width:100%;
+    height:260px;
+    position:relative;
+  }
+
+  .photo-preview{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    background:#f9fafb;
+  }
+
+  .remove-photo{
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:36px;
+    height:36px;
+    border:0;
+    border-radius:999px;
+    background:#ef4444;
+    color:#fff;
+    font-size:24px;
+    line-height:1;
+    font-weight:950;
+    cursor:pointer;
+    z-index:5;
+    box-shadow:0 8px 20px rgba(239,68,68,.25);
+  }
+
+  .remove-photo:hover{
+    background:#b91c1c;
+  }
+</style>
+
+<script>
+(function(){
+  const drop = document.getElementById("photoDrop");
+  const input = document.getElementById("stockPhotoInput");
+  const empty = document.getElementById("photoEmpty");
+  const previewWrap = document.getElementById("photoPreviewWrap");
+  const preview = document.getElementById("photoPreview");
+  const removeBtn = document.getElementById("removePhotoBtn");
+
+  if (!drop || !input) return;
+
+  function setInputFile(file){
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    input.files = dataTransfer.files;
+  }
+
+  function showFile(file){
+    if (!file) return;
+
+    if (!file.type || !file.type.startsWith("image/")) {
+      alert("Please choose image file only.");
+      input.value = "";
+      return;
+    }
+
+    setInputFile(file);
+
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    empty.style.display = "none";
+    previewWrap.style.display = "block";
+  }
+
+  function getImageFromClipboard(event){
+    const clipboard = event.clipboardData || window.clipboardData;
+
+    if (!clipboard || !clipboard.items) {
+      return null;
+    }
+
+    for (let i = 0; i < clipboard.items.length; i++) {
+      const item = clipboard.items[i];
+
+      if (item.type && item.type.startsWith("image/")) {
+        return item.getAsFile();
+      }
+    }
+
+    return null;
+  }
+
+  drop.addEventListener("click", function(e){
+    if (e.target === removeBtn) return;
+    input.click();
+  });
+
+  input.addEventListener("change", function(){
+    const file = input.files && input.files[0];
+    showFile(file);
+  });
+
+  ["dragenter", "dragover"].forEach(function(eventName){
+    drop.addEventListener(eventName, function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      drop.classList.add("dragging");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(function(eventName){
+    drop.addEventListener(eventName, function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      drop.classList.remove("dragging");
+    });
+  });
+
+  drop.addEventListener("drop", function(e){
+    const files = e.dataTransfer.files;
+    if (!files || !files.length) return;
+
+    showFile(files[0]);
+  });
+
+  drop.addEventListener("paste", function(e){
+    const file = getImageFromClipboard(e);
+
+    if (file) {
+      e.preventDefault();
+      showFile(file);
+    }
+  });
+
+  document.addEventListener("paste", function(e){
+    const file = getImageFromClipboard(e);
+
+    if (file) {
+      e.preventDefault();
+      showFile(file);
+      drop.focus();
+    }
+  });
+
+  removeBtn.addEventListener("click", function(e){
+    e.preventDefault();
+    e.stopPropagation();
+
+    input.value = "";
+    preview.src = "";
+    previewWrap.style.display = "none";
+    empty.style.display = "block";
+    drop.focus();
+  });
+})();
+</script>
+{% endblock %}

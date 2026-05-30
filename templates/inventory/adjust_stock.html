@@ -1,0 +1,52 @@
+{% extends "inventory/base_inventory.html" %}
+
+{% block title %}Adjust Stock - DS Express{% endblock %}
+
+{% block inventory_content %}
+<div class="inv-head">
+  <div>
+    <h1 class="inv-title">Adjust Stock</h1>
+    <div class="inv-sub">Use when real stock is wrong, missing, damaged, or counted different.</div>
+  </div>
+</div>
+
+<div class="inv-card">
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Product</label>
+        {{ form.product }}
+        {{ form.product.errors }}
+      </div>
+
+      <div class="form-row">
+        <label>Real Qty</label>
+        {{ form.real_qty }}
+        {{ form.real_qty.errors }}
+        <div class="form-help">Example: system says 10, real count 8, enter 8.</div>
+      </div>
+
+      <div class="form-row">
+        <label>Or Difference Qty</label>
+        {{ form.diff_qty }}
+        {{ form.diff_qty.errors }}
+        <div class="form-help">Example: missing 2, enter -2. Extra 2, enter 2.</div>
+      </div>
+
+      <div class="form-row">
+        <label>Reason / Note</label>
+        {{ form.note }}
+        {{ form.note.errors }}
+      </div>
+    </div>
+
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn-green" type="submit">Save Adjustment</button>
+      <a class="btn-soft" href="{% url 'inventory:list' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

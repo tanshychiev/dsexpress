@@ -1,0 +1,6 @@
+{% extends "inventory/base_inventory.html" %}
+{% block title %}Confirm Stock - DS Express{% endblock %}
+{% block inventory_content %}
+<div class="inv-head"><div><h1 class="inv-title">Confirm Today Stock Is Correct</h1><div class="inv-sub">After confirm, next stock check starts from this confirmed count.</div></div></div>
+<div class="inv-card"><form method="post">{% csrf_token %}{{ form.non_field_errors }}<div class="form-grid"><div class="form-row"><label>Product</label>{{ form.product }}{{ form.product.errors }}</div><div class="form-row"><label>Real Stock Count Today</label>{{ form.real_qty }}{{ form.real_qty.errors }}</div><div class="form-row"><label>Note</label>{{ form.note }}{{ form.note.errors }}</div></div><div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn-green" type="submit">Confirm Stock</button><a class="btn-soft" href="{% url 'inventory:list' %}">Cancel</a></div></form></div><div class="inv-card"><strong>How it works:</strong><div class="muted" style="margin-top:6px;">If system stock is 50 but real count is 48, system will create adjustment -2, then save 48 as confirmed stock.</div></div>
+{% endblock %}

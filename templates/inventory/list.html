@@ -1,0 +1,254 @@
+{% extends "inventory/base_inventory.html" %}
+{% block title %}Inventory - DS Express{% endblock %}
+
+{% block inventory_content %}
+<div class="inv-head">
+  <div>
+    <h1 class="inv-title">Inventory</h1>
+    <div class="inv-sub">Current stock by seller.</div>
+  </div>
+
+  <a class="btn-green" href="{% url 'inventory:stock_in' %}">+ Stock In</a>
+</div>
+
+<div class="inv-card">
+  <form method="get" class="inv-filter">
+    <div>
+      <label class="muted">Seller</label>
+      <select class="ds-input" name="seller_id">
+        <option value="">All sellers</option>
+        {% for seller in sellers %}
+          <option value="{{ seller.id }}" {% if selected_seller_id == seller.id|stringformat:"s" %}selected{% endif %}>
+            {{ seller.name }}{% if seller.code %} - {{ seller.code }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="muted">Search</label>
+      <input
+        class="ds-input"
+        name="q"
+        value="{{ q }}"
+        placeholder="Product / SKU / type / location / shop"
+      >
+    </div>
+
+    <div>
+      <button class="btn-green" type="submit">Search</button>
+      <a class="btn-soft" href="{% url 'inventory:list' %}">Reset</a>
+    </div>
+  </form>
+</div>
+
+<div class="inv-card">
+  <div class="inv-table-wrap">
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th>Photo</th>
+          <th>Shop</th>
+          <th>Stock Rule</th>
+          <th>Product</th>
+          <th>SKU / Code</th>
+          <th>Location</th>
+          <th>Current</th>
+          <th>Reserved</th>
+          <th>Available</th>
+          <th>Last Confirmed</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>
+              {% if row.photo_url %}
+                <img class="inv-photo" src="{{ row.photo_url }}" alt="{{ row.name }}">
+              {% else %}
+                <div class="inv-photo">NO PHOTO</div>
+              {% endif %}
+            </td>
+
+            <td>
+              <strong>{{ row.product.seller.name }}</strong>
+              <div class="muted">{{ row.product.seller.code }}</div>
+
+              <div style="margin-top:8px;">
+                <a
+                  class="btn-mini btn-mini-gray"
+                  href="{% url 'inventory:seller_setting' row.product.seller.id %}"
+                >
+                  Change Setting
+                </a>
+              </div>
+            </td>
+
+            <td>
+              {% if row.stock_mode == "STRICT" %}
+                <span class="stock-mode-badge stock-mode-strict">STRICT</span>
+                <div class="muted" style="margin-top:5px;">Must have correct stock</div>
+              {% elif row.stock_mode == "NO_STOCK" %}
+                <span class="stock-mode-badge stock-mode-nostock">NO STOCK</span>
+                <div class="muted" style="margin-top:5px;">Shop prepares stock</div>
+              {% else %}
+                <span class="stock-mode-badge stock-mode-optional">OPTIONAL</span>
+                <div class="muted" style="margin-top:5px;">Can create/import</div>
+              {% endif %}
+            </td>
+
+            <td>
+              <strong>{{ row.name }}</strong>
+              <div class="muted">{{ row.product_type|default:"-" }}</div>
+            </td>
+
+            <td>
+              {% if row.sku %}
+                <span class="badge badge-blue">{{ row.sku }}</span>
+              {% else %}
+                <span class="muted">No code</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {{ row.location|default:"-" }}
+            </td>
+
+            <td>
+              <span class="num-big">{{ row.current_qty }}</span>
+            </td>
+
+            <td>
+              <span class="badge badge-yellow">{{ row.reserved_qty }}</span>
+            </td>
+
+            <td>
+              {% if row.available_qty <= 0 %}
+                <span class="badge badge-red">{{ row.available_qty }}</span>
+              {% else %}
+                <span class="badge badge-green">{{ row.available_qty }}</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if row.last_confirmed_at %}
+                {{ row.last_confirmed_at|date:"d-m-Y H:i" }}
+              {% else %}
+                <span class="muted">Not confirmed</span>
+              {% endif %}
+            </td>
+
+            <td>
+              <div class="action-stack">
+                <a
+                  class="btn-mini btn-mini-green"
+                  href="{% url 'inventory:product_edit' row.product.id %}"
+                >
+                  Edit Product / Code
+                </a>
+
+                <a
+                  class="btn-mini btn-mini-gray"
+                  href="{% url 'inventory:history' %}?product_id={{ row.product.id }}"
+                >
+                  History
+                </a>
+
+                <a
+                  class="btn-mini btn-mini-gray"
+                  href="{% url 'inventory:adjust' %}"
+                >
+                  Adjust
+                </a>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="11">
+              <div class="muted">No stock product yet.</div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .action-stack{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:150px;
+  }
+
+  .btn-mini{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:30px;
+    padding:0 10px;
+    border-radius:9px;
+    font-size:11px;
+    font-weight:950;
+    text-decoration:none;
+    border:1px solid #d1d5db;
+    white-space:nowrap;
+  }
+
+  .btn-mini-green{
+    background:#0f8a3b;
+    border-color:#0f8a3b;
+    color:#fff;
+  }
+
+  .btn-mini-green:hover{
+    background:#0a6d2e;
+    color:#fff;
+  }
+
+  .btn-mini-gray{
+    background:#fff;
+    color:#111827;
+  }
+
+  .btn-mini-gray:hover{
+    background:#f3f4f6;
+    color:#111827;
+  }
+
+  .stock-mode-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:28px;
+    padding:0 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:950;
+    letter-spacing:.3px;
+    white-space:nowrap;
+  }
+
+  .stock-mode-strict{
+    background:#fee2e2;
+    color:#991b1b;
+    border:1px solid #fecaca;
+  }
+
+  .stock-mode-optional{
+    background:#dcfce7;
+    color:#166534;
+    border:1px solid #bbf7d0;
+  }
+
+  .stock-mode-nostock{
+    background:#e0e7ff;
+    color:#3730a3;
+    border:1px solid #c7d2fe;
+  }
+</style>
+{% endblock %}

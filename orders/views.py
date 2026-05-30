@@ -6,6 +6,7 @@ import json
 from datetime import date, datetime, time
 from decimal import Decimal
 from urllib.parse import urlencode
+import re
 
 import qrcode
 from django.conf import settings
@@ -68,6 +69,50 @@ ORDER_EXCEL_HEADERS = [
 # ============================================================
 def _cell(v) -> str:
     return "" if v is None else str(v).strip()
+
+
+def _inventory_precheck_for_import(*, seller, product_desc: str, quantity: int):
+    """
+    Strict shop:
+    - product must match inventory
+    - stock must be enough
+    Optional shop:
+    - do not block import
+    No stock shop:
+    - do not block import
+    """
+    try:
+        from inventory.models import InventorySellerSetting
+        from inventory.services import (
+            get_seller_inventory_setting,
+            match_product,
+            current_available_qty,
+        )
+    except Exception:
+        return True, ""
+
+    setting = get_seller_inventory_setting(seller)
+
+    if setting.stock_mode != InventorySellerSetting.STRICT:
+        return True, ""
+
+    product = match_product(seller, product_desc)
+
+    if not product:
+        return False, (
+            f"Strict stock shop: Product not recognized: {product_desc}. "
+            f"Please use correct inventory code/name or fix product alias."
+        )
+
+    available_qty = current_available_qty(product)
+
+    if available_qty < quantity:
+        return False, (
+            f"Strict stock shop: Not enough stock for {product.name}. "
+            f"Need {quantity}, available {available_qty}."
+        )
+
+    return True, ""
 
 
 def _to_int(v, default=0) -> int:
@@ -505,6 +550,165 @@ def download_import_sample_excel(request: HttpRequest):
 
 @login_required
 def import_orders(request: HttpRequest):
+    def _parse_mixed_description(desc: str, excel_qty: int):
+        """
+        Supported:
+        - matimum x2 + Enmum x1
+        - matimum*2, Enmum*1
+        - 260001-ITE-001 x2 + 260001-ITE-002 x1
+        - single product name, qty from Excel quantity column
+        """
+        raw = (desc or "").strip()
+
+        if not raw:
+            return []
+
+        normalized = (
+            raw.replace("＋", "+")
+            .replace("，", ",")
+            .replace("；", ";")
+            .replace("\n", "+")
+            .replace(";", "+")
+            .replace(",", "+")
+        )
+
+        parts = [p.strip() for p in normalized.split("+") if p.strip()]
+        items = []
+
+        for part in parts:
+            name = part.strip()
+            qty = 1
+
+            # name x2 / name *2 / name ×2
+            m = re.match(r"^(?P<name>.+?)\s*(?:x|X|×|\*)\s*(?P<qty>\d+)$", part)
+            if m:
+                name = m.group("name").strip()
+                qty = int(m.group("qty"))
+            else:
+                # 2x name / 2 * name
+                m = re.match(r"^(?P<qty>\d+)\s*(?:x|X|×|\*)\s*(?P<name>.+)$", part)
+                if m:
+                    name = m.group("name").strip()
+                    qty = int(m.group("qty"))
+
+            if name:
+                items.append(
+                    {
+                        "text": name,
+                        "qty": max(int(qty or 1), 1),
+                    }
+                )
+
+        # Single product without x qty should use Excel quantity column.
+        if len(items) == 1 and items[0]["qty"] == 1 and excel_qty > 1:
+            items[0]["qty"] = excel_qty
+
+        return items
+
+    def _inventory_check_and_prepare_items(
+        *,
+        seller,
+        product_desc: str,
+        excel_qty: int,
+        strict_stock_used: dict,
+    ):
+        """
+        Return:
+        ok, error, stock_items_data, final_qty
+
+        stock_items_data example:
+        [
+            {"product_id": 1, "qty": 2, "name": "matimum"},
+            {"product_id": 2, "qty": 1, "name": "Enmum"},
+        ]
+        """
+        try:
+            from inventory.models import InventorySellerSetting
+            from inventory.services import (
+                current_available_qty,
+                get_seller_inventory_setting,
+                match_product,
+            )
+        except Exception:
+            return True, "", [], excel_qty
+
+        setting = get_seller_inventory_setting(seller)
+
+        parsed_items = _parse_mixed_description(product_desc, excel_qty)
+        final_qty = sum(int(x["qty"] or 0) for x in parsed_items) or excel_qty
+
+        if setting.stock_mode == InventorySellerSetting.NO_STOCK:
+            return True, "", [], final_qty
+
+        matched_items = []
+        unmatched_names = []
+        stock_errors = []
+
+        for item in parsed_items:
+            product = match_product(seller, item["text"])
+            item_qty = int(item["qty"] or 1)
+
+            if not product:
+                unmatched_names.append(item["text"])
+                continue
+
+            available_qty = current_available_qty(product)
+            already_used_qty = int(strict_stock_used.get(product.id, 0) or 0)
+            remaining_qty = available_qty - already_used_qty
+
+            if setting.stock_mode == InventorySellerSetting.STRICT:
+                if remaining_qty < item_qty:
+                    stock_errors.append(
+                        f"{product.name}: need {item_qty}, available {remaining_qty} "
+                        f"(current {available_qty}, already used in this import {already_used_qty})"
+                    )
+
+            matched_items.append(
+                {
+                    "product_id": product.id,
+                    "qty": item_qty,
+                    "name": product.name,
+                }
+            )
+
+        if setting.stock_mode == InventorySellerSetting.STRICT:
+            if unmatched_names:
+                return (
+                    False,
+                    (
+                        "Strict stock shop: Product not recognized: "
+                        + ", ".join(unmatched_names)
+                        + ". Please use correct inventory code/SKU, product name, or alias."
+                    ),
+                    [],
+                    final_qty,
+                )
+
+            if stock_errors:
+                return (
+                    False,
+                    "Strict stock shop: Not enough stock. " + " | ".join(stock_errors),
+                    [],
+                    final_qty,
+                )
+
+            for item in matched_items:
+                product_id = item["product_id"]
+                strict_stock_used[product_id] = (
+                    int(strict_stock_used.get(product_id, 0) or 0)
+                    + int(item["qty"] or 0)
+                )
+
+            return True, "", matched_items, final_qty
+
+        # OPTIONAL shop:
+        # If all items are recognized, deduct them separately.
+        # If some item cannot be recognized, import still works but does not auto deduct mixed stock.
+        if unmatched_names:
+            return True, "", [], final_qty
+
+        return True, "", matched_items, final_qty
+
     if request.method == "POST":
         f = request.FILES.get("file")
         errors: list[str] = []
@@ -531,7 +735,6 @@ def import_orders(request: HttpRequest):
             "description",
             "quantity",
             "cod",
-            "receiver name",
             "phone",
             "address",
             "deliver fee",
@@ -539,6 +742,7 @@ def import_orders(request: HttpRequest):
             "price",
             "remark",
         ]
+
         for r in required:
             if r not in header_map:
                 errors.append(f"Missing column: {r}")
@@ -548,6 +752,7 @@ def import_orders(request: HttpRequest):
             return _cell(row[i].value) if i is not None else ""
 
         prepared_rows = []
+        strict_stock_used = {}
 
         if not errors:
             for row_idx in range(2, ws.max_row + 1):
@@ -559,7 +764,10 @@ def import_orders(request: HttpRequest):
                 desc = get(row, "description")
                 qty_raw = get(row, "quantity")
                 cod_raw = get(row, "cod")
+
+                # Receiver name is optional now.
                 receiver_name = get(row, "receiver name")
+
                 phone = get(row, "phone")
                 address = get(row, "address")
                 deliver_fee_raw = get(row, "deliver fee")
@@ -594,7 +802,6 @@ def import_orders(request: HttpRequest):
                     "Description": desc,
                     "quantity": qty_raw,
                     "COD": cod_raw,
-                    "Receiver name": receiver_name,
                     "Phone": phone,
                     "Address": address,
                     "Deliver Fee": deliver_fee_raw,
@@ -603,6 +810,7 @@ def import_orders(request: HttpRequest):
                 }
 
                 row_has_err = False
+
                 for k, v in required_values.items():
                     if _cell(v) == "":
                         errors.append(f"Row {row_idx}: {k} is required")
@@ -612,13 +820,32 @@ def import_orders(request: HttpRequest):
                     continue
 
                 seller = Seller.objects.filter(code=customer_code).first()
+
                 if not seller:
-                    errors.append(f"Row {row_idx}: Customer code not existed: {customer_code}")
+                    errors.append(
+                        f"Row {row_idx}: Customer code not existed: {customer_code}"
+                    )
                     continue
 
-                qty = _to_int(qty_raw, 0)
-                if qty <= 0:
-                    errors.append(f"Row {row_idx}: quantity must be number greater than 0")
+                excel_qty = _to_int(qty_raw, 0)
+
+                if excel_qty <= 0:
+                    errors.append(
+                        f"Row {row_idx}: quantity must be number greater than 0"
+                    )
+                    continue
+
+                ok_stock, stock_error, stock_items_data, final_qty = (
+                    _inventory_check_and_prepare_items(
+                        seller=seller,
+                        product_desc=desc,
+                        excel_qty=excel_qty,
+                        strict_stock_used=strict_stock_used,
+                    )
+                )
+
+                if not ok_stock:
+                    errors.append(f"Row {row_idx}: {stock_error}")
                     continue
 
                 cod = _to_decimal(cod_raw, 0)
@@ -632,7 +859,7 @@ def import_orders(request: HttpRequest):
                         "seller_name": seller_name or None,
                         "seller_order_code": order_code or None,
                         "product_desc": desc or None,
-                        "quantity": qty,
+                        "quantity": final_qty,
                         "cod": cod,
                         "delivery_fee": deliver_fee,
                         "additional_fee": additional_fee,
@@ -641,12 +868,16 @@ def import_orders(request: HttpRequest):
                         "receiver_phone": phone or None,
                         "receiver_address": address or None,
                         "remark": remark.strip() if remark.strip() else None,
+                        "stock_items_data": stock_items_data,
                     }
                 )
 
         if errors:
             request.session["import_errors"] = errors
-            messages.error(request, f"❌ Import failed: {len(errors)} error(s). No data was uploaded.")
+            messages.error(
+                request,
+                f"❌ Import failed: {len(errors)} error(s). No data was uploaded.",
+            )
             return redirect("import_orders")
 
         try:
@@ -678,6 +909,28 @@ def import_orders(request: HttpRequest):
 
                     o.tracking_no = _make_tracking_no()
                     o.save()
+
+                    try:
+                        from inventory.services import (
+                            auto_link_order_stock,
+                            set_order_stock_items,
+                        )
+
+                        if item.get("stock_items_data"):
+                            set_order_stock_items(
+                                order=o,
+                                items_data=item["stock_items_data"],
+                                actor=request.user,
+                            )
+                        else:
+                            auto_link_order_stock(
+                                o,
+                                actor=request.user,
+                            )
+
+                    except Exception:
+                        pass
+
                     success_count += 1
 
                 add_audit_log(
@@ -688,11 +941,17 @@ def import_orders(request: HttpRequest):
                     note=f"Imported {success_count} order(s) from {f.name}",
                 )
 
-            messages.success(request, f"✅ Import finished: {success_count} orders created.")
+            messages.success(
+                request,
+                f"✅ Import finished: {success_count} orders created.",
+            )
             return redirect("import_batch_detail", batch_id=batch.id)
 
         except Exception as e:
-            messages.error(request, f"❌ Import failed. Nothing was uploaded. {str(e)}")
+            messages.error(
+                request,
+                f"❌ Import failed. Nothing was uploaded. {str(e)}",
+            )
             return redirect("import_orders")
 
     show = _is_search_clicked(request)
@@ -700,16 +959,33 @@ def import_orders(request: HttpRequest):
 
     if show:
         start_dt, end_dt = _dt_range_from_request(request)
-        if start_dt and end_dt:
-            batch_qs = batch_qs.filter(created_at__gte=start_dt, created_at__lte=end_dt)
 
-        file_q = (request.GET.get("filename_contains") or request.GET.get("q") or "").strip()
+        if start_dt and end_dt:
+            batch_qs = batch_qs.filter(
+                created_at__gte=start_dt,
+                created_at__lte=end_dt,
+            )
+
+        file_q = (
+            request.GET.get("filename_contains")
+            or request.GET.get("q")
+            or ""
+        ).strip()
+
         if file_q:
             batch_qs = batch_qs.filter(filename__icontains=file_q)
 
         batch_qs = batch_qs.annotate(
-            total_orders=Count("orders", filter=Q(orders__is_deleted=False), distinct=True),
-            total_shops=Count("orders__seller", filter=Q(orders__is_deleted=False), distinct=True),
+            total_orders=Count(
+                "orders",
+                filter=Q(orders__is_deleted=False),
+                distinct=True,
+            ),
+            total_shops=Count(
+                "orders__seller",
+                filter=Q(orders__is_deleted=False),
+                distinct=True,
+            ),
         )
     else:
         batch_qs = ImportBatch.objects.none()
@@ -721,10 +997,16 @@ def import_orders(request: HttpRequest):
             import_batch__in=batch_qs.values_list("id", flat=True),
             is_deleted=False,
         ).count()
-        total_shops_sum = Seller.objects.filter(
-            orders__import_batch__in=batch_qs.values_list("id", flat=True),
-            orders__is_deleted=False,
-        ).distinct().count()
+
+        total_shops_sum = (
+            Seller.objects
+            .filter(
+                orders__import_batch__in=batch_qs.values_list("id", flat=True),
+                orders__is_deleted=False,
+            )
+            .distinct()
+            .count()
+        )
     else:
         total_orders_sum = 0
         total_shops_sum = 0
@@ -1204,9 +1486,12 @@ def create_order(request: HttpRequest):
 
     if request.method == "POST":
         seller_id = (request.POST.get("seller") or "").strip()
+        seller_search_display = (request.POST.get("seller_search_display") or "").strip()
+
         seller_order_code = (request.POST.get("seller_order_code") or "").strip()
         seller_name = (request.POST.get("seller_name") or "").strip()
 
+        # Receiver name is OPTIONAL now.
         receiver_name = (request.POST.get("receiver_name") or "").strip()
         receiver_phone = (request.POST.get("receiver_phone") or "").strip()
         receiver_address = (request.POST.get("receiver_address") or "").strip()
@@ -1223,8 +1508,11 @@ def create_order(request: HttpRequest):
 
         remark = (request.POST.get("remark") or "").strip()
         reason = (request.POST.get("reason") or "").strip()
+        stock_items_json = (request.POST.get("stock_items_json") or "").strip()
 
         form_data = {
+            "seller": seller_id,
+            "seller_search_display": seller_search_display,
             "seller_order_code": seller_order_code,
             "seller_name": seller_name,
             "receiver_name": receiver_name,
@@ -1240,22 +1528,34 @@ def create_order(request: HttpRequest):
             "delivery_shipper": shipper_id,
             "remark": remark,
             "reason": reason,
+            "stock_items_json": stock_items_json,
         }
 
         if not seller_id.isdigit():
             errors.append("Please select shop from dropdown.")
-        if not receiver_name:
-            errors.append("Receiver name is required.")
+
+        # Receiver name is optional, so do NOT validate it.
         if not receiver_phone:
             errors.append("Receiver phone is required.")
+
         if not receiver_address:
             errors.append("Receiver address is required.")
+
+        if not product_desc:
+            errors.append("Product name / goods is required.")
+
+        if quantity <= 0:
+            errors.append("Quantity must be greater than 0.")
 
         if not errors:
             seller = Seller.objects.get(id=int(seller_id))
             shipper = None
+
             if shipper_id.isdigit():
-                shipper = Shipper.objects.filter(id=int(shipper_id), is_active=True).first()
+                shipper = Shipper.objects.filter(
+                    id=int(shipper_id),
+                    is_active=True,
+                ).first()
 
             with transaction.atomic():
                 o = Order.objects.create(
@@ -1272,9 +1572,9 @@ def create_order(request: HttpRequest):
                     additional_fee=additional_fee,
                     province_fee=province_fee,
                     delivery_shipper=shipper,
-                    receiver_name=receiver_name,
-                    receiver_phone=receiver_phone,
-                    receiver_address=receiver_address,
+                    receiver_name=receiver_name or None,
+                    receiver_phone=receiver_phone or None,
+                    receiver_address=receiver_address or None,
                     remark=remark or None,
                     reason=reason or None,
                     status=Order.STATUS_CREATED,
@@ -1284,6 +1584,27 @@ def create_order(request: HttpRequest):
 
                 o.tracking_no = _make_tracking_no()
                 o.save()
+
+                try:
+                    from inventory.services import (
+                        auto_link_order_stock,
+                        set_order_stock_items_from_json,
+                    )
+
+                    if stock_items_json:
+                        set_order_stock_items_from_json(
+                            order=o,
+                            stock_items_json=stock_items_json,
+                            actor=request.user,
+                        )
+                    else:
+                        auto_link_order_stock(o, actor=request.user)
+
+                except Exception as e:
+                    messages.warning(
+                        request,
+                        f"Order created, but inventory stock was not linked: {e}",
+                    )
 
             add_audit_log(
                 module=AuditLog.MODULE_ORDER,
@@ -1311,15 +1632,17 @@ def create_order(request: HttpRequest):
             "errors": errors,
             "form_data": form_data,
             "sellers": sellers,
+            "selected_seller_id": form_data.get("seller", ""),
+            "seller_search_display": form_data.get("seller_search_display", ""),
         },
     )
+
+
 @login_required
 def order_edit(request: HttpRequest, pk: int):
     order = get_object_or_404(Order, pk=pk, is_deleted=False)
 
     original_id = order.id
-    original_tracking = order.tracking_no
-
     sellers = Seller.objects.filter(is_active=True).order_by("name")
     errors: list[str] = []
 
@@ -1363,6 +1686,7 @@ def order_edit(request: HttpRequest, pk: int):
         seller_id = (request.POST.get("seller") or "").strip()
         override_password = (request.POST.get("override_password") or "").strip()
         new_tracking = (request.POST.get("tracking_no") or "").strip()
+        stock_items_json = (request.POST.get("stock_items_json") or "").strip()
 
         old_cod_decimal = order.cod
         cod_override_used = False
@@ -1371,21 +1695,26 @@ def order_edit(request: HttpRequest, pk: int):
             if not seller_id.isdigit():
                 errors.append("Invalid shop.")
             else:
-                seller = Seller.objects.filter(id=int(seller_id), is_active=True).first()
+                seller = Seller.objects.filter(
+                    id=int(seller_id),
+                    is_active=True,
+                ).first()
+
                 if not seller:
                     errors.append("Selected shop not found.")
                 else:
                     order.seller = seller
                     order.seller_code = seller.code or ""
 
-        # allow tracking edit
         if not new_tracking:
             errors.append("Tracking ID is required.")
         else:
-            conflict_qs = Order.objects.filter(
-                tracking_no=new_tracking,
-                is_deleted=False,
-            ).exclude(pk=order.pk)
+            conflict_qs = (
+                Order.objects
+                .filter(tracking_no=new_tracking, is_deleted=False)
+                .exclude(pk=order.pk)
+            )
+
             if conflict_qs.exists():
                 errors.append(f"Tracking ID already exists: {new_tracking}")
             else:
@@ -1413,30 +1742,62 @@ def order_edit(request: HttpRequest, pk: int):
         if can_change_cod:
             order.cod = posted_cod
         else:
-            errors.append("COD cannot be updated after delivered/done. Only admin or correct override password can change it.")
+            errors.append(
+                "COD cannot be updated after delivered/done. "
+                "Only admin or correct override password can change it."
+            )
 
         order.delivery_fee = _to_decimal(request.POST.get("delivery_fee"), order.delivery_fee)
         order.additional_fee = _to_decimal(request.POST.get("additional_fee"), order.additional_fee)
         order.province_fee = _to_decimal(request.POST.get("province_fee"), order.province_fee)
 
+        # Receiver name is OPTIONAL now.
         order.receiver_name = (request.POST.get("receiver_name") or "").strip() or None
         order.receiver_phone = (request.POST.get("receiver_phone") or "").strip() or None
         order.receiver_address = (request.POST.get("receiver_address") or "").strip() or None
+
         order.remark = (request.POST.get("remark") or "").strip() or None
         order.reason = (request.POST.get("reason") or "").strip() or None
 
-        if not order.receiver_name:
-            errors.append("Receiver name is required.")
+        # Receiver name is optional, so do NOT validate it.
         if not order.receiver_phone:
             errors.append("Receiver phone is required.")
+
         if not order.receiver_address:
             errors.append("Receiver address is required.")
+
+        if not order.product_desc:
+            errors.append("Product name / goods is required.")
+
+        if order.quantity <= 0:
+            errors.append("Quantity must be greater than 0.")
 
         if not errors:
             order.id = original_id
             order.updated_at = timezone.now()
             order.updated_by = request.user
             order.save()
+
+            try:
+                from inventory.services import (
+                    auto_link_order_stock,
+                    set_order_stock_items_from_json,
+                )
+
+                if stock_items_json:
+                    set_order_stock_items_from_json(
+                        order=order,
+                        stock_items_json=stock_items_json,
+                        actor=request.user,
+                    )
+                else:
+                    auto_link_order_stock(order, actor=request.user)
+
+            except Exception as e:
+                messages.warning(
+                    request,
+                    f"Order updated, but inventory stock was not linked: {e}",
+                )
 
             new_snapshot = {
                 "tracking_no": order.tracking_no,
@@ -1460,6 +1821,7 @@ def order_edit(request: HttpRequest, pk: int):
 
             if old_snapshot != new_snapshot:
                 audit_note = "Edited order"
+
                 if old_snapshot["cod"] != new_snapshot["cod"]:
                     if cod_override_used:
                         audit_note = "Edited order | COD changed with override password"
@@ -1479,48 +1841,70 @@ def order_edit(request: HttpRequest, pk: int):
                 note_parts = []
 
                 if old_snapshot["tracking_no"] != new_snapshot["tracking_no"]:
-                    note_parts.append(f"Tracking: {old_snapshot['tracking_no']} -> {new_snapshot['tracking_no']}")
+                    note_parts.append(
+                        f"Tracking: {old_snapshot['tracking_no']} -> {new_snapshot['tracking_no']}"
+                    )
 
                 if old_snapshot["seller_id"] != new_snapshot["seller_id"]:
                     note_parts.append("Shop changed")
 
                 if old_snapshot["seller_name"] != new_snapshot["seller_name"]:
-                    note_parts.append(f"Seller name: {old_snapshot['seller_name'] or '-'} -> {new_snapshot['seller_name'] or '-'}")
+                    note_parts.append(
+                        f"Seller name: {old_snapshot['seller_name'] or '-'} -> {new_snapshot['seller_name'] or '-'}"
+                    )
 
                 if old_snapshot["seller_order_code"] != new_snapshot["seller_order_code"]:
-                    note_parts.append(f"Order code: {old_snapshot['seller_order_code'] or '-'} -> {new_snapshot['seller_order_code'] or '-'}")
+                    note_parts.append(
+                        f"Order code: {old_snapshot['seller_order_code'] or '-'} -> {new_snapshot['seller_order_code'] or '-'}"
+                    )
 
                 if old_snapshot["product_desc"] != new_snapshot["product_desc"]:
                     note_parts.append("Product updated")
 
                 if old_snapshot["quantity"] != new_snapshot["quantity"]:
-                    note_parts.append(f"Qty: {old_snapshot['quantity']} -> {new_snapshot['quantity']}")
+                    note_parts.append(
+                        f"Qty: {old_snapshot['quantity']} -> {new_snapshot['quantity']}"
+                    )
 
                 if old_snapshot["price"] != new_snapshot["price"]:
-                    note_parts.append(f"Price: {old_snapshot['price']} -> {new_snapshot['price']}")
+                    note_parts.append(
+                        f"Price: {old_snapshot['price']} -> {new_snapshot['price']}"
+                    )
 
                 if old_snapshot["cod"] != new_snapshot["cod"]:
                     cod_note = f"COD: {old_snapshot['cod']} -> {new_snapshot['cod']}"
+
                     if cod_override_used:
                         cod_note += " (override password used)"
                     elif is_admin and is_done_or_delivered:
                         cod_note += " (changed by admin after delivered/done)"
+
                     note_parts.append(cod_note)
 
                 if old_snapshot["delivery_fee"] != new_snapshot["delivery_fee"]:
-                    note_parts.append(f"Delivery fee: {old_snapshot['delivery_fee']} -> {new_snapshot['delivery_fee']}")
+                    note_parts.append(
+                        f"Delivery fee: {old_snapshot['delivery_fee']} -> {new_snapshot['delivery_fee']}"
+                    )
 
                 if old_snapshot["additional_fee"] != new_snapshot["additional_fee"]:
-                    note_parts.append(f"Additional fee: {old_snapshot['additional_fee']} -> {new_snapshot['additional_fee']}")
+                    note_parts.append(
+                        f"Additional fee: {old_snapshot['additional_fee']} -> {new_snapshot['additional_fee']}"
+                    )
 
                 if old_snapshot["province_fee"] != new_snapshot["province_fee"]:
-                    note_parts.append(f"Province fee: {old_snapshot['province_fee']} -> {new_snapshot['province_fee']}")
+                    note_parts.append(
+                        f"Province fee: {old_snapshot['province_fee']} -> {new_snapshot['province_fee']}"
+                    )
 
                 if old_snapshot["receiver_name"] != new_snapshot["receiver_name"]:
-                    note_parts.append(f"Receiver name: {old_snapshot['receiver_name'] or '-'} -> {new_snapshot['receiver_name'] or '-'}")
+                    note_parts.append(
+                        f"Receiver name: {old_snapshot['receiver_name'] or '-'} -> {new_snapshot['receiver_name'] or '-'}"
+                    )
 
                 if old_snapshot["receiver_phone"] != new_snapshot["receiver_phone"]:
-                    note_parts.append(f"Receiver phone: {old_snapshot['receiver_phone'] or '-'} -> {new_snapshot['receiver_phone'] or '-'}")
+                    note_parts.append(
+                        f"Receiver phone: {old_snapshot['receiver_phone'] or '-'} -> {new_snapshot['receiver_phone'] or '-'}"
+                    )
 
                 if old_snapshot["receiver_address"] != new_snapshot["receiver_address"]:
                     note_parts.append("Receiver address updated")
@@ -1529,7 +1913,9 @@ def order_edit(request: HttpRequest, pk: int):
                     note_parts.append("Remark updated")
 
                 if old_snapshot["reason"] != new_snapshot["reason"]:
-                    note_parts.append(f"Reason: {old_snapshot['reason'] or '-'} -> {new_snapshot['reason'] or '-'}")
+                    note_parts.append(
+                        f"Reason: {old_snapshot['reason'] or '-'} -> {new_snapshot['reason'] or '-'}"
+                    )
 
                 timeline_note = " | ".join(note_parts) if note_parts else "Order edited"
 
@@ -1557,6 +1943,7 @@ def order_edit(request: HttpRequest, pk: int):
             "is_admin_user": is_admin,
         },
     )
+
 @login_required
 def order_detail(request: HttpRequest, pk: int):
     order = get_object_or_404(Order, pk=pk, is_deleted=False)

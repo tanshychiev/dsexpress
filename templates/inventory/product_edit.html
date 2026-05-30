@@ -1,0 +1,70 @@
+{% extends "inventory/base_inventory.html" %}
+
+{% block title %}Edit Inventory Product - DS Express{% endblock %}
+
+{% block inventory_content %}
+<div class="inv-head">
+  <div>
+    <h1 class="inv-title">Edit Inventory Product</h1>
+    <div class="inv-sub">
+      {{ product.seller.name }}{% if product.seller.code %} - {{ product.seller.code }}{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="inv-card">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Product Name</label>
+        <input class="ds-input" type="text" name="name" value="{{ product.name }}" required>
+      </div>
+
+      <div class="form-row">
+        <label>Product Code / SKU</label>
+        <input class="ds-input" type="text" name="sku" value="{{ product.sku }}">
+        <div class="form-help">
+          Import can recognize stock by this code.
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Product Type</label>
+        <input class="ds-input" type="text" name="product_type" value="{{ product.product_type }}" placeholder="Serum / Cream / Gel">
+      </div>
+
+      <div class="form-row">
+        <label>Location</label>
+        <input class="ds-input" type="text" name="location" value="{{ product.location }}" placeholder="Shelf / box location">
+      </div>
+
+      <div class="form-row">
+        <label>Product Photo</label>
+        <input class="ds-input" type="file" name="photo" accept="image/*">
+      </div>
+
+      <div class="form-row">
+        <label>Status</label>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:800;">
+          <input type="checkbox" name="is_active" {% if product.is_active %}checked{% endif %}>
+          Active
+        </label>
+      </div>
+    </div>
+
+    {% if product.photo %}
+      <div style="margin-top:16px;">
+        <label>Current Photo</label>
+        <img src="{{ product.photo.url }}" style="width:130px;height:130px;object-fit:cover;border-radius:16px;border:1px solid #e5e7eb;">
+      </div>
+    {% endif %}
+
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-green" type="submit">Save Product</button>
+      <a class="btn-soft" href="{% url 'inventory:list' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

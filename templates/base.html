@@ -512,6 +512,36 @@
 
         <div class="menu-sep"></div>
 
+        <div class="menu-title {% if request.path|slice:':11' == '/inventory/' %}open{% endif %}" data-target="group-inventory">Inventory</div>
+        <div class="menu-group {% if request.path|slice:':11' != '/inventory/' %}hidden-sec{% endif %}" id="group-inventory">
+          <a class="menu-item {% if request.path == '/inventory/' %}active{% endif %}" href="{% url 'inventory:list' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Inventory</span>
+          </a>
+
+          <a class="menu-item {% if request.path == '/inventory/stock-in/' %}active{% endif %}" href="{% url 'inventory:stock_in' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Stock In</span>
+          </a>
+
+          <a class="menu-item {% if request.path == '/inventory/adjust/' %}active{% endif %}" href="{% url 'inventory:adjust' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Adjust Stock</span>
+          </a>
+
+          <a class="menu-item {% if request.path == '/inventory/confirm/' %}active{% endif %}" href="{% url 'inventory:confirm' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Confirm Stock</span>
+          </a>
+
+          <a class="menu-item {% if request.path == '/inventory/history/' %}active{% endif %}" href="{% url 'inventory:history' %}">
+            <span class="dot"></span>
+            <span class="menu-label">Stock History</span>
+          </a>
+        </div>
+
+        <div class="menu-sep"></div>
+
         <div class="menu-title" data-target="group-reports">Reports</div>
         <div class="menu-group hidden-sec" id="group-reports">
           <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'delivery_report' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_png' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_pdf' or request.resolver_match and request.resolver_match.url_name == 'delivery_report_upload' %}active{% endif %}" href="{% url 'delivery_report' %}">

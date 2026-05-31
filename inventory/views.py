@@ -47,6 +47,14 @@ def inventory_list(request):
 
     sellers = Seller.objects.filter(is_active=True).order_by("name")
 
+    selected_seller_display = ""
+    selected_seller = None
+
+    if seller_id.isdigit():
+        selected_seller = Seller.objects.filter(id=int(seller_id), is_active=True).first()
+        if selected_seller:
+            selected_seller_display = f"{selected_seller.name} - {selected_seller.code or ''}".strip(" -")
+
     products = (
         StockProduct.objects
         .select_related("seller")
@@ -54,8 +62,8 @@ def inventory_list(request):
         .order_by("seller__name", "name")
     )
 
-    if seller_id.isdigit():
-        products = products.filter(seller_id=int(seller_id))
+    if selected_seller:
+        products = products.filter(seller=selected_seller)
 
     if q:
         products = products.filter(
@@ -95,8 +103,6 @@ def inventory_list(request):
             "reserved_qty": reserved,
             "available_qty": available,
             "last_confirmed_at": snapshot.confirmed_at if snapshot else None,
-
-            # Seller stock setting
             "stock_mode": setting.stock_mode,
             "stock_mode_label": stock_mode_label,
             "show_stock_in_portal": setting.show_stock_in_portal,
@@ -109,6 +115,7 @@ def inventory_list(request):
             "rows": rows,
             "sellers": sellers,
             "selected_seller_id": seller_id,
+            "selected_seller_display": selected_seller_display,
             "q": q,
         },
     )

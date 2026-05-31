@@ -12,17 +12,28 @@
 </div>
 
 <div class="inv-card">
-  <form method="get" class="inv-filter">
-    <div>
+  <form method="get" class="inv-filter" id="inventoryFilterForm">
+    <div class="seller-search-wrap">
       <label class="muted">Seller</label>
-      <select class="ds-input" name="seller_id">
-        <option value="">All sellers</option>
-        {% for seller in sellers %}
-          <option value="{{ seller.id }}" {% if selected_seller_id == seller.id|stringformat:"s" %}selected{% endif %}>
-            {{ seller.name }}{% if seller.code %} - {{ seller.code }}{% endif %}
-          </option>
-        {% endfor %}
-      </select>
+
+      <input
+        class="ds-input"
+        id="inventory_seller_search"
+        type="text"
+        name="seller_search_display"
+        value="{{ selected_seller_display|default:'' }}"
+        placeholder="Type seller name / code / phone..."
+        autocomplete="off"
+      >
+
+      <input
+        type="hidden"
+        id="inventory_seller_id"
+        name="seller_id"
+        value="{{ selected_seller_id|default:'' }}"
+      >
+
+      <div id="inventory_seller_dropdown" class="seller-dropdown"></div>
     </div>
 
     <div>
@@ -112,17 +123,11 @@
               {% endif %}
             </td>
 
-            <td>
-              {{ row.location|default:"-" }}
-            </td>
+            <td>{{ row.location|default:"-" }}</td>
 
-            <td>
-              <span class="num-big">{{ row.current_qty }}</span>
-            </td>
+            <td><span class="num-big">{{ row.current_qty }}</span></td>
 
-            <td>
-              <span class="badge badge-yellow">{{ row.reserved_qty }}</span>
-            </td>
+            <td><span class="badge badge-yellow">{{ row.reserved_qty }}</span></td>
 
             <td>
               {% if row.available_qty <= 0 %}
@@ -178,6 +183,49 @@
 </div>
 
 <style>
+  .seller-search-wrap{
+    position:relative;
+  }
+
+  .seller-dropdown{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    z-index:99999;
+    max-height:280px;
+    overflow-y:auto;
+    background:#fff;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    box-shadow:0 14px 34px rgba(15,23,42,.16);
+  }
+
+  .seller-dd-item{
+    padding:10px 12px;
+    cursor:pointer;
+    border-bottom:1px solid #f1f5f9;
+    font-size:13px;
+    font-weight:850;
+    color:#0f172a;
+  }
+
+  .seller-dd-item:hover{
+    background:#f0fdf4;
+  }
+
+  .seller-dd-name{
+    font-weight:950;
+  }
+
+  .seller-dd-code{
+    color:#64748b;
+    font-size:12px;
+    font-weight:800;
+    margin-top:2px;
+  }
+
   .action-stack{
     display:flex;
     flex-direction:column;
@@ -251,4 +299,142 @@
     border:1px solid #c7d2fe;
   }
 </style>
+
+<script>
+(function(){
+  const form = document.getElementById("inventoryFilterForm");
+  const input = document.getElementById("inventory_seller_search");
+  const hidden = document.getElementById("inventory_seller_id");
+  const box = document.getElementById("inventory_seller_dropdown");
+
+  if (!form || !input || !hidden || !box) return;
+
+  let timer = null;
+
+  function escapeHtml(text){
+    return String(text || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function hideBox(){
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
+
+  function normalizeResponse(data){
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.items)) return data.items;
+    if (data && Array.isArray(data.results)) return data.results;
+    return [];
+  }
+
+  function addAllSellerOption(){
+    const all = document.createElement("div");
+    all.className = "seller-dd-item";
+    all.innerHTML = `
+      <div class="seller-dd-name">All sellers</div>
+      <div class="seller-dd-code">Show all inventory</div>
+    `;
+
+    all.addEventListener("click", function(){
+      input.value = "";
+      hidden.value = "";
+      hideBox();
+      form.submit();
+    });
+
+    box.appendChild(all);
+  }
+
+  function renderItems(items){
+    box.innerHTML = "";
+    addAllSellerOption();
+
+    if (!items.length){
+      box.style.display = "block";
+      return;
+    }
+
+    items.forEach(function(item){
+      const id = item.id || "";
+      const name = item.name || "";
+      const code = item.code || "";
+      const phone = item.phone || "";
+
+      const div = document.createElement("div");
+      div.className = "seller-dd-item";
+      div.innerHTML = `
+        <div class="seller-dd-name">${escapeHtml(name)}</div>
+        <div class="seller-dd-code">${escapeHtml(code)}${phone ? " · " + escapeHtml(phone) : ""}</div>
+      `;
+
+      div.addEventListener("click", function(){
+        input.value = `${name}${code ? " - " + code : ""}`;
+        hidden.value = id;
+        hideBox();
+        form.submit();
+      });
+
+      box.appendChild(div);
+    });
+
+    box.style.display = "block";
+  }
+
+  function searchSeller(q){
+    q = (q || "").trim();
+
+    if (!q){
+      hidden.value = "";
+      box.innerHTML = "";
+      addAllSellerOption();
+      box.style.display = "block";
+      return;
+    }
+
+    fetch(`/api/sellers/autocomplete/?q=${encodeURIComponent(q)}`, {
+      headers: {"Accept":"application/json"}
+    })
+      .then(resp => resp.json())
+      .then(data => {
+        const items = normalizeResponse(data);
+        renderItems(items);
+      })
+      .catch(() => hideBox());
+  }
+
+  input.addEventListener("input", function(){
+    hidden.value = "";
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      searchSeller(input.value);
+    }, 150);
+  });
+
+  input.addEventListener("focus", function(){
+    searchSeller(input.value);
+  });
+
+  input.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){
+      e.preventDefault();
+      form.submit();
+    }
+
+    if (e.key === "Escape"){
+      hideBox();
+    }
+  });
+
+  document.addEventListener("click", function(e){
+    if (!box.contains(e.target) && e.target !== input){
+      hideBox();
+    }
+  });
+})();
+</script>
 {% endblock %}

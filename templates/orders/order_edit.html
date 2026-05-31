@@ -68,10 +68,8 @@
     gap:14px;
   }
 
-  @media (max-width: 900px){
-    .grid2{
-      grid-template-columns:1fr;
-    }
+  @media(max-width:900px){
+    .grid2{grid-template-columns:1fr;}
   }
 
   .field{
@@ -91,7 +89,9 @@
     color:#334155;
   }
 
-  input, select, textarea{
+  input,
+  select,
+  textarea{
     width:100%;
     padding:11px 12px;
     border:1px solid #d1d5db;
@@ -101,7 +101,9 @@
     background:#fff;
   }
 
-  input:focus, select:focus, textarea:focus{
+  input:focus,
+  select:focus,
+  textarea:focus{
     border-color:#0f766e;
     box-shadow:0 0 0 3px rgba(15,118,110,.12);
   }
@@ -157,13 +159,213 @@
   .btn-primary:hover{
     background:#115e59;
   }
+
+  .product-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+  }
+
+  @media(max-width:640px){
+    .product-row{grid-template-columns:1fr;}
+  }
+
+  .muted{
+    font-size:12px;
+    color:#64748b;
+  }
+
+  .selected-goods-box{
+    margin-top:10px;
+    padding:12px;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    background:#f9fafb;
+  }
+
+  .selected-title{
+    font-size:13px;
+    font-weight:950;
+    color:#064e3b;
+    margin-bottom:8px;
+  }
+
+  .selected-good-row{
+    display:grid;
+    grid-template-columns:1fr 90px 40px;
+    gap:8px;
+    align-items:center;
+    padding:8px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    margin-bottom:8px;
+  }
+
+  .selected-good-row input{
+    height:36px;
+    text-align:center;
+    font-weight:900;
+  }
+
+  .selected-good-row button{
+    width:36px;
+    height:36px;
+    border:0;
+    border-radius:999px;
+    background:#ef4444;
+    color:#fff;
+    font-size:22px;
+    font-weight:950;
+    cursor:pointer;
+  }
+
+  .goods-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:9999;
+  }
+
+  .goods-modal.show{
+    display:block;
+  }
+
+  .goods-backdrop{
+    position:absolute;
+    inset:0;
+    background:rgba(15,23,42,.55);
+  }
+
+  .goods-card{
+    position:relative;
+    z-index:2;
+    width:min(980px,94vw);
+    max-height:86vh;
+    overflow:auto;
+    margin:7vh auto 0;
+    background:#fff;
+    border-radius:24px;
+    box-shadow:0 24px 80px rgba(0,0,0,.30);
+    padding:18px;
+  }
+
+  .goods-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .goods-title{
+    font-size:22px;
+    font-weight:950;
+    color:#064e3b;
+  }
+
+  .goods-sub{
+    color:#6b7280;
+    font-size:13px;
+    font-weight:750;
+    margin-top:2px;
+  }
+
+  .goods-close{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:999px;
+    background:#ef4444;
+    color:#fff;
+    font-size:26px;
+    font-weight:950;
+    cursor:pointer;
+  }
+
+  .goods-search-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+    margin-bottom:14px;
+  }
+
+  @media(max-width:640px){
+    .goods-search-row{grid-template-columns:1fr;}
+  }
+
+  .goods-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+    gap:12px;
+  }
+
+  .goods-item{
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    background:#fff;
+    padding:10px;
+    transition:.15s ease;
+  }
+
+  .goods-item:hover{
+    border-color:#0f766e;
+    box-shadow:0 10px 24px rgba(15,118,110,.14);
+    transform:translateY(-1px);
+  }
+
+  .goods-photo{
+    width:100%;
+    height:130px;
+    border-radius:14px;
+    object-fit:cover;
+    background:#f3f4f6;
+    display:grid;
+    place-items:center;
+    color:#9ca3af;
+    font-size:12px;
+    font-weight:900;
+  }
+
+  .goods-name{
+    margin-top:8px;
+    font-size:14px;
+    font-weight:950;
+    color:#111827;
+  }
+
+  .goods-meta{
+    color:#6b7280;
+    font-size:12px;
+    font-weight:750;
+    margin-top:2px;
+  }
+
+  .goods-stock{
+    margin-top:8px;
+    display:inline-flex;
+    min-height:26px;
+    padding:0 10px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#166534;
+    align-items:center;
+    font-size:12px;
+    font-weight:950;
+  }
+
+  .goods-loading{
+    padding:18px;
+    text-align:center;
+    color:#64748b;
+    font-weight:850;
+  }
 </style>
 
 <div class="wrap">
   <div class="page-title">Edit Order</div>
 
   <div class="card">
-
     {% if errors %}
       <div class="err">
         <ul style="margin:0;padding-left:18px;">
@@ -183,12 +385,12 @@
     <form method="post" id="editOrderForm">
       {% csrf_token %}
       <input type="hidden" name="override_password" id="override_password_hidden">
+      <input type="hidden" name="stock_items_json" id="stockItemsJson">
 
       <div class="section">
         <div class="section-head">Basic Information</div>
         <div class="section-body">
           <div class="grid2">
-
             <div class="field field-full">
               <label>Tracking / SN</label>
               <input
@@ -201,7 +403,7 @@
 
             <div class="field">
               <label>Shop</label>
-              <select name="seller">
+              <select name="seller" id="seller_id">
                 <option value="">Select shop</option>
                 {% for s in sellers %}
                   <option value="{{ s.id }}" {% if order.seller_id == s.id %}selected{% endif %}>
@@ -221,14 +423,35 @@
               <input name="seller_order_code" value="{{ order.seller_order_code|default:'' }}">
             </div>
 
-            <div class="field">
-              <label>Product</label>
-              <input name="product_desc" value="{{ order.product_desc|default:'' }}">
+            <div class="field field-full">
+              <label>Product / Goods</label>
+              <div class="product-row">
+                <input
+                  id="id_product_desc"
+                  name="product_desc"
+                  value="{{ order.product_desc|default:'' }}"
+                  placeholder="Choose goods or type manually"
+                >
+                <button type="button" class="btn btn-primary" id="openGoodsPopup">
+                  Choose Goods
+                </button>
+              </div>
+
+              <div class="small-note">
+                Can choose many goods. Example: Serum x1 + Cream x2.
+              </div>
+
+              <div class="selected-goods-box">
+                <div class="selected-title">Selected Goods</div>
+                <div id="selectedGoodsList">
+                  <div class="muted">No goods selected yet.</div>
+                </div>
+              </div>
             </div>
 
             <div class="field">
               <label>Quantity</label>
-              <input name="quantity" value="{{ order.quantity }}">
+              <input id="id_quantity" name="quantity" value="{{ order.quantity }}">
             </div>
 
             <div class="field">
@@ -265,7 +488,6 @@
               <label>Province Fee ($)</label>
               <input name="province_fee" value="{{ order.province_fee }}">
             </div>
-
           </div>
         </div>
       </div>
@@ -274,7 +496,6 @@
         <div class="section-head">Receiver Information</div>
         <div class="section-body">
           <div class="grid2">
-
             <div class="field field-full">
               <label>Receiver Name</label>
               <input name="receiver_name" value="{{ order.receiver_name|default:'' }}">
@@ -289,7 +510,6 @@
               <label>Address</label>
               <input name="receiver_address" value="{{ order.receiver_address|default:'' }}">
             </div>
-
           </div>
         </div>
       </div>
@@ -298,7 +518,6 @@
         <div class="section-head">Remark / Reason</div>
         <div class="section-body">
           <div class="grid2">
-
             <div class="field">
               <label>Remark</label>
               <textarea name="remark">{{ order.remark|default:'' }}</textarea>
@@ -308,7 +527,6 @@
               <label>Reason</label>
               <textarea name="reason">{{ order.reason|default:'' }}</textarea>
             </div>
-
           </div>
         </div>
       </div>
@@ -321,12 +539,35 @@
   </div>
 </div>
 
+<div id="goodsModal" class="goods-modal">
+  <div class="goods-backdrop" id="goodsBackdrop"></div>
+
+  <div class="goods-card">
+    <div class="goods-head">
+      <div>
+        <div class="goods-title">Choose Goods</div>
+        <div class="goods-sub">Select one or many products from this seller inventory.</div>
+      </div>
+
+      <button type="button" class="goods-close" id="closeGoodsPopup">×</button>
+    </div>
+
+    <div class="goods-search-row">
+      <input id="goodsSearch" type="text" placeholder="Search product / SKU / type">
+      <button type="button" class="btn btn-primary" id="searchGoodsBtn">Search</button>
+    </div>
+
+    <div id="goodsLoading" class="goods-loading" style="display:none;">Loading goods...</div>
+    <div id="goodsGrid" class="goods-grid"></div>
+  </div>
+</div>
+
 <div id="cod-password-modal" style="
   display:none;
   position:fixed;
   inset:0;
   background:rgba(15,23,42,.45);
-  z-index:9999;
+  z-index:99999;
   align-items:center;
   justify-content:center;
 ">
@@ -361,13 +602,8 @@
     >
 
     <div style="display:flex; justify-content:flex-end; gap:10px;">
-      <button type="button" id="cod-modal-cancel" class="btn">
-        Cancel
-      </button>
-
-      <button type="button" id="cod-modal-confirm" class="btn btn-primary">
-        Confirm
-      </button>
+      <button type="button" id="cod-modal-cancel" class="btn">Cancel</button>
+      <button type="button" id="cod-modal-confirm" class="btn btn-primary">Confirm</button>
     </div>
   </div>
 </div>
@@ -452,5 +688,205 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+(function(){
+  let selectedGoods = [];
+  let lastGoodsResults = [];
+
+  {% for item in order.stock_items.all %}
+    selectedGoods.push({
+      product_id: {{ item.product_id }},
+      name: "{{ item.product.name|escapejs }}",
+      qty: {{ item.quantity }}
+    });
+  {% endfor %}
+
+  const modal = document.getElementById("goodsModal");
+  const openBtn = document.getElementById("openGoodsPopup");
+  const closeBtn = document.getElementById("closeGoodsPopup");
+  const backdrop = document.getElementById("goodsBackdrop");
+  const grid = document.getElementById("goodsGrid");
+  const search = document.getElementById("goodsSearch");
+  const searchBtn = document.getElementById("searchGoodsBtn");
+  const loading = document.getElementById("goodsLoading");
+  const productInput = document.getElementById("id_product_desc");
+  const qtyInput = document.getElementById("id_quantity");
+  const hiddenItems = document.getElementById("stockItemsJson");
+  const selectedBox = document.getElementById("selectedGoodsList");
+
+  if (!modal || !openBtn || !productInput || !hiddenItems || !selectedBox) return;
+
+  function getSellerId(){
+    const sellerField = document.getElementById("seller_id");
+    return sellerField ? sellerField.value : "";
+  }
+
+  function escapeHtml(text){
+    return String(text || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function renderSelectedGoods(){
+    if (!selectedGoods.length){
+      selectedBox.innerHTML = `<div class="muted">No goods selected yet.</div>`;
+      hiddenItems.value = "";
+      return;
+    }
+
+    selectedBox.innerHTML = selectedGoods.map(item => `
+      <div class="selected-good-row">
+        <div><strong>${escapeHtml(item.name)}</strong></div>
+        <input
+          type="number"
+          min="1"
+          value="${item.qty}"
+          onchange="changeGoodsQty(${item.product_id}, this.value)"
+        >
+        <button type="button" onclick="removeGoods(${item.product_id})">×</button>
+      </div>
+    `).join("");
+
+    hiddenItems.value = JSON.stringify(selectedGoods);
+
+    productInput.value = selectedGoods
+      .map(item => `${item.name} x${item.qty}`)
+      .join(" + ");
+
+    if (qtyInput) {
+      qtyInput.value = selectedGoods.reduce((sum, item) => sum + parseInt(item.qty || 0), 0);
+    }
+  }
+
+  window.removeGoods = function(productId){
+    selectedGoods = selectedGoods.filter(x => parseInt(x.product_id) !== parseInt(productId));
+    renderSelectedGoods();
+  };
+
+  window.changeGoodsQty = function(productId, qty){
+    qty = parseInt(qty || "1", 10);
+    if (qty <= 0) qty = 1;
+
+    const item = selectedGoods.find(x => parseInt(x.product_id) === parseInt(productId));
+
+    if (item) {
+      item.qty = qty;
+    }
+
+    renderSelectedGoods();
+  };
+
+  function addGoods(item){
+    const existing = selectedGoods.find(x => parseInt(x.product_id) === parseInt(item.id));
+
+    if (existing){
+      existing.qty += 1;
+    } else {
+      selectedGoods.push({
+        product_id: item.id,
+        name: item.name,
+        qty: 1
+      });
+    }
+
+    renderSelectedGoods();
+  }
+
+  function goodsCardHtml(item){
+    const photo = item.photo_url
+      ? `<img class="goods-photo" src="${item.photo_url}" alt="${escapeHtml(item.name)}">`
+      : `<div class="goods-photo">NO PHOTO</div>`;
+
+    return `
+      <div class="goods-item">
+        ${photo}
+        <div class="goods-name">${escapeHtml(item.name)}</div>
+        <div class="goods-meta">${escapeHtml(item.sku || "-")}</div>
+        <div class="goods-meta">${escapeHtml(item.product_type || "-")}</div>
+        <div class="goods-stock">Available: ${item.available_qty}</div>
+        <button
+          type="button"
+          class="btn btn-primary add-goods-btn"
+          data-id="${item.id}"
+          style="width:100%;margin-top:10px;"
+        >
+          Add
+        </button>
+      </div>
+    `;
+  }
+
+  function openModal(){
+    const sellerId = getSellerId();
+
+    if (!sellerId){
+      alert("Please select seller first.");
+      return;
+    }
+
+    modal.classList.add("show");
+    loadGoods();
+  }
+
+  function closeModal(){
+    modal.classList.remove("show");
+  }
+
+  function loadGoods(){
+    const sellerId = getSellerId();
+    const q = search ? (search.value || "") : "";
+
+    loading.style.display = "block";
+    grid.innerHTML = "";
+
+    const url = `{% url 'inventory:stock_products_api' %}?seller_id=${encodeURIComponent(sellerId)}&q=${encodeURIComponent(q)}`;
+
+    fetch(url)
+      .then(resp => resp.json())
+      .then(data => {
+        loading.style.display = "none";
+        lastGoodsResults = data.results || [];
+
+        if (!lastGoodsResults.length){
+          grid.innerHTML = `<div class="goods-loading">No goods found for this seller.</div>`;
+          return;
+        }
+
+        grid.innerHTML = lastGoodsResults.map(goodsCardHtml).join("");
+
+        grid.querySelectorAll(".add-goods-btn").forEach(btn => {
+          btn.addEventListener("click", function(){
+            const id = parseInt(btn.getAttribute("data-id"), 10);
+            const item = lastGoodsResults.find(x => parseInt(x.id) === id);
+
+            if (item) {
+              addGoods(item);
+            }
+          });
+        });
+      })
+      .catch(() => {
+        loading.style.display = "none";
+        grid.innerHTML = `<div class="goods-loading">Cannot load goods.</div>`;
+      });
+  }
+
+  openBtn.addEventListener("click", openModal);
+  closeBtn.addEventListener("click", closeModal);
+  backdrop.addEventListener("click", closeModal);
+  searchBtn.addEventListener("click", loadGoods);
+
+  search.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){
+      e.preventDefault();
+      loadGoods();
+    }
+  });
+
+  renderSelectedGoods();
+})();
 </script>
 {% endblock %}

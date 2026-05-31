@@ -250,6 +250,38 @@
     font-weight:600;
   }
 
+  .month-form{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    flex:0 0 auto;
+  }
+
+  .month-picker{
+    width:122px;
+    border:1px solid #dbece2;
+    border-radius:14px;
+    background:#f8fbf9;
+    color:#1f2937;
+    padding:9px 8px;
+    font-size:12px;
+    font-weight:800;
+    outline:none;
+  }
+
+  .month-submit{
+    border:0;
+    border-radius:14px;
+    background:linear-gradient(135deg,#179b67,#22b276);
+    color:#fff;
+    padding:10px 11px;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+    box-shadow:0 6px 14px rgba(23,132,88,.14);
+  }
+
   .profile-badge{
     width:42px;
     height:42px;
@@ -267,7 +299,7 @@
 
   .money-grid{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(2,1fr);
     gap:12px;
   }
 
@@ -291,6 +323,15 @@
     font-weight:900;
     color:#1f2937;
     line-height:1.15;
+  }
+
+  .money-value.is-money{
+    font-size:18px;
+    word-break:break-word;
+  }
+
+  .today-card .hero-sub{
+    margin-bottom:14px;
   }
 
   .hero-card{
@@ -451,7 +492,7 @@
 
   .menu-grid{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(4,1fr);
     gap:12px;
     margin-bottom:14px;
     position:relative;
@@ -532,6 +573,21 @@
   }
 
   @media (max-width: 420px){
+    .summary-top{
+      align-items:flex-start;
+      flex-direction:column;
+    }
+
+    .month-form{
+      width:100%;
+      justify-content:space-between;
+    }
+
+    .month-picker{
+      flex:1;
+      width:auto;
+    }
+
     .money-grid{
       gap:10px;
     }
@@ -540,8 +596,16 @@
       font-size:18px;
     }
 
+    .money-value.is-money{
+      font-size:16px;
+    }
+
     .hero-stat strong{
       font-size:16px;
+    }
+
+    .menu-grid{
+      grid-template-columns:repeat(2,1fr);
     }
   }
 </style>
@@ -584,49 +648,61 @@
       <div class="summary-card">
         <div class="summary-top">
           <div>
-            <h2 class="summary-title">Account Summary</h2>
-            <div class="summary-sub">Overview of your seller account</div>
+            <h2 class="summary-title">Account Summary, {{ selected_month_label }}</h2>
+            <div class="summary-sub">Choose month to view seller account result</div>
           </div>
-          <div class="profile-badge">👤</div>
+
+          <form method="get" class="month-form">
+            <input
+              type="month"
+              name="month"
+              value="{{ selected_month }}"
+              class="month-picker"
+            >
+            <button type="submit" class="month-submit">View</button>
+          </form>
         </div>
 
         <div class="money-grid">
           <div class="money-card">
-            <div class="money-label">Balance</div>
-            <div class="money-value">${{ cod_balance|default:0 }}</div>
+            <div class="money-label">Total Balance</div>
+            <div class="money-value is-money">${{ month_balance|default:0|floatformat:2 }}</div>
           </div>
 
           <div class="money-card">
-            <div class="money-label">Delivered</div>
-            <div class="money-value">{{ delivered_parcels|default:0 }}</div>
+            <div class="money-label">Delivery</div>
+            <div class="money-value">{{ month_delivered_parcels|default:0 }}</div>
           </div>
 
           <div class="money-card">
             <div class="money-label">Pending</div>
-            <div class="money-value">{{ pending_parcels|default:0 }}</div>
+            <div class="money-value">{{ month_pending_parcels|default:0 }}</div>
+          </div>
+
+          <div class="money-card">
+            <div class="money-label">Done %</div>
+            <div class="money-value">{{ month_done_percent|default:0 }}%</div>
           </div>
         </div>
       </div>
 
-      <div class="hero-card">
-        <p class="hero-eyebrow">Welcome Back</p>
-        <h3 class="hero-name">{{ seller.name }}</h3>
-        <p class="hero-sub">
-          Manage your orders, reports and parcel tracking in one place.
-        </p>
+      <div class="hero-card today-card">
+        <p class="hero-eyebrow">Welcome Back, {{ seller.name }}</p>
+        <h3 class="hero-name">Today Summary</h3>
+        <p class="hero-sub">{{ today_label }}</p>
 
         <div class="hero-stats">
           <div class="hero-stat">
-            <span>Total</span>
-            <strong>{{ total_parcels|default:0 }}</strong>
+            <span>Total COD</span>
+            <strong>${{ today_cod|default:0|floatformat:2 }}</strong>
           </div>
           <div class="hero-stat">
-            <span>Pending</span>
-            <strong>{{ pending_parcels|default:0 }}</strong>
+            <span>Total Sent</span>
+            <strong>{{ today_sent|default:0 }}</strong>
           </div>
           <div class="hero-stat">
-            <span>Out</span>
-            <strong>{{ out_for_delivery|default:0 }}</strong>
+            <span>Total Done</span>
+            <strong>{{ today_done|default:0 }}</strong>
           </div>
         </div>
       </div>
@@ -660,6 +736,11 @@
         <a href="{% url 'portal:tracking' %}" class="menu-item">
           <div class="menu-icon">📍</div>
           <span>Tracking</span>
+        </a>
+
+        <a href="{% url 'portal:stock' %}" class="menu-item">
+          <div class="menu-icon">📦</div>
+          <span>Inventory</span>
         </a>
       </div>
     </div>

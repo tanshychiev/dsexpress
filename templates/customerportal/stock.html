@@ -1,0 +1,716 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+  >
+  <title>My Stock - DS Express</title>
+
+  <style>
+    *{
+      box-sizing:border-box;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    html, body{
+      margin:0;
+      width:100%;
+      min-height:100%;
+      font-family:Arial, sans-serif;
+      color:#1f2937;
+      background:
+        radial-gradient(circle at 7% 12%, rgba(35,184,119,.08), transparent 28%),
+        radial-gradient(circle at 94% 33%, rgba(22,154,101,.08), transparent 25%),
+        linear-gradient(180deg,#f6fbf8 0%, #edf7f2 48%, #f8fbf9 100%);
+      overflow-x:hidden;
+    }
+
+    body{
+      padding-bottom:96px;
+    }
+
+    .phone-wrap{
+      width:min(430px, 100%);
+      margin:0 auto;
+      min-height:100vh;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .phone-wrap::before,
+    .phone-wrap::after{
+      content:"";
+      position:absolute;
+      border-radius:50%;
+      background:rgba(34,178,118,.08);
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .phone-wrap::before{
+      width:150px;
+      height:150px;
+      right:-76px;
+      top:218px;
+    }
+
+    .phone-wrap::after{
+      width:122px;
+      height:122px;
+      left:-58px;
+      bottom:260px;
+    }
+
+    .top-header,
+    .content{
+      position:relative;
+      z-index:1;
+    }
+
+    .top-header{
+      background:linear-gradient(135deg,#179b67,#22b276);
+      color:#fff;
+      padding:14px 16px 26px;
+      border-bottom-left-radius:42px;
+      box-shadow:0 10px 28px rgba(20,134,88,.22);
+    }
+
+    .status-bar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size:14px;
+      font-weight:900;
+      margin-bottom:16px;
+      opacity:.96;
+    }
+
+    .top-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .left-top{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .top-btn{
+      width:34px;
+      height:34px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
+      color:#fff;
+      text-decoration:none;
+      font-size:20px;
+      line-height:1;
+      background:rgba(255,255,255,.12);
+      flex:0 0 auto;
+    }
+
+    .logo{
+      width:50px;
+      height:50px;
+      border-radius:50%;
+      background:#fff;
+      padding:4px;
+      object-fit:cover;
+      box-shadow:0 5px 16px rgba(0,0,0,.14);
+      flex:0 0 auto;
+    }
+
+    .page-title{
+      font-size:21px;
+      font-weight:950;
+      letter-spacing:.1px;
+      white-space:nowrap;
+    }
+
+    .content{
+      padding:16px 14px 22px;
+    }
+
+    .summary-card,
+    .search-card,
+    .stock-card,
+    .empty-box{
+      background:rgba(255,255,255,.96);
+      border:1px solid rgba(15,122,69,.08);
+      border-radius:24px;
+      box-shadow:0 12px 26px rgba(15,23,42,.07);
+    }
+
+    .summary-card{
+      padding:14px;
+      margin-top:-8px;
+      margin-bottom:12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      overflow:hidden;
+      position:relative;
+    }
+
+    .summary-card::after{
+      content:"";
+      position:absolute;
+      right:-32px;
+      top:-34px;
+      width:106px;
+      height:106px;
+      border-radius:50%;
+      background:rgba(34,178,118,.08);
+      pointer-events:none;
+    }
+
+    .summary-left{
+      display:flex;
+      align-items:center;
+      gap:11px;
+      min-width:0;
+      position:relative;
+      z-index:1;
+    }
+
+    .stock-icon{
+      width:44px;
+      height:44px;
+      border-radius:16px;
+      display:grid;
+      place-items:center;
+      background:linear-gradient(135deg,#149766,#1fb777);
+      color:#fff;
+      font-size:20px;
+      box-shadow:0 10px 22px rgba(20,134,88,.20);
+      flex:0 0 auto;
+    }
+
+    .summary-title{
+      margin:0;
+      font-size:20px;
+      line-height:1.1;
+      color:#1f2937;
+      font-weight:950;
+      letter-spacing:-.03em;
+    }
+
+    .summary-sub{
+      margin:4px 0 0;
+      color:#64748b;
+      font-size:11px;
+      line-height:1.25;
+      font-weight:800;
+      max-width:210px;
+    }
+
+    .count-pill{
+      min-width:64px;
+      height:46px;
+      padding:7px 10px;
+      border-radius:17px;
+      background:#eaf8f0;
+      border:1px solid #d6eee1;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      color:#0f7a45;
+      flex:0 0 auto;
+      position:relative;
+      z-index:1;
+    }
+
+    .count-pill strong{
+      font-size:18px;
+      line-height:1;
+      font-weight:950;
+      color:#0f5132;
+    }
+
+    .count-pill span{
+      margin-top:3px;
+      font-size:8px;
+      font-weight:950;
+      color:#64748b;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    .search-card{
+      padding:9px;
+      margin-bottom:12px;
+      display:flex;
+      align-items:center;
+      gap:9px;
+    }
+
+    .search-icon{
+      width:36px;
+      height:36px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
+      background:#eaf8f0;
+      color:#169864;
+      font-size:15px;
+      flex:0 0 auto;
+    }
+
+    .search-input{
+      width:100%;
+      height:38px;
+      border:0;
+      outline:0;
+      background:transparent;
+      color:#0f172a;
+      font-size:13px;
+      font-weight:850;
+    }
+
+    .search-input::placeholder{
+      color:#94a3b8;
+      font-weight:800;
+    }
+
+    .stock-list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .stock-card{
+      position:relative;
+      overflow:hidden;
+      display:grid;
+      grid-template-columns:88px minmax(0,1fr);
+      min-height:124px;
+      border-radius:22px;
+      background:linear-gradient(135deg, rgba(255,255,255,.98), rgba(247,255,251,.95));
+    }
+
+    .stock-card::before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:16px;
+      bottom:16px;
+      width:4px;
+      border-radius:999px;
+      background:linear-gradient(180deg,#19b879,#0f8f4c);
+      opacity:.75;
+    }
+
+    .stock-card::after{
+      content:"";
+      position:absolute;
+      right:-34px;
+      top:-34px;
+      width:76px;
+      height:76px;
+      border-radius:50%;
+      background:rgba(34,178,118,.08);
+      pointer-events:none;
+    }
+
+    .photo-box{
+      padding:10px 0 10px 10px;
+      position:relative;
+      z-index:1;
+    }
+
+    .stock-photo,
+    .no-photo{
+      width:78px;
+      height:104px;
+      border-radius:17px;
+      display:block;
+      object-fit:cover;
+      background:#eaf8f0;
+      border:1px solid rgba(15,122,69,.08);
+      box-shadow:0 8px 18px rgba(15,23,42,.08);
+    }
+
+    .no-photo{
+      display:grid;
+      place-items:center;
+      color:#0f7a45;
+      font-size:10px;
+      font-weight:950;
+      text-align:center;
+      padding:6px;
+      background:linear-gradient(135deg,#eaf8f0,#f8fffb);
+      border:1px dashed rgba(15,122,69,.20);
+    }
+
+    .stock-body{
+      padding:10px 10px 9px;
+      min-width:0;
+      position:relative;
+      z-index:1;
+    }
+
+    .stock-top{
+      padding-right:42px;
+      margin-bottom:8px;
+    }
+
+    .stock-name{
+      margin:0;
+      color:#0f172a;
+      font-size:14px;
+      line-height:1.15;
+      font-weight:950;
+      display:-webkit-box;
+      -webkit-line-clamp:1;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      overflow-wrap:anywhere;
+    }
+
+    .stock-code{
+      margin-top:3px;
+      color:#64748b;
+      font-size:10px;
+      line-height:1.15;
+      font-weight:850;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .live-pill{
+      position:absolute;
+      top:10px;
+      right:10px;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:4px 7px;
+      border-radius:999px;
+      background:#eaf8f0;
+      color:#0f7a45;
+      font-size:9px;
+      line-height:1;
+      font-weight:950;
+      box-shadow:inset 0 0 0 1px rgba(15,122,69,.06);
+    }
+
+    .live-pill::before{
+      content:"";
+      width:5px;
+      height:5px;
+      border-radius:50%;
+      background:#16a34a;
+      box-shadow:0 0 0 3px rgba(22,163,74,.12);
+    }
+
+    .stock-numbers{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:5px;
+    }
+
+    .stock-number{
+      border-radius:13px;
+      padding:7px 3px 6px;
+      background:linear-gradient(180deg,#f7fffb,#eaf8f0);
+      border:1px solid rgba(15,122,69,.10);
+      text-align:center;
+      min-width:0;
+    }
+
+    .stock-number span{
+      display:block;
+      color:#64748b;
+      font-size:7px;
+      line-height:1.1;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.01em;
+      white-space:nowrap;
+    }
+
+    .stock-number strong{
+      display:block;
+      margin-top:3px;
+      color:#0f5132;
+      font-size:16px;
+      line-height:1;
+      font-weight:950;
+    }
+
+    .stock-number.reserved strong{
+      color:#92400e;
+    }
+
+    .stock-number.available strong{
+      color:#0f7a45;
+    }
+
+    .empty-box{
+      padding:26px 16px;
+      text-align:center;
+      color:#64748b;
+      font-weight:850;
+    }
+
+    .empty-icon{
+      width:58px;
+      height:58px;
+      border-radius:20px;
+      display:grid;
+      place-items:center;
+      margin:0 auto 11px;
+      background:#eaf8f0;
+      font-size:26px;
+    }
+
+    .empty-box strong{
+      display:block;
+      color:#1f2937;
+      font-size:17px;
+      font-weight:950;
+      margin-bottom:6px;
+    }
+
+    .bottom-nav{
+      position:fixed;
+      left:50%;
+      bottom:12px;
+      transform:translateX(-50%);
+      width:min(390px, calc(100% - 24px));
+      background:rgba(255,255,255,.96);
+      border-radius:24px;
+      box-shadow:0 14px 30px rgba(0,0,0,0.13);
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      padding:9px 6px;
+      z-index:500;
+      backdrop-filter:blur(12px);
+      border:1px solid rgba(15,122,69,.08);
+    }
+
+    .nav-item{
+      text-decoration:none;
+      text-align:center;
+      color:#7a7f87;
+      font-size:11px;
+      font-weight:900;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      border-radius:18px;
+      min-height:42px;
+    }
+
+    .nav-item.active{
+      color:#169864;
+      background:#eaf8f0;
+    }
+
+    .nav-icon{
+      font-size:19px;
+      line-height:1;
+    }
+
+    @media (max-width:360px){
+      .content{
+        padding-left:11px;
+        padding-right:11px;
+      }
+
+      .summary-card{
+        padding:12px;
+      }
+
+      .stock-icon{
+        width:40px;
+        height:40px;
+        border-radius:15px;
+      }
+
+      .summary-title{
+        font-size:18px;
+      }
+
+      .summary-sub{
+        font-size:10px;
+        max-width:170px;
+      }
+
+      .count-pill{
+        min-width:58px;
+        height:42px;
+      }
+
+      .stock-card{
+        grid-template-columns:82px minmax(0,1fr);
+        min-height:118px;
+      }
+
+      .stock-photo,
+      .no-photo{
+        width:72px;
+        height:98px;
+        border-radius:16px;
+      }
+
+      .stock-body{
+        padding:9px 9px 8px;
+      }
+
+      .stock-number strong{
+        font-size:15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-wrap">
+    <div class="top-header">
+      <div class="status-bar">
+        <div>08:36</div>
+        <div>📶 4G 🔋</div>
+      </div>
+
+      <div class="top-row">
+        <div class="left-top">
+          <a href="/portal/dashboard/" class="top-btn" aria-label="Back">‹</a>
+          <img src="{% static 'img/ds-logo.png' %}" alt="DS Express" class="logo">
+          <div class="page-title">My Stock</div>
+        </div>
+
+        <a href="#" class="top-btn" aria-label="Notifications">🔔</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <section class="summary-card">
+        <div class="summary-left">
+          <div class="stock-icon">📦</div>
+          <div>
+            <h1 class="summary-title">Warehouse Stock</h1>
+            <p class="summary-sub">Current DS Express warehouse stock only.</p>
+          </div>
+        </div>
+
+        <div class="count-pill">
+          <strong>{{ stock_rows|length }}</strong>
+          <span>Items</span>
+        </div>
+      </section>
+
+      <div class="search-card">
+        <div class="search-icon">🔎</div>
+        <input
+          id="stockSearch"
+          class="search-input"
+          type="search"
+          placeholder="Search product or SKU"
+          autocomplete="off"
+        >
+      </div>
+
+      <section class="stock-list" id="stockGrid">
+        {% for row in stock_rows %}
+          <article
+            class="stock-card"
+            data-search="{{ row.name|default:'' }} {{ row.sku|default:'' }} {{ row.product_type|default:'' }} {{ row.location|default:'' }}"
+          >
+            <div class="photo-box">
+              {% if row.photo_url %}
+                <img class="stock-photo" src="{{ row.photo_url }}" alt="{{ row.name }}">
+              {% else %}
+                <div class="no-photo">NO PHOTO</div>
+              {% endif %}
+            </div>
+
+            <div class="stock-body">
+              <div class="live-pill">Live</div>
+
+              <div class="stock-top">
+                <h2 class="stock-name">{{ row.name|default:"Unnamed product" }}</h2>
+                <div class="stock-code">{{ row.sku|default:"No SKU" }}</div>
+              </div>
+
+              <div class="stock-numbers">
+                <div class="stock-number">
+                  <span>Current</span>
+                  <strong>{{ row.current_qty|default:0 }}</strong>
+                </div>
+
+                <div class="stock-number reserved">
+                  <span>Reserved</span>
+                  <strong>{{ row.reserved_qty|default:0 }}</strong>
+                </div>
+
+                <div class="stock-number available">
+                  <span>Available</span>
+                  <strong>{{ row.available_qty|default:0 }}</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+        {% empty %}
+          <div class="empty-box">
+            <div class="empty-icon">📦</div>
+            <strong>No stock product yet</strong>
+            <div>Your current warehouse stock will show here after products are added.</div>
+          </div>
+        {% endfor %}
+      </section>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/portal/dashboard/" class="nav-item">
+      <div class="nav-icon">🏠</div>
+      <div>Home</div>
+    </a>
+
+    <a href="/portal/orders/" class="nav-item">
+      <div class="nav-icon">📦</div>
+      <div>Orders</div>
+    </a>
+
+    <a href="/portal/report/" class="nav-item">
+      <div class="nav-icon">📊</div>
+      <div>Report</div>
+    </a>
+
+    <a href="/portal/stock/" class="nav-item active">
+      <div class="nav-icon">📦</div>
+      <div>Stock</div>
+    </a>
+  </nav>
+
+  <script>
+    (function () {
+      const input = document.getElementById("stockSearch");
+      const cards = Array.from(document.querySelectorAll(".stock-card"));
+
+      if (!input || !cards.length) return;
+
+      input.addEventListener("input", function () {
+        const q = (input.value || "").trim().toLowerCase();
+
+        cards.forEach(function (card) {
+          const text = (card.getAttribute("data-search") || "").toLowerCase();
+          card.style.display = !q || text.includes(q) ? "" : "none";
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

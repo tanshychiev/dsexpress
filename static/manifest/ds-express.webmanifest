@@ -1,0 +1,20 @@
+{
+  "name": "DS Express",
+  "short_name": "DS Express",
+  "start_url": "/portal/dashboard/",
+  "display": "standalone",
+  "background_color": "#f8fffb",
+  "theme_color": "#18b978",
+  "icons": [
+    {
+      "src": "/static/img/ds-app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/img/ds-app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

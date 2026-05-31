@@ -1,13 +1,17 @@
 import json
 import calendar
+import os
 import requests
 
-from datetime import date
+from datetime import date, timedelta
+
 from django import forms
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.db import models
 from django.db.models import Sum
 from django.http import JsonResponse
@@ -62,33 +66,69 @@ def _safe_pct(part, total):
         return 0
 
 
+def _parse_tracking_date(value):
+    try:
+        return date.fromisoformat((value or "").strip())
+    except Exception:
+        return None
+
+
 def tracking(request):
     seller = get_user_seller(request.user)
 
     q = (request.GET.get("q") or "").strip()
     status_filter = (request.GET.get("status") or "ALL").strip().upper()
-    date_from = (request.GET.get("from") or "").strip()
-    date_to = (request.GET.get("to") or "").strip()
+    raw_date_from = (request.GET.get("from") or "").strip()
+    raw_date_to = (request.GET.get("to") or "").strip()
     has_searched = request.GET.get("search") == "1"
 
+    today = timezone.localdate()
+    tracking_max_date = today
+    tracking_min_date = today - timedelta(days=59)
+    tracking_limit_days = 60
+
     qs = Order.objects.none()
+
+    date_from_obj = _parse_tracking_date(raw_date_from)
+    date_to_obj = _parse_tracking_date(raw_date_to)
+
+    if has_searched:
+        if date_from_obj is None:
+            date_from_obj = tracking_min_date
+
+        if date_to_obj is None:
+            date_to_obj = tracking_max_date
+
+        if date_from_obj < tracking_min_date:
+            date_from_obj = tracking_min_date
+
+        if date_to_obj > tracking_max_date:
+            date_to_obj = tracking_max_date
+    else:
+        date_from_obj = date_from_obj or tracking_min_date
+        date_to_obj = date_to_obj or tracking_max_date
+
+    date_from = date_from_obj.isoformat() if date_from_obj else ""
+    date_to = date_to_obj.isoformat() if date_to_obj else ""
 
     if seller:
         qs = Order.objects.filter(seller=seller).order_by("-id")
 
     if has_searched and seller:
-        if date_from:
-            qs = qs.filter(created_at__date__gte=date_from)
-
-        if date_to:
-            qs = qs.filter(created_at__date__lte=date_to)
-
-        if q:
+        if date_from_obj and date_to_obj and date_from_obj > date_to_obj:
+            qs = Order.objects.none()
+        else:
             qs = qs.filter(
-                models.Q(tracking_no__icontains=q)
-                | models.Q(receiver_name__icontains=q)
-                | models.Q(receiver_phone__icontains=q)
+                created_at__date__gte=date_from_obj,
+                created_at__date__lte=date_to_obj,
             )
+
+            if q:
+                qs = qs.filter(
+                    models.Q(tracking_no__icontains=q)
+                    | models.Q(receiver_name__icontains=q)
+                    | models.Q(receiver_phone__icontains=q)
+                )
 
     orders = list(qs) if has_searched and seller else []
 
@@ -128,6 +168,9 @@ def tracking(request):
         "total_done_pct": _safe_pct(total_delivered, total_sent),
         "total_processing_pct": _safe_pct(total_processing + total_create, total_sent),
         "total_return_pct": _safe_pct(total_return, total_sent),
+        "tracking_min_date": tracking_min_date.isoformat(),
+        "tracking_max_date": tracking_max_date.isoformat(),
+        "tracking_limit_days": tracking_limit_days,
     }
 
     return render(request, "customerportal/tracking.html", context)
@@ -172,6 +215,60 @@ def get_user_seller(user):
 
 def _get_logged_in_seller(request):
     return get_user_seller(request.user)
+
+
+# =========================================================
+# SELLER PROFILE PHOTO HELPERS
+# =========================================================
+
+PROFILE_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp"]
+PROFILE_IMAGE_MAX_SIZE = 3 * 1024 * 1024
+
+
+def _seller_profile_photo_path(seller, ext):
+    return f"seller_portal/profile/seller_{seller.id}{ext.lower()}"
+
+
+def _get_seller_profile_photo_url(seller):
+    if not seller:
+        return ""
+
+    for ext in PROFILE_IMAGE_EXTS:
+        path = _seller_profile_photo_path(seller, ext)
+
+        try:
+            if default_storage.exists(path):
+                return default_storage.url(path)
+        except Exception:
+            pass
+
+    return ""
+
+
+def _save_seller_profile_photo(seller, upload_file):
+    if not seller or not upload_file:
+        return ""
+
+    ext = os.path.splitext(upload_file.name or "")[1].lower()
+
+    if ext not in PROFILE_IMAGE_EXTS:
+        raise forms.ValidationError("Please upload JPG, PNG, or WEBP image only.")
+
+    if upload_file.size > PROFILE_IMAGE_MAX_SIZE:
+        raise forms.ValidationError("Profile photo must be under 3MB.")
+
+    for old_ext in PROFILE_IMAGE_EXTS:
+        old_path = _seller_profile_photo_path(seller, old_ext)
+
+        try:
+            if default_storage.exists(old_path):
+                default_storage.delete(old_path)
+        except Exception:
+            pass
+
+    new_path = _seller_profile_photo_path(seller, ext)
+    saved_path = default_storage.save(new_path, ContentFile(upload_file.read()))
+    return default_storage.url(saved_path)
 
 
 # =========================================================
@@ -680,7 +777,6 @@ def dashboard(request):
     context = {
         "seller": seller,
 
-        # Month Account Summary
         "selected_month": selected_month,
         "selected_month_label": month_start.strftime("%B %Y"),
         "month_balance": month_balance,
@@ -688,13 +784,11 @@ def dashboard(request):
         "month_pending_parcels": month_pending_parcels,
         "month_done_percent": month_done_percent,
 
-        # Today Summary
         "today_label": today.strftime("%d %B %Y"),
         "today_cod": today_done_qs.aggregate(total=Sum("price"))["total"] or 0,
         "today_sent": today_sent_qs.count(),
         "today_done": today_done_qs.count(),
 
-        # Existing dashboard totals
         "total_parcels": qs.count(),
         "pending_parcels": qs.filter(status__in=pending_statuses).count(),
         "out_for_delivery": qs.filter(status=Order.STATUS_OUT_FOR_DELIVERY).count(),
@@ -800,7 +894,7 @@ def cod_report(request):
 
 
 # =========================================================
-# CHANGE PASSWORD
+# PROFILE SETTING / CHANGE PASSWORD
 # =========================================================
 
 @login_required
@@ -811,15 +905,44 @@ def change_password(request):
         logout(request)
         return redirect("portal:login")
 
-    if request.method == "POST":
-        form = PasswordChangeForm(request.user, request.POST)
+    success_message = ""
+    photo_error = ""
 
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)
-            return redirect("portal:dashboard")
+    if request.method == "POST":
+        action = (request.POST.get("action") or "password").strip()
+
+        if action == "photo":
+            upload_file = request.FILES.get("profile_photo")
+            form = PasswordChangeForm(request.user)
+
+            if not upload_file:
+                photo_error = "Please choose a photo first."
+            else:
+                try:
+                    _save_seller_profile_photo(seller, upload_file)
+                    return redirect("portal:change_password")
+                except forms.ValidationError as e:
+                    photo_error = e.messages[0] if e.messages else "Invalid photo."
+                except Exception:
+                    photo_error = "Cannot upload photo. Please try again."
+
+        else:
+            form = PasswordChangeForm(request.user, request.POST)
+
+            if form.is_valid():
+                user = form.save()
+                update_session_auth_hash(request, user)
+                success_message = "Password updated successfully."
+                form = PasswordChangeForm(request.user)
     else:
         form = PasswordChangeForm(request.user)
+
+    shop_name = (
+        getattr(seller, "name", "")
+        or getattr(seller, "shop_name", "")
+        or getattr(seller, "seller_name", "")
+        or "Seller"
+    )
 
     return render(
         request,
@@ -827,6 +950,11 @@ def change_password(request):
         {
             "seller": seller,
             "form": form,
+            "profile_photo_url": _get_seller_profile_photo_url(seller),
+            "login_username": request.user.username,
+            "shop_name": shop_name,
+            "success_message": success_message,
+            "photo_error": photo_error,
         },
     )
 

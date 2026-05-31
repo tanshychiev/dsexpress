@@ -3,47 +3,88 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+  >
   <title>Tracking</title>
-
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
   <style>
     *{
       box-sizing:border-box;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    html, body{
+      margin:0;
+      width:100%;
+      min-height:100%;
+      font-family:Arial, sans-serif;
+      color:#1f2937;
+      background:
+        radial-gradient(circle at 6% 12%, rgba(35,184,119,.08), transparent 28%),
+        radial-gradient(circle at 96% 32%, rgba(22,154,101,.08), transparent 24%),
+        linear-gradient(180deg,#f6fbf8 0%, #eef7f2 48%, #f8fbf9 100%);
+      overflow-x:hidden;
     }
 
     body{
-      margin:0;
-      font-family:Arial,sans-serif;
-      background:#f3f4f6;
-      color:#334155;
-      padding-bottom:24px;
+      padding-bottom:96px;
     }
 
     .phone-wrap{
-      max-width:480px;
+      width:min(430px, 100%);
       margin:0 auto;
       min-height:100vh;
-      background:#f3f4f6;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .phone-wrap::before,
+    .phone-wrap::after{
+      content:"";
+      position:absolute;
+      border-radius:50%;
+      background:rgba(34,178,118,.08);
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .phone-wrap::before{
+      width:150px;
+      height:150px;
+      right:-72px;
+      top:215px;
+    }
+
+    .phone-wrap::after{
+      width:115px;
+      height:115px;
+      left:-52px;
+      bottom:290px;
+    }
+
+    .top-header,
+    .content{
+      position:relative;
+      z-index:1;
     }
 
     .top-header{
       background:linear-gradient(135deg,#179b67,#22b276);
       color:#fff;
-      padding:18px 18px 28px;
+      padding:14px 16px 26px;
       border-bottom-left-radius:42px;
-      box-shadow:0 8px 24px rgba(20,134,88,.20);
+      box-shadow:0 10px 28px rgba(20,134,88,.22);
     }
 
     .status-bar{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      font-size:15px;
-      font-weight:800;
-      margin-bottom:18px;
+      font-size:14px;
+      font-weight:900;
+      margin-bottom:16px;
       opacity:.96;
     }
 
@@ -51,45 +92,85 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
+      gap:10px;
     }
 
     .left-top{
       display:flex;
       align-items:center;
-      gap:14px;
+      gap:12px;
+      min-width:0;
     }
 
     .top-btn{
+      width:34px;
+      height:34px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
       color:#fff;
       text-decoration:none;
-      font-size:22px;
+      font-size:20px;
       line-height:1;
+      background:rgba(255,255,255,.12);
+      flex:0 0 auto;
     }
 
     .logo{
-      width:54px;
-      height:54px;
+      width:50px;
+      height:50px;
       border-radius:50%;
       background:#fff;
       padding:4px;
       object-fit:cover;
-      box-shadow:0 4px 14px rgba(0,0,0,.12);
+      box-shadow:0 5px 16px rgba(0,0,0,.14);
+      flex:0 0 auto;
     }
 
     .page-title{
       font-size:21px;
-      font-weight:900;
-      letter-spacing:.2px;
+      font-weight:950;
+      letter-spacing:.1px;
+      white-space:nowrap;
     }
 
     .content{
-      padding:16px;
+      padding:14px 14px 22px;
+    }
+
+    .search-card,
+    .result-card,
+    .empty-box{
+      background:rgba(255,255,255,.96);
+      border:1px solid rgba(15,122,69,.08);
+      border-radius:24px;
+      box-shadow:0 12px 26px rgba(15,23,42,.07);
+    }
+
+    .search-card{
+      padding:14px;
+      margin-top:-16px;
+      margin-bottom:14px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .search-card::before{
+      content:"";
+      position:absolute;
+      right:-36px;
+      top:-42px;
+      width:115px;
+      height:115px;
+      border-radius:50%;
+      background:rgba(34,178,118,.08);
+      pointer-events:none;
     }
 
     .search-wrap{
       position:relative;
-      margin-top:-18px;
-      margin-bottom:16px;
+      z-index:1;
+      margin-bottom:12px;
     }
 
     .search-input{
@@ -97,272 +178,473 @@
       height:48px;
       border:none;
       outline:none;
-      border-radius:999px;
-      background:#fff;
-      box-shadow:0 10px 24px rgba(15,23,42,.08);
-      padding:0 48px 0 18px;
-      font-size:14px;
-      color:#334155;
+      border-radius:18px;
+      background:#f8fbf9;
+      border:1px solid #dceae4;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.62);
+      padding:0 48px 0 14px;
+      font-size:13px;
+      color:#1f2937;
+      font-weight:800;
+    }
+
+    .search-input::placeholder{
+      color:#94a3b8;
+      font-weight:800;
     }
 
     .search-icon{
       position:absolute;
-      right:18px;
+      right:12px;
       top:50%;
+      width:32px;
+      height:32px;
       transform:translateY(-50%);
-      font-size:20px;
-      color:#94a3b8;
-      pointer-events:none;
-    }
-
-    .tabs{
+      border-radius:13px;
       display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:10px;
-      margin-bottom:16px;
-    }
-
-    .tab{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-decoration:none;
-      height:44px;
-      border-radius:999px;
-      font-size:13px;
-      font-weight:800;
-      color:#555;
-      background:#fff;
-      border:2px solid #d9d9d9;
-    }
-
-    .tab.active{
-      background:#1c9b68;
-      color:#fff;
-      border-color:#1c9b68;
-      box-shadow:0 8px 18px rgba(20,134,88,.16);
-    }
-
-    .section-title{
-      font-size:18px;
-      font-weight:900;
-      margin:10px 0 12px;
-      color:#475569;
-    }
-
-    .date-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
-      margin-bottom:16px;
-    }
-
-    .date-card{
-      background:#dff0e8;
-      border-radius:22px;
-      padding:16px;
-      box-shadow:0 8px 18px rgba(0,0,0,.08);
-    }
-
-    .date-card label{
-      display:block;
-      font-size:15px;
-      font-weight:900;
-      color:#5b5b5b;
-      margin-bottom:10px;
-    }
-
-    .date-input-wrap{
-      position:relative;
-    }
-
-    .date-input{
-      width:100%;
-      height:40px;
-      border:none;
-      outline:none;
-      border-radius:999px;
-      background:#fff;
-      padding:0 40px 0 14px;
-      font-size:14px;
-      color:#334155;
-    }
-
-    .date-icon{
-      position:absolute;
-      right:14px;
-      top:50%;
-      transform:translateY(-50%);
-      color:#94a3b8;
+      place-items:center;
+      background:#eaf8f0;
+      color:#169864;
       font-size:16px;
       pointer-events:none;
     }
 
-    .search-btn{
-      width:100%;
-      height:46px;
-      border:none;
-      outline:none;
-      border-radius:999px;
+    .tabs{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:8px;
+      margin-bottom:13px;
+    }
+
+    .tab{
+      min-height:39px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+      border-radius:15px;
+      font-size:12px;
+      font-weight:950;
+      color:#475569;
+      background:#fff;
+      border:1px solid #dfeae5;
+      box-shadow:0 5px 12px rgba(15,23,42,.04);
+      white-space:nowrap;
+    }
+
+    .tab.active{
       background:linear-gradient(135deg,#179b67,#22b276);
       color:#fff;
-      font-size:15px;
-      font-weight:900;
+      border-color:#179b67;
+      box-shadow:0 8px 16px rgba(20,134,88,.18);
+    }
+
+    .filter-head{
+      position:relative;
+      z-index:1;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:11px;
+    }
+
+    .filter-title{
+      margin:0;
+      color:#1f2937;
+      font-size:17px;
+      font-weight:950;
+      letter-spacing:-.01em;
+      line-height:1.1;
+    }
+
+    .filter-sub{
+      margin:4px 0 0;
+      color:#64748b;
+      font-size:11px;
+      font-weight:800;
+      line-height:1.35;
+    }
+
+    .limit-badge{
+      flex:0 0 auto;
+      min-height:36px;
+      padding:0 10px;
+      border-radius:15px;
+      background:#eaf8f0;
+      border:1px solid #d6eee1;
+      color:#11885a;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      font-weight:950;
+      letter-spacing:.03em;
+      white-space:nowrap;
+    }
+
+    .quick-row{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:7px;
+      margin-bottom:10px;
+    }
+
+    .quick-btn{
+      min-height:36px;
+      border:none;
+      border-radius:14px;
+      background:#fff;
+      border:1px solid #dfeae5;
+      color:#475569;
+      font-size:11px;
+      font-weight:950;
       cursor:pointer;
-      margin-bottom:18px;
-      box-shadow:0 10px 20px rgba(20,134,88,.16);
+      box-shadow:0 5px 12px rgba(15,23,42,.04);
+      padding:0 4px;
+    }
+
+    .quick-btn:active{
+      transform:scale(.98);
+    }
+
+    .quick-btn.active,
+    .quick-btn:hover{
+      background:linear-gradient(135deg,#179b67,#22b276);
+      border-color:#179b67;
+      color:#fff;
+      box-shadow:0 8px 16px rgba(20,134,88,.18);
+    }
+
+    .date-grid{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:9px;
+      margin-bottom:12px;
+    }
+
+    .field-box label{
+      display:block;
+      font-size:11px;
+      font-weight:950;
+      color:#64748b;
+      margin:0 0 6px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+
+    .date-input{
+      width:100%;
+      height:43px;
+      border:none;
+      outline:none;
+      border-radius:15px;
+      background:#fff;
+      padding:0 10px;
+      font-size:13px;
+      color:#1f2937;
+      font-weight:900;
+      border:1px solid #dceae4;
+      cursor:pointer;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.62);
+    }
+
+    .date-input::placeholder{
+      color:#94a3b8;
+      font-weight:800;
+    }
+
+    .action-row{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:9px;
+      align-items:center;
+    }
+
+    .hint-pill{
+      min-height:42px;
+      border-radius:16px;
+      background:#f8fbf9;
+      border:1px solid #e5efea;
+      color:#64748b;
+      font-size:11px;
+      font-weight:850;
+      display:flex;
+      align-items:center;
+      padding:0 11px;
+      line-height:1.3;
+    }
+
+    .search-btn{
+      min-width:104px;
+      height:42px;
+      border:none;
+      outline:none;
+      border-radius:16px;
+      background:linear-gradient(135deg,#149766,#1fb777);
+      color:#fff;
+      font-size:13px;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(20,134,88,.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:7px;
+      padding:0 13px;
+    }
+
+    .search-btn:active{
+      transform:scale(.99);
+    }
+
+    .summary-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:8px;
+      margin:0 0 14px;
+    }
+
+    .summary-mini{
+      background:rgba(255,255,255,.96);
+      border:1px solid rgba(15,122,69,.08);
+      border-radius:17px;
+      min-height:62px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 8px 18px rgba(15,23,42,.06);
+      text-align:center;
+      padding:8px 4px;
+    }
+
+    .summary-mini span{
+      font-size:9px;
+      color:#64748b;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      margin-bottom:5px;
+    }
+
+    .summary-mini strong{
+      font-size:17px;
+      color:#1f2937;
+      font-weight:950;
+      line-height:1;
     }
 
     .track-list{
       display:flex;
       flex-direction:column;
-      gap:18px;
-    }
-
-    .track-card{
-      border-radius:24px;
-      overflow:hidden;
-      background:#dff0e8;
-      box-shadow:0 10px 20px rgba(15,23,42,.08);
-    }
-
-    .track-top{
-      background:#f1f1f1;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:14px 16px;
-      font-size:15px;
-      font-weight:900;
-      color:#555;
-    }
-
-    .track-main{
-      background:#fff;
-      margin:0 0 0 0;
-      padding:16px;
-      border-bottom-left-radius:24px;
-      border-bottom-right-radius:24px;
-      border:1px solid #e5e7eb;
-      border-top:none;
-    }
-
-    .main-row{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
       gap:12px;
     }
 
-    .person-col{
-      flex:1;
-      min-width:0;
+    .result-card{
+      overflow:hidden;
+      position:relative;
+    }
+
+    .result-card::before{
+      content:"";
+      position:absolute;
+      right:-34px;
+      top:-34px;
+      width:100px;
+      height:100px;
+      border-radius:50%;
+      background:rgba(34,178,118,.08);
+      pointer-events:none;
+    }
+
+    .result-head{
+      position:relative;
+      z-index:1;
+      padding:13px 14px 11px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      border-bottom:1px solid #eef3f0;
+    }
+
+    .tracking-code{
+      font-size:15px;
+      font-weight:950;
+      color:#1f2937;
+      line-height:1.15;
+      word-break:break-word;
+    }
+
+    .sent-date{
+      margin-top:5px;
+      color:#64748b;
+      font-size:11px;
+      font-weight:850;
+    }
+
+    .status-badge{
+      flex:0 0 auto;
+      min-height:32px;
+      padding:0 10px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:10px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      white-space:nowrap;
+    }
+
+    .badge-create{ background:#eef2f7; color:#64748b; }
+    .badge-processing{ background:#fff4cc; color:#b48300; }
+    .badge-delivered{ background:#e6f8ee; color:#169864; }
+    .badge-return{ background:#ffe8e8; color:#d45858; }
+
+    .result-body{
+      position:relative;
+      z-index:1;
+      padding:13px 14px 14px;
+    }
+
+    .main-row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:12px;
+      align-items:start;
     }
 
     .info-line{
       display:flex;
-      align-items:center;
-      gap:10px;
-      margin-bottom:10px;
+      align-items:flex-start;
+      gap:9px;
+      margin-bottom:9px;
+      min-width:0;
     }
 
     .info-icon{
-      width:18px;
-      text-align:center;
-      color:#19a16c;
-      font-size:18px;
-      flex:0 0 18px;
+      width:28px;
+      height:28px;
+      border-radius:12px;
+      background:#eaf8f0;
+      color:#169864;
+      display:grid;
+      place-items:center;
+      font-size:13px;
+      flex:0 0 28px;
     }
 
     .info-text{
-      font-size:15px;
+      min-width:0;
       color:#475569;
+      font-size:13px;
+      font-weight:850;
       word-break:break-word;
+      line-height:1.35;
+      padding-top:5px;
     }
 
     .info-name{
+      color:#1f2937;
+      font-size:14px;
+      font-weight:950;
+    }
+
+    .cod-box{
+      min-width:95px;
+      border-radius:17px;
+      background:linear-gradient(180deg,#eaf8f0 0%, #dff3e7 100%);
+      border:1px solid #d6eee1;
+      text-align:center;
+      padding:11px 8px;
+    }
+
+    .cod-box span{
+      display:block;
+      color:#64748b;
+      font-size:10px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      margin-bottom:5px;
+    }
+
+    .cod-box strong{
+      display:block;
+      color:#1f2937;
       font-size:16px;
-      font-weight:900;
-      color:#475569;
+      font-weight:950;
+      line-height:1;
     }
-
-    .right-col{
-      min-width:110px;
-      text-align:right;
-    }
-
-    .cod-text{
-      font-size:15px;
-      font-weight:900;
-      color:#555;
-      margin-bottom:10px;
-    }
-
-    .status-text{
-      font-size:15px;
-      font-weight:900;
-    }
-
-    .status-create{ color:#64748b; }
-    .status-processing{ color:#d5a500; }
-    .status-delivered{ color:#169b67; }
-    .status-return{ color:#d66a6a; }
 
     .timeline-wrap{
-      padding:18px 14px 16px;
-      background:#dff0e8;
-    }
-
-    .timeline-times{
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:8px;
-      font-size:11px;
-      color:#5f6b67;
-      font-weight:700;
-      text-align:center;
-      margin-bottom:10px;
+      margin-top:10px;
+      padding:13px 9px 10px;
+      border-radius:18px;
+      background:#f8fbf9;
+      border:1px solid #e5efea;
     }
 
     .timeline-line{
       position:relative;
-      height:34px;
-      margin-bottom:8px;
+      height:30px;
+      margin-bottom:6px;
     }
 
     .timeline-line::before{
       content:"";
       position:absolute;
-      left:8%;
-      right:8%;
-      top:16px;
+      left:10%;
+      right:10%;
+      top:14px;
       height:4px;
-      background:#20a86f;
+      background:#dceae4;
       border-radius:999px;
+    }
+
+    .timeline-line::after{
+      content:"";
+      position:absolute;
+      left:10%;
+      top:14px;
+      height:4px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#179b67,#22b276);
+      width:var(--progress, 38%);
     }
 
     .timeline-points{
       position:relative;
+      z-index:2;
       display:grid;
       grid-template-columns:repeat(4,1fr);
-      gap:8px;
-      align-items:center;
       justify-items:center;
-      z-index:2;
+      align-items:center;
     }
 
     .point{
-      width:34px;
-      height:34px;
+      width:30px;
+      height:30px;
       border-radius:50%;
       background:#20a86f;
       color:#fff;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size:18px;
-      font-weight:900;
-      box-shadow:0 4px 10px rgba(0,0,0,.12);
+      font-size:15px;
+      font-weight:950;
+      box-shadow:0 4px 10px rgba(0,0,0,.10);
     }
 
     .point.inactive{
@@ -373,34 +655,285 @@
     .timeline-labels{
       display:grid;
       grid-template-columns:repeat(4,1fr);
-      gap:8px;
-      font-size:12px;
-      color:#5f6b67;
-      font-weight:700;
+      gap:4px;
+      font-size:10px;
+      color:#64748b;
+      font-weight:900;
       text-align:center;
     }
 
     .empty-box{
-      background:#fff;
-      border-radius:20px;
-      padding:26px 16px;
+      padding:24px 16px;
       text-align:center;
-      color:#777;
-      font-weight:700;
-      margin-top:16px;
-      box-shadow:0 8px 18px rgba(0,0,0,.07);
+      color:#64748b;
+      font-weight:900;
+      margin-top:12px;
     }
 
-    @media (max-width: 520px){
-      .flatpickr-calendar{
-        position:fixed !important;
-        top:50% !important;
-        left:50% !important;
-        transform:translate(-50%, -50%) !important;
-        width:calc(100vw - 24px) !important;
-        max-width:430px !important;
-        border-radius:18px !important;
-        z-index:99999 !important;
+    .empty-icon{
+      width:52px;
+      height:52px;
+      border-radius:19px;
+      background:#eaf8f0;
+      margin:0 auto 10px;
+      display:grid;
+      place-items:center;
+      font-size:22px;
+    }
+
+    .bottom-nav{
+      position:fixed;
+      left:50%;
+      bottom:12px;
+      transform:translateX(-50%);
+      width:min(390px, calc(100% - 24px));
+      background:rgba(255,255,255,.96);
+      border-radius:24px;
+      box-shadow:0 14px 30px rgba(0,0,0,0.13);
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      padding:9px 6px;
+      z-index:500;
+      backdrop-filter:blur(12px);
+    }
+
+    .nav-item{
+      text-decoration:none;
+      text-align:center;
+      color:#7a7f87;
+      font-size:11px;
+      font-weight:900;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+    }
+
+    .nav-item.active{
+      color:#169864;
+    }
+
+    .nav-icon{
+      font-size:19px;
+      line-height:1;
+    }
+
+    .picker-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.30);
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      z-index:99999;
+      padding:0 12px 12px;
+    }
+
+    .picker-overlay.open{
+      display:flex;
+    }
+
+    .date-sheet{
+      width:min(390px, 100%);
+      background:#fff;
+      border-radius:26px;
+      box-shadow:0 24px 70px rgba(0,0,0,.25);
+      padding:14px 14px 16px;
+      animation:sheetUp .18s ease;
+    }
+
+    @keyframes sheetUp{
+      from{ opacity:0; transform:translateY(24px); }
+      to{ opacity:1; transform:translateY(0); }
+    }
+
+    .sheet-handle{
+      width:82px;
+      height:5px;
+      border-radius:999px;
+      background:#e5e7eb;
+      margin:0 auto 12px;
+    }
+
+    .picker-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+
+    .picker-nav{
+      width:42px;
+      height:42px;
+      border:none;
+      border-radius:16px;
+      background:#f4f7f5;
+      color:#1f2937;
+      font-size:24px;
+      font-weight:900;
+      cursor:pointer;
+    }
+
+    .picker-month{
+      flex:1;
+      text-align:center;
+      font-size:18px;
+      font-weight:950;
+      color:#1f2937;
+    }
+
+    .week-row,
+    .days-grid{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:5px;
+    }
+
+    .week-row{
+      margin-bottom:6px;
+    }
+
+    .week-row div{
+      text-align:center;
+      color:#64748b;
+      font-size:11px;
+      font-weight:950;
+    }
+
+    .day-btn{
+      border:none;
+      width:100%;
+      aspect-ratio:1/1;
+      border-radius:15px;
+      background:#f8faf9;
+      color:#1f2937;
+      font-size:14px;
+      font-weight:850;
+      cursor:pointer;
+    }
+
+    .day-btn.other{
+      color:#cbd5e1;
+      background:#fbfcfb;
+    }
+
+    .day-btn.selected{
+      background:linear-gradient(135deg,#179b67,#22b276);
+      color:#fff;
+      box-shadow:0 8px 18px rgba(20,134,88,.18);
+    }
+
+    .day-btn.today{
+      box-shadow:inset 0 0 0 2px #22b276;
+    }
+
+    .day-btn.disabled{
+      opacity:.28;
+      cursor:not-allowed;
+    }
+
+    .picker-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:8px;
+      margin-top:12px;
+    }
+
+    .sheet-action{
+      height:42px;
+      border:none;
+      border-radius:15px;
+      background:#f3f7f5;
+      color:#475569;
+      font-size:13px;
+      font-weight:950;
+      cursor:pointer;
+    }
+
+    .sheet-action.green{
+      background:#eaf8f0;
+      color:#169864;
+    }
+
+    .sheet-action.dark{
+      background:#169864;
+      color:#fff;
+    }
+
+    @media (max-width:420px){
+      .content{
+        padding-left:12px;
+        padding-right:12px;
+      }
+
+      .quick-btn{
+        font-size:10px;
+      }
+
+      .summary-grid{
+        gap:7px;
+      }
+
+      .summary-mini{
+        min-height:58px;
+      }
+
+      .summary-mini strong{
+        font-size:15px;
+      }
+
+      .main-row{
+        grid-template-columns:1fr;
+      }
+
+      .cod-box{
+        width:100%;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        text-align:left;
+        padding:10px 12px;
+      }
+
+      .cod-box span{
+        margin:0;
+      }
+    }
+
+    @media (max-width:360px){
+      .tabs{
+        gap:6px;
+      }
+
+      .tab{
+        font-size:10px;
+      }
+
+      .date-input{
+        font-size:12px;
+        padding:0 9px;
+      }
+
+      .quick-row{
+        gap:5px;
+      }
+
+      .quick-btn{
+        font-size:9px;
+      }
+
+      .hint-pill{
+        display:none;
+      }
+
+      .action-row{
+        grid-template-columns:1fr;
+      }
+
+      .search-btn{
+        width:100%;
       }
     }
   </style>
@@ -415,81 +948,145 @@
 
       <div class="top-row">
         <div class="left-top">
-          <a href="{% url 'portal:dashboard' %}" class="top-btn">←</a>
+          <a href="{% url 'portal:dashboard' %}" class="top-btn" aria-label="Back">‹</a>
           <img src="{% static 'img/ds-logo.png' %}" alt="DS Express" class="logo">
           <div class="page-title">Tracking</div>
         </div>
 
-        <a href="#" class="top-btn">🔔</a>
+        <a href="#" class="top-btn" aria-label="Notifications">🔔</a>
       </div>
     </div>
 
     <div class="content">
-      <form method="get">
+      <form method="get" class="search-card">
         <div class="search-wrap">
           <input
             type="text"
             class="search-input"
             name="q"
             value="{{ q|default:'' }}"
-            placeholder="Search by phone number, name, shipment ID"
+            placeholder="Phone, name, tracking ID"
           >
           <div class="search-icon">🔎</div>
         </div>
 
         <div class="tabs">
-          <a class="tab {% if status_filter == 'ALL' %}active{% endif %}" href="?from={{ date_from }}&to={{ date_to }}&status=ALL&search=1&q={{ q|default:'' }}">All</a>
-          <a class="tab {% if status_filter == 'PROCESSING' %}active{% endif %}" href="?from={{ date_from }}&to={{ date_to }}&status=PROCESSING&search=1&q={{ q|default:'' }}">Processing</a>
-          <a class="tab {% if status_filter == 'DELIVERED' %}active{% endif %}" href="?from={{ date_from }}&to={{ date_to }}&status=DELIVERED&search=1&q={{ q|default:'' }}">Delivered</a>
-          <a class="tab {% if status_filter == 'RETURN' %}active{% endif %}" href="?from={{ date_from }}&to={{ date_to }}&status=RETURN&search=1&q={{ q|default:'' }}">Return</a>
+          <a class="tab {% if status_filter == 'ALL' %}active{% endif %}" href="?from={{ date_from }}&to={{ date_to }}&status=ALL&search=1&q={{ q|default:''|urlencode }}">All</a>
+          <a class="tab {% if status_filter == 'PROCESSING' %}active{% endif %}" href="?from={{ date_from }}&to={{ date_to }}&status=PROCESSING&search=1&q={{ q|default:''|urlencode }}">Process</a>
+          <a class="tab {% if status_filter == 'DELIVERED' %}active{% endif %}" href="?from={{ date_from }}&to={{ date_to }}&status=DELIVERED&search=1&q={{ q|default:''|urlencode }}">Done</a>
+          <a class="tab {% if status_filter == 'RETURN' %}active{% endif %}" href="?from={{ date_from }}&to={{ date_to }}&status=RETURN&search=1&q={{ q|default:''|urlencode }}">Return</a>
         </div>
 
-        <div class="section-title">Sent Date</div>
-
-        <div class="date-grid">
-          <div class="date-card">
-            <label>From:</label>
-            <div class="date-input-wrap">
-              <input type="text" id="date_from" name="from" class="date-input" value="{{ date_from }}">
-              <div class="date-icon">🗓️</div>
-            </div>
+        <div class="filter-head">
+          <div>
+            <h1 class="filter-title">Sent Date</h1>
+            <p class="filter-sub">Tracking search is limited to recent parcels.</p>
           </div>
 
-          <div class="date-card">
-            <label>To:</label>
-            <div class="date-input-wrap">
-              <input type="text" id="date_to" name="to" class="date-input" value="{{ date_to }}">
-              <div class="date-icon">🗓️</div>
-            </div>
+          <div class="limit-badge">60 Days</div>
+        </div>
+
+        <div class="quick-row">
+          <button type="button" class="quick-btn" data-quick="today">Today</button>
+          <button type="button" class="quick-btn" data-quick="yesterday">Yesterday</button>
+          <button type="button" class="quick-btn" data-quick="last7">7 Days</button>
+          <button type="button" class="quick-btn" data-quick="all60">All</button>
+        </div>
+
+        <div class="date-grid">
+          <div class="field-box">
+            <label>From</label>
+            <input
+              type="text"
+              id="date_from"
+              name="from"
+              class="date-input js-date"
+              value="{{ date_from }}"
+              placeholder="From"
+              readonly
+            >
+          </div>
+
+          <div class="field-box">
+            <label>To</label>
+            <input
+              type="text"
+              id="date_to"
+              name="to"
+              class="date-input js-date"
+              value="{{ date_to }}"
+              placeholder="To"
+              readonly
+            >
           </div>
         </div>
 
         <input type="hidden" name="status" value="{{ status_filter }}">
         <input type="hidden" name="search" value="1">
 
-        <button type="submit" class="search-btn">Search</button>
+        <div class="action-row">
+          <div class="hint-pill">Only last 60 days are available.</div>
+          <button type="submit" class="search-btn">
+            <span>Search</span>
+            <span>→</span>
+          </button>
+        </div>
       </form>
 
       {% if has_searched %}
+        <div class="summary-grid">
+          <div class="summary-mini">
+            <span>Total</span>
+            <strong>{{ total_sent|default:0 }}</strong>
+          </div>
+          <div class="summary-mini">
+            <span>Done</span>
+            <strong>{{ total_done|default:0 }}</strong>
+          </div>
+          <div class="summary-mini">
+            <span>Process</span>
+            <strong>{{ total_processing|default:0 }}</strong>
+          </div>
+          <div class="summary-mini">
+            <span>Return</span>
+            <strong>{{ total_return|default:0 }}</strong>
+          </div>
+        </div>
+
         {% if orders %}
           <div class="track-list">
             {% for order in orders %}
-              <div class="track-card">
-                <div class="track-top">
+              <div class="result-card">
+                <div class="result-head">
                   <div>
-                    Date:
-                    {% if order.created_at %}
-                      {{ order.created_at|date:"d-m-Y" }}
+                    <div class="tracking-code">{{ order.tracking_no|default:order.id }}</div>
+                    <div class="sent-date">
+                      Sent:
+                      {% if order.created_at %}
+                        {{ order.created_at|date:"d M Y" }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="status-badge
+                    {% if order.main_status == 'CREATE' %}badge-create{% elif order.main_status == 'PROCESSING' %}badge-processing{% elif order.main_status == 'DELIVERED' %}badge-delivered{% else %}badge-return{% endif %}">
+                    {% if order.main_status == "CREATE" %}
+                      Create
+                    {% elif order.main_status == "PROCESSING" %}
+                      Processing
+                    {% elif order.main_status == "DELIVERED" %}
+                      Delivered
                     {% else %}
-                      -
+                      Return
                     {% endif %}
                   </div>
-                  <div>ID: {{ order.tracking_no|default:order.id }}</div>
                 </div>
 
-                <div class="track-main">
+                <div class="result-body">
                   <div class="main-row">
-                    <div class="person-col">
+                    <div>
                       <div class="info-line">
                         <div class="info-icon">👤</div>
                         <div class="info-text info-name">{{ order.receiver_name|default:"Customer" }}</div>
@@ -499,82 +1096,332 @@
                         <div class="info-icon">📞</div>
                         <div class="info-text">{{ order.receiver_phone|default:"-" }}</div>
                       </div>
-                    </div>
 
-                    <div class="right-col">
-                      <div class="cod-text">COD: ${{ order.price|default:0 }}</div>
-
-                      <div class="status-text
-                        {% if order.main_status == 'CREATE' %}status-create{% elif order.main_status == 'PROCESSING' %}status-processing{% elif order.main_status == 'DELIVERED' %}status-delivered{% else %}status-return{% endif %}">
-                        Status:
-                        {% if order.main_status == "CREATE" %}
-                          CREATE
-                        {% elif order.main_status == "PROCESSING" %}
-                          PROCESSING
-                        {% elif order.main_status == "DELIVERED" %}
-                          DELIVERED
-                        {% else %}
-                          RETURN
-                        {% endif %}
+                      <div class="info-line">
+                        <div class="info-icon">📍</div>
+                        <div class="info-text">{{ order.receiver_address|default:"No address" }}</div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {% if order.main_status == "DELIVERED" or order.main_status == "PROCESSING" %}
-                <div class="timeline-wrap">
-                  <div class="timeline-times">
-                    <div>{% if order.created_at %}{{ order.created_at|date:"D, g:iA" }}{% else %}-{% endif %}</div>
-                    <div>{% if order.created_at %}{{ order.created_at|date:"D, g:iA" }}{% else %}-{% endif %}</div>
-                    <div>{% if order.created_at %}{{ order.created_at|date:"D, g:iA" }}{% else %}-{% endif %}</div>
-                    <div>{% if order.created_at %}{{ order.created_at|date:"D, g:iA" }}{% else %}-{% endif %}</div>
-                  </div>
-
-                  <div class="timeline-line">
-                    <div class="timeline-points">
-                      <div class="point">✓</div>
-                      <div class="point">✓</div>
-
-                      {% if order.main_status == "DELIVERED" %}
-                        <div class="point">✓</div>
-                        <div class="point">✓</div>
-                      {% else %}
-                        <div class="point">✓</div>
-                        <div class="point inactive">•</div>
-                      {% endif %}
+                    <div class="cod-box">
+                      <span>COD</span>
+                      <strong>${{ order.price|default:0 }}</strong>
                     </div>
                   </div>
 
-                  <div class="timeline-labels">
-                    <div>Pickup</div>
-                    <div>On Process</div>
-                    <div>Delivering</div>
-                    <div>Delivered</div>
-                  </div>
+                  {% if order.main_status == "DELIVERED" or order.main_status == "PROCESSING" %}
+                    <div
+                      class="timeline-wrap"
+                      {% if order.main_status == "DELIVERED" %}
+                        style="--progress:80%;"
+                      {% else %}
+                        style="--progress:55%;"
+                      {% endif %}
+                    >
+                      <div class="timeline-line">
+                        <div class="timeline-points">
+                          <div class="point">✓</div>
+                          <div class="point">✓</div>
+
+                          {% if order.main_status == "DELIVERED" %}
+                            <div class="point">✓</div>
+                            <div class="point">✓</div>
+                          {% else %}
+                            <div class="point">✓</div>
+                            <div class="point inactive">•</div>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      <div class="timeline-labels">
+                        <div>Pickup</div>
+                        <div>Process</div>
+                        <div>Deliver</div>
+                        <div>Done</div>
+                      </div>
+                    </div>
+                  {% endif %}
                 </div>
-                {% endif %}
               </div>
             {% endfor %}
           </div>
         {% else %}
-          <div class="empty-box">No tracking data found.</div>
+          <div class="empty-box">
+            <div class="empty-icon">🔍</div>
+            No tracking data found in the last 60 days.
+          </div>
         {% endif %}
       {% endif %}
     </div>
   </div>
 
-  <script>
-    flatpickr("#date_from", {
-      dateFormat: "Y-m-d",
-      allowInput: true,
-      disableMobile: true
-    });
+  <div class="bottom-nav">
+    <a href="{% url 'portal:dashboard' %}" class="nav-item">
+      <div class="nav-icon">🏠</div>
+      <div>Home</div>
+    </a>
 
-    flatpickr("#date_to", {
-      dateFormat: "Y-m-d",
-      allowInput: true,
-      disableMobile: true
-    });
+    <a href="{% url 'portal:orders' %}" class="nav-item">
+      <div class="nav-icon">📦</div>
+      <div>Orders</div>
+    </a>
+
+    <a href="{% url 'portal:tracking' %}" class="nav-item active">
+      <div class="nav-icon">📍</div>
+      <div>Track</div>
+    </a>
+
+    <a href="{% url 'portal:dashboard' %}" class="nav-item">
+      <div class="nav-icon">👤</div>
+      <div>Profile</div>
+    </a>
+  </div>
+
+  <div class="picker-overlay" id="pickerOverlay" aria-hidden="true">
+    <div class="date-sheet">
+      <div class="sheet-handle"></div>
+
+      <div class="picker-top">
+        <button type="button" class="picker-nav" id="pickerPrev">‹</button>
+        <div class="picker-month" id="pickerTitle">Month Year</div>
+        <button type="button" class="picker-nav" id="pickerNext">›</button>
+      </div>
+
+      <div class="week-row">
+        <div>Sun</div>
+        <div>Mon</div>
+        <div>Tue</div>
+        <div>Wed</div>
+        <div>Thu</div>
+        <div>Fri</div>
+        <div>Sat</div>
+      </div>
+
+      <div class="days-grid" id="pickerDays"></div>
+
+      <div class="picker-actions">
+        <button type="button" class="sheet-action" id="pickerCancel">Cancel</button>
+        <button type="button" class="sheet-action green" id="pickerClear">Clear</button>
+        <button type="button" class="sheet-action dark" id="pickerToday">Today</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const fromInput = document.getElementById("date_from");
+      const toInput = document.getElementById("date_to");
+
+      const serverMin = "{{ tracking_min_date|default:'' }}";
+      const serverMax = "{{ tracking_max_date|default:'' }}";
+      const limitDays = Number("{{ tracking_limit_days|default:60 }}") || 60;
+
+      function pad(num) {
+        return String(num).padStart(2, "0");
+      }
+
+      function formatDate(date) {
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+      }
+
+      function parseDate(value) {
+        if (!value) return null;
+        const parts = value.split("-");
+        if (parts.length !== 3) return null;
+
+        const y = Number(parts[0]);
+        const m = Number(parts[1]) - 1;
+        const d = Number(parts[2]);
+
+        if (!y || m < 0 || !d) return null;
+        return new Date(y, m, d);
+      }
+
+      const today = new Date();
+      const fallbackMax = formatDate(today);
+      const fallbackMinDate = new Date(today);
+      fallbackMinDate.setDate(today.getDate() - (limitDays - 1));
+      const fallbackMin = formatDate(fallbackMinDate);
+
+      const minDateStr = serverMin || fallbackMin;
+      const maxDateStr = serverMax || fallbackMax;
+      const minDate = parseDate(minDateStr);
+      const maxDate = parseDate(maxDateStr);
+
+      function setActiveQuick(type) {
+        document.querySelectorAll(".quick-btn").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.quick === type);
+        });
+      }
+
+      function setRange(type) {
+        const max = parseDate(maxDateStr) || new Date();
+        let start = new Date(max);
+        let end = new Date(max);
+
+        if (type === "yesterday") {
+          start.setDate(max.getDate() - 1);
+          end.setDate(max.getDate() - 1);
+        }
+
+        if (type === "last7") {
+          start.setDate(max.getDate() - 6);
+        }
+
+        if (type === "all60") {
+          start = parseDate(minDateStr) || start;
+          end = parseDate(maxDateStr) || end;
+        }
+
+        fromInput.value = formatDate(start);
+        toInput.value = formatDate(end);
+        setActiveQuick(type);
+      }
+
+      document.querySelectorAll(".quick-btn").forEach(btn => {
+        btn.addEventListener("click", function () {
+          setRange(this.dataset.quick);
+        });
+      });
+
+      if (!fromInput.value && !toInput.value) {
+        setRange("all60");
+      } else if (fromInput.value === maxDateStr && toInput.value === maxDateStr) {
+        setActiveQuick("today");
+      } else if (fromInput.value === minDateStr && toInput.value === maxDateStr) {
+        setActiveQuick("all60");
+      }
+
+      const overlay = document.getElementById("pickerOverlay");
+      const pickerTitle = document.getElementById("pickerTitle");
+      const pickerDays = document.getElementById("pickerDays");
+      const pickerPrev = document.getElementById("pickerPrev");
+      const pickerNext = document.getElementById("pickerNext");
+      const pickerCancel = document.getElementById("pickerCancel");
+      const pickerClear = document.getElementById("pickerClear");
+      const pickerToday = document.getElementById("pickerToday");
+
+      let activeInput = null;
+      let viewDate = new Date();
+
+      function openPicker(input) {
+        activeInput = input;
+
+        const selectedDate = parseDate(input.value);
+        viewDate = selectedDate || new Date();
+
+        renderPicker();
+        overlay.classList.add("open");
+        overlay.setAttribute("aria-hidden", "false");
+      }
+
+      function closePicker() {
+        overlay.classList.remove("open");
+        overlay.setAttribute("aria-hidden", "true");
+        activeInput = null;
+      }
+
+      function sameDate(a, b) {
+        return a && b &&
+          a.getFullYear() === b.getFullYear() &&
+          a.getMonth() === b.getMonth() &&
+          a.getDate() === b.getDate();
+      }
+
+      function isOutOfRange(date) {
+        if (minDate && date < minDate) return true;
+        if (maxDate && date > maxDate) return true;
+        return false;
+      }
+
+      function renderPicker() {
+        const year = viewDate.getFullYear();
+        const month = viewDate.getMonth();
+        const monthName = viewDate.toLocaleString("en-US", { month: "long" });
+        const selectedDate = activeInput ? parseDate(activeInput.value) : null;
+        const currentToday = new Date();
+
+        pickerTitle.textContent = `${monthName} ${year}`;
+        pickerDays.innerHTML = "";
+
+        const firstDay = new Date(year, month, 1);
+        const start = new Date(year, month, 1 - firstDay.getDay());
+
+        for (let i = 0; i < 42; i++) {
+          const date = new Date(start);
+          date.setDate(start.getDate() + i);
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "day-btn";
+          btn.textContent = date.getDate();
+
+          if (date.getMonth() !== month) {
+            btn.classList.add("other");
+          }
+
+          if (sameDate(date, currentToday)) {
+            btn.classList.add("today");
+          }
+
+          if (sameDate(date, selectedDate)) {
+            btn.classList.add("selected");
+          }
+
+          if (isOutOfRange(date)) {
+            btn.classList.add("disabled");
+            btn.disabled = true;
+          } else {
+            btn.addEventListener("click", function () {
+              if (activeInput) {
+                activeInput.value = formatDate(date);
+              }
+              closePicker();
+            });
+          }
+
+          pickerDays.appendChild(btn);
+        }
+      }
+
+      document.querySelectorAll(".js-date").forEach(input => {
+        input.addEventListener("click", function () {
+          openPicker(this);
+        });
+      });
+
+      pickerPrev.addEventListener("click", function () {
+        viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
+        renderPicker();
+      });
+
+      pickerNext.addEventListener("click", function () {
+        viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
+        renderPicker();
+      });
+
+      pickerCancel.addEventListener("click", closePicker);
+
+      pickerClear.addEventListener("click", function () {
+        if (activeInput) {
+          activeInput.value = "";
+        }
+        closePicker();
+      });
+
+      pickerToday.addEventListener("click", function () {
+        if (activeInput) {
+          activeInput.value = maxDateStr;
+        }
+        closePicker();
+      });
+
+      overlay.addEventListener("click", function (event) {
+        if (event.target === overlay) {
+          closePicker();
+        }
+      });
+    })();
   </script>
 </body>
 </html>

@@ -230,58 +230,263 @@
 
   .summary-top{
     display:flex;
-    align-items:center;
-    justify-content:space-between;
+    flex-direction:column;
+    align-items:stretch;
     gap:12px;
     margin-bottom:14px;
   }
 
+  .summary-title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+
   .summary-title{
-    font-size:18px;
-    font-weight:900;
+    font-size:20px;
+    font-weight:950;
     color:#1f2937;
     margin:0;
+    line-height:1.08;
+    letter-spacing:-.03em;
+  }
+
+  .summary-month-chip{
+    border-radius:999px;
+    padding:7px 11px;
+    background:#eefaf4;
+    color:#0f8f4c;
+    border:1px solid rgba(15,122,69,.12);
+    font-size:12px;
+    font-weight:950;
+    white-space:nowrap;
   }
 
   .summary-sub{
     font-size:13px;
     color:#64748b;
-    margin-top:4px;
-    font-weight:600;
+    margin-top:5px;
+    font-weight:700;
+    line-height:1.35;
+    max-width:290px;
   }
 
   .month-form{
-    display:flex;
+    width:100%;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 102px;
     align-items:center;
-    justify-content:flex-end;
-    gap:8px;
-    flex:0 0 auto;
+    gap:10px;
+    min-width:0;
   }
 
-  .month-picker{
-    width:122px;
-    border:1px solid #dbece2;
-    border-radius:14px;
-    background:#f8fbf9;
+  .month-input-wrap{
+    min-height:54px;
+    min-width:0;
+    width:100%;
+    border:0;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 14px;
+    background:linear-gradient(180deg,#edf9f3 0%, #e5f6ee 100%);
+    border:1px solid rgba(15,122,69,.14);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.88),
+      0 10px 22px rgba(15,122,69,.08);
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
     color:#1f2937;
-    padding:9px 8px;
-    font-size:12px;
-    font-weight:800;
-    outline:none;
+    appearance:none;
+  }
+
+  .month-input-wrap:active{
+    transform:scale(.98);
+  }
+
+  .month-icon{
+    width:34px;
+    height:34px;
+    border-radius:13px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,255,255,.62);
+    color:#0f8f4c;
+    font-size:18px;
+    flex:0 0 auto;
+    box-shadow:inset 0 0 0 1px rgba(15,122,69,.08);
+  }
+
+  .month-input-text{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+    flex:1;
+    white-space:nowrap;
+  }
+
+  .month-input-label{
+    display:none;
+  }
+
+  .month-display{
+    font-size:16px;
+    font-weight:950;
+    color:#1f2937;
+    line-height:1;
+  }
+
+  .month-caret{
+    margin-left:auto;
+    color:#0f8f4c;
+    font-size:18px;
+    font-weight:950;
+    line-height:1;
   }
 
   .month-submit{
+    min-height:54px;
     border:0;
-    border-radius:14px;
-    background:linear-gradient(135deg,#179b67,#22b276);
+    border-radius:999px;
+    background:linear-gradient(135deg,#11a768 0%, #19bd77 100%);
     color:#fff;
-    padding:10px 11px;
-    font-size:12px;
-    font-weight:900;
+    padding:0 20px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    font-size:15px;
+    font-weight:950;
     cursor:pointer;
-    box-shadow:0 6px 14px rgba(23,132,88,.14);
+    box-shadow:0 10px 20px rgba(17,166,106,.20);
+    transition:transform .16s ease, box-shadow .16s ease, filter .16s ease;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+    white-space:nowrap;
   }
 
+  .month-submit:active{
+    transform:scale(.96);
+    box-shadow:0 8px 16px rgba(17,166,106,.18);
+  }
+
+  .month-submit-icon{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    display:inline-block;
+    background:rgba(255,255,255,.95);
+    box-shadow:0 0 0 5px rgba(255,255,255,.16);
+  }
+
+  .month-hidden-input{
+    display:none;
+  }
+
+  .month-sheet-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:2000;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(15,23,42,.26);
+    backdrop-filter:blur(7px);
+  }
+
+  .month-sheet-backdrop.is-open{
+    display:flex;
+  }
+
+  .month-sheet{
+    width:min(430px, calc(100vw - 28px));
+    max-height:calc(100vh - 34px);
+    overflow:auto;
+    border-radius:28px;
+    background:rgba(255,255,255,.98);
+    border:1px solid rgba(15,23,42,.08);
+    box-shadow:0 26px 70px rgba(15,23,42,.22);
+    padding:20px;
+  }
+
+  .month-sheet-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+  }
+
+  .month-nav-btn{
+    width:42px;
+    height:42px;
+    border:0;
+    border-radius:15px;
+    background:#f4fbf7;
+    color:#0f172a;
+    font-size:30px;
+    line-height:1;
+    font-weight:900;
+    cursor:pointer;
+    box-shadow:inset 0 0 0 1px rgba(15,122,69,.08);
+    touch-action:manipulation;
+  }
+
+  .month-year-title{
+    font-size:24px;
+    font-weight:950;
+    color:#172033;
+  }
+
+  .month-grid-select{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+  }
+
+  .month-option{
+    min-height:56px;
+    border:1px solid rgba(15,23,42,.10);
+    border-radius:15px;
+    background:#fff;
+    color:#0f172a;
+    font-size:16px;
+    font-weight:850;
+    cursor:pointer;
+    box-shadow:0 5px 14px rgba(15,23,42,.04);
+    touch-action:manipulation;
+  }
+
+  .month-option.is-active{
+    color:#fff;
+    border-color:transparent;
+    background:linear-gradient(135deg,#13a96b,#22c67f);
+    box-shadow:0 10px 22px rgba(17,166,106,.24);
+  }
+
+  .month-sheet-actions{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:16px;
+  }
+
+  .month-text-btn{
+    border:0;
+    background:transparent;
+    color:#12a86a;
+    font-size:16px;
+    font-weight:950;
+    padding:10px 4px;
+    cursor:pointer;
+    touch-action:manipulation;
+  }
   .profile-badge{
     width:42px;
     height:42px;
@@ -572,20 +777,57 @@
     color:#169864;
   }
 
-  @media (max-width: 420px){
-    .summary-top{
-      align-items:flex-start;
-      flex-direction:column;
+  @media (max-width: 520px){
+    .summary-sub{
+      max-width:100%;
     }
 
     .month-form{
-      width:100%;
-      justify-content:space-between;
+      grid-template-columns:minmax(0,1fr) 88px;
+      gap:9px;
     }
 
-    .month-picker{
-      flex:1;
-      width:auto;
+    .month-input-wrap{
+      min-width:0;
+      width:100%;
+      min-height:56px;
+      padding:8px 12px;
+    }
+
+    .month-display{
+      font-size:15px;
+    }
+
+    .month-submit{
+      min-height:56px;
+      padding:0 14px;
+      min-width:88px;
+    }
+
+    .month-submit-icon{
+      width:7px;
+      height:7px;
+    }
+
+    .month-sheet-backdrop{
+      align-items:flex-end;
+      padding:0 10px 12px;
+    }
+
+    .month-sheet{
+      width:min(430px, calc(100vw - 20px));
+      max-height:calc(100vh - 80px);
+      border-radius:26px;
+      padding:18px;
+    }
+
+    .month-grid-select{
+      gap:8px;
+    }
+
+    .month-option{
+      min-height:52px;
+      font-size:15px;
     }
 
     .money-grid{
@@ -608,6 +850,25 @@
       grid-template-columns:repeat(2,1fr);
     }
   }
+  @media (max-width: 360px){
+    .summary-title{
+      font-size:18px;
+    }
+
+    .summary-month-chip{
+      font-size:11px;
+      padding:6px 9px;
+    }
+
+    .month-form{
+      grid-template-columns:1fr;
+    }
+
+    .month-submit{
+      width:100%;
+    }
+  }
+
 </style>
 {% endblock %}
 
@@ -647,20 +908,67 @@
     <div class="content">
       <div class="summary-card">
         <div class="summary-top">
-          <div>
-            <h2 class="summary-title">Account Summary, {{ selected_month_label }}</h2>
+          <div class="summary-copy">
+            <div class="summary-title-row">
+              <h2 class="summary-title">Account Summary</h2>
+              <span class="summary-month-chip">{{ selected_month_label }}</span>
+            </div>
             <div class="summary-sub">Choose month to view seller account result</div>
           </div>
 
-          <form method="get" class="month-form">
+          <form method="get" class="month-form" id="monthFilterForm">
             <input
-              type="month"
+              type="hidden"
               name="month"
               value="{{ selected_month }}"
-              class="month-picker"
+              id="monthValueInput"
+              class="month-hidden-input"
             >
-            <button type="submit" class="month-submit">View</button>
+
+            <button type="button" class="month-input-wrap" id="monthPickerOpen" aria-label="Choose report month">
+              <span class="month-icon">📅</span>
+              <span class="month-input-text">
+                <span class="month-input-label">Month</span>
+                <span class="month-display" id="monthDisplay">{{ selected_month_label }}</span>
+              </span>
+              <span class="month-caret">⌄</span>
+            </button>
+
+            <button type="submit" class="month-submit">
+              <span class="month-submit-icon" aria-hidden="true"></span>
+              <span>View</span>
+            </button>
           </form>
+        </div>
+
+        <div class="month-sheet-backdrop" id="monthSheetBackdrop" aria-hidden="true">
+          <div class="month-sheet" role="dialog" aria-modal="true" aria-label="Choose report month">
+            <div class="month-sheet-top">
+              <button type="button" class="month-nav-btn" id="monthPrevYear" aria-label="Previous year">‹</button>
+              <div class="month-year-title" id="monthYearTitle">{{ selected_month_year|default:"2026" }}</div>
+              <button type="button" class="month-nav-btn" id="monthNextYear" aria-label="Next year">›</button>
+            </div>
+
+            <div class="month-grid-select" id="monthGridSelect">
+              <button type="button" class="month-option" data-month="01">Jan</button>
+              <button type="button" class="month-option" data-month="02">Feb</button>
+              <button type="button" class="month-option" data-month="03">Mar</button>
+              <button type="button" class="month-option" data-month="04">Apr</button>
+              <button type="button" class="month-option" data-month="05">May</button>
+              <button type="button" class="month-option" data-month="06">Jun</button>
+              <button type="button" class="month-option" data-month="07">Jul</button>
+              <button type="button" class="month-option" data-month="08">Aug</button>
+              <button type="button" class="month-option" data-month="09">Sep</button>
+              <button type="button" class="month-option" data-month="10">Oct</button>
+              <button type="button" class="month-option" data-month="11">Nov</button>
+              <button type="button" class="month-option" data-month="12">Dec</button>
+            </div>
+
+            <div class="month-sheet-actions">
+              <button type="button" class="month-text-btn" id="monthClearBtn">Clear</button>
+              <button type="button" class="month-text-btn" id="monthThisBtn">This month</button>
+            </div>
+          </div>
         </div>
 
         <div class="money-grid">
@@ -738,7 +1046,7 @@
           <span>Tracking</span>
         </a>
 
-        <a href="{% url 'portal:stock' %}" class="menu-item">
+        <a href="/portal/stock/" class="menu-item">
           <div class="menu-icon">📦</div>
           <span>Inventory</span>
         </a>
@@ -768,4 +1076,110 @@
     </a>
   </nav>
 </section>
+
+<script>
+(function () {
+  const form = document.getElementById("monthFilterForm");
+  const input = document.getElementById("monthValueInput");
+  const openBtn = document.getElementById("monthPickerOpen");
+  const display = document.getElementById("monthDisplay");
+  const backdrop = document.getElementById("monthSheetBackdrop");
+  const yearTitle = document.getElementById("monthYearTitle");
+  const prevYear = document.getElementById("monthPrevYear");
+  const nextYear = document.getElementById("monthNextYear");
+  const clearBtn = document.getElementById("monthClearBtn");
+  const thisBtn = document.getElementById("monthThisBtn");
+  const monthButtons = Array.from(document.querySelectorAll(".month-option"));
+
+  if (!form || !input || !openBtn || !display || !backdrop || !yearTitle) return;
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  let selectedValue = input.value || "";
+  let pickerYear = selectedValue && selectedValue.indexOf("-") > -1
+    ? parseInt(selectedValue.split("-")[0], 10)
+    : new Date().getFullYear();
+
+  function valueToLabel(value) {
+    if (!value || value.indexOf("-") === -1) return "This month";
+    const parts = value.split("-");
+    const year = parts[0];
+    const monthIndex = Math.max(0, Math.min(11, parseInt(parts[1], 10) - 1));
+    return monthNames[monthIndex] + " " + year;
+  }
+
+  function setOpen(open) {
+    backdrop.classList.toggle("is-open", open);
+    backdrop.setAttribute("aria-hidden", open ? "false" : "true");
+    document.body.style.overflow = open ? "hidden" : "";
+    if (open) renderPicker();
+  }
+
+  function renderPicker() {
+    yearTitle.textContent = pickerYear;
+    monthButtons.forEach(function (btn) {
+      const value = pickerYear + "-" + btn.dataset.month;
+      btn.classList.toggle("is-active", value === selectedValue);
+    });
+  }
+
+  function setMonth(value, submitNow) {
+    selectedValue = value;
+    input.value = value;
+    display.textContent = valueToLabel(value);
+    renderPicker();
+    setOpen(false);
+    if (submitNow) form.submit();
+  }
+
+  openBtn.addEventListener("click", function () {
+    setOpen(true);
+  });
+
+  backdrop.addEventListener("click", function (event) {
+    if (event.target === backdrop) setOpen(false);
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") setOpen(false);
+  });
+
+  if (prevYear) {
+    prevYear.addEventListener("click", function () {
+      pickerYear -= 1;
+      renderPicker();
+    });
+  }
+
+  if (nextYear) {
+    nextYear.addEventListener("click", function () {
+      pickerYear += 1;
+      renderPicker();
+    });
+  }
+
+  monthButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      setMonth(pickerYear + "-" + btn.dataset.month, true);
+    });
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", function () {
+      setMonth("", true);
+    });
+  }
+
+  if (thisBtn) {
+    thisBtn.addEventListener("click", function () {
+      const now = new Date();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      pickerYear = now.getFullYear();
+      setMonth(pickerYear + "-" + month, true);
+    });
+  }
+
+  display.textContent = valueToLabel(input.value);
+  renderPicker();
+})();
+</script>
 {% endblock %}

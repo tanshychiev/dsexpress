@@ -6,9 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Orders</title>
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
   <style>
     *{ box-sizing:border-box; }
 
@@ -491,67 +488,239 @@
       line-height:1;
     }
 
-    .flatpickr-calendar{
-      border-radius:16px !important;
-      box-shadow:0 10px 24px rgba(0,0,0,.16) !important;
-      font-size:14px !important;
+    .filter-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
     }
 
-    .flatpickr-day.selected{
-      background:#16a466 !important;
-      border-color:#16a466 !important;
+    .filter-sub{
+      margin-top:3px;
+      color:#64748b;
+      font-size:12px;
+      font-weight:700;
+      line-height:1.35;
     }
 
-    .flatpickr-day.today{
-      border-color:#16a466 !important;
+    .quick-range{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:8px;
+      margin-bottom:14px;
     }
 
-    .flatpickr-months{
-      border-radius:16px 16px 0 0;
+    .quick-btn{
+      border:none;
+      min-height:42px;
+      border-radius:999px;
+      background:#eef8f2;
+      color:#0f7a45;
+      font-size:12px;
+      font-weight:900;
+      box-shadow:inset 0 0 0 1px #d8eee2;
+      cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    .quick-btn:active{
+      transform:scale(.98);
+    }
+
+    .quick-btn.active{
+      background:linear-gradient(135deg,#149766,#1fb777);
+      color:#fff;
+      box-shadow:0 10px 18px rgba(20,134,88,.16);
+    }
+
+    .date-input{
+      cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    .date-input:focus{
+      border-color:#19a86e;
+      box-shadow:0 0 0 4px rgba(25,168,110,.10);
+    }
+
+    .date-modal-layer{
+      position:fixed;
+      inset:0;
+      z-index:10000;
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      background:rgba(15,23,42,.22);
+      padding:16px 12px 86px;
+      backdrop-filter:blur(5px);
+    }
+
+    .date-modal-layer.is-open{
+      display:flex;
+    }
+
+    .date-modal-panel{
+      width:min(420px, 100%);
+      background:#fff;
+      border-radius:26px;
+      box-shadow:0 22px 50px rgba(15,23,42,.24);
+      padding:14px;
+      border:1px solid #e4eee9;
+      animation:datePanelUp .16s ease-out;
+    }
+
+    @keyframes datePanelUp{
+      from{ transform:translateY(18px); opacity:.6; }
+      to{ transform:translateY(0); opacity:1; }
+    }
+
+    .date-modal-grip{
+      width:54px;
+      height:5px;
+      border-radius:999px;
+      background:#dbe3df;
+      margin:0 auto 12px;
+    }
+
+    .date-modal-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:12px;
+    }
+
+    .date-modal-title{
+      font-size:18px;
+      font-weight:900;
+      color:#1f2937;
+      text-align:center;
+      min-width:150px;
+    }
+
+    .date-arrow{
+      width:42px;
+      height:42px;
+      border:none;
+      border-radius:15px;
+      background:#eef8f2;
+      color:#0f7a45;
+      font-size:22px;
+      font-weight:900;
+      cursor:pointer;
+    }
+
+    .date-week,
+    .date-days{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:6px;
+    }
+
+    .date-week{
+      margin-bottom:8px;
+    }
+
+    .date-week div{
+      text-align:center;
+      font-size:11px;
+      font-weight:900;
+      color:#64748b;
+    }
+
+    .date-day{
+      height:42px;
+      border:none;
+      border-radius:14px;
+      background:#f7faf8;
+      color:#1f2937;
+      font-size:14px;
+      font-weight:850;
+      cursor:pointer;
+      box-shadow:inset 0 0 0 1px #e5eee9;
+    }
+
+    .date-day.muted{
+      color:#b5c0ba;
+      background:#fbfcfb;
+    }
+
+    .date-day.today{
+      color:#0f7a45;
+      box-shadow:inset 0 0 0 2px #20b979;
+    }
+
+    .date-day.selected{
+      color:#fff;
+      background:linear-gradient(135deg,#149766,#1fb777);
+      box-shadow:0 8px 14px rgba(20,134,88,.20);
+    }
+
+    .date-modal-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .date-action{
+      border:none;
+      border-radius:16px;
+      min-height:44px;
+      font-size:14px;
+      font-weight:900;
+      cursor:pointer;
+    }
+
+    .date-action.clear{
+      background:#f1f5f3;
+      color:#475569;
+    }
+
+    .date-action.today{
+      background:#eaf8f0;
+      color:#0f7a45;
     }
 
     @media (max-width: 520px){
-      .flatpickr-calendar{
-        position:fixed !important;
-        top:50% !important;
-        left:50% !important;
-        transform:translate(-50%, -50%) !important;
-        width:calc(100vw - 24px) !important;
-        max-width:430px !important;
-        height:auto !important;
-        max-height:none !important;
-        border-radius:18px !important;
-        margin:0 !important;
-        box-shadow:0 14px 40px rgba(0,0,0,.22) !important;
-        padding:12px 10px 10px !important;
-        z-index:99999 !important;
+      body{
+        padding-bottom:110px;
       }
 
-      .flatpickr-months{
-        padding:0 6px;
+      .content{
+        padding:16px 12px;
       }
 
-      .flatpickr-innerContainer,
-      .flatpickr-rContainer,
-      .flatpickr-days,
-      .dayContainer{
-        width:100% !important;
-        max-width:none !important;
+      .quick-range{
+        grid-template-columns:1fr;
       }
 
-      .dayContainer{
-        min-width:100% !important;
-        height:auto !important;
+      .quick-btn{
+        min-height:44px;
+        font-size:13px;
       }
 
-      .flatpickr-days{
-        height:auto !important;
+      .date-grid{
+        gap:10px;
       }
 
-      .flatpickr-day{
-        height:44px !important;
-        line-height:44px !important;
-        max-width:none !important;
+      .date-input{
+        padding:12px 34px 12px 12px;
+        font-size:13px;
+      }
+
+      .date-modal-layer{
+        padding-left:12px;
+        padding-right:12px;
+      }
+
+      .date-modal-panel{
+        max-width:420px;
+      }
+
+      .date-day{
+        height:40px;
+        border-radius:13px;
       }
 
       .mid-row{
@@ -565,6 +734,34 @@
 
       .bottom-row{
         align-items:flex-start;
+      }
+    }
+
+    @media (max-width: 380px){
+      .status-tab{
+        font-size:11px;
+      }
+
+      .filter-card{
+        padding:14px 12px;
+      }
+
+      .date-grid{
+        grid-template-columns:1fr;
+      }
+
+      .date-modal-layer{
+        padding-bottom:80px;
+      }
+
+      .date-modal-panel{
+        border-radius:22px;
+        padding:12px;
+      }
+
+      .date-day{
+        height:38px;
+        font-size:13px;
       }
     }
   </style>
@@ -597,17 +794,28 @@
       </div>
 
       <form method="get" class="filter-card">
-        <div class="filter-title">Sent Date</div>
+        <div class="filter-head">
+          <div>
+            <div class="filter-title">Sent Date</div>
+            <div class="filter-sub">Choose fast range or custom date</div>
+          </div>
+        </div>
+
+        <div class="quick-range">
+          <button type="button" class="quick-btn" data-range="today">Today</button>
+          <button type="button" class="quick-btn" data-range="yesterday">Yesterday</button>
+          <button type="button" class="quick-btn" data-range="last7">Last 7 Days</button>
+        </div>
 
         <div class="date-grid">
           <div class="date-box">
             <label>From</label>
-            <input type="text" id="date_from" name="from" class="date-input" value="{{ date_from }}">
+            <input type="text" id="date_from" name="from" class="date-input js-date-input" value="{{ date_from }}" readonly>
           </div>
 
           <div class="date-box">
             <label>To</label>
-            <input type="text" id="date_to" name="to" class="date-input" value="{{ date_to }}">
+            <input type="text" id="date_to" name="to" class="date-input js-date-input" value="{{ date_to }}" readonly>
           </div>
         </div>
 
@@ -732,6 +940,34 @@
     </div>
   </div>
 
+  <div class="date-modal-layer" id="dateModal" aria-hidden="true">
+    <div class="date-modal-panel" role="dialog" aria-modal="true" aria-label="Choose date">
+      <div class="date-modal-grip"></div>
+      <div class="date-modal-top">
+        <button type="button" class="date-arrow" id="datePrev">‹</button>
+        <div class="date-modal-title" id="dateTitle">Month 2026</div>
+        <button type="button" class="date-arrow" id="dateNext">›</button>
+      </div>
+
+      <div class="date-week">
+        <div>Sun</div>
+        <div>Mon</div>
+        <div>Tue</div>
+        <div>Wed</div>
+        <div>Thu</div>
+        <div>Fri</div>
+        <div>Sat</div>
+      </div>
+
+      <div class="date-days" id="dateDays"></div>
+
+      <div class="date-modal-actions">
+        <button type="button" class="date-action clear" id="dateClear">Clear</button>
+        <button type="button" class="date-action today" id="dateToday">Today</button>
+      </div>
+    </div>
+  </div>
+
   <div class="bottom-nav">
     <a href="{% url 'portal:dashboard' %}" class="nav-item">
       <div class="nav-icon">🏠</div>
@@ -755,17 +991,185 @@
   </div>
 
   <script>
-    flatpickr("#date_from", {
-      dateFormat: "Y-m-d",
-      allowInput: true,
-      disableMobile: true
-    });
+    (function(){
+      const fromInput = document.getElementById("date_from");
+      const toInput = document.getElementById("date_to");
+      const modal = document.getElementById("dateModal");
+      const title = document.getElementById("dateTitle");
+      const daysBox = document.getElementById("dateDays");
+      const prevBtn = document.getElementById("datePrev");
+      const nextBtn = document.getElementById("dateNext");
+      const clearBtn = document.getElementById("dateClear");
+      const todayBtn = document.getElementById("dateToday");
+      const form = document.querySelector(".filter-card");
+      const quickButtons = document.querySelectorAll(".quick-btn");
 
-    flatpickr("#date_to", {
-      dateFormat: "Y-m-d",
-      allowInput: true,
-      disableMobile: true
-    });
+      let activeInput = null;
+      let viewDate = new Date();
+
+      function pad(num){
+        return String(num).padStart(2, "0");
+      }
+
+      function formatDate(date){
+        return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+      }
+
+      function parseDate(value){
+        if(!value) return null;
+        const parts = value.split("-");
+        if(parts.length !== 3) return null;
+        const y = Number(parts[0]);
+        const m = Number(parts[1]) - 1;
+        const d = Number(parts[2]);
+        if(!y || m < 0 || !d) return null;
+        return new Date(y, m, d);
+      }
+
+      function monthName(monthIndex){
+        return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][monthIndex];
+      }
+
+      function openPicker(input){
+        activeInput = input;
+        const selected = parseDate(input.value) || new Date();
+        viewDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
+        renderCalendar();
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+      }
+
+      function closePicker(){
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      function renderCalendar(){
+        const year = viewDate.getFullYear();
+        const month = viewDate.getMonth();
+        const today = new Date();
+        const selected = parseDate(activeInput ? activeInput.value : "");
+
+        title.textContent = monthName(month) + " " + year;
+        daysBox.innerHTML = "";
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const prevDays = new Date(year, month, 0).getDate();
+
+        const cells = 42;
+
+        for(let i = 0; i < cells; i++){
+          let cellDate;
+          let muted = false;
+
+          if(i < firstDay){
+            cellDate = new Date(year, month - 1, prevDays - firstDay + i + 1);
+            muted = true;
+          }else if(i >= firstDay + daysInMonth){
+            cellDate = new Date(year, month + 1, i - firstDay - daysInMonth + 1);
+            muted = true;
+          }else{
+            cellDate = new Date(year, month, i - firstDay + 1);
+          }
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "date-day";
+          btn.textContent = cellDate.getDate();
+
+          if(muted) btn.classList.add("muted");
+          if(formatDate(cellDate) === formatDate(today)) btn.classList.add("today");
+          if(selected && formatDate(cellDate) === formatDate(selected)) btn.classList.add("selected");
+
+          btn.addEventListener("click", function(){
+            if(activeInput){
+              activeInput.value = formatDate(cellDate);
+            }
+            closePicker();
+          });
+
+          daysBox.appendChild(btn);
+        }
+      }
+
+      fromInput.addEventListener("click", function(){ openPicker(fromInput); });
+      toInput.addEventListener("click", function(){ openPicker(toInput); });
+
+      prevBtn.addEventListener("click", function(){
+        viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
+        renderCalendar();
+      });
+
+      nextBtn.addEventListener("click", function(){
+        viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
+        renderCalendar();
+      });
+
+      clearBtn.addEventListener("click", function(){
+        if(activeInput) activeInput.value = "";
+        closePicker();
+      });
+
+      todayBtn.addEventListener("click", function(){
+        if(activeInput) activeInput.value = formatDate(new Date());
+        closePicker();
+      });
+
+      modal.addEventListener("click", function(e){
+        if(e.target === modal){
+          closePicker();
+        }
+      });
+
+      document.addEventListener("keydown", function(e){
+        if(e.key === "Escape"){
+          closePicker();
+        }
+      });
+
+      quickButtons.forEach(function(btn){
+        btn.addEventListener("click", function(){
+          const now = new Date();
+          let from = new Date(now);
+          let to = new Date(now);
+
+          if(btn.dataset.range === "yesterday"){
+            from.setDate(now.getDate() - 1);
+            to.setDate(now.getDate() - 1);
+          }
+
+          if(btn.dataset.range === "last7"){
+            from.setDate(now.getDate() - 6);
+          }
+
+          fromInput.value = formatDate(from);
+          toInput.value = formatDate(to);
+          form.submit();
+        });
+      });
+
+      const today = new Date();
+      const todayText = formatDate(today);
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const last7 = new Date(today);
+      last7.setDate(today.getDate() - 6);
+
+      quickButtons.forEach(function(btn){
+        if(btn.dataset.range === "today" && fromInput.value === todayText && toInput.value === todayText){
+          btn.classList.add("active");
+        }
+
+        if(btn.dataset.range === "yesterday" && fromInput.value === formatDate(yesterday) && toInput.value === formatDate(yesterday)){
+          btn.classList.add("active");
+        }
+
+        if(btn.dataset.range === "last7" && fromInput.value === formatDate(last7) && toInput.value === todayText){
+          btn.classList.add("active");
+        }
+      });
+    })();
   </script>
 </body>
 </html>

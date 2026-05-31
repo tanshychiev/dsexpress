@@ -1,6 +1,8 @@
 import json
+import calendar
 import requests
 
+from datetime import date
 from django import forms
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -16,6 +18,9 @@ from django.views.decorators.csrf import csrf_exempt
 from orders.models import Order
 from .forms import PublicBookingForm
 from .models import SellerBooking, SellerPortalSession
+
+from inventory.models import InventorySellerSetting
+from inventory.services import get_seller_current_stock, get_seller_inventory_setting
 
 
 # =========================================================
@@ -50,6 +55,7 @@ def _map_portal_status(order):
 def _safe_pct(part, total):
     if not total:
         return 0
+
     try:
         return round((part * 100.0) / total, 2)
     except Exception:
@@ -133,8 +139,10 @@ def tracking(request):
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+
     if x_forwarded_for:
         return x_forwarded_for.split(",")[0].strip()
+
     return request.META.get("REMOTE_ADDR", "")
 
 
@@ -162,12 +170,17 @@ def get_user_seller(user):
     return seller
 
 
+def _get_logged_in_seller(request):
+    return get_user_seller(request.user)
+
+
 # =========================================================
 # TELEGRAM HELPERS
 # =========================================================
 
 def get_telegram_bot_token():
     return getattr(settings, "TELEGRAM_BOOKING_BOT_TOKEN", "")
+
 
 def get_telegram_chat_id():
     return getattr(settings, "TELEGRAM_BOOKING_CHAT_ID", "")
@@ -195,6 +208,7 @@ def telegram_send_message(text, reply_markup=None):
         response = requests.post(url, data=payload, timeout=10)
         data = response.json()
         print("TELEGRAM SEND:", data)
+
         if data.get("ok"):
             return data.get("result")
     except Exception as e:
@@ -232,6 +246,7 @@ def telegram_send_photo(photo_file, caption=""):
         )
         data = response.json()
         print("TELEGRAM SEND PHOTO:", data)
+
         if data.get("ok"):
             return data.get("result")
     except Exception as e:
@@ -293,18 +308,23 @@ def telegram_answer_callback(callback_query_id, text=""):
 def get_accept_status():
     if hasattr(SellerBooking, "STATUS_APPROVED"):
         return SellerBooking.STATUS_APPROVED
+
     if hasattr(SellerBooking, "STATUS_ACCEPTED"):
         return SellerBooking.STATUS_ACCEPTED
+
     return "APPROVED"
 
 
 def get_cancel_status():
     if hasattr(SellerBooking, "STATUS_CANCELLED"):
         return SellerBooking.STATUS_CANCELLED
+
     if hasattr(SellerBooking, "STATUS_CANCELED"):
         return SellerBooking.STATUS_CANCELED
+
     if hasattr(SellerBooking, "STATUS_REJECTED"):
         return SellerBooking.STATUS_REJECTED
+
     return "CANCELLED"
 
 
@@ -322,6 +342,7 @@ def send_public_booking_to_telegram(
     photo_file=None,
 ):
     map_link = ""
+
     if latitude and longitude:
         map_link = f"\n🗺 Map: https://maps.google.com/?q={latitude},{longitude}"
 
@@ -380,6 +401,7 @@ def booking_public(request):
 
     if request.method == "POST":
         form = PublicBookingForm(request.POST, request.FILES)
+
         if form.is_valid():
             name = form.cleaned_data["name"]
             phone = form.cleaned_data["phone"]
@@ -427,8 +449,10 @@ class SellerLoginForm(forms.Form):
 def seller_login(request):
     if request.user.is_authenticated:
         seller = get_user_seller(request.user)
+
         if seller:
             return redirect("portal:dashboard")
+
         logout(request)
 
     form = SellerLoginForm(request.POST or None)
@@ -485,6 +509,7 @@ def seller_logout(request):
             .order_by("-login_at")
             .first()
         )
+
         if session:
             session.logout_at = timezone.now()
             session.last_activity_at = timezone.now()
@@ -495,20 +520,13 @@ def seller_logout(request):
 
 
 # =========================================================
-# SELLER HELPER
-# =========================================================
-
-def _get_logged_in_seller(request):
-    return get_user_seller(request.user)
-
-
-# =========================================================
 # SELLER BOOKING PAGE
 # =========================================================
 
 @login_required
 def booking_seller(request):
     seller = _get_logged_in_seller(request)
+
     if seller is None:
         logout(request)
         return redirect("portal:login")
@@ -579,6 +597,7 @@ def booking_seller(request):
 @login_required
 def booking_history(request):
     seller = _get_logged_in_seller(request)
+
     if seller is None:
         logout(request)
         return redirect("portal:login")
@@ -599,26 +618,124 @@ def booking_history(request):
 # DASHBOARD
 # =========================================================
 
+def _get_dashboard_month_range(month_value):
+    today = timezone.localdate()
+
+    try:
+        year_text, month_text = (month_value or "").split("-", 1)
+        year = int(year_text)
+        month = int(month_text)
+        month_start = date(year, month, 1)
+    except Exception:
+        year = today.year
+        month = today.month
+        month_start = date(year, month, 1)
+
+    last_day = calendar.monthrange(year, month)[1]
+    month_end = date(year, month, last_day)
+    selected_month = f"{year:04d}-{month:02d}"
+
+    return selected_month, month_start, month_end
+
+
 @login_required
 def dashboard(request):
     seller = _get_logged_in_seller(request)
+
     if seller is None:
         logout(request)
         return redirect("portal:login")
 
-    qs = Order.objects.filter(seller=seller)
+    selected_month, month_start, month_end = _get_dashboard_month_range(
+        request.GET.get("month", "")
+    )
+
+    qs = Order.objects.filter(seller=seller, is_deleted=False)
+
+    pending_statuses = [
+        Order.STATUS_CREATED,
+        Order.STATUS_INBOUND,
+        Order.STATUS_OUT_FOR_DELIVERY,
+        Order.STATUS_PROVINCE_ASSIGNED,
+        Order.STATUS_RETURN_ASSIGNED,
+        Order.STATUS_RETURNING,
+    ]
+
+    month_qs = qs.filter(
+        created_at__date__gte=month_start,
+        created_at__date__lte=month_end,
+    )
+    month_delivered_qs = month_qs.filter(status=Order.STATUS_DELIVERED)
+
+    month_total_sent = month_qs.count()
+    month_delivered_parcels = month_delivered_qs.count()
+    month_pending_parcels = month_qs.filter(status__in=pending_statuses).count()
+    month_balance = month_delivered_qs.aggregate(total=Sum("price"))["total"] or 0
+    month_done_percent = _safe_pct(month_delivered_parcels, month_total_sent)
+
+    today = timezone.localdate()
+    today_sent_qs = qs.filter(created_at__date=today)
+    today_done_qs = qs.filter(status=Order.STATUS_DELIVERED, done_at=today)
 
     context = {
         "seller": seller,
+
+        # Month Account Summary
+        "selected_month": selected_month,
+        "selected_month_label": month_start.strftime("%B %Y"),
+        "month_balance": month_balance,
+        "month_delivered_parcels": month_delivered_parcels,
+        "month_pending_parcels": month_pending_parcels,
+        "month_done_percent": month_done_percent,
+
+        # Today Summary
+        "today_label": today.strftime("%d %B %Y"),
+        "today_cod": today_done_qs.aggregate(total=Sum("price"))["total"] or 0,
+        "today_sent": today_sent_qs.count(),
+        "today_done": today_done_qs.count(),
+
+        # Existing dashboard totals
         "total_parcels": qs.count(),
-        "pending_parcels": qs.filter(status="CREATED").count(),
-        "out_for_delivery": qs.filter(status="OUT_FOR_DELIVERY").count(),
-        "delivered_parcels": qs.filter(status="DELIVERED").count(),
-        "cod_balance": qs.filter(status="DELIVERED").aggregate(total=Sum("price"))["total"] or 0,
+        "pending_parcels": qs.filter(status__in=pending_statuses).count(),
+        "out_for_delivery": qs.filter(status=Order.STATUS_OUT_FOR_DELIVERY).count(),
+        "delivered_parcels": qs.filter(status=Order.STATUS_DELIVERED).count(),
+        "cod_balance": month_balance,
         "recent_orders": qs.order_by("-id")[:10],
     }
 
     return render(request, "customerportal/dashboard.html", context)
+
+
+# =========================================================
+# STOCK
+# =========================================================
+
+@login_required
+def stock(request):
+    seller = _get_logged_in_seller(request)
+
+    if seller is None:
+        logout(request)
+        return redirect("portal:login")
+
+    setting = get_seller_inventory_setting(seller)
+
+    if (
+        setting.stock_mode == InventorySellerSetting.NO_STOCK
+        or not setting.show_stock_in_portal
+    ):
+        stock_rows = []
+    else:
+        stock_rows = get_seller_current_stock(seller)
+
+    return render(
+        request,
+        "customerportal/stock.html",
+        {
+            "seller": seller,
+            "stock_rows": stock_rows,
+        },
+    )
 
 
 # =========================================================
@@ -628,6 +745,7 @@ def dashboard(request):
 @login_required
 def orders(request):
     seller = _get_logged_in_seller(request)
+
     if seller is None:
         logout(request)
         return redirect("portal:login")
@@ -662,6 +780,7 @@ def orders(request):
 @login_required
 def cod_report(request):
     seller = _get_logged_in_seller(request)
+
     if seller is None:
         logout(request)
         return redirect("portal:login")
@@ -687,12 +806,14 @@ def cod_report(request):
 @login_required
 def change_password(request):
     seller = _get_logged_in_seller(request)
+
     if seller is None:
         logout(request)
         return redirect("portal:login")
 
     if request.method == "POST":
         form = PasswordChangeForm(request.user, request.POST)
+
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
@@ -724,6 +845,7 @@ def telegram_update_booking(request):
         print("TELEGRAM UPDATE DATA:", update)
 
         callback = update.get("callback_query")
+
         if not callback:
             return JsonResponse({"success": True, "message": "No callback_query"})
 
@@ -743,7 +865,10 @@ def telegram_update_booking(request):
 
         if ":" not in callback_data:
             telegram_answer_callback(callback_id, "Invalid action")
-            return JsonResponse({"success": False, "error": "Invalid callback_data"}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Invalid callback_data"},
+                status=400,
+            )
 
         action, booking_id_raw = callback_data.split(":", 1)
         action = action.strip().lower()
@@ -752,7 +877,10 @@ def telegram_update_booking(request):
             booking_id = int(booking_id_raw)
         except Exception:
             telegram_answer_callback(callback_id, "Invalid booking")
-            return JsonResponse({"success": False, "error": "Invalid booking id"}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Invalid booking id"},
+                status=400,
+            )
 
         booking = SellerBooking.objects.get(id=booking_id)
 
@@ -771,7 +899,10 @@ def telegram_update_booking(request):
             action_text = "❌ Cancelled"
         else:
             telegram_answer_callback(callback_id, "Invalid action")
-            return JsonResponse({"success": False, "error": "Invalid action"}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Invalid action"},
+                status=400,
+            )
 
         if telegram_name:
             display_name = telegram_name.strip()
@@ -822,7 +953,13 @@ def telegram_update_booking(request):
         )
 
     except SellerBooking.DoesNotExist:
-        return JsonResponse({"success": False, "error": "Booking not found"}, status=404)
+        return JsonResponse(
+            {"success": False, "error": "Booking not found"},
+            status=404,
+        )
     except Exception as e:
         print("telegram_update_booking error:", e)
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+        return JsonResponse(
+            {"success": False, "error": str(e)},
+            status=500,
+        )

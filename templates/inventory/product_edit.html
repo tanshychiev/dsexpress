@@ -1,5 +1,4 @@
 {% extends "inventory/base_inventory.html" %}
-
 {% block title %}Edit Inventory Product - DS Express{% endblock %}
 
 {% block inventory_content %}
@@ -15,6 +14,7 @@
 <div class="inv-card">
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
+    <input type="hidden" name="action" value="save">
 
     <div class="form-grid">
       <div class="form-row">
@@ -25,9 +25,7 @@
       <div class="form-row">
         <label>Product Code / SKU</label>
         <input class="ds-input" type="text" name="sku" value="{{ product.sku }}">
-        <div class="form-help">
-          Import can recognize stock by this code.
-        </div>
+        <div class="form-help">Import can recognize stock by this code.</div>
       </div>
 
       <div class="form-row">
@@ -41,7 +39,7 @@
       </div>
 
       <div class="form-row">
-        <label>Product Photo</label>
+        <label>Upload New Photo</label>
         <input class="ds-input" type="file" name="photo" accept="image/*">
       </div>
 
@@ -57,7 +55,13 @@
     {% if product.photo %}
       <div style="margin-top:16px;">
         <label>Current Photo</label>
-        <img src="{{ product.photo.url }}" style="width:130px;height:130px;object-fit:cover;border-radius:16px;border:1px solid #e5e7eb;">
+        <div style="margin-top:8px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+          <img src="{{ product.photo.url }}" style="width:150px;height:150px;object-fit:cover;border-radius:16px;border:1px solid #e5e7eb;">
+          <label style="display:flex;gap:8px;align-items:center;font-weight:900;">
+            <input type="checkbox" name="remove_photo">
+            Remove current photo
+          </label>
+        </div>
       </div>
     {% endif %}
 
@@ -65,6 +69,17 @@
       <button class="btn-green" type="submit">Save Product</button>
       <a class="btn-soft" href="{% url 'inventory:list' %}">Cancel</a>
     </div>
+  </form>
+</div>
+
+<div class="inv-card" style="border-color:#fecaca;background:#fff7f7;">
+  <strong style="color:#991b1b;">Remove Product</strong>
+  <div class="muted" style="margin-top:6px;">This will hide the product from inventory list. History will stay.</div>
+
+  <form method="post" style="margin-top:12px;" onsubmit="return confirm('Remove this product from inventory list?');">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <button class="btn-soft" type="submit" style="border-color:#ef4444;color:#991b1b;">Remove Product</button>
   </form>
 </div>
 {% endblock %}

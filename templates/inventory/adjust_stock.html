@@ -1,52 +1,57 @@
 {% extends "inventory/base_inventory.html" %}
-
 {% block title %}Adjust Stock - DS Express{% endblock %}
 
 {% block inventory_content %}
 <div class="inv-head">
   <div>
     <h1 class="inv-title">Adjust Stock</h1>
-    <div class="inv-sub">Use when real stock is wrong, missing, damaged, or counted different.</div>
+    <div class="inv-sub">Fix wrong stock by real count or +/- adjustment.</div>
   </div>
 </div>
 
 <div class="inv-card">
   <form method="post">
     {% csrf_token %}
-    {{ form.non_field_errors }}
 
     <div class="form-grid">
-      <div class="form-row">
+      <div class="form-row seller-search-wrap">
+        <label>Shop / Seller</label>
+        <input class="ds-input" id="sellerSearch" type="text" value="{{ selected_seller_display }}" placeholder="Type shop name / code / phone" autocomplete="off">
+        <input type="hidden" id="sellerId" name="seller_id" value="{{ selected_seller_id }}">
+        <div id="sellerDropdown" class="search-dropdown"></div>
+      </div>
+
+      <div class="form-row seller-search-wrap">
         <label>Product</label>
-        {{ form.product }}
-        {{ form.product.errors }}
+        <input class="ds-input" id="productSearch" type="text" value="{{ selected_product_display }}" placeholder="Type product / SKU / type" autocomplete="off">
+        <input type="hidden" id="productId" name="product_id" value="{{ selected_product_id }}">
+        <div id="productDropdown" class="search-dropdown"></div>
       </div>
 
       <div class="form-row">
         <label>Real Qty</label>
-        {{ form.real_qty }}
-        {{ form.real_qty.errors }}
-        <div class="form-help">Example: system says 10, real count 8, enter 8.</div>
+        <input class="ds-input" name="real_qty" type="number" placeholder="Example: 48">
+        <div class="form-help">Use this if you counted real physical stock.</div>
       </div>
 
       <div class="form-row">
-        <label>Or Difference Qty</label>
-        {{ form.diff_qty }}
-        {{ form.diff_qty.errors }}
-        <div class="form-help">Example: missing 2, enter -2. Extra 2, enter 2.</div>
+        <label>Adjustment +/-</label>
+        <input class="ds-input" name="diff_qty" type="number" placeholder="Example: -2 or 10">
+        <div class="form-help">Use this if you only want add/remove quantity.</div>
       </div>
 
       <div class="form-row">
-        <label>Reason / Note</label>
-        {{ form.note }}
-        {{ form.note.errors }}
+        <label>Note</label>
+        <textarea class="ds-input" name="note" rows="2"></textarea>
       </div>
     </div>
 
-    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
-      <button class="btn-green" type="submit">Save Adjustment</button>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-green" type="submit">Adjust Stock</button>
       <a class="btn-soft" href="{% url 'inventory:list' %}">Cancel</a>
     </div>
   </form>
 </div>
+
+{% include "inventory/search_js.html" %}
 {% endblock %}

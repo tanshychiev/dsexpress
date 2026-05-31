@@ -1,5 +1,4 @@
 {% extends "inventory/base_inventory.html" %}
-
 {% block title %}Inventory History - DS Express{% endblock %}
 
 {% block inventory_content %}
@@ -8,18 +7,77 @@
     <h1 class="inv-title">Inventory History</h1>
     <div class="inv-sub">Internal only. Customers cannot see this page.</div>
   </div>
+
+  <button type="button" class="btn-soft" id="toggleSearchBtn">
+    Show / Hide Search
+  </button>
 </div>
 
-<div class="inv-card">
-  <form method="get" class="inv-filter">
+<div class="inv-card" id="historySearchBox" style="display:none;">
+  <form method="get" class="inv-filter" id="historyFilterForm">
+    <input type="hidden" name="search" value="1">
+
     <div>
-      <label class="muted">Search</label>
-      <input class="ds-input" name="q" value="{{ q }}" placeholder="Shop / product / SKU / note">
+      <label class="muted">From Date</label>
+      <input
+        class="ds-input"
+        type="date"
+        name="from_date"
+        value="{{ from_date }}"
+      >
+    </div>
+
+    <div>
+      <label class="muted">To Date</label>
+      <input
+        class="ds-input"
+        type="date"
+        name="to_date"
+        value="{{ to_date }}"
+      >
+    </div>
+
+    <div class="seller-search-wrap">
+      <label class="muted">Shop / Seller</label>
+
+      <input
+        class="ds-input"
+        id="history_seller_search"
+        type="text"
+        name="seller_search_display"
+        value="{{ selected_seller_display|default:'' }}"
+        placeholder="Type seller name / code / phone..."
+        autocomplete="off"
+      >
+
+      <input
+        type="hidden"
+        id="history_seller_id"
+        name="seller_id"
+        value="{{ selected_seller_id|default:'' }}"
+      >
+
+      <div id="history_seller_dropdown" class="seller-dropdown"></div>
     </div>
 
     <div>
       <label class="muted">Tracking No</label>
-      <input class="ds-input" name="tracking" value="{{ tracking }}" placeholder="DS2026...">
+      <input
+        class="ds-input"
+        name="tracking"
+        value="{{ tracking }}"
+        placeholder="DS2026..."
+      >
+    </div>
+
+    <div>
+      <label class="muted">Search</label>
+      <input
+        class="ds-input"
+        name="q"
+        value="{{ q }}"
+        placeholder="Shop / product / SKU / note"
+      >
     </div>
 
     <div>
@@ -30,6 +88,19 @@
 </div>
 
 <div class="inv-card">
+  <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+    <div>
+      <strong>History Result</strong>
+      <div class="muted">
+        Default date is today. Use search to filter by date, shop, product, SKU, tracking, or note.
+      </div>
+    </div>
+
+    <div class="muted">
+      {{ from_date }} → {{ to_date }}
+    </div>
+  </div>
+
   <div class="inv-table-wrap">
     <table class="inv-table">
       <thead>
@@ -49,31 +120,25 @@
         {% for m in page_obj %}
           <tr>
             <td>{{ m.created_at|date:"d-m-Y H:i" }}</td>
+
             <td>
               <strong>{{ m.seller.name }}</strong>
               <div class="muted">{{ m.seller.code }}</div>
             </td>
+
             <td>
               {% if m.product %}
                 <strong>{{ m.product.name }}</strong>
-                <div class="muted">{{ m.product.sku }}</div>
+                <div class="muted">{{ m.product.sku|default:"-" }}</div>
               {% else %}
-                -
+                <span class="muted">-</span>
               {% endif %}
             </td>
+
             <td>
-              {% if m.movement_type == "STOCK_IN" %}
-                <span class="badge badge-green">{{ m.get_movement_type_display }}</span>
-              {% elif m.movement_type == "STOCK_LACK" %}
-                <span class="badge badge-red">{{ m.get_movement_type_display }}</span>
-              {% elif m.movement_type == "IMPORT_UNMATCHED" %}
-                <span class="badge badge-yellow">{{ m.get_movement_type_display }}</span>
-              {% elif m.movement_type == "ADJUSTMENT" %}
-                <span class="badge badge-blue">{{ m.get_movement_type_display }}</span>
-              {% else %}
-                <span class="badge badge-gray">{{ m.get_movement_type_display }}</span>
-              {% endif %}
+              <span class="badge badge-gray">{{ m.get_movement_type_display }}</span>
             </td>
+
             <td>
               {% if m.qty_delta > 0 %}
                 <span class="badge badge-green">+{{ m.qty_delta }}</span>
@@ -83,26 +148,29 @@
                 <span class="badge badge-gray">0</span>
               {% endif %}
             </td>
+
             <td>
               {% if m.order %}
                 {{ m.order.tracking_no }}
               {% else %}
-                -
+                <span class="muted">-</span>
               {% endif %}
             </td>
+
             <td>
               {% if m.created_by %}
                 {{ m.created_by.username }}
               {% else %}
-                -
+                <span class="muted">-</span>
               {% endif %}
             </td>
+
             <td>{{ m.note|default:"-" }}</td>
           </tr>
         {% empty %}
           <tr>
             <td colspan="8">
-              <div class="muted">No stock history yet.</div>
+              <div class="muted">No inventory history found for this filter.</div>
             </td>
           </tr>
         {% endfor %}
@@ -111,17 +179,220 @@
   </div>
 
   {% if page_obj.has_other_pages %}
-    <div style="display:flex; gap:8px; justify-content:center; margin-top:14px;">
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
       {% if page_obj.has_previous %}
-        <a class="btn-soft" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&tracking={{ tracking }}">Previous</a>
+        <a class="btn-soft" href="?page={{ page_obj.previous_page_number }}&from_date={{ from_date }}&to_date={{ to_date }}&seller_id={{ selected_seller_id }}&q={{ q }}&tracking={{ tracking }}&search=1">Previous</a>
       {% endif %}
 
-      <span class="btn-soft">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      <span class="btn-soft">
+        Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+      </span>
 
       {% if page_obj.has_next %}
-        <a class="btn-soft" href="?page={{ page_obj.next_page_number }}&q={{ q }}&tracking={{ tracking }}">Next</a>
+        <a class="btn-soft" href="?page={{ page_obj.next_page_number }}&from_date={{ from_date }}&to_date={{ to_date }}&seller_id={{ selected_seller_id }}&q={{ q }}&tracking={{ tracking }}&search=1">Next</a>
       {% endif %}
     </div>
   {% endif %}
 </div>
+
+<style>
+  .seller-search-wrap{
+    position:relative;
+  }
+
+  .seller-dropdown{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    z-index:99999;
+    max-height:280px;
+    overflow-y:auto;
+    background:#fff;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    box-shadow:0 14px 34px rgba(15,23,42,.16);
+  }
+
+  .seller-dd-item{
+    padding:10px 12px;
+    cursor:pointer;
+    border-bottom:1px solid #f1f5f9;
+    font-size:13px;
+    font-weight:850;
+    color:#0f172a;
+  }
+
+  .seller-dd-item:hover{
+    background:#f0fdf4;
+  }
+
+  .seller-dd-name{
+    font-weight:950;
+  }
+
+  .seller-dd-code{
+    color:#64748b;
+    font-size:12px;
+    font-weight:800;
+    margin-top:2px;
+  }
+</style>
+
+<script>
+(function(){
+  const searchBox = document.getElementById("historySearchBox");
+  const toggleBtn = document.getElementById("toggleSearchBtn");
+
+  if (searchBox && toggleBtn){
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasSearch = urlParams.get("search") === "1";
+
+    if (hasSearch){
+      searchBox.style.display = "block";
+      toggleBtn.textContent = "Hide Search";
+    }
+
+    toggleBtn.addEventListener("click", function(){
+      if (searchBox.style.display === "none"){
+        searchBox.style.display = "block";
+        toggleBtn.textContent = "Hide Search";
+      } else {
+        searchBox.style.display = "none";
+        toggleBtn.textContent = "Show Search";
+      }
+    });
+  }
+})();
+
+(function(){
+  const form = document.getElementById("historyFilterForm");
+  const input = document.getElementById("history_seller_search");
+  const hidden = document.getElementById("history_seller_id");
+  const box = document.getElementById("history_seller_dropdown");
+
+  if (!form || !input || !hidden || !box) return;
+
+  let timer = null;
+
+  function escapeHtml(text){
+    return String(text || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function hideBox(){
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
+
+  function normalizeResponse(data){
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.items)) return data.items;
+    if (data && Array.isArray(data.results)) return data.results;
+    return [];
+  }
+
+  function addAllSellerOption(){
+    const all = document.createElement("div");
+    all.className = "seller-dd-item";
+    all.innerHTML = `
+      <div class="seller-dd-name">All sellers</div>
+      <div class="seller-dd-code">Show all history</div>
+    `;
+
+    all.addEventListener("click", function(){
+      input.value = "";
+      hidden.value = "";
+      hideBox();
+    });
+
+    box.appendChild(all);
+  }
+
+  function renderItems(items){
+    box.innerHTML = "";
+    addAllSellerOption();
+
+    items.forEach(function(item){
+      const id = item.id || "";
+      const name = item.name || "";
+      const code = item.code || "";
+      const phone = item.phone || "";
+
+      const div = document.createElement("div");
+      div.className = "seller-dd-item";
+      div.innerHTML = `
+        <div class="seller-dd-name">${escapeHtml(name)}</div>
+        <div class="seller-dd-code">${escapeHtml(code)}${phone ? " · " + escapeHtml(phone) : ""}</div>
+      `;
+
+      div.addEventListener("click", function(){
+        input.value = `${name}${code ? " - " + code : ""}`;
+        hidden.value = id;
+        hideBox();
+      });
+
+      box.appendChild(div);
+    });
+
+    box.style.display = "block";
+  }
+
+  function searchSeller(q){
+    q = (q || "").trim();
+
+    if (!q){
+      hidden.value = "";
+      box.innerHTML = "";
+      addAllSellerOption();
+      box.style.display = "block";
+      return;
+    }
+
+    fetch(`/api/sellers/autocomplete/?q=${encodeURIComponent(q)}`, {
+      headers: {"Accept":"application/json"}
+    })
+      .then(resp => resp.json())
+      .then(data => {
+        const items = normalizeResponse(data);
+        renderItems(items);
+      })
+      .catch(() => hideBox());
+  }
+
+  input.addEventListener("input", function(){
+    hidden.value = "";
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      searchSeller(input.value);
+    }, 150);
+  });
+
+  input.addEventListener("focus", function(){
+    searchSeller(input.value);
+  });
+
+  input.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){
+      e.preventDefault();
+      form.submit();
+    }
+
+    if (e.key === "Escape"){
+      hideBox();
+    }
+  });
+
+  document.addEventListener("click", function(e){
+    if (!box.contains(e.target) && e.target !== input){
+      hideBox();
+    }
+  });
+})();
+</script>
 {% endblock %}

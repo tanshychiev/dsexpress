@@ -1,0 +1,197 @@
+<style>
+  .seller-search-wrap{position:relative}
+  .search-dropdown{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    z-index:99999;
+    max-height:280px;
+    overflow-y:auto;
+    background:#fff;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    box-shadow:0 14px 34px rgba(15,23,42,.16);
+  }
+  .search-dd-item{
+    padding:10px 12px;
+    cursor:pointer;
+    border-bottom:1px solid #f1f5f9;
+    font-size:13px;
+    font-weight:850;
+    color:#0f172a;
+  }
+  .search-dd-item:hover{background:#f0fdf4}
+  .search-dd-name{font-weight:950}
+  .search-dd-code{color:#64748b;font-size:12px;font-weight:800;margin-top:2px}
+</style>
+
+<script>
+(function(){
+  function escapeHtml(text){
+    return String(text || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function normalize(data){
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.items)) return data.items;
+    if (data && Array.isArray(data.results)) return data.results;
+    return [];
+  }
+
+  function setupSellerSearch(){
+    const input = document.getElementById("sellerSearch");
+    const hidden = document.getElementById("sellerId");
+    const box = document.getElementById("sellerDropdown");
+
+    if (!input || !hidden || !box) return;
+
+    let timer = null;
+
+    function hide(){
+      box.style.display = "none";
+      box.innerHTML = "";
+    }
+
+    function render(items){
+      box.innerHTML = "";
+
+      items.forEach(function(item){
+        const div = document.createElement("div");
+        div.className = "search-dd-item";
+        div.innerHTML = `
+          <div class="search-dd-name">${escapeHtml(item.name)}</div>
+          <div class="search-dd-code">${escapeHtml(item.code || "")}${item.phone ? " · " + escapeHtml(item.phone) : ""}</div>
+        `;
+
+        div.addEventListener("click", function(){
+          input.value = `${item.name}${item.code ? " - " + item.code : ""}`;
+          hidden.value = item.id;
+          hide();
+
+          const productSearch = document.getElementById("productSearch");
+          const productId = document.getElementById("productId");
+          if (productSearch) productSearch.value = "";
+          if (productId) productId.value = "";
+        });
+
+        box.appendChild(div);
+      });
+
+      box.style.display = items.length ? "block" : "none";
+    }
+
+    function search(q){
+      q = (q || "").trim();
+
+      if (!q){
+        hidden.value = "";
+        hide();
+        return;
+      }
+
+      fetch(`/api/sellers/autocomplete/?q=${encodeURIComponent(q)}`, {
+        headers: {"Accept":"application/json"}
+      })
+        .then(resp => resp.json())
+        .then(data => render(normalize(data)))
+        .catch(() => hide());
+    }
+
+    input.addEventListener("input", function(){
+      hidden.value = "";
+      clearTimeout(timer);
+      timer = setTimeout(() => search(input.value), 150);
+    });
+
+    input.addEventListener("focus", function(){
+      if (input.value.trim()) search(input.value);
+    });
+
+    document.addEventListener("click", function(e){
+      if (!box.contains(e.target) && e.target !== input) hide();
+    });
+  }
+
+  function setupProductSearch(){
+    const input = document.getElementById("productSearch");
+    const hidden = document.getElementById("productId");
+    const box = document.getElementById("productDropdown");
+
+    if (!input || !hidden || !box) return;
+
+    let timer = null;
+
+    function hide(){
+      box.style.display = "none";
+      box.innerHTML = "";
+    }
+
+    function render(items){
+      box.innerHTML = "";
+
+      items.forEach(function(item){
+        const div = document.createElement("div");
+        div.className = "search-dd-item";
+        div.innerHTML = `
+          <div class="search-dd-name">${escapeHtml(item.name)}</div>
+          <div class="search-dd-code">
+            ${escapeHtml(item.sku || "-")} · Available: ${item.available_qty}
+            ${item.seller_name ? " · " + escapeHtml(item.seller_name) : ""}
+          </div>
+        `;
+
+        div.addEventListener("click", function(){
+          input.value = `${item.name}${item.sku ? " - " + item.sku : ""}`;
+          hidden.value = item.id;
+          hide();
+        });
+
+        box.appendChild(div);
+      });
+
+      box.style.display = items.length ? "block" : "none";
+    }
+
+    function search(q){
+      const sellerId = document.getElementById("sellerId")?.value || "";
+      q = (q || "").trim();
+
+      if (!q && !sellerId){
+        hide();
+        return;
+      }
+
+      fetch(`/inventory/api/products/?seller_id=${encodeURIComponent(sellerId)}&q=${encodeURIComponent(q)}`, {
+        headers: {"Accept":"application/json"}
+      })
+        .then(resp => resp.json())
+        .then(data => render(normalize(data)))
+        .catch(() => hide());
+    }
+
+    input.addEventListener("input", function(){
+      hidden.value = "";
+      clearTimeout(timer);
+      timer = setTimeout(() => search(input.value), 150);
+    });
+
+    input.addEventListener("focus", function(){
+      search(input.value);
+    });
+
+    document.addEventListener("click", function(e){
+      if (!box.contains(e.target) && e.target !== input) hide();
+    });
+  }
+
+  setupSellerSearch();
+  setupProductSearch();
+})();
+</script>

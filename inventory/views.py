@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, time
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -9,16 +10,12 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from masterdata.models import Seller
 from orders.models import Order
 
-from .forms import (
-    AdjustStockForm,
-    ConfirmStockForm,
-    InventorySellerSettingForm,
-    StockInForm,
-)
+from .forms import InventorySellerSettingForm
 from .models import OrderStockItem, StockMovement, StockProduct
 from .services import (
     add_stock_in,
@@ -37,6 +34,75 @@ from .services import (
 def staff_only(request):
     return request.user.is_authenticated and request.user.is_staff
 
+
+def seller_display(seller):
+    if not seller:
+        return ""
+    code = getattr(seller, "code", "") or ""
+    name = getattr(seller, "name", "") or ""
+    return f"{name} - {code}".strip(" -")
+
+
+def product_display(product):
+    if not product:
+        return ""
+    sku = getattr(product, "sku", "") or ""
+    name = getattr(product, "name", "") or ""
+    return f"{name} - {sku}".strip(" -")
+
+
+def get_selected_seller_from_request(request):
+    seller_id = (
+        request.POST.get("seller_id")
+        or request.POST.get("seller")
+        or request.GET.get("seller_id")
+        or request.GET.get("seller")
+        or ""
+    ).strip()
+
+    if seller_id.isdigit():
+        return Seller.objects.filter(id=int(seller_id), is_active=True).first()
+
+    return None
+
+
+def get_selected_product_from_request(request):
+    product_id = (
+        request.POST.get("product_id")
+        or request.POST.get("product")
+        or request.GET.get("product_id")
+        or request.GET.get("product")
+        or ""
+    ).strip()
+
+    if product_id.isdigit():
+        return StockProduct.objects.filter(id=int(product_id), is_active=True).first()
+
+    return None
+
+
+def inventory_date_range(request):
+    today = timezone.localdate()
+
+    from_date_raw = (request.GET.get("from_date") or today.isoformat()).strip()
+    to_date_raw = (request.GET.get("to_date") or today.isoformat()).strip()
+
+    try:
+        from_date = datetime.strptime(from_date_raw, "%Y-%m-%d").date()
+    except Exception:
+        from_date = today
+
+    try:
+        to_date = datetime.strptime(to_date_raw, "%Y-%m-%d").date()
+    except Exception:
+        to_date = today
+
+    start_dt = timezone.make_aware(datetime.combine(from_date, time.min))
+    end_dt = timezone.make_aware(datetime.combine(to_date, time.max))
+
+    return from_date, to_date, start_dt, end_dt
+
+
 @login_required
 def inventory_list(request):
     if not staff_only(request):
@@ -47,13 +113,12 @@ def inventory_list(request):
 
     sellers = Seller.objects.filter(is_active=True).order_by("name")
 
-    selected_seller_display = ""
     selected_seller = None
+    selected_seller_display = ""
 
     if seller_id.isdigit():
         selected_seller = Seller.objects.filter(id=int(seller_id), is_active=True).first()
-        if selected_seller:
-            selected_seller_display = f"{selected_seller.name} - {selected_seller.code or ''}".strip(" -")
+        selected_seller_display = seller_display(selected_seller)
 
     products = (
         StockProduct.objects
@@ -81,7 +146,6 @@ def inventory_list(request):
         available = current_available_qty(product)
         reserved = reserved_qty(product)
         snapshot = last_confirmed(product)
-
         setting = get_seller_inventory_setting(product.seller)
 
         if setting.stock_mode == "STRICT":
@@ -126,80 +190,83 @@ def stock_in(request):
     if not staff_only(request):
         return redirect("portal:dashboard")
 
-    seller = None
-    seller_id = request.POST.get("seller") or request.GET.get("seller_id")
-
-    if seller_id and str(seller_id).isdigit():
-        seller = Seller.objects.filter(id=int(seller_id)).first()
+    selected_seller = get_selected_seller_from_request(request)
+    selected_product = get_selected_product_from_request(request)
 
     if request.method == "POST":
-        form = StockInForm(request.POST, request.FILES, seller=seller)
+        seller = selected_seller
+        product = selected_product
 
-        if form.is_valid():
-            seller = form.cleaned_data["seller"]
-            product = form.cleaned_data.get("product")
-            new_product_name = (form.cleaned_data.get("new_product_name") or "").strip()
-            product_type = (form.cleaned_data.get("product_type") or "").strip()
-            photo = form.cleaned_data.get("photo")
-            location = (form.cleaned_data.get("location") or "").strip()
-            qty = form.cleaned_data["qty"]
-            note = form.cleaned_data.get("note") or ""
+        new_product_name = (request.POST.get("new_product_name") or "").strip()
+        product_type = (request.POST.get("product_type") or "").strip()
+        location = (request.POST.get("location") or "").strip()
+        qty_raw = (request.POST.get("qty") or "").strip()
+        note = (request.POST.get("note") or "").strip()
+        photo = request.FILES.get("photo")
 
-            with transaction.atomic():
-                if not product:
-                    if not new_product_name:
-                        form.add_error(
-                            "new_product_name",
-                            "Choose existing product or enter new product name.",
-                        )
-                    else:
-                        product = StockProduct.objects.create(
-                            seller=seller,
-                            name=new_product_name,
-                            product_type=product_type,
-                            photo=photo,
-                            location=location,
-                            created_by=request.user,
-                        )
-                else:
-                    changed = False
+        try:
+            qty = int(qty_raw or 0)
+        except Exception:
+            qty = 0
 
-                    if photo:
-                        product.photo = photo
-                        changed = True
+        if not seller:
+            messages.error(request, "Please choose seller/shop.")
+            return redirect("inventory:stock_in")
 
-                    if location:
-                        product.location = location
-                        changed = True
+        if qty <= 0:
+            messages.error(request, "Qty must be greater than 0.")
+            return redirect("inventory:stock_in")
 
-                    if product_type and not product.product_type:
-                        product.product_type = product_type
-                        changed = True
+        with transaction.atomic():
+            if not product:
+                if not new_product_name:
+                    messages.error(request, "Choose existing product or enter new product name.")
+                    return redirect("inventory:stock_in")
 
-                    if changed:
-                        product.save()
+                product = StockProduct.objects.create(
+                    seller=seller,
+                    name=new_product_name,
+                    product_type=product_type,
+                    location=location,
+                    photo=photo,
+                    created_by=request.user,
+                )
+            else:
+                changed = False
 
-                if product and not form.errors:
-                    add_stock_in(
-                        product=product,
-                        qty=qty,
-                        actor=request.user,
-                        note=note,
-                    )
+                if photo:
+                    product.photo = photo
+                    changed = True
 
-                    messages.success(
-                        request,
-                        f"Stock in saved: {product.name} +{qty}",
-                    )
-                    return redirect("inventory:list")
-    else:
-        form = StockInForm(seller=seller)
+                if product_type:
+                    product.product_type = product_type
+                    changed = True
+
+                if location:
+                    product.location = location
+                    changed = True
+
+                if changed:
+                    product.save()
+
+            add_stock_in(
+                product=product,
+                qty=qty,
+                actor=request.user,
+                note=note or "Stock in",
+            )
+
+        messages.success(request, f"Stock in saved: {product.name} +{qty}")
+        return redirect("inventory:list")
 
     return render(
         request,
         "inventory/stock_in.html",
         {
-            "form": form,
+            "selected_seller_id": selected_seller.id if selected_seller else "",
+            "selected_seller_display": seller_display(selected_seller),
+            "selected_product_id": selected_product.id if selected_product else "",
+            "selected_product_display": product_display(selected_product),
         },
     )
 
@@ -209,33 +276,59 @@ def adjust_stock_view(request):
     if not staff_only(request):
         return redirect("portal:dashboard")
 
+    selected_seller = get_selected_seller_from_request(request)
+    selected_product = get_selected_product_from_request(request)
+
     if request.method == "POST":
-        form = AdjustStockForm(request.POST)
+        product = selected_product
+        real_qty_raw = (request.POST.get("real_qty") or "").strip()
+        diff_qty_raw = (request.POST.get("diff_qty") or "").strip()
+        note = (request.POST.get("note") or "").strip()
 
-        if form.is_valid():
-            product = form.cleaned_data["product"]
-            real_qty = form.cleaned_data.get("real_qty")
-            diff_qty = form.cleaned_data.get("diff_qty")
-            note = form.cleaned_data.get("note") or ""
+        if not product:
+            messages.error(request, "Please choose product.")
+            return redirect("inventory:adjust")
 
-            adjust_stock(
-                product=product,
-                real_qty=real_qty,
-                diff_qty=diff_qty,
-                actor=request.user,
-                note=note,
-            )
+        real_qty = None
+        diff_qty = None
 
-            messages.success(request, "Stock adjusted.")
-            return redirect("inventory:list")
-    else:
-        form = AdjustStockForm()
+        try:
+            if real_qty_raw != "":
+                real_qty = int(real_qty_raw)
+        except Exception:
+            messages.error(request, "Real qty must be a number.")
+            return redirect("inventory:adjust")
+
+        try:
+            if diff_qty_raw != "":
+                diff_qty = int(diff_qty_raw)
+        except Exception:
+            messages.error(request, "Adjustment qty must be a number.")
+            return redirect("inventory:adjust")
+
+        if real_qty is None and diff_qty is None:
+            messages.error(request, "Enter real qty or adjustment qty.")
+            return redirect("inventory:adjust")
+
+        adjust_stock(
+            product=product,
+            real_qty=real_qty,
+            diff_qty=diff_qty,
+            actor=request.user,
+            note=note or "Stock adjustment",
+        )
+
+        messages.success(request, "Stock adjusted.")
+        return redirect("inventory:list")
 
     return render(
         request,
         "inventory/adjust_stock.html",
         {
-            "form": form,
+            "selected_seller_id": selected_seller.id if selected_seller else "",
+            "selected_seller_display": seller_display(selected_seller),
+            "selected_product_id": selected_product.id if selected_product else "",
+            "selected_product_display": product_display(selected_product),
         },
     )
 
@@ -245,34 +338,46 @@ def confirm_stock_view(request):
     if not staff_only(request):
         return redirect("portal:dashboard")
 
+    selected_seller = get_selected_seller_from_request(request)
+    selected_product = get_selected_product_from_request(request)
+
     if request.method == "POST":
-        form = ConfirmStockForm(request.POST)
+        product = selected_product
+        real_qty_raw = (request.POST.get("real_qty") or "").strip()
+        note = (request.POST.get("note") or "").strip()
 
-        if form.is_valid():
-            product = form.cleaned_data["product"]
-            real_qty = form.cleaned_data["real_qty"]
-            note = form.cleaned_data.get("note") or ""
+        if not product:
+            messages.error(request, "Please choose product.")
+            return redirect("inventory:confirm")
 
-            confirm_stock(
-                product=product,
-                real_qty=real_qty,
-                actor=request.user,
-                note=note,
-            )
+        try:
+            real_qty = int(real_qty_raw or 0)
+        except Exception:
+            messages.error(request, "Real qty must be a number.")
+            return redirect("inventory:confirm")
 
-            messages.success(
-                request,
-                f"Stock confirmed: {product.name} = {real_qty}",
-            )
-            return redirect("inventory:list")
-    else:
-        form = ConfirmStockForm()
+        if real_qty < 0:
+            messages.error(request, "Real qty cannot be negative.")
+            return redirect("inventory:confirm")
+
+        confirm_stock(
+            product=product,
+            real_qty=real_qty,
+            actor=request.user,
+            note=note or "Stock confirmed",
+        )
+
+        messages.success(request, f"Stock confirmed: {product.name} = {real_qty}")
+        return redirect("inventory:list")
 
     return render(
         request,
         "inventory/confirm_stock.html",
         {
-            "form": form,
+            "selected_seller_id": selected_seller.id if selected_seller else "",
+            "selected_seller_display": seller_display(selected_seller),
+            "selected_product_id": selected_product.id if selected_product else "",
+            "selected_product_display": product_display(selected_product),
         },
     )
 
@@ -282,9 +387,12 @@ def history(request):
     if not staff_only(request):
         return redirect("portal:dashboard")
 
+    from_date, to_date, start_dt, end_dt = inventory_date_range(request)
+
     qs = (
         StockMovement.objects
         .select_related("seller", "product", "order", "created_by")
+        .filter(created_at__gte=start_dt, created_at__lte=end_dt)
         .order_by("-created_at", "-id")
     )
 
@@ -293,8 +401,12 @@ def history(request):
     tracking = (request.GET.get("tracking") or "").strip()
     q = (request.GET.get("q") or "").strip()
 
+    selected_seller = None
+
     if seller_id.isdigit():
-        qs = qs.filter(seller_id=int(seller_id))
+        selected_seller = Seller.objects.filter(id=int(seller_id), is_active=True).first()
+        if selected_seller:
+            qs = qs.filter(seller=selected_seller)
 
     if product_id.isdigit():
         qs = qs.filter(product_id=int(product_id))
@@ -308,6 +420,7 @@ def history(request):
             | Q(seller__code__icontains=q)
             | Q(product__name__icontains=q)
             | Q(product__sku__icontains=q)
+            | Q(product__location__icontains=q)
             | Q(order__tracking_no__icontains=q)
             | Q(note__icontains=q)
         )
@@ -322,6 +435,10 @@ def history(request):
             "page_obj": page_obj,
             "q": q,
             "tracking": tracking,
+            "from_date": from_date.isoformat(),
+            "to_date": to_date.isoformat(),
+            "selected_seller_id": selected_seller.id if selected_seller else "",
+            "selected_seller_display": seller_display(selected_seller),
         },
     )
 
@@ -356,25 +473,21 @@ def seller_inventory_setting(request, seller_id: int):
 
 @login_required
 def stock_products_api(request):
-    """
-    Used by create order / edit order popup.
-    Returns stock products for selected seller.
-    """
     if not staff_only(request):
         return JsonResponse({"results": []}, status=403)
 
     seller_id = (request.GET.get("seller_id") or "").strip()
     q = (request.GET.get("q") or "").strip()
 
-    if not seller_id.isdigit():
-        return JsonResponse({"results": []})
-
     qs = (
         StockProduct.objects
-        .filter(seller_id=int(seller_id), is_active=True)
+        .filter(is_active=True)
         .select_related("seller")
-        .order_by("name")
+        .order_by("seller__name", "name")
     )
+
+    if seller_id.isdigit():
+        qs = qs.filter(seller_id=int(seller_id))
 
     if q:
         qs = qs.filter(
@@ -382,6 +495,8 @@ def stock_products_api(request):
             | Q(sku__icontains=q)
             | Q(product_type__icontains=q)
             | Q(location__icontains=q)
+            | Q(seller__name__icontains=q)
+            | Q(seller__code__icontains=q)
         )
 
     results = []
@@ -389,6 +504,9 @@ def stock_products_api(request):
     for product in qs[:80]:
         results.append({
             "id": product.id,
+            "seller_id": product.seller_id,
+            "seller_name": product.seller.name,
+            "seller_code": product.seller.code or "",
             "name": product.name,
             "sku": product.sku or "",
             "product_type": product.product_type or "",
@@ -510,12 +628,9 @@ def choose_order_stock(request, order_id: int):
         },
     )
 
+
 @login_required
 def product_edit(request, product_id: int):
-    """
-    Edit inventory product name / code / SKU / type / location / photo.
-    Import can recognize stock by SKU/code or product name.
-    """
     if not staff_only(request):
         return redirect("portal:dashboard")
 
@@ -525,11 +640,30 @@ def product_edit(request, product_id: int):
     )
 
     if request.method == "POST":
+        action = (request.POST.get("action") or "save").strip()
+
+        if action == "delete":
+            product.is_active = False
+            product.save(update_fields=["is_active"])
+
+            StockMovement.objects.create(
+                seller=product.seller,
+                product=product,
+                movement_type=StockMovement.PRODUCT_CHANGED,
+                qty_delta=0,
+                created_by=request.user,
+                note=f"Product removed/hidden: {product.name}",
+            )
+
+            messages.success(request, "Product removed from inventory list.")
+            return redirect("inventory:list")
+
         name = (request.POST.get("name") or "").strip()
         sku = (request.POST.get("sku") or "").strip()
         product_type = (request.POST.get("product_type") or "").strip()
         location = (request.POST.get("location") or "").strip()
         is_active = request.POST.get("is_active") == "on"
+        remove_photo = request.POST.get("remove_photo") == "on"
         photo = request.FILES.get("photo")
 
         if not name:
@@ -556,6 +690,7 @@ def product_edit(request, product_id: int):
         old_type = product.product_type
         old_location = product.location
         old_active = product.is_active
+        old_photo = bool(product.photo)
 
         product.name = name
         product.sku = sku
@@ -563,7 +698,13 @@ def product_edit(request, product_id: int):
         product.location = location
         product.is_active = is_active
 
+        if remove_photo and product.photo:
+            product.photo.delete(save=False)
+            product.photo = None
+
         if photo:
+            if product.photo:
+                product.photo.delete(save=False)
             product.photo = photo
 
         product.save()
@@ -580,7 +721,8 @@ def product_edit(request, product_id: int):
                 f"Code: {old_sku or '-'} -> {product.sku or '-'}. "
                 f"Type: {old_type or '-'} -> {product.product_type or '-'}. "
                 f"Location: {old_location or '-'} -> {product.location or '-'}. "
-                f"Active: {old_active} -> {product.is_active}."
+                f"Active: {old_active} -> {product.is_active}. "
+                f"Had photo: {old_photo}, now photo: {bool(product.photo)}."
             ),
         )
 

@@ -14,51 +14,100 @@
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
-    {{ form.non_field_errors }}
-
     <div class="form-grid">
-      <div class="form-row">
+      <div class="form-row seller-search-wrap">
         <label>Seller / Shop</label>
-        {{ form.seller }}
-        {{ form.seller.errors }}
+
+        <input
+          class="ds-input"
+          id="sellerSearch"
+          type="text"
+          value="{{ selected_seller_display|default:'' }}"
+          placeholder="Type shop name / code / phone..."
+          autocomplete="off"
+        >
+
+        <input
+          type="hidden"
+          id="sellerId"
+          name="seller_id"
+          value="{{ selected_seller_id|default:'' }}"
+        >
+
+        <div id="sellerDropdown" class="search-dropdown"></div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row seller-search-wrap">
         <label>Choose Existing Product</label>
-        {{ form.product }}
-        {{ form.product.errors }}
+
+        <input
+          class="ds-input"
+          id="productSearch"
+          type="text"
+          value="{{ selected_product_display|default:'' }}"
+          placeholder="Type product / SKU / type..."
+          autocomplete="off"
+        >
+
+        <input
+          type="hidden"
+          id="productId"
+          name="product_id"
+          value="{{ selected_product_id|default:'' }}"
+        >
+
+        <div id="productDropdown" class="search-dropdown"></div>
         <div class="form-help">Choose if product already exists.</div>
       </div>
 
       <div class="form-row">
         <label>New Product Name</label>
-        {{ form.new_product_name }}
-        {{ form.new_product_name.errors }}
+        <input
+          class="ds-input"
+          name="new_product_name"
+          placeholder="Only fill if this is new product"
+        >
         <div class="form-help">Fill this only for new product.</div>
       </div>
 
       <div class="form-row">
         <label>Product Type</label>
-        {{ form.product_type }}
-        {{ form.product_type.errors }}
+        <input
+          class="ds-input"
+          name="product_type"
+          placeholder="Serum / Cream / Gel"
+        >
       </div>
 
       <div class="form-row">
         <label>Location</label>
-        {{ form.location }}
-        {{ form.location.errors }}
+        <input
+          class="ds-input"
+          name="location"
+          placeholder="Shelf / box location"
+        >
       </div>
 
       <div class="form-row">
         <label>Qty In</label>
-        {{ form.qty }}
-        {{ form.qty.errors }}
+        <input
+          class="ds-input"
+          name="qty"
+          type="number"
+          min="1"
+          placeholder="Example: 300"
+          required
+        >
       </div>
 
       <div class="form-row">
         <label>Note</label>
-        {{ form.note }}
-        {{ form.note.errors }}
+        <textarea
+          class="ds-input"
+          name="note"
+          rows="2"
+          placeholder="Optional note..."
+        ></textarea>
       </div>
     </div>
 
@@ -89,8 +138,6 @@
       <div class="form-help">
         You can screenshot/copy an image, click the upload box, then press Ctrl+V.
       </div>
-
-      {{ form.photo.errors }}
     </div>
 
     <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
@@ -101,6 +148,49 @@
 </div>
 
 <style>
+  .seller-search-wrap{
+    position:relative;
+  }
+
+  .search-dropdown{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    z-index:99999;
+    max-height:280px;
+    overflow-y:auto;
+    background:#fff;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    box-shadow:0 14px 34px rgba(15,23,42,.16);
+  }
+
+  .search-dd-item{
+    padding:10px 12px;
+    cursor:pointer;
+    border-bottom:1px solid #f1f5f9;
+    font-size:13px;
+    font-weight:850;
+    color:#0f172a;
+  }
+
+  .search-dd-item:hover{
+    background:#f0fdf4;
+  }
+
+  .search-dd-name{
+    font-weight:950;
+  }
+
+  .search-dd-code{
+    color:#64748b;
+    font-size:12px;
+    font-weight:800;
+    margin-top:2px;
+  }
+
   .photo-drop{
     min-height:220px;
     border:2px dashed #86efac;
@@ -188,6 +278,188 @@
     background:#b91c1c;
   }
 </style>
+
+<script>
+(function(){
+  function escapeHtml(text){
+    return String(text || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function normalize(data){
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.items)) return data.items;
+    if (data && Array.isArray(data.results)) return data.results;
+    return [];
+  }
+
+  function setupSellerSearch(){
+    const input = document.getElementById("sellerSearch");
+    const hidden = document.getElementById("sellerId");
+    const box = document.getElementById("sellerDropdown");
+
+    if (!input || !hidden || !box) return;
+
+    let timer = null;
+
+    function hide(){
+      box.style.display = "none";
+      box.innerHTML = "";
+    }
+
+    function render(items){
+      box.innerHTML = "";
+
+      items.forEach(function(item){
+        const name = item.name || "";
+        const code = item.code || "";
+        const phone = item.phone || "";
+
+        const div = document.createElement("div");
+        div.className = "search-dd-item";
+        div.innerHTML = `
+          <div class="search-dd-name">${escapeHtml(name)}</div>
+          <div class="search-dd-code">${escapeHtml(code)}${phone ? " · " + escapeHtml(phone) : ""}</div>
+        `;
+
+        div.addEventListener("click", function(){
+          input.value = `${name}${code ? " - " + code : ""}`;
+          hidden.value = item.id;
+          hide();
+
+          const productSearch = document.getElementById("productSearch");
+          const productId = document.getElementById("productId");
+
+          if (productSearch) productSearch.value = "";
+          if (productId) productId.value = "";
+        });
+
+        box.appendChild(div);
+      });
+
+      box.style.display = items.length ? "block" : "none";
+    }
+
+    function search(q){
+      q = (q || "").trim();
+
+      if (!q){
+        hidden.value = "";
+        hide();
+        return;
+      }
+
+      fetch(`/api/sellers/autocomplete/?q=${encodeURIComponent(q)}`, {
+        headers: {"Accept":"application/json"}
+      })
+        .then(resp => resp.json())
+        .then(data => render(normalize(data)))
+        .catch(() => hide());
+    }
+
+    input.addEventListener("input", function(){
+      hidden.value = "";
+      clearTimeout(timer);
+      timer = setTimeout(function(){
+        search(input.value);
+      }, 150);
+    });
+
+    input.addEventListener("focus", function(){
+      if (input.value.trim()) search(input.value);
+    });
+
+    document.addEventListener("click", function(e){
+      if (!box.contains(e.target) && e.target !== input) hide();
+    });
+  }
+
+  function setupProductSearch(){
+    const input = document.getElementById("productSearch");
+    const hidden = document.getElementById("productId");
+    const box = document.getElementById("productDropdown");
+
+    if (!input || !hidden || !box) return;
+
+    let timer = null;
+
+    function hide(){
+      box.style.display = "none";
+      box.innerHTML = "";
+    }
+
+    function render(items){
+      box.innerHTML = "";
+
+      items.forEach(function(item){
+        const name = item.name || "";
+        const sku = item.sku || "";
+        const type = item.product_type || "";
+        const available = item.available_qty ?? "-";
+
+        const div = document.createElement("div");
+        div.className = "search-dd-item";
+        div.innerHTML = `
+          <div class="search-dd-name">${escapeHtml(name)}</div>
+          <div class="search-dd-code">
+            ${escapeHtml(sku || "-")} · ${escapeHtml(type || "-")} · Available: ${available}
+          </div>
+        `;
+
+        div.addEventListener("click", function(){
+          input.value = `${name}${sku ? " - " + sku : ""}`;
+          hidden.value = item.id;
+          hide();
+        });
+
+        box.appendChild(div);
+      });
+
+      box.style.display = items.length ? "block" : "none";
+    }
+
+    function search(q){
+      const sellerId = document.getElementById("sellerId")?.value || "";
+      q = (q || "").trim();
+
+      if (!q && !sellerId){
+        hide();
+        return;
+      }
+
+      fetch(`/inventory/api/products/?seller_id=${encodeURIComponent(sellerId)}&q=${encodeURIComponent(q)}`, {
+        headers: {"Accept":"application/json"}
+      })
+        .then(resp => resp.json())
+        .then(data => render(normalize(data)))
+        .catch(() => hide());
+    }
+
+    input.addEventListener("input", function(){
+      hidden.value = "";
+      clearTimeout(timer);
+      timer = setTimeout(function(){
+        search(input.value);
+      }, 150);
+    });
+
+    input.addEventListener("focus", function(){
+      search(input.value);
+    });
+
+    document.addEventListener("click", function(e){
+      if (!box.contains(e.target) && e.target !== input) hide();
+    });
+  }
+
+  setupSellerSearch();
+  setupProductSearch();
+})();
+</script>
 
 <script>
 (function(){

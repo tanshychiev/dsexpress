@@ -6,22 +6,22 @@
   "scope": "/portal/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#179b67",
+  "theme_color": "#0f7a45",
   "icons": [
     {
-      "src": "/static/img/favicon.png?v=20260604ds",
+      "src": "/static/img/favicon.png?v=20260604ds6",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/img/favicon.png?v=20260604ds",
+      "src": "/static/img/favicon.png?v=20260604ds6",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/img/favicon.png?v=20260604ds",
+      "src": "/static/img/favicon.png?v=20260604ds6",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

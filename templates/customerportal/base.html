@@ -9,24 +9,21 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
   >
 
-  {% static 'img/favicon.png' as ds_favicon %}
+  {% static 'img/ds-app-icon-180.png' as ds_icon_180 %}
+  {% static 'img/ds-app-icon-192.png' as ds_icon_192 %}
+  {% static 'img/ds-app-icon-512.png' as ds_icon_512 %}
   {% static 'img/manifest/ds-express.webmanifest' as ds_manifest %}
 
-  <!-- FORCE APP NAME FOR SAFARI / IPHONE / PWA -->
   <title>DS EXPRESS</title>
 
-  <!-- NORMAL BROWSER ICON -->
-  <link rel="icon" type="image/png" href="{{ ds_favicon }}?v=20260604ds6">
-  <link rel="shortcut icon" type="image/png" href="{{ ds_favicon }}?v=20260604ds6">
+  <link rel="icon" type="image/png" href="{{ ds_icon_192 }}?v=20260604fit3">
+  <link rel="shortcut icon" type="image/png" href="{{ ds_icon_192 }}?v=20260604fit3">
 
-  <!-- IPHONE ADD TO HOME SCREEN ICON -->
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ ds_favicon }}?v=20260604ds6">
-  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ ds_favicon }}?v=20260604ds6">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ ds_icon_180 }}?v=20260604fit3">
+  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ ds_icon_180 }}?v=20260604fit3">
 
-  <!-- PWA MANIFEST -->
-  <link rel="manifest" href="{{ ds_manifest }}?v=20260604ds6">
+  <link rel="manifest" href="{{ ds_manifest }}?v=20260604fit3">
 
-  <!-- FORCE APP NAME -->
   <meta name="application-name" content="DS EXPRESS">
   <meta name="apple-mobile-web-app-title" content="DS EXPRESS">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -35,12 +32,11 @@
   <meta name="theme-color" content="#0f7a45">
   <meta name="description" content="DS EXPRESS Seller Portal">
 
-  <!-- EXTRA FORCE FOR IPHONE CACHE -->
   <script>
     document.title = "DS EXPRESS";
   </script>
 
-  <link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}?v=20260604ds6">
+  <link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}?v=20260604fit3">
   {% block extra_css %}{% endblock %}
 
   <style>
@@ -539,7 +535,7 @@
   <div class="portal-container header-inner">
     <a href="{% url 'portal:home' %}" class="brand">
       <span class="logo">
-        <img src="{{ ds_favicon }}?v=20260604ds6" alt="DS EXPRESS">
+        <img src="{{ ds_icon_192 }}?v=20260604fit3" alt="DS EXPRESS">
       </span>
       <span>DS EXPRESS</span>
     </a>
@@ -586,7 +582,7 @@
   <div class="portal-container footer-inner">
     <div class="footer-brand">
       <div class="footer-logo">
-        <img src="{{ ds_favicon }}?v=20260604ds6" alt="DS EXPRESS">
+        <img src="{{ ds_icon_192 }}?v=20260604fit3" alt="DS EXPRESS">
       </div>
       <div>
         <div class="footer-title">DS EXPRESS</div>
@@ -601,7 +597,7 @@
   </div>
 </footer>
 
-<script src="{% static 'customerportal/js/portal.js' %}?v=20260604ds6"></script>
+<script src="{% static 'customerportal/js/portal.js' %}?v=20260604fit3"></script>
 
 <script>
 (function () {

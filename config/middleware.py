@@ -31,11 +31,11 @@ class InternalLoginRequiredMiddleware:
 
     # iPhone / Safari PWA icon requests from root
     PWA_ROOT_REDIRECTS = {
-        "/apple-touch-icon.png": "/static/img/favicon.png?v=20260604ds10",
-        "/apple-touch-icon-precomposed.png": "/static/img/favicon.png?v=20260604ds10",
-        "/apple-touch-icon-180x180.png": "/static/img/favicon.png?v=20260604ds10",
-        "/manifest.json": "/static/img/manifest/ds-express.webmanifest?v=20260604ds10",
-        "/site.webmanifest": "/static/img/manifest/ds-express.webmanifest?v=20260604ds10",
+        "/apple-touch-icon.png": "/static/img/ds-app-icon-180.png?v=20260604fit3",
+        "/apple-touch-icon-precomposed.png": "/static/img/ds-app-icon-180.png?v=20260604fit3",
+        "/apple-touch-icon-180x180.png": "/static/img/ds-app-icon-180.png?v=20260604fit3",
+        "/manifest.json": "/static/img/manifest/ds-express.webmanifest?v=20260604fit3",
+        "/site.webmanifest": "/static/img/manifest/ds-express.webmanifest?v=20260604fit3",
     }
 
     ALLOWED_URL_NAMES = {

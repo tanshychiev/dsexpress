@@ -1,8 +1,17 @@
+from difflib import SequenceMatcher
+
 from django.shortcuts import redirect
 from django.urls import resolve, Resolver404
 
 
 class InternalLoginRequiredMiddleware:
+    LOGIN_URL = "/accounts/login/"
+    PORTAL_HOME = "/portal/"
+    PORTAL_LOGIN = "/portal/login/"
+
+    # Change this if your internal dashboard is not "/"
+    INTERNAL_HOME = "/"
+
     ALLOWED_PREFIXES = (
         "/accounts/login/",
         "/accounts/logout/",
@@ -14,6 +23,11 @@ class InternalLoginRequiredMiddleware:
         "/reports/delivery-report/pdf/",
     )
 
+    ALLOWED_EXACT_PATHS = {
+        "/favicon.ico",
+        "/portal",
+    }
+
     ALLOWED_URL_NAMES = {
         "login",
         "logout",
@@ -21,32 +35,141 @@ class InternalLoginRequiredMiddleware:
         "delivery_report_pdf",
     }
 
+    # Words that look like customer / seller portal
+    PORTAL_WORDS = (
+        "portal",
+        "seller",
+        "shop",
+        "customer",
+        "tracking",
+        "track",
+        "booking",
+        "book",
+    )
+
+    # Words that look like internal staff system
+    INTERNAL_WORDS = (
+        "admin",
+        "account",
+        "accounts",
+        "dashboard",
+        "order",
+        "orders",
+        "delivery",
+        "deliver",
+        "deliverpp",
+        "province",
+        "return",
+        "reports",
+        "report",
+        "inventory",
+        "stock",
+        "cod",
+        "masterdata",
+        "shipper",
+        "seller-list",
+        "users",
+        "staff",
+    )
+
     def __init__(self, get_response):
         self.get_response = get_response
+
+    def _first_segment(self, path):
+        """
+        /portal/test  -> portal
+        /repoorts/x   -> repoorts
+        /.gfasd       -> .gfasd
+        """
+        clean = (path or "/").strip("/").lower()
+        if not clean:
+            return ""
+        return clean.split("/")[0]
+
+    def _similarity(self, a, b):
+        return SequenceMatcher(None, a, b).ratio()
+
+    def _looks_like_words(self, segment, words):
+        if not segment:
+            return False
+
+        segment = segment.lower()
+
+        for word in words:
+            # Exact
+            if segment == word:
+                return True
+
+            # Example: por -> portal, repo -> reports
+            if len(segment) >= 3 and word.startswith(segment):
+                return True
+
+            # Example: portl -> portal, repoorts -> reports
+            if self._similarity(segment, word) >= 0.72:
+                return True
+
+        return False
+
+    def _go_internal(self, request):
+        if not request.user.is_authenticated:
+            return redirect(f"{self.LOGIN_URL}?next={self.INTERNAL_HOME}")
+
+        if not request.user.is_staff:
+            return redirect(self.PORTAL_LOGIN)
+
+        return redirect(self.INTERNAL_HOME)
 
     def __call__(self, request):
         path = request.path or "/"
 
+        # /portal without slash
+        if path == "/portal":
+            return redirect(self.PORTAL_HOME)
+
+        # Public exact paths
+        if path in self.ALLOWED_EXACT_PATHS:
+            return self.get_response(request)
+
+        # Public prefixes
         for prefix in self.ALLOWED_PREFIXES:
             if path.startswith(prefix):
                 return self.get_response(request)
 
-        if path == "/favicon.ico":
-            return self.get_response(request)
-
+        # Try normal Django URL first
         try:
             match = resolve(path)
             url_name = match.url_name
         except Resolver404:
-            url_name = None
+            segment = self._first_segment(path)
 
+            is_portal = self._looks_like_words(segment, self.PORTAL_WORDS)
+            is_internal = self._looks_like_words(segment, self.INTERNAL_WORDS)
+
+            # Smart decision
+            if is_internal and not is_portal:
+                return self._go_internal(request)
+
+            if is_portal and not is_internal:
+                return redirect(self.PORTAL_HOME)
+
+            # If unclear:
+            # staff logged in -> internal
+            # normal visitor/customer -> portal
+            if request.user.is_authenticated and request.user.is_staff:
+                return redirect(self.INTERNAL_HOME)
+
+            return redirect(self.PORTAL_HOME)
+
+        # Allow by URL name
         if url_name in self.ALLOWED_URL_NAMES:
             return self.get_response(request)
 
+        # Real internal page needs login
         if not request.user.is_authenticated:
-            return redirect(f"/accounts/login/?next={request.path}")
+            return redirect(f"{self.LOGIN_URL}?next={request.path}")
 
+        # Logged in but not staff cannot enter internal system
         if not request.user.is_staff:
-            return redirect("/portal/login/")
+            return redirect(self.PORTAL_LOGIN)
 
         return self.get_response(request)

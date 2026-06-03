@@ -31,18 +31,7 @@
       border-bottom-left-radius:42px;
       box-shadow:0 8px 24px rgba(20,134,88,.20);
     }
-
-    .status-bar{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      font-size:15px;
-      font-weight:800;
-      margin-bottom:18px;
-      opacity:.96;
-    }
-
-    .top-row{
+.top-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -769,12 +758,7 @@
 <body>
   <div class="phone-wrap">
     <div class="top-header">
-      <div class="status-bar">
-        <div>08:36</div>
-        <div>📶 4G 🔋</div>
-      </div>
-
-      <div class="top-row">
+<div class="top-row">
         <div class="left-top">
           <a href="{% url 'portal:dashboard' %}" class="top-btn">←</a>
           <img src="{% static 'img/ds-logo.png' %}" alt="DS Express" class="logo">

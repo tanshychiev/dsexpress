@@ -179,15 +179,4 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SELLER_PORTAL_SESSION_TIMEOUT = 60 * 60 * 24 * 180  # seller portal = 6 months
 
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'config.middleware.InternalLoginRequiredMiddleware',
-    'customerportal.middleware.SellerPortalActivityMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
 

@@ -25,7 +25,18 @@ class InternalLoginRequiredMiddleware:
 
     ALLOWED_EXACT_PATHS = {
         "/favicon.ico",
+        "/robots.txt",
         "/portal",
+    }
+
+    # iPhone / PWA may request these from root.
+    # Do NOT let these redirect to /portal/ as HTML.
+    PWA_ROOT_REDIRECTS = {
+        "/apple-touch-icon.png": "/static/img/favicon.png?v=20260604ds10",
+        "/apple-touch-icon-precomposed.png": "/static/img/favicon.png?v=20260604ds10",
+        "/apple-touch-icon-180x180.png": "/static/img/favicon.png?v=20260604ds10",
+        "/manifest.json": "/static/img/manifest/ds-express.webmanifest?v=20260604ds10",
+        "/site.webmanifest": "/static/img/manifest/ds-express.webmanifest?v=20260604ds10",
     }
 
     ALLOWED_URL_NAMES = {
@@ -35,7 +46,6 @@ class InternalLoginRequiredMiddleware:
         "delivery_report_pdf",
     }
 
-    # Words that look like customer / seller portal
     PORTAL_WORDS = (
         "portal",
         "seller",
@@ -47,7 +57,6 @@ class InternalLoginRequiredMiddleware:
         "book",
     )
 
-    # Words that look like internal staff system
     INTERNAL_WORDS = (
         "admin",
         "account",
@@ -72,15 +81,30 @@ class InternalLoginRequiredMiddleware:
         "staff",
     )
 
+    FILE_EXTENSIONS = (
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".gif",
+        ".svg",
+        ".ico",
+        ".css",
+        ".js",
+        ".map",
+        ".json",
+        ".webmanifest",
+        ".txt",
+        ".xml",
+        ".woff",
+        ".woff2",
+        ".ttf",
+    )
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def _first_segment(self, path):
-        """
-        /portal/test  -> portal
-        /repoorts/x   -> repoorts
-        /.gfasd       -> .gfasd
-        """
         clean = (path or "/").strip("/").lower()
         if not clean:
             return ""
@@ -96,19 +120,22 @@ class InternalLoginRequiredMiddleware:
         segment = segment.lower()
 
         for word in words:
-            # Exact
             if segment == word:
                 return True
 
-            # Example: por -> portal, repo -> reports
+            # Example: por -> portal
             if len(segment) >= 3 and word.startswith(segment):
                 return True
 
-            # Example: portl -> portal, repoorts -> reports
+            # Example: portl -> portal
             if self._similarity(segment, word) >= 0.72:
                 return True
 
         return False
+
+    def _looks_like_file_request(self, path):
+        clean = (path or "").lower().split("?")[0]
+        return clean.endswith(self.FILE_EXTENSIONS)
 
     def _go_internal(self, request):
         if not request.user.is_authenticated:
@@ -122,9 +149,13 @@ class InternalLoginRequiredMiddleware:
     def __call__(self, request):
         path = request.path or "/"
 
-        # /portal without slash
+        # Fix /portal without slash
         if path == "/portal":
             return redirect(self.PORTAL_HOME)
+
+        # Important for iPhone Add to Home Screen icon / manifest
+        if path in self.PWA_ROOT_REDIRECTS:
+            return redirect(self.PWA_ROOT_REDIRECTS[path])
 
         # Public exact paths
         if path in self.ALLOWED_EXACT_PATHS:
@@ -134,6 +165,11 @@ class InternalLoginRequiredMiddleware:
         for prefix in self.ALLOWED_PREFIXES:
             if path.startswith(prefix):
                 return self.get_response(request)
+
+        # If browser requests a file, do not redirect to portal HTML.
+        # Let Django/nginx return normal 404 if the file does not exist.
+        if self._looks_like_file_request(path):
+            return self.get_response(request)
 
         # Try normal Django URL first
         try:
@@ -145,16 +181,14 @@ class InternalLoginRequiredMiddleware:
             is_portal = self._looks_like_words(segment, self.PORTAL_WORDS)
             is_internal = self._looks_like_words(segment, self.INTERNAL_WORDS)
 
-            # Smart decision
             if is_internal and not is_portal:
                 return self._go_internal(request)
 
             if is_portal and not is_internal:
                 return redirect(self.PORTAL_HOME)
 
-            # If unclear:
-            # staff logged in -> internal
-            # normal visitor/customer -> portal
+            # Unclear wrong URL:
+            # staff -> internal, normal customer/visitor -> portal
             if request.user.is_authenticated and request.user.is_staff:
                 return redirect(self.INTERNAL_HOME)
 
@@ -168,7 +202,7 @@ class InternalLoginRequiredMiddleware:
         if not request.user.is_authenticated:
             return redirect(f"{self.LOGIN_URL}?next={request.path}")
 
-        # Logged in but not staff cannot enter internal system
+        # Logged in seller/customer cannot enter internal system
         if not request.user.is_staff:
             return redirect(self.PORTAL_LOGIN)
 

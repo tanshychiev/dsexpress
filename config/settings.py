@@ -170,6 +170,9 @@ SESSION_COOKIE_AGE = 90000
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
+SELLER_PORTAL_SESSION_TIMEOUT = 60 * 60 * 24 * 180  # seller portal = 6 months
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

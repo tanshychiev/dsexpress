@@ -11,7 +11,29 @@
 
   <title>{% block title %}DS Express{% endblock %}</title>
 
-  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  {% static 'img/favicon.png' as ds_favicon %}
+  {% static 'img/manifest/ds-express.webmanifest' as ds_manifest %}
+
+  <!-- Normal browser favicon -->
+  <link rel="icon" type="image/png" href="{{ ds_favicon }}?v=20260603favicon">
+  <link rel="shortcut icon" type="image/png" href="{{ ds_favicon }}?v=20260603favicon">
+
+  <!-- iPhone / iPad Add to Home Screen icon -->
+  <link rel="apple-touch-icon" href="{{ ds_favicon }}?v=20260603favicon">
+  <link rel="apple-touch-icon-precomposed" href="{{ ds_favicon }}?v=20260603favicon">
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="{{ ds_manifest }}?v=20260603favicon">
+
+  <!-- App name for iPhone / Android -->
+  <meta name="application-name" content="DS Express">
+  <meta name="apple-mobile-web-app-title" content="DS Express">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#0f7a45">
+  <meta name="description" content="DS Express Seller Portal">
+
   <link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}">
   {% block extra_css %}{% endblock %}
 
@@ -238,17 +260,33 @@
       white-space: nowrap;
     }
 
+    .logo,
+    .footer-logo {
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: #ffffff;
+      box-shadow: 0 10px 22px rgba(15, 122, 69, 0.22);
+    }
+
     .logo {
+      width: 46px;
+      height: 46px;
+      border-radius: 15px;
+    }
+
+    .footer-logo {
       width: 42px;
       height: 42px;
       border-radius: 14px;
-      display: grid;
-      place-items: center;
-      color: #ffffff;
-      background: linear-gradient(135deg, #0f8f4c, #075c34);
-      font-size: 13px;
-      font-weight: 950;
-      box-shadow: 0 10px 22px rgba(15, 122, 69, 0.22);
+    }
+
+    .logo img,
+    .footer-logo img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
     }
 
     .top-nav {
@@ -356,18 +394,6 @@
       gap: 12px;
     }
 
-    .footer-logo {
-      width: 40px;
-      height: 40px;
-      border-radius: 14px;
-      display: grid;
-      place-items: center;
-      background: #0f7a45;
-      color: #fff;
-      font-size: 13px;
-      font-weight: 950;
-    }
-
     .footer-title {
       color: #064e32;
       font-weight: 950;
@@ -407,7 +433,6 @@
       min-height: calc(100vh - 72px);
     }
 
-    /* Hide public header and footer after seller login */
     body.portal-auth-page .portal-header,
     body.portal-auth-page .site-footer {
       display: none !important;
@@ -449,10 +474,9 @@
       }
 
       .logo {
-        width: 38px;
-        height: 38px;
-        border-radius: 13px;
-        font-size: 12px;
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
       }
 
       .top-nav {
@@ -507,7 +531,9 @@
 <header class="portal-header">
   <div class="portal-container header-inner">
     <a href="{% url 'portal:home' %}" class="brand">
-      <span class="logo">DS</span>
+      <span class="logo">
+        <img src="{{ ds_favicon }}?v=20260603favicon" alt="DS Express">
+      </span>
       <span>DS Express</span>
     </a>
 
@@ -552,7 +578,9 @@
 <footer class="site-footer">
   <div class="portal-container footer-inner">
     <div class="footer-brand">
-      <div class="footer-logo">DS</div>
+      <div class="footer-logo">
+        <img src="{{ ds_favicon }}?v=20260603favicon" alt="DS Express">
+      </div>
       <div>
         <div class="footer-title">DS Express</div>
         <div class="footer-sub">Fast COD delivery for modern businesses</div>

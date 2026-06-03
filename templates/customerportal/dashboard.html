@@ -1,7 +1,7 @@
 {% extends "customerportal/base.html" %}
 {% load static %}
 
-{% block title %}Seller Portal{% endblock %}
+{% block title %}DS EXPRESS{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -169,13 +169,7 @@
   }
 
   .status-bar{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-size:15px;
-    font-weight:800;
-    margin-bottom:18px;
-    opacity:.96;
+    display:none !important;
   }
 
   .top-row{
@@ -487,6 +481,7 @@
     cursor:pointer;
     touch-action:manipulation;
   }
+
   .profile-badge{
     width:42px;
     height:42px;
@@ -850,6 +845,7 @@
       grid-template-columns:repeat(2,1fr);
     }
   }
+
   @media (max-width: 360px){
     .summary-title{
       font-size:18px;
@@ -868,7 +864,6 @@
       width:100%;
     }
   }
-
 </style>
 {% endblock %}
 
@@ -890,14 +885,12 @@
 
   <div class="phone-wrap">
     <div class="top-header">
-      <div class="status-bar">
-        
-      </div>
+      <div class="status-bar"></div>
 
       <div class="top-row">
         <div class="left-top">
           <a href="#" class="top-btn">←</a>
-          <img src="{% static 'img/ds-logo.png' %}" alt="DS Express" class="logo">
+          <img src="{% static 'img/favicon.png' %}?v=20260604ds10" alt="DS EXPRESS" class="logo">
           <div class="page-title">Dashboard</div>
         </div>
 
@@ -1076,6 +1069,22 @@
     </a>
   </nav>
 </section>
+
+<script>
+(function () {
+  document.title = "DS EXPRESS";
+
+  const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+  if (appleTitle) {
+    appleTitle.setAttribute("content", "DS EXPRESS");
+  }
+
+  const appName = document.querySelector('meta[name="application-name"]');
+  if (appName) {
+    appName.setAttribute("content", "DS EXPRESS");
+  }
+})();
+</script>
 
 <script>
 (function () {

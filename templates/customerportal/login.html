@@ -1,11 +1,28 @@
 {% extends "customerportal/base.html" %}
 {% load static %}
 
-{% block title %}Seller Login{% endblock %}
+{% block title %}DS EXPRESS{% endblock %}
 {% block body_class %}portal-login{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'customerportal/css/login.css' %}">
+<link rel="stylesheet" href="{% static 'customerportal/css/login.css' %}?v=20260604ds">
+
+<!-- Force iPhone / PWA name and icon even from login page -->
+<link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}?v=20260604ds">
+<link rel="shortcut icon" type="image/png" href="{% static 'img/favicon.png' %}?v=20260604ds">
+
+<link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/favicon.png' %}?v=20260604ds">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="{% static 'img/favicon.png' %}?v=20260604ds">
+
+<link rel="manifest" href="{% static 'img/manifest/ds-express.webmanifest' %}?v=20260604ds">
+
+<meta name="application-name" content="DS EXPRESS">
+<meta name="apple-mobile-web-app-title" content="DS EXPRESS">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#179b67">
+<meta name="description" content="DS EXPRESS Seller Portal">
 {% endblock %}
 
 {% block content %}
@@ -15,9 +32,12 @@
 
     <div class="app-top">
       <div class="app-logo-wrap">
-        <div class="app-logo">DS</div>
+        <div class="app-logo-img">
+          <img src="{% static 'img/favicon.png' %}?v=20260604ds" alt="DS EXPRESS">
+        </div>
+
         <div>
-          <div class="app-name">DS Express</div>
+          <div class="app-name">DS EXPRESS</div>
           <div class="app-sub">Seller Portal</div>
         </div>
       </div>
@@ -36,10 +56,12 @@
         <span>📦</span>
         <strong>Track</strong>
       </div>
+
       <div class="quick-stat">
         <span>💵</span>
         <strong>COD</strong>
       </div>
+
       <div class="quick-stat">
         <span>🚚</span>
         <strong>Pickup</strong>
@@ -50,7 +72,7 @@
       {% csrf_token %}
 
       <div class="form-title">
-        <h2>Sign in</h2>
+        <h2>Seller Login</h2>
         <p>Use your seller username and password.</p>
       </div>
 
@@ -62,6 +84,7 @@
 
       <div class="form-group">
         <label for="id_username">Username</label>
+
         <div class="field-box">
           <span class="field-icon">👤</span>
           <input
@@ -74,6 +97,7 @@
             required
           >
         </div>
+
         {% if form.username.errors %}
           <div class="field-error">{{ form.username.errors|striptags }}</div>
         {% endif %}
@@ -81,6 +105,7 @@
 
       <div class="form-group">
         <label for="id_password">Password</label>
+
         <div class="field-box password-box">
           <span class="field-icon">🔒</span>
           <input
@@ -91,10 +116,12 @@
             autocomplete="current-password"
             required
           >
+
           <button type="button" class="toggle-password" onclick="togglePassword()">
             Show
           </button>
         </div>
+
         {% if form.password.errors %}
           <div class="field-error">{{ form.password.errors|striptags }}</div>
         {% endif %}
@@ -124,10 +151,44 @@
 
 </section>
 
+<style>
+  .app-logo-img {
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 4px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+    flex: 0 0 auto;
+  }
+
+  .app-logo-img img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 15px;
+  }
+
+  .app-name {
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+</style>
+
 <script>
+  document.title = "DS EXPRESS";
+
   function togglePassword() {
     const passwordInput = document.getElementById("id_password");
     const toggleBtn = document.querySelector(".toggle-password");
+
+    if (!passwordInput || !toggleBtn) {
+      return;
+    }
 
     if (passwordInput.type === "password") {
       passwordInput.type = "text";

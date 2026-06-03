@@ -1,27 +1,27 @@
 {
-  "name": "DS Express",
-  "short_name": "DS Express",
-  "description": "DS Express Seller Portal",
+  "name": "DS EXPRESS",
+  "short_name": "DS EXPRESS",
+  "description": "DS EXPRESS Seller Portal",
   "start_url": "/portal/",
   "scope": "/portal/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0f7a45",
+  "theme_color": "#179b67",
   "icons": [
     {
-      "src": "/static/img/favicon.png?v=20260603favicon",
+      "src": "/static/img/favicon.png?v=20260604ds",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/img/favicon.png?v=20260603favicon",
+      "src": "/static/img/favicon.png?v=20260604ds",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/img/favicon.png?v=20260603favicon",
+      "src": "/static/img/favicon.png?v=20260604ds",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

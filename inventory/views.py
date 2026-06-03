@@ -736,3 +736,85 @@ def product_edit(request, product_id: int):
             "product": product,
         },
     )
+
+
+@login_required
+def customer_stock_png(request):
+    if not staff_only(request):
+        return redirect("portal:dashboard")
+
+    seller_id = (request.GET.get("seller_id") or "").strip()
+    q = (request.GET.get("q") or "").strip()
+
+    selected_seller = None
+    selected_seller_display = ""
+
+    if seller_id.isdigit():
+        selected_seller = Seller.objects.filter(id=int(seller_id), is_active=True).first()
+        selected_seller_display = seller_display(selected_seller)
+
+    products = (
+        StockProduct.objects
+        .select_related("seller")
+        .filter(is_active=True)
+        .order_by("seller__name", "name")
+    )
+
+    if selected_seller:
+        products = products.filter(seller=selected_seller)
+
+    if q:
+        products = products.filter(
+            Q(name__icontains=q)
+            | Q(sku__icontains=q)
+            | Q(product_type__icontains=q)
+            | Q(location__icontains=q)
+            | Q(seller__name__icontains=q)
+            | Q(seller__code__icontains=q)
+        )
+
+    rows = []
+
+    total_current = 0
+    total_reserved = 0
+    total_available = 0
+
+    for product in products:
+        available = current_available_qty(product)
+        reserved = reserved_qty(product)
+        current = available + reserved
+        snapshot = last_confirmed(product)
+
+        total_current += current
+        total_reserved += reserved
+        total_available += available
+
+        rows.append({
+            "product": product,
+            "photo_url": product.photo.url if product.photo else "",
+            "name": product.name,
+            "sku": product.sku,
+            "product_type": product.product_type,
+            "location": product.location,
+            "current_qty": current,
+            "reserved_qty": reserved,
+            "available_qty": available,
+            "last_confirmed_at": snapshot.confirmed_at if snapshot else None,
+        })
+
+    return render(
+        request,
+        "inventory/customer_stock_png.html",
+        {
+            "rows": rows,
+            "selected_seller": selected_seller,
+            "selected_seller_display": selected_seller_display,
+            "shop_name": selected_seller.name if selected_seller else "All Shops",
+            "shop_code": selected_seller.code if selected_seller else "",
+            "q": q,
+            "server_now": timezone.localtime(),
+            "total_current": total_current,
+            "total_reserved": total_reserved,
+            "total_available": total_available,
+        },
+    )

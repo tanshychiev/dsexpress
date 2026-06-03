@@ -39,4 +39,6 @@ urlpatterns = [
         views.stock_products_api,
         name="stock_products_api",
     ),
+
+    path("customer-stock-png/", views.customer_stock_png, name="customer_stock_png"),
 ]

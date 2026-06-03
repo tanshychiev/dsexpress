@@ -8,7 +8,16 @@
     <div class="inv-sub">Current stock by seller.</div>
   </div>
 
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+  <a
+    class="btn-soft"
+    href="{% url 'inventory:customer_stock_png' %}?seller_id={{ selected_seller_id|default:'' }}&q={{ q|urlencode }}"
+  >
+    Customer Stock PNG
+  </a>
+
   <a class="btn-green" href="{% url 'inventory:stock_in' %}">+ Stock In</a>
+</div>
 </div>
 
 <div class="inv-card">

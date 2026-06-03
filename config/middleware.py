@@ -9,7 +9,7 @@ class InternalLoginRequiredMiddleware:
     PORTAL_HOME = "/portal/"
     PORTAL_LOGIN = "/portal/login/"
 
-    # Change this if your internal dashboard is not "/"
+    # Internal staff home
     INTERNAL_HOME = "/"
 
     ALLOWED_PREFIXES = (
@@ -29,8 +29,7 @@ class InternalLoginRequiredMiddleware:
         "/portal",
     }
 
-    # iPhone / PWA may request these from root.
-    # Do NOT let these redirect to /portal/ as HTML.
+    # iPhone / Safari PWA icon requests from root
     PWA_ROOT_REDIRECTS = {
         "/apple-touch-icon.png": "/static/img/favicon.png?v=20260604ds10",
         "/apple-touch-icon-precomposed.png": "/static/img/favicon.png?v=20260604ds10",
@@ -123,11 +122,9 @@ class InternalLoginRequiredMiddleware:
             if segment == word:
                 return True
 
-            # Example: por -> portal
             if len(segment) >= 3 and word.startswith(segment):
                 return True
 
-            # Example: portl -> portal
             if self._similarity(segment, word) >= 0.72:
                 return True
 
@@ -149,11 +146,20 @@ class InternalLoginRequiredMiddleware:
     def __call__(self, request):
         path = request.path or "/"
 
-        # Fix /portal without slash
+        # IMPORTANT:
+        # Root domain should be seller/customer portal for public users.
+        # Staff logged in can still use internal root.
+        if path == "/":
+            if request.user.is_authenticated and request.user.is_staff:
+                return self.get_response(request)
+
+            return redirect(self.PORTAL_HOME)
+
+        # /portal without slash
         if path == "/portal":
             return redirect(self.PORTAL_HOME)
 
-        # Important for iPhone Add to Home Screen icon / manifest
+        # iPhone / Safari icon and manifest requests
         if path in self.PWA_ROOT_REDIRECTS:
             return redirect(self.PWA_ROOT_REDIRECTS[path])
 
@@ -166,8 +172,7 @@ class InternalLoginRequiredMiddleware:
             if path.startswith(prefix):
                 return self.get_response(request)
 
-        # If browser requests a file, do not redirect to portal HTML.
-        # Let Django/nginx return normal 404 if the file does not exist.
+        # If browser requests file, do not redirect to staff login.
         if self._looks_like_file_request(path):
             return self.get_response(request)
 
@@ -187,8 +192,6 @@ class InternalLoginRequiredMiddleware:
             if is_portal and not is_internal:
                 return redirect(self.PORTAL_HOME)
 
-            # Unclear wrong URL:
-            # staff -> internal, normal customer/visitor -> portal
             if request.user.is_authenticated and request.user.is_staff:
                 return redirect(self.INTERNAL_HOME)
 
@@ -198,11 +201,10 @@ class InternalLoginRequiredMiddleware:
         if url_name in self.ALLOWED_URL_NAMES:
             return self.get_response(request)
 
-        # Real internal page needs login
+        # Real internal page needs staff login
         if not request.user.is_authenticated:
             return redirect(f"{self.LOGIN_URL}?next={request.path}")
 
-        # Logged in seller/customer cannot enter internal system
         if not request.user.is_staff:
             return redirect(self.PORTAL_LOGIN)
 

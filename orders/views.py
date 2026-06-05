@@ -1254,6 +1254,10 @@ def bulk_update(request: HttpRequest):
                 before = _snapshot(order)
                 changed = False
 
+                old_stock_seller_id = order.seller_id
+                old_stock_product_desc = order.product_desc or ""
+                old_stock_quantity = int(order.quantity or 0)
+
                 created_at_cell = row_cells[header_map["created at"]] if "created at" in header_map else None
                 product_desc_cell = row_cells[header_map["product desc"]] if "product desc" in header_map else None
                 receiver_name_cell = row_cells[header_map["receiver name"]] if "receiver name" in header_map else None
@@ -1355,8 +1359,25 @@ def bulk_update(request: HttpRequest):
                         changed = True
 
                 if changed:
+                    stock_related_changed = (
+                        old_stock_seller_id != order.seller_id
+                        or old_stock_product_desc != (order.product_desc or "")
+                        or old_stock_quantity != int(order.quantity or 0)
+                    )
+
                     with transaction.atomic():
+                        # Stop possible order post_save signal from auto-linking stock again.
+                        # We manually sync inventory below only when goods/qty/shop changed.
+                        order._skip_stock_signal = True
                         order.save()
+
+                        if stock_related_changed:
+                            try:
+                                from inventory.services import auto_link_order_stock
+                                auto_link_order_stock(order, actor=request.user)
+                            except Exception:
+                                pass
+
                         after = _snapshot(order)
                         BulkUpdateRow.objects.create(
                             batch=batch,
@@ -1773,31 +1794,80 @@ def order_edit(request: HttpRequest, pk: int):
             errors.append("Quantity must be greater than 0.")
 
         if not errors:
+            try:
+                parsed_stock_items = json.loads(stock_items_json or "[]")
+                stock_items_json_has_items = (
+                    isinstance(parsed_stock_items, list)
+                    and len(parsed_stock_items) > 0
+                )
+            except Exception:
+                parsed_stock_items = []
+                stock_items_json_has_items = False
+
+            stock_items_changed = False
+
+            if stock_items_json_has_items:
+                try:
+                    from inventory.models import OrderStockItem
+
+                    current_items = sorted(
+                        (
+                            int(x.product_id or 0),
+                            int(x.quantity or 0),
+                        )
+                        for x in OrderStockItem.objects.filter(order=order)
+                    )
+
+                    posted_items = sorted(
+                        (
+                            int(x.get("product_id") or x.get("id") or 0),
+                            int(x.get("qty") or x.get("quantity") or 1),
+                        )
+                        for x in parsed_stock_items
+                        if int(x.get("product_id") or x.get("id") or 0) > 0
+                    )
+
+                    stock_items_changed = current_items != posted_items
+                except Exception:
+                    stock_items_changed = True
+
+            stock_related_changed = (
+                old_snapshot["seller_id"] != order.seller_id
+                or (old_snapshot["product_desc"] or "") != (order.product_desc or "")
+                or int(old_snapshot["quantity"] or 0) != int(order.quantity or 0)
+                or stock_items_changed
+            )
+
             order.id = original_id
             order.updated_at = timezone.now()
             order.updated_by = request.user
+
+            # Stop possible order post_save signal from auto-linking stock again.
+            # We manually sync inventory below only when shop/goods/qty/stock items changed.
+            order._skip_stock_signal = True
             order.save()
 
-            try:
-                from inventory.services import (
-                    auto_link_order_stock,
-                    set_order_stock_items_from_json,
-                )
-
-                if stock_items_json:
-                    set_order_stock_items_from_json(
-                        order=order,
-                        stock_items_json=stock_items_json,
-                        actor=request.user,
+            if stock_related_changed:
+                try:
+                    from inventory.services import (
+                        auto_link_order_stock,
+                        set_order_stock_items_from_json,
                     )
-                else:
-                    auto_link_order_stock(order, actor=request.user)
 
-            except Exception as e:
-                messages.warning(
-                    request,
-                    f"Order updated, but inventory stock was not linked: {e}",
-                )
+                    if stock_items_json_has_items:
+                        set_order_stock_items_from_json(
+                            order=order,
+                            stock_items_json=stock_items_json,
+                            actor=request.user,
+                        )
+                    else:
+                        auto_link_order_stock(order, actor=request.user)
+
+                except Exception as e:
+                    messages.warning(
+                        request,
+                        f"Order updated, but inventory stock was not linked: {e}",
+                    )
 
             new_snapshot = {
                 "tracking_no": order.tracking_no,

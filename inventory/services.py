@@ -20,6 +20,29 @@ from .models import (
 )
 
 
+DONE_STOCK_STATUSES = {
+    "DELIVERED",
+    "DONE",
+}
+
+CLOSED_STOCK_STATUSES = {
+    "DELIVERED",
+    "DONE",
+    "RETURNED",
+    "VOID",
+    "CANCELLED",
+    "CANCELED",
+}
+
+
+def order_stock_is_done(order) -> bool:
+    return str(getattr(order, "status", "") or "").upper() in DONE_STOCK_STATUSES
+
+
+def order_stock_is_closed(order) -> bool:
+    return str(getattr(order, "status", "") or "").upper() in CLOSED_STOCK_STATUSES
+
+
 def normalize_text(text: str | None) -> str:
     return " ".join((text or "").strip().lower().split())
 
@@ -61,12 +84,20 @@ def current_available_qty(product: StockProduct) -> int:
 
 def reserved_qty(product: StockProduct) -> int:
     """
-    Qty currently reserved by pending orders.
-    This is for display only.
+    Qty currently reserved by active/pending orders only.
+
+    IMPORTANT:
+    Delivered / Done / Returned / Void / Cancelled / Deleted orders
+    must not show in reserved display.
     """
     link_reserved = (
         OrderStockLink.objects
-        .filter(product=product, reserved_qty__gt=0)
+        .filter(
+            product=product,
+            reserved_qty__gt=0,
+            order__is_deleted=False,
+        )
+        .exclude(order__status__in=CLOSED_STOCK_STATUSES)
         .aggregate(total=Sum("reserved_qty"))
         .get("total")
         or 0
@@ -74,7 +105,12 @@ def reserved_qty(product: StockProduct) -> int:
 
     item_reserved = (
         OrderStockItem.objects
-        .filter(product=product, reserved_qty__gt=0)
+        .filter(
+            product=product,
+            reserved_qty__gt=0,
+            order__is_deleted=False,
+        )
+        .exclude(order__status__in=CLOSED_STOCK_STATUSES)
         .aggregate(total=Sum("reserved_qty"))
         .get("total")
         or 0
@@ -541,6 +577,287 @@ def return_order_stock_damaged(order, actor=None, note: str = ""):
     OrderStockItem.objects.filter(order=order).update(reserved_qty=0)
 
 
+def clear_closed_order_reserved_display(order, actor=None):
+    """
+    Returned / void / cancelled orders should not reserve again when edited.
+    If there is still reserved qty, release it safely.
+    """
+    with transaction.atomic():
+        release_order_stock(
+            order,
+            actor=actor,
+            note="Closed order edited: release old reserved stock",
+        )
+        release_order_stock_items(
+            order,
+            actor=actor,
+            note="Closed order edited: release old mixed reserved stock",
+        )
+
+        link = _get_or_create_order_link(order)
+        link.seller = order.seller
+        link.raw_product_text = order.product_desc or ""
+        link.quantity = int(order.quantity or 1)
+        link.reserved_qty = 0
+        link.shortage_qty = 0
+        link.updated_by = actor
+
+        if not link.product_id:
+            link.status = OrderStockLink.UNMATCHED
+
+        link.save()
+
+        OrderStockItem.objects.filter(order=order).update(reserved_qty=0)
+
+        return link
+
+
+def _put_back_current_done_order_stock(order, actor=None, note: str = ""):
+    """
+    For delivered/done order edit.
+
+    Example:
+    Old done goods = A
+    New goods = B + C
+
+    Correct movement:
+    A +1 back
+    B -1
+    C -1
+    Reserved = 0
+    """
+    link = getattr(order, "stock_link", None)
+
+    items = list(
+        OrderStockItem.objects
+        .select_related("product", "seller")
+        .filter(order=order)
+    )
+
+    if items:
+        for item in items:
+            qty = int(item.quantity or 0)
+
+            if item.product and qty > 0:
+                create_movement(
+                    seller=item.seller,
+                    product=item.product,
+                    order=order,
+                    movement_type=StockMovement.ADJUSTMENT,
+                    qty_delta=qty,
+                    actor=actor,
+                    note=note or f"Done order goods edited: put back old item {item.product.name} x{qty}",
+                )
+
+        OrderStockItem.objects.filter(order=order).delete()
+
+    elif link and link.product:
+        qty = int(link.quantity or 0)
+
+        if qty > 0:
+            create_movement(
+                seller=link.seller,
+                product=link.product,
+                order=order,
+                movement_type=StockMovement.ADJUSTMENT,
+                qty_delta=qty,
+                actor=actor,
+                note=note or f"Done order goods edited: put back old item {link.product.name} x{qty}",
+            )
+
+    if link:
+        link.reserved_qty = 0
+        link.shortage_qty = 0
+        link.updated_by = actor
+        link.save(
+            update_fields=[
+                "reserved_qty",
+                "shortage_qty",
+                "updated_by",
+                "updated_at",
+            ]
+        )
+
+
+def replace_done_order_stock_single(
+    *,
+    order,
+    product: StockProduct | None,
+    qty: int,
+    raw_text: str = "",
+    actor=None,
+    note: str = "",
+):
+    """
+    Delivered/done order edited to one product.
+    Do not reserve. Transfer sold stock.
+
+    Example:
+    Old done goods = A
+    New goods = B
+
+    Correct movement:
+    A +1 back
+    B -1
+    Reserved = 0
+    """
+    qty = max(int(qty or 1), 1)
+
+    with transaction.atomic():
+        _put_back_current_done_order_stock(
+            order,
+            actor=actor,
+            note="Done order single goods edited",
+        )
+
+        link = _get_or_create_order_link(order)
+        link.seller = order.seller
+        link.raw_product_text = raw_text or order.product_desc or ""
+        link.quantity = qty
+        link.product = product
+        link.reserved_qty = 0
+        link.shortage_qty = 0
+        link.updated_by = actor
+
+        if not product:
+            link.status = OrderStockLink.UNMATCHED
+            link.save()
+            return link
+
+        available_before = current_available_qty(product)
+        shortage = max(qty - available_before, 0)
+
+        link.status = (
+            OrderStockLink.STOCK_LACK
+            if shortage > 0
+            else OrderStockLink.LINKED
+        )
+        link.shortage_qty = shortage
+        link.save()
+
+        create_movement(
+            seller=order.seller,
+            product=product,
+            order=order,
+            movement_type=StockMovement.ADJUSTMENT,
+            qty_delta=-qty,
+            actor=actor,
+            note=note or f"Done order goods changed to {product.name} x{qty}. Available before: {available_before}",
+        )
+
+        return link
+
+
+def replace_done_order_stock_items(order, items_data, actor=None):
+    """
+    Delivered/done order edited to mixed products.
+    Do not reserve. Transfer sold stock.
+
+    Example:
+    Old done goods = A
+    New goods = B + C
+
+    Correct movement:
+    A +1 back
+    B -1
+    C -1
+    Reserved = 0
+    """
+    with transaction.atomic():
+        _put_back_current_done_order_stock(
+            order,
+            actor=actor,
+            note="Done order mixed goods edited",
+        )
+
+        link = _get_or_create_order_link(order)
+        link.seller = order.seller
+        link.product = None
+        link.quantity = int(order.quantity or 1)
+        link.reserved_qty = 0
+        link.shortage_qty = 0
+        link.updated_by = actor
+
+        total_qty = 0
+        total_shortage = 0
+        product_desc_parts = []
+
+        for item in items_data:
+            product_id = item.get("product_id") or item.get("id")
+            qty = int(item.get("qty") or item.get("quantity") or 1)
+            qty = max(qty, 1)
+
+            product = StockProduct.objects.filter(
+                id=product_id,
+                seller=order.seller,
+                is_active=True,
+            ).first()
+
+            if not product:
+                continue
+
+            available_before = current_available_qty(product)
+            shortage = max(qty - available_before, 0)
+
+            item_status = (
+                OrderStockItem.STOCK_LACK
+                if shortage > 0
+                else OrderStockItem.LINKED
+            )
+
+            OrderStockItem.objects.create(
+                order=order,
+                link=link,
+                seller=order.seller,
+                product=product,
+                quantity=qty,
+                reserved_qty=0,
+                shortage_qty=shortage,
+                status=item_status,
+                raw_product_text=product.name,
+            )
+
+            create_movement(
+                seller=order.seller,
+                product=product,
+                order=order,
+                movement_type=StockMovement.ADJUSTMENT,
+                qty_delta=-qty,
+                actor=actor,
+                note=f"Done order mixed goods changed to {product.name} x{qty}. Available before: {available_before}",
+            )
+
+            total_qty += qty
+            total_shortage += shortage
+            product_desc_parts.append(f"{product.name} x{qty}")
+
+        if total_qty <= 0:
+            link.status = OrderStockLink.UNMATCHED
+            link.reserved_qty = 0
+            link.shortage_qty = 0
+            link.raw_product_text = order.product_desc or ""
+            link.save()
+            return link
+
+        link.status = (
+            OrderStockLink.STOCK_LACK
+            if total_shortage > 0
+            else OrderStockLink.LINKED
+        )
+        link.reserved_qty = 0
+        link.shortage_qty = total_shortage
+        link.raw_product_text = " + ".join(product_desc_parts)
+        link.quantity = total_qty
+        link.save()
+
+        order.product_desc = " + ".join(product_desc_parts)
+        order.quantity = total_qty
+        order._skip_stock_signal = True
+        order.save(update_fields=["product_desc", "quantity"])
+
+        return link
+
+
 def set_order_stock(
     *,
     order,
@@ -552,10 +869,32 @@ def set_order_stock(
 ) -> OrderStockLink:
     """
     Single-product stock for one order.
+
+    Pending order:
+    - release old reserved stock
+    - reserve new stock
+
+    Delivered/done order:
+    - put old done stock back
+    - deduct new done stock
+    - reserved stays 0
     """
     qty = int(qty if qty is not None else (order.quantity or 1))
     qty = max(qty, 1)
     raw_text = raw_text or order.product_desc or ""
+
+    if order_stock_is_done(order):
+        return replace_done_order_stock_single(
+            order=order,
+            product=product,
+            qty=qty,
+            raw_text=raw_text,
+            actor=actor,
+            note=note,
+        )
+
+    if order_stock_is_closed(order):
+        return clear_closed_order_reserved_display(order, actor=actor)
 
     with transaction.atomic():
         release_order_stock(
@@ -637,12 +976,25 @@ def set_order_stock_items(order, items_data, actor=None):
     """
     Mixed product stock.
 
-    items_data example:
-    [
-        {"product_id": 1, "qty": 1},
-        {"product_id": 2, "qty": 2}
-    ]
+    Pending order:
+    - release old reserved stock
+    - reserve new mixed stock
+
+    Delivered/done order:
+    - put old done stock back
+    - deduct new mixed done stock
+    - reserved stays 0
     """
+    if order_stock_is_done(order):
+        return replace_done_order_stock_items(
+            order=order,
+            items_data=items_data,
+            actor=actor,
+        )
+
+    if order_stock_is_closed(order):
+        return clear_closed_order_reserved_display(order, actor=actor)
+
     with transaction.atomic():
         release_order_stock(order, actor=actor, note="Changing to mixed stock")
         release_order_stock_items(order, actor=actor, note="Changing mixed stock")

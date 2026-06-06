@@ -144,7 +144,7 @@
                     </td>
                     <td class="td-center">
                       {% if p.order and p.order.seller %}
-                        {{ p.order.seller.name }}
+                        {% firstof p.order.seller.seller_name p.order.seller.name "-" %}
                       {% else %}
                         -
                       {% endif %}
@@ -199,7 +199,23 @@
   {% endif %}
 
   {% if return_blocks %}
-    <div class="section-title">Return Batch</div>
+    {% with sorted_return_blocks=return_blocks|dictsort:"shop" %}
+    {% regroup sorted_return_blocks by shop as return_shop_groups %}
+
+    <div class="section-title section-flex">
+      <span>Return Batch</span>
+      <span class="sort-note">Sorted by shop name</span>
+    </div>
+
+    <div class="shop-summary">
+      {% for shop in return_shop_groups %}
+        <div class="shop-pill">
+          <span>{{ shop.grouper|default:"No Shop" }}</span>
+          <b>{{ shop.list|length }}</b>
+        </div>
+      {% endfor %}
+    </div>
+
     <div class="table-wrap">
       <table class="ds-table wide">
         <thead>
@@ -217,52 +233,94 @@
             <th class="th-center" style="width:120px;">Status</th>
           </tr>
         </thead>
-        <tbody>
-          {% for r in return_blocks %}
-            <tr class="{% if r.staged_removed %}row-remove{% endif %}">
-              <td class="td-center">{{ forloop.counter }}</td>
-              <td class="td-center"><span class="trk mono">{{ r.code }}</span></td>
-              <td class="td-center">{% firstof r.shop "-" %}</td>
-              <td>{% firstof r.address "-" %}</td>
-              <td class="td-center">{% firstof r.phone "-" %}</td>
-              <td class="td-center"><b>{{ r.pc }}</b></td>
-              <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
 
-              {% if edit_mode %}
+        <tbody class="return-body">
+          {% for shop in return_shop_groups %}
+
+            <tr class="shop-group-row">
+              <td colspan="{% if edit_mode %}9{% else %}8{% endif %}">
+                <div class="shop-group-title">
+                  <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
+                  <b>{{ shop.list|length }} return batch{% if shop.list|length > 1 %}es{% endif %}</b>
+                </div>
+              </td>
+            </tr>
+
+            {% for r in shop.list %}
+              <tr class="return-row {% if r.staged_removed %}row-remove{% endif %}">
+                <td class="td-center return-n-cell"></td>
+                <td class="td-center"><span class="trk mono">{{ r.code }}</span></td>
+                <td class="td-center seller-cell">{% firstof r.shop "-" %}</td>
+                <td>{% firstof r.address "-" %}</td>
+                <td class="td-center">{% firstof r.phone "-" %}</td>
+                <td class="td-center"><b>{{ r.pc }}</b></td>
+                <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
+
+                {% if edit_mode %}
+                  <td class="td-center">
+                    {% if r.staged_removed %}
+                      <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="undo_remove_return">
+                        <input type="hidden" name="label_code" value="{{ r.label_code }}">
+                        <button class="btn btn-ghost" type="submit">Undo</button>
+                      </form>
+                    {% else %}
+                      <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="stage_remove_return">
+                        <input type="hidden" name="label_code" value="{{ r.label_code }}">
+                        <button class="btn btn-danger" type="submit">Remove</button>
+                      </form>
+                    {% endif %}
+                  </td>
+                {% endif %}
+
                 <td class="td-center">
                   {% if r.staged_removed %}
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="undo_remove_return">
-                      <input type="hidden" name="label_code" value="{{ r.label_code }}">
-                      <button class="btn btn-ghost" type="submit">Undo</button>
-                    </form>
+                    <span class="st-remove">REMOVE</span>
                   {% else %}
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="stage_remove_return">
-                      <input type="hidden" name="label_code" value="{{ r.label_code }}">
-                      <button class="btn btn-danger" type="submit">Remove</button>
-                    </form>
+                    <span class="st-ok">ACTIVE</span>
                   {% endif %}
                 </td>
-              {% endif %}
+              </tr>
+            {% endfor %}
 
-              <td class="td-center">
-                {% if r.staged_removed %}
-                  <span class="st-remove">REMOVE</span>
-                {% else %}
-                  <span class="st-ok">ACTIVE</span>
-                {% endif %}
+          {% empty %}
+            <tr>
+              <td colspan="{% if edit_mode %}9{% else %}8{% endif %}" style="padding:14px;opacity:.7;">
+                No return batch.
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    {% endwith %}
   {% endif %}
 
-  <div class="section-title">PP Delivery</div>
+  {% with sorted_items=items|dictsort:"order.seller.name" %}
+  {% regroup sorted_items by order.seller.name as pp_shop_groups %}
+
+  <div class="section-title section-flex">
+    <span>PP Delivery</span>
+    <span class="sort-note">Sorted by shop name</span>
+  </div>
+
+  <div class="shop-summary">
+    {% for shop in pp_shop_groups %}
+      <div class="shop-pill">
+        <span>{{ shop.grouper|default:"No Shop" }}</span>
+        <b>{{ shop.list|length }}</b>
+      </div>
+    {% empty %}
+      <div class="shop-pill muted">
+        <span>No shop data</span>
+        <b>0</b>
+      </div>
+    {% endfor %}
+  </div>
 
   <div class="table-wrap">
     <table class="ds-table wide">
@@ -283,87 +341,81 @@
           <th class="th-center" style="width:120px;">STATUS</th>
         </tr>
       </thead>
-      <tbody>
-        {% for it in items %}
-          {% with o=it.order %}
-            <tr class="{% if it.id in staged_remove %}row-remove{% endif %}">
-              <td class="td-center">{{ forloop.counter }}</td>
 
-              <td class="td-center">
-                <a class="trk mono" href="/orders/created/{{ o.id }}/">
-                  {% firstof o.full_tracking o.tracking_no o.id %}
-                </a>
-              </td>
+      <tbody class="pp-body">
+        {% for shop in pp_shop_groups %}
 
-              <td class="td-center">{% if o.seller %}{% firstof o.seller.seller_name o.seller.name "-" %}{% else %}-{% endif %}</td>
-              <td>{% firstof o.receiver_address o.address "-" %}</td>
-              <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
-              <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
-              <td class="td-center">{% firstof o.price "-" %}</td>
-              <td class="td-center"><b>{{ o.cod|default_if_none:"0.00" }}</b></td>
+          <tr class="shop-group-row">
+            <td colspan="{% if edit_mode %}11{% else %}10{% endif %}">
+              <div class="shop-group-title">
+                <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
+                <b>{{ shop.list|length }} order{% if shop.list|length > 1 %}s{% endif %}</b>
+              </div>
+            </td>
+          </tr>
 
-              <td class="td-center">
-                <button type="button" class="reason-btn" data-modal-open="reasonModal{{ it.id }}">
-                  {% firstof it.reason o.reason "Click to add reason" %}
-                </button>
-              </td>
+          {% for it in shop.list %}
+            {% with o=it.order %}
+              <tr class="pp-row {% if it.id in staged_remove %}row-remove{% endif %}">
+                <td class="td-center pp-n-cell"></td>
 
-              {% if edit_mode %}
                 <td class="td-center">
-                  {% if it.id in staged_remove %}
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="undo_remove">
-                      <input type="hidden" name="item_id" value="{{ it.id }}">
-                      <button class="btn btn-ghost" type="submit">Undo</button>
-                    </form>
+                  <a class="trk mono" href="/orders/created/{{ o.id }}/">
+                    {% firstof o.full_tracking o.tracking_no o.id %}
+                  </a>
+                </td>
+
+                <td class="td-center seller-cell">
+                  {% if o.seller %}
+                    {% firstof o.seller.seller_name o.seller.name "-" %}
                   {% else %}
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="stage_remove">
-                      <input type="hidden" name="item_id" value="{{ it.id }}">
-                      <button class="btn btn-danger" type="submit">Remove</button>
-                    </form>
+                    -
                   {% endif %}
                 </td>
-              {% endif %}
 
-              <td class="td-center">
-                {% if it.id in staged_remove %}
-                  <span class="st-remove">REMOVE</span>
-                {% else %}
-                  <span class="st-ok">ACTIVE</span>
+                <td>{% firstof o.receiver_address o.address "-" %}</td>
+                <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
+                <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
+                <td class="td-center">{% firstof o.price "-" %}</td>
+                <td class="td-center"><b>{{ o.cod|default_if_none:"0.00" }}</b></td>
+
+                <td class="td-center">
+                  <button type="button" class="reason-btn" data-modal-open="reasonModal{{ it.id }}">
+                    {% firstof it.reason o.reason "Click to add reason" %}
+                  </button>
+                </td>
+
+                {% if edit_mode %}
+                  <td class="td-center">
+                    {% if it.id in staged_remove %}
+                      <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="undo_remove">
+                        <input type="hidden" name="item_id" value="{{ it.id }}">
+                        <button class="btn btn-ghost" type="submit">Undo</button>
+                      </form>
+                    {% else %}
+                      <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="stage_remove">
+                        <input type="hidden" name="item_id" value="{{ it.id }}">
+                        <button class="btn btn-danger" type="submit">Remove</button>
+                      </form>
+                    {% endif %}
+                  </td>
                 {% endif %}
-              </td>
-            </tr>
 
-            <div class="reason-modal" id="reasonModal{{ it.id }}">
-              <div class="reason-modal-card">
-                <div class="reason-modal-head">
-                  <div class="reason-modal-title">Update Reason</div>
-                  <button type="button" class="modal-x" data-modal-close="reasonModal{{ it.id }}">×</button>
-                </div>
+                <td class="td-center">
+                  {% if it.id in staged_remove %}
+                    <span class="st-remove">REMOVE</span>
+                  {% else %}
+                    <span class="st-ok">ACTIVE</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endwith %}
+          {% endfor %}
 
-                <form method="post">
-                  {% csrf_token %}
-                  <input type="hidden" name="action" value="save_reasons">
-
-                  <div class="reason-modal-body">
-                    <div class="reason-meta">
-                      Shipment: <b>{% firstof o.tracking_no o.id %}</b>
-                    </div>
-
-                    <textarea class="reason-area" name="reason_{{ it.id }}" placeholder="Type reason / note here...">{% firstof it.reason o.reason "" %}</textarea>
-                  </div>
-
-                  <div class="reason-modal-foot">
-                    <button type="button" class="btn btn-ghost" data-modal-close="reasonModal{{ it.id }}">Cancel</button>
-                    <button type="submit" class="btn btn-success">Save Reason</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          {% endwith %}
         {% empty %}
           <tr>
             <td colspan="{% if edit_mode %}11{% else %}10{% endif %}" style="padding:14px;opacity:.7;">
@@ -374,6 +426,40 @@
       </tbody>
     </table>
   </div>
+
+  <!-- REASON MODALS OUTSIDE TABLE -->
+  {% for it in sorted_items %}
+    {% with o=it.order %}
+      <div class="reason-modal" id="reasonModal{{ it.id }}">
+        <div class="reason-modal-card">
+          <div class="reason-modal-head">
+            <div class="reason-modal-title">Update Reason</div>
+            <button type="button" class="modal-x" data-modal-close="reasonModal{{ it.id }}">×</button>
+          </div>
+
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_reasons">
+
+            <div class="reason-modal-body">
+              <div class="reason-meta">
+                Shipment: <b>{% firstof o.tracking_no o.id %}</b>
+              </div>
+
+              <textarea class="reason-area" name="reason_{{ it.id }}" placeholder="Type reason / note here...">{% firstof it.reason o.reason "" %}</textarea>
+            </div>
+
+            <div class="reason-modal-foot">
+              <button type="button" class="btn btn-ghost" data-modal-close="reasonModal{{ it.id }}">Cancel</button>
+              <button type="submit" class="btn btn-success">Save Reason</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endwith %}
+  {% endfor %}
+
+  {% endwith %}
 
 </div>
 
@@ -433,6 +519,61 @@
     font-size:14px;
   }
 
+  .section-flex{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .sort-note{
+    font-size:12px;
+    font-weight:900;
+    color:#16a34a;
+    background:#dcfce7;
+    border:1px solid #bbf7d0;
+    padding:6px 10px;
+    border-radius:999px;
+  }
+
+  .shop-summary{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:8px 0 12px;
+  }
+
+  .shop-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    padding:8px 12px;
+    border-radius:999px;
+    background:#ffffff;
+    border:1px solid #dbeafe;
+    color:#0f172a;
+    box-shadow:0 8px 18px rgba(15,23,42,.04);
+    font-size:13px;
+    font-weight:800;
+  }
+
+  .shop-pill b{
+    min-width:26px;
+    height:26px;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#16a34a;
+    color:#fff;
+    font-size:12px;
+  }
+
+  .shop-pill.muted{
+    opacity:.55;
+  }
+
   .btn{
     padding:10px 14px;
     border-radius:12px;
@@ -443,6 +584,7 @@
     text-decoration:none;
     font-weight:800;
   }
+
   .btn-ghost{
     padding:10px 14px;
     border-radius:12px;
@@ -453,6 +595,7 @@
     text-decoration:none;
     font-weight:800;
   }
+
   .btn-primary{background:#0b5cff;border-color:#0b5cff;color:#fff;}
   .btn-success{background:#12a150;border-color:#12a150;color:#fff;}
   .btn-danger{background:#e11d48;border-color:#e11d48;color:#fff;}
@@ -465,6 +608,7 @@
     font-size:11px;
     display:inline-block;
   }
+
   .pp-blue{background:#dbeafe;color:#1e40af;}
   .pp-orange{background:#fff7cc;color:#92400e;}
 
@@ -472,10 +616,87 @@
   table.wide{width:100%;min-width:100%;}
   .th-center{text-align:center;}
   .td-center{text-align:center;}
-  .ds-table{width:100%;border-collapse:collapse;}
-  .ds-table th,.ds-table td{border-bottom:1px solid #eee;padding:10px;vertical-align:middle;}
-  .ds-table th{background:#fafafa;font-weight:900;}
-  .trk{font-weight:900;text-decoration:underline;color:inherit;}
+
+  .ds-table{
+    width:100%;
+    border-collapse:collapse;
+  }
+
+  .ds-table th,
+  .ds-table td{
+    border-bottom:1px solid #eee;
+    padding:10px;
+    vertical-align:middle;
+  }
+
+  .ds-table th{
+    background:#fafafa;
+    font-weight:900;
+  }
+
+  .trk{
+    font-weight:900;
+    text-decoration:underline;
+    color:inherit;
+  }
+
+  .shop-group-row td{
+    padding:10px 12px !important;
+    background:linear-gradient(90deg,#ecfdf5,#f8fafc);
+    border-top:2px solid #bbf7d0;
+    border-bottom:1px solid #d1fae5;
+  }
+
+  .shop-group-title{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    color:#064e3b;
+    font-size:13px;
+    font-weight:900;
+    letter-spacing:.2px;
+  }
+
+  .shop-group-title b{
+    background:#16a34a;
+    color:#fff;
+    padding:5px 10px;
+    border-radius:999px;
+    font-size:12px;
+  }
+
+  .seller-cell{
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .return-body{
+    counter-reset:returnNo;
+  }
+
+  .return-row{
+    counter-increment:returnNo;
+  }
+
+  .return-n-cell::before{
+    content:counter(returnNo);
+    font-weight:900;
+  }
+
+  .pp-body{
+    counter-reset:ppNo;
+  }
+
+  .pp-row{
+    counter-increment:ppNo;
+  }
+
+  .pp-n-cell::before{
+    content:counter(ppNo);
+    font-weight:900;
+  }
 
   .edit-grid{
     display:grid;
@@ -484,12 +705,15 @@
     margin-top:10px;
     margin-bottom:12px;
   }
-  .edit-box,.preview-box{
+
+  .edit-box,
+  .preview-box{
     border:1px solid #eee;
     border-radius:14px;
     padding:12px;
     background:#fff;
   }
+
   .scan-box{
     width:100%;
     min-height:180px;
@@ -498,16 +722,39 @@
     padding:12px;
     resize:vertical;
   }
-  .edit-actions{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;}
-  .edit-help{margin-top:8px;font-size:12px;opacity:.7;}
-  .preview-title{font-size:13px;font-weight:900;margin-bottom:8px;}
-  .preview-list{display:flex;flex-direction:column;gap:8px;}
+
+  .edit-actions{
+    margin-top:10px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .edit-help{
+    margin-top:8px;
+    font-size:12px;
+    opacity:.7;
+  }
+
+  .preview-title{
+    font-size:13px;
+    font-weight:900;
+    margin-bottom:8px;
+  }
+
+  .preview-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
   .preview-item{
     border-radius:12px;
     padding:10px 12px;
     border:1px solid #eee;
     font-size:13px;
   }
+
   .preview-ok{background:#eafff1;border-color:#c7f3d4;}
   .preview-bad{background:#fff1f2;border-color:#fecdd3;}
   .preview-warn{background:#fff7ed;border-color:#fed7aa;}
@@ -528,9 +775,11 @@
     align-items:center;
     flex-wrap:wrap;
   }
+
   .shipper-label{
     font-weight:800;
   }
+
   .shipper-select{
     min-width:220px;
     height:40px;
@@ -554,7 +803,10 @@
     white-space:nowrap;
   }
 
-  .row-remove{background:#fff1f2;}
+  .row-remove{
+    background:#fff1f2;
+  }
+
   .st-ok{
     display:inline-block;
     padding:4px 10px;
@@ -564,6 +816,7 @@
     font-size:11px;
     font-weight:900;
   }
+
   .st-remove{
     display:inline-block;
     padding:4px 10px;
@@ -580,6 +833,7 @@
     font-weight:800;
     border:1px solid transparent;
   }
+
   .msg-success{background:#eafff1;border-color:#c7f3d4;color:#166534;}
   .msg-error{background:#fff1f2;border-color:#fecdd3;color:#9f1239;}
   .msg-info{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
@@ -594,7 +848,11 @@
     padding:20px;
     z-index:9999;
   }
-  .reason-modal.show{display:flex;}
+
+  .reason-modal.show{
+    display:flex;
+  }
+
   .reason-modal-card{
     width:min(560px,100%);
     background:#fff;
@@ -602,6 +860,7 @@
     overflow:hidden;
     box-shadow:0 20px 50px rgba(15,23,42,.22);
   }
+
   .reason-modal-head{
     display:flex;
     justify-content:space-between;
@@ -610,13 +869,16 @@
     padding:14px 16px;
     border-bottom:1px solid #eee;
   }
+
   .reason-modal-title{
     font-size:17px;
     font-weight:900;
   }
+
   .reason-modal-body{
     padding:16px;
   }
+
   .reason-modal-foot{
     padding:14px 16px;
     border-top:1px solid #eee;
@@ -624,7 +886,13 @@
     justify-content:flex-end;
     gap:10px;
   }
-  .reason-meta{margin-bottom:10px;font-size:13px;font-weight:800;}
+
+  .reason-meta{
+    margin-bottom:10px;
+    font-size:13px;
+    font-weight:800;
+  }
+
   .reason-area{
     width:100%;
     min-height:140px;
@@ -633,6 +901,7 @@
     padding:12px;
     resize:vertical;
   }
+
   .modal-x{
     width:34px;
     height:34px;
@@ -644,9 +913,26 @@
     cursor:pointer;
   }
 
-  @media (max-width: 1000px){
-    .shipper-form{align-items:stretch;}
-    .shipper-select{width:100%;}
+  @media (max-width:1000px){
+    .shipper-form{
+      align-items:stretch;
+    }
+
+    .shipper-select{
+      width:100%;
+    }
+  }
+
+  @media print{
+    .shop-summary,
+    .sort-note{
+      display:none !important;
+    }
+
+    .shop-group-row td{
+      background:#f5f5f5 !important;
+      color:#111 !important;
+    }
   }
 </style>
 {% endblock %}

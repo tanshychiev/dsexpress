@@ -141,8 +141,30 @@
     </div>
   {% endif %}
 
+  {% with sorted_rows=rows|dictsort:"seller_name" %}
+  {% regroup sorted_rows by seller_name as shop_groups %}
+
+  <!-- SHOP SUMMARY -->
+  <div class="section-title section-flex">
+    <span>Province Delivery Detail</span>
+    <span class="sort-note">Sorted by shop name</span>
+  </div>
+
+  <div class="shop-summary">
+    {% for shop in shop_groups %}
+      <div class="shop-pill">
+        <span>{{ shop.grouper|default:"No Shop" }}</span>
+        <b>{{ shop.list|length }}</b>
+      </div>
+    {% empty %}
+      <div class="shop-pill muted">
+        <span>No shop data</span>
+        <b>0</b>
+      </div>
+    {% endfor %}
+  </div>
+
   <!-- TABLE -->
-  <div class="section-title">Province Delivery</div>
   <div class="table-wrap">
     <table class="ds-table wide">
       <thead>
@@ -160,62 +182,77 @@
         </tr>
       </thead>
 
-      <tbody>
-        {% for r in rows %}
-        <tr>
-          <td class="td-center">{{ forloop.counter }}</td>
+      <tbody class="order-body">
+        {% for shop in shop_groups %}
 
-          <td class="td-center">
-            <a href="{{ r.tracking_url }}" class="trk mono">
-              {{ r.tracking_no }}
-            </a>
-          </td>
+          <tr class="shop-group-row">
+            <td colspan="10">
+              <div class="shop-group-title">
+                <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
+                <b>{{ shop.list|length }} order{% if shop.list|length > 1 %}s{% endif %}</b>
+              </div>
+            </td>
+          </tr>
 
-          <td class="td-center">{{ r.seller_name }}</td>
-          <td>{{ r.receiver_location }}</td>
-          <td class="td-center">{{ r.customer_name }}</td>
-          <td class="td-center">{{ r.customer_phone }}</td>
-          <td class="td-center">{{ r.price }}</td>
-          <td class="td-center"><b>{{ r.cod }}</b></td>
+          {% for r in shop.list %}
+          <tr class="order-row">
+            <td class="td-center n-cell"></td>
 
-          <td class="td-center">
-            {% if r.order_status == "DONE" %}
-              <span class="badge badge-green">DONE</span>
-            {% elif r.order_status == "PROCESSING" %}
-              <span class="badge badge-yellow">PROCESSING</span>
-            {% elif r.order_status == "INBOUND" %}
-              <span class="badge badge-gray">INBOUND</span>
-            {% else %}
-              <span class="badge badge-blue">{{ r.order_status }}</span>
-            {% endif %}
-          </td>
+            <td class="td-center">
+              <a href="{{ r.tracking_url }}" class="trk mono">
+                {{ r.tracking_no }}
+              </a>
+            </td>
 
-          <td class="td-center">
-            {% if edit_mode %}
-              <form method="post" style="display:inline;">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="remove_item">
-                <input type="hidden" name="item_id" value="{{ r.item_id }}">
-                <button type="submit"
-                        class="btn btn-danger js-confirm"
-                        data-title="Remove this shipment?"
-                        data-text="This shipment will be removed and moved to INBOUND.">
-                  Remove
-                </button>
-              </form>
-            {% else %}
-              <span style="opacity:.35;">—</span>
-            {% endif %}
-          </td>
-        </tr>
+            <td class="td-center seller-cell">{{ r.seller_name|default:"-" }}</td>
+            <td>{{ r.receiver_location }}</td>
+            <td class="td-center">{{ r.customer_name }}</td>
+            <td class="td-center">{{ r.customer_phone }}</td>
+            <td class="td-center">{{ r.price }}</td>
+            <td class="td-center"><b>{{ r.cod }}</b></td>
+
+            <td class="td-center">
+              {% if r.order_status == "DONE" %}
+                <span class="badge badge-green">DONE</span>
+              {% elif r.order_status == "PROCESSING" %}
+                <span class="badge badge-yellow">PROCESSING</span>
+              {% elif r.order_status == "INBOUND" %}
+                <span class="badge badge-gray">INBOUND</span>
+              {% else %}
+                <span class="badge badge-blue">{{ r.order_status }}</span>
+              {% endif %}
+            </td>
+
+            <td class="td-center">
+              {% if edit_mode %}
+                <form method="post" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove_item">
+                  <input type="hidden" name="item_id" value="{{ r.item_id }}">
+                  <button type="submit"
+                          class="btn btn-danger js-confirm"
+                          data-title="Remove this shipment?"
+                          data-text="This shipment will be removed and moved to INBOUND.">
+                    Remove
+                  </button>
+                </form>
+              {% else %}
+                <span style="opacity:.35;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+
         {% empty %}
-        <tr>
-          <td colspan="10" style="padding:14px; opacity:.7;">No orders in this batch.</td>
-        </tr>
+          <tr>
+            <td colspan="10" style="padding:14px; opacity:.7;">No orders in this batch.</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  {% endwith %}
 
 </div>
 
@@ -233,16 +270,63 @@
 </div>
 
 <style>
-  .pp-card{padding:18px;border-radius:16px;width:100%;}
-  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .pp-card{
+    padding:18px;
+    border-radius:16px;
+    width:100%;
+  }
 
-  .pp-header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
-  .pp-title{font-size:18px;font-weight:900;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-  .pp-meta{margin-top:6px;opacity:.85;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-  .meta-item{display:inline-flex;gap:6px;align-items:baseline;}
-  .sep{opacity:.5;}
-  .big-num{font-size:20px;font-weight:900;}
-  .pp-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .mono{
+    font-family:ui-monospace,Consolas,monospace;
+  }
+
+  .pp-header{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+
+  .pp-title{
+    font-size:18px;
+    font-weight:900;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  .pp-meta{
+    margin-top:6px;
+    opacity:.85;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .meta-item{
+    display:inline-flex;
+    gap:6px;
+    align-items:baseline;
+  }
+
+  .sep{
+    opacity:.5;
+  }
+
+  .big-num{
+    font-size:20px;
+    font-weight:900;
+  }
+
+  .pp-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
 
   .section-title{
     margin-top:14px;
@@ -250,6 +334,61 @@
     font-weight:900;
     color:#0f172a;
     font-size:14px;
+  }
+
+  .section-flex{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .sort-note{
+    font-size:12px;
+    font-weight:800;
+    color:#16a34a;
+    background:#dcfce7;
+    border:1px solid #bbf7d0;
+    padding:6px 10px;
+    border-radius:999px;
+  }
+
+  .shop-summary{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:8px 0 12px;
+  }
+
+  .shop-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    padding:8px 12px;
+    border-radius:999px;
+    background:#ffffff;
+    border:1px solid #dbeafe;
+    color:#0f172a;
+    box-shadow:0 8px 18px rgba(15,23,42,.04);
+    font-size:13px;
+    font-weight:800;
+  }
+
+  .shop-pill b{
+    min-width:26px;
+    height:26px;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#16a34a;
+    color:#fff;
+    font-size:12px;
+  }
+
+  .shop-pill.muted{
+    opacity:.55;
   }
 
   .btn{
@@ -262,6 +401,7 @@
     text-decoration:none;
     font-weight:800;
   }
+
   .btn-ghost{
     padding:10px 14px;
     border-radius:12px;
@@ -272,10 +412,30 @@
     text-decoration:none;
     font-weight:800;
   }
-  .btn-primary{background:#0b5cff;border-color:#0b5cff;color:#fff;}
-  .btn-success{background:#12a150;border-color:#12a150;color:#fff;}
-  .btn-danger{background:#e11d48;border-color:#e11d48;color:#fff;}
-  .btn-warning{background:#f59e0b;border-color:#f59e0b;color:#111;}
+
+  .btn-primary{
+    background:#0b5cff;
+    border-color:#0b5cff;
+    color:#fff;
+  }
+
+  .btn-success{
+    background:#12a150;
+    border-color:#12a150;
+    color:#fff;
+  }
+
+  .btn-danger{
+    background:#e11d48;
+    border-color:#e11d48;
+    color:#fff;
+  }
+
+  .btn-warning{
+    background:#f59e0b;
+    border-color:#f59e0b;
+    color:#111;
+  }
 
   .pp-state{
     padding:4px 10px;
@@ -284,33 +444,123 @@
     font-size:11px;
     display:inline-block;
   }
-  .pp-blue{background:#dbeafe;color:#1e40af;}
-  .pp-orange{background:#fff7cc;color:#92400e;}
-  .pp-green{background:#dcfce7;color:#166534;}
-  .pp-red{background:#fee2e2;color:#991b1b;}
-  .pp-yellow{background:#fef3c7;color:#92400e;}
 
-  .table-wrap{margin-top:10px;overflow-x:auto;width:100%;}
-  table.wide{width:100%;min-width:100%;}
-  .th-center{text-align:center;}
-  .td-center{text-align:center;}
+  .pp-blue{
+    background:#dbeafe;
+    color:#1e40af;
+  }
 
-  .ds-table{width:100%;border-collapse:collapse;}
+  .pp-orange{
+    background:#fff7cc;
+    color:#92400e;
+  }
+
+  .pp-green{
+    background:#dcfce7;
+    color:#166534;
+  }
+
+  .pp-red{
+    background:#fee2e2;
+    color:#991b1b;
+  }
+
+  .pp-yellow{
+    background:#fef3c7;
+    color:#92400e;
+  }
+
+  .table-wrap{
+    margin-top:10px;
+    overflow-x:auto;
+    width:100%;
+  }
+
+  table.wide{
+    width:100%;
+    min-width:100%;
+  }
+
+  .th-center{
+    text-align:center;
+  }
+
+  .td-center{
+    text-align:center;
+  }
+
+  .ds-table{
+    width:100%;
+    border-collapse:collapse;
+  }
+
   .ds-table th,
   .ds-table td{
     border-bottom:1px solid #eee;
     padding:10px;
     vertical-align:middle;
   }
+
   .ds-table th{
     background:#fafafa;
     white-space:nowrap;
     font-size:12px;
     font-weight:800;
   }
-  .ds-table tbody tr:hover td{background:#fcfcfc;}
 
-  .trk{font-weight:900;text-decoration:underline;}
+  .ds-table tbody tr.order-row:hover td{
+    background:#fcfcfc;
+  }
+
+  .order-body{
+    counter-reset: orderNo;
+  }
+
+  .order-row{
+    counter-increment: orderNo;
+  }
+
+  .n-cell::before{
+    content: counter(orderNo);
+    font-weight:800;
+  }
+
+  .shop-group-row td{
+    padding:10px 12px !important;
+    background:linear-gradient(90deg,#ecfdf5,#f8fafc);
+    border-top:2px solid #bbf7d0;
+    border-bottom:1px solid #d1fae5;
+  }
+
+  .shop-group-title{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    color:#064e3b;
+    font-size:13px;
+    font-weight:900;
+    letter-spacing:.2px;
+  }
+
+  .shop-group-title b{
+    background:#16a34a;
+    color:#fff;
+    padding:5px 10px;
+    border-radius:999px;
+    font-size:12px;
+  }
+
+  .seller-cell{
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .trk{
+    font-weight:900;
+    text-decoration:underline;
+  }
 
   .edit-box{
     background:#fff;
@@ -358,9 +608,23 @@
     align-items:center;
   }
 
-  .modal{display:none;position:fixed;inset:0;z-index:9999;}
-  .modal.show{display:block;}
-  .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);}
+  .modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:9999;
+  }
+
+  .modal.show{
+    display:block;
+  }
+
+  .modal-backdrop{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,.45);
+  }
+
   .modal-card{
     position:relative;
     margin:12vh auto 0;
@@ -370,9 +634,37 @@
     padding:16px;
     box-shadow:0 20px 60px rgba(0,0,0,.25);
   }
-  .modal-title{font-size:16px;font-weight:900;margin-bottom:6px;}
-  .modal-text{font-size:13px;opacity:.8;margin-bottom:14px;line-height:1.4;}
-  .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+
+  .modal-title{
+    font-size:16px;
+    font-weight:900;
+    margin-bottom:6px;
+  }
+
+  .modal-text{
+    font-size:13px;
+    opacity:.8;
+    margin-bottom:14px;
+    line-height:1.4;
+  }
+
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+  }
+
+  @media print{
+    .shop-summary,
+    .sort-note{
+      display:none !important;
+    }
+
+    .shop-group-row td{
+      background:#f5f5f5 !important;
+      color:#111 !important;
+    }
+  }
 </style>
 
 <script>

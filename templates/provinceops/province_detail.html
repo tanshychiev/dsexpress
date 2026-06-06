@@ -141,32 +141,14 @@
     </div>
   {% endif %}
 
-  {% with sorted_rows=rows|dictsort:"seller_name" %}
-  {% regroup sorted_rows by seller_name as shop_groups %}
-
-  <!-- SHOP SUMMARY -->
-  <div class="section-title section-flex">
-    <span>Province Delivery Detail</span>
-    <span class="sort-note">Sorted by shop name</span>
-  </div>
-
-  <div class="shop-summary">
-    {% for shop in shop_groups %}
-      <div class="shop-pill">
-        <span>{{ shop.grouper|default:"No Shop" }}</span>
-        <b>{{ shop.list|length }}</b>
-      </div>
-    {% empty %}
-      <div class="shop-pill muted">
-        <span>No shop data</span>
-        <b>0</b>
-      </div>
-    {% endfor %}
-  </div>
-
   <!-- TABLE -->
+  <div class="section-title-row">
+    <div class="section-title">Province Delivery</div>
+    <div class="sorted-badge no-print">Sorted by shop name</div>
+  </div>
+
   <div class="table-wrap">
-    <table class="ds-table wide">
+    <table class="ds-table wide" id="provinceDeliveryTable">
       <thead>
         <tr>
           <th class="th-center" style="width:55px;">N</th>
@@ -182,77 +164,67 @@
         </tr>
       </thead>
 
-      <tbody class="order-body">
-        {% for shop in shop_groups %}
+      <tbody id="provinceDeliveryBody">
+        {% for r in rows %}
+        <tr
+          data-seller="{{ r.seller_name|default:'-'|lower }}"
+          data-tracking="{{ r.tracking_no|default:''|lower }}"
+        >
+          <td class="td-center row-number">{{ forloop.counter }}</td>
 
-          <tr class="shop-group-row">
-            <td colspan="10">
-              <div class="shop-group-title">
-                <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
-                <b>{{ shop.list|length }} order{% if shop.list|length > 1 %}s{% endif %}</b>
-              </div>
-            </td>
-          </tr>
+          <td class="td-center">
+            <a href="{{ r.tracking_url }}" class="trk mono">
+              {{ r.tracking_no }}
+            </a>
+          </td>
 
-          {% for r in shop.list %}
-          <tr class="order-row">
-            <td class="td-center n-cell"></td>
+          <td class="td-center seller-cell">{{ r.seller_name }}</td>
+          <td>{{ r.receiver_location }}</td>
+          <td class="td-center">{{ r.customer_name }}</td>
+          <td class="td-center">{{ r.customer_phone }}</td>
+          <td class="td-center">{{ r.price }}</td>
+          <td class="td-center"><b>{{ r.cod }}</b></td>
 
-            <td class="td-center">
-              <a href="{{ r.tracking_url }}" class="trk mono">
-                {{ r.tracking_no }}
-              </a>
-            </td>
+          <td class="td-center">
+            {% if r.order_status == "DONE" %}
+              <span class="badge badge-green">DONE</span>
+            {% elif r.order_status == "PROCESSING" %}
+              <span class="badge badge-yellow">PROCESSING</span>
+            {% elif r.order_status == "INBOUND" %}
+              <span class="badge badge-gray">INBOUND</span>
+            {% else %}
+              <span class="badge badge-blue">{{ r.order_status }}</span>
+            {% endif %}
+          </td>
 
-            <td class="td-center seller-cell">{{ r.seller_name|default:"-" }}</td>
-            <td>{{ r.receiver_location }}</td>
-            <td class="td-center">{{ r.customer_name }}</td>
-            <td class="td-center">{{ r.customer_phone }}</td>
-            <td class="td-center">{{ r.price }}</td>
-            <td class="td-center"><b>{{ r.cod }}</b></td>
-
-            <td class="td-center">
-              {% if r.order_status == "DONE" %}
-                <span class="badge badge-green">DONE</span>
-              {% elif r.order_status == "PROCESSING" %}
-                <span class="badge badge-yellow">PROCESSING</span>
-              {% elif r.order_status == "INBOUND" %}
-                <span class="badge badge-gray">INBOUND</span>
-              {% else %}
-                <span class="badge badge-blue">{{ r.order_status }}</span>
-              {% endif %}
-            </td>
-
-            <td class="td-center">
-              {% if edit_mode %}
-                <form method="post" style="display:inline;">
-                  {% csrf_token %}
-                  <input type="hidden" name="action" value="remove_item">
-                  <input type="hidden" name="item_id" value="{{ r.item_id }}">
-                  <button type="submit"
-                          class="btn btn-danger js-confirm"
-                          data-title="Remove this shipment?"
-                          data-text="This shipment will be removed and moved to INBOUND.">
-                    Remove
-                  </button>
-                </form>
-              {% else %}
-                <span style="opacity:.35;">—</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-
+          <td class="td-center">
+            {% if edit_mode %}
+              <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remove_item">
+                <input type="hidden" name="item_id" value="{{ r.item_id }}">
+                <button type="submit"
+                        class="btn btn-danger js-confirm"
+                        data-title="Remove this shipment?"
+                        data-text="This shipment will be removed and moved to INBOUND.">
+                  Remove
+                </button>
+              </form>
+            {% else %}
+              <span style="opacity:.35;">—</span>
+            {% endif %}
+          </td>
+        </tr>
         {% empty %}
-          <tr>
-            <td colspan="10" style="padding:14px; opacity:.7;">No orders in this batch.</td>
-          </tr>
+        <tr>
+          <td colspan="10" style="padding:14px; opacity:.7;text-align:center;">
+            No orders in this batch.
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-
-  {% endwith %}
 
 </div>
 
@@ -274,6 +246,7 @@
     padding:18px;
     border-radius:16px;
     width:100%;
+    background:#ecfdf5;
   }
 
   .mono{
@@ -299,7 +272,7 @@
 
   .pp-meta{
     margin-top:6px;
-    opacity:.85;
+    opacity:.9;
     display:flex;
     gap:10px;
     flex-wrap:wrap;
@@ -317,8 +290,8 @@
   }
 
   .big-num{
-    font-size:20px;
-    font-weight:900;
+    font-size:22px;
+    font-weight:1000;
   }
 
   .pp-actions{
@@ -326,6 +299,14 @@
     gap:10px;
     flex-wrap:wrap;
     align-items:center;
+  }
+
+  .section-title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:14px;
   }
 
   .section-title{
@@ -336,59 +317,13 @@
     font-size:14px;
   }
 
-  .section-flex{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    flex-wrap:wrap;
-  }
-
-  .sort-note{
-    font-size:12px;
-    font-weight:800;
-    color:#16a34a;
+  .sorted-badge{
+    padding:7px 11px;
+    border-radius:999px;
     background:#dcfce7;
-    border:1px solid #bbf7d0;
-    padding:6px 10px;
-    border-radius:999px;
-  }
-
-  .shop-summary{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin:8px 0 12px;
-  }
-
-  .shop-pill{
-    display:inline-flex;
-    align-items:center;
-    gap:9px;
-    padding:8px 12px;
-    border-radius:999px;
-    background:#ffffff;
-    border:1px solid #dbeafe;
-    color:#0f172a;
-    box-shadow:0 8px 18px rgba(15,23,42,.04);
-    font-size:13px;
-    font-weight:800;
-  }
-
-  .shop-pill b{
-    min-width:26px;
-    height:26px;
-    border-radius:999px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    background:#16a34a;
-    color:#fff;
+    color:#16a34a;
     font-size:12px;
-  }
-
-  .shop-pill.muted{
-    opacity:.55;
+    font-weight:1000;
   }
 
   .btn{
@@ -496,70 +431,37 @@
 
   .ds-table th,
   .ds-table td{
-    border-bottom:1px solid #eee;
+    border-bottom:1px solid #dceee5;
     padding:10px;
     vertical-align:middle;
   }
 
   .ds-table th{
-    background:#fafafa;
+    background:#ffffff;
     white-space:nowrap;
     font-size:12px;
-    font-weight:800;
-  }
-
-  .ds-table tbody tr.order-row:hover td{
-    background:#fcfcfc;
-  }
-
-  .order-body{
-    counter-reset: orderNo;
-  }
-
-  .order-row{
-    counter-increment: orderNo;
-  }
-
-  .n-cell::before{
-    content: counter(orderNo);
-    font-weight:800;
-  }
-
-  .shop-group-row td{
-    padding:10px 12px !important;
-    background:linear-gradient(90deg,#ecfdf5,#f8fafc);
-    border-top:2px solid #bbf7d0;
-    border-bottom:1px solid #d1fae5;
-  }
-
-  .shop-group-title{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-    color:#064e3b;
-    font-size:13px;
     font-weight:900;
-    letter-spacing:.2px;
+    color:#020617;
   }
 
-  .shop-group-title b{
-    background:#16a34a;
-    color:#fff;
-    padding:5px 10px;
-    border-radius:999px;
-    font-size:12px;
+  .ds-table td{
+    background:transparent;
+    color:#020617;
+    font-weight:750;
+  }
+
+  .ds-table tbody tr:hover td{
+    background:rgba(255,255,255,.45);
   }
 
   .seller-cell{
-    font-weight:900;
-    color:#0f172a;
+    font-weight:1000;
   }
 
   .trk{
     font-weight:900;
     text-decoration:underline;
+    color:inherit;
   }
 
   .edit-box{
@@ -606,6 +508,34 @@
     gap:10px;
     flex-wrap:wrap;
     align-items:center;
+  }
+
+  .badge{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .badge-green{
+    background:#dcfce7;
+    color:#166534;
+  }
+
+  .badge-yellow{
+    background:#fef3c7;
+    color:#92400e;
+  }
+
+  .badge-gray{
+    background:#f1f5f9;
+    color:#475569;
+  }
+
+  .badge-blue{
+    background:#dbeafe;
+    color:#1e40af;
   }
 
   .modal{
@@ -655,20 +585,57 @@
   }
 
   @media print{
-    .shop-summary,
-    .sort-note{
+    .no-print{
       display:none !important;
     }
 
-    .shop-group-row td{
-      background:#f5f5f5 !important;
-      color:#111 !important;
+    .pp-card{
+      background:#fff;
+      padding:0;
+    }
+
+    .ds-table th,
+    .ds-table td{
+      font-size:11px;
+      padding:7px;
     }
   }
 </style>
 
 <script>
   (function(){
+    function sortProvinceByShop(){
+      const body = document.getElementById("provinceDeliveryBody");
+      if(!body) return;
+
+      const rows = Array.from(body.querySelectorAll("tr[data-seller]"));
+
+      rows.sort(function(a, b){
+        const sellerA = (a.getAttribute("data-seller") || "").toLowerCase();
+        const sellerB = (b.getAttribute("data-seller") || "").toLowerCase();
+        const trackA = (a.getAttribute("data-tracking") || "").toLowerCase();
+        const trackB = (b.getAttribute("data-tracking") || "").toLowerCase();
+
+        if(sellerA < sellerB) return -1;
+        if(sellerA > sellerB) return 1;
+
+        if(trackA < trackB) return -1;
+        if(trackA > trackB) return 1;
+
+        return 0;
+      });
+
+      rows.forEach(function(row, index){
+        const numberCell = row.querySelector(".row-number");
+        if(numberCell){
+          numberCell.textContent = index + 1;
+        }
+        body.appendChild(row);
+      });
+    }
+
+    sortProvinceByShop();
+
     const modal = document.getElementById("confirmModal");
     const titleEl = document.getElementById("confirmTitle");
     const textEl  = document.getElementById("confirmText");

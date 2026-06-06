@@ -39,7 +39,6 @@
     </div>
   </div>
 
-  <!-- hidden form for per-row reason save -->
   <form method="post" id="rowSaveForm" style="display:none;">
     {% csrf_token %}
     <input type="hidden" name="action" value="save_reason_one">
@@ -47,16 +46,8 @@
     <input type="hidden" name="reason_value" id="rowSaveReasonVal" value="">
   </form>
 
-  <!-- ========= Return Batch ========= -->
   {% if return_groups %}
-    {% with sorted_return_groups=return_groups|dictsort:"seller" %}
-    {% regroup sorted_return_groups by seller as return_shop_groups %}
-
-    <div class="section-title section-flex">
-      <span>Return Batch</span>
-      <span class="sort-note">Sorted by shop name</span>
-    </div>
-
+    <div class="section-title">Return Batch</div>
     <div class="table-wrap">
       <table class="ds-table wide">
         <thead>
@@ -73,78 +64,48 @@
           </tr>
         </thead>
 
-        <tbody class="return-body">
-          {% for shop in return_shop_groups %}
+        <tbody>
+          {% for r in return_groups %}
+            <tr class="{% if r.ticked_all %}row-ticked{% endif %}"
+                data-group="return"
+                data-item-ids="{{ r.item_ids|join:',' }}">
+              <td class="td-center">{{ forloop.counter }}</td>
 
-            <tr class="shop-group-row">
-              <td colspan="9">
-                <div class="shop-group-title">
-                  <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
-                  <b>{{ shop.list|length }} return batch{% if shop.list|length > 1 %}es{% endif %}</b>
-                </div>
+              <td class="td-center">
+                {% if r.label_id %}
+                  <a class="trk mono" href="{% url 'returnshop_label_detail' r.label_id %}">{{ r.code }}</a>
+                {% else %}
+                  <span class="mono">{{ r.code }}</span>
+                {% endif %}
               </td>
-            </tr>
 
-            {% for r in shop.list %}
-              <tr class="return-row {% if r.ticked_all %}row-ticked{% endif %}"
-                  data-group="return"
-                  data-item-ids="{{ r.item_ids|join:',' }}">
-                <td class="td-center return-n-cell"></td>
+              <td class="td-center">{% if r.created_at %}{{ r.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+              <td class="td-center">{% firstof r.seller "-" %}</td>
+              <td>{% firstof r.location "-" %}</td>
+              <td class="td-center">{% firstof r.phone "-" %}</td>
+              <td class="td-center"><b>{{ r.total_pc }}</b></td>
+              <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
 
-                <td class="td-center">
-                  {% if r.label_id %}
-                    <a class="trk mono" href="{% url 'returnshop_label_detail' r.label_id %}">{{ r.code }}</a>
-                  {% else %}
-                    <span class="mono">{{ r.code }}</span>
-                  {% endif %}
-                </td>
-
-                <td class="td-center">
-                  {% if r.created_at %}
-                    {{ r.created_at|date:"Y-m-d H:i" }}
-                  {% else %}
-                    -
-                  {% endif %}
-                </td>
-
-                <td class="td-center seller-cell">{% firstof r.seller "-" %}</td>
-                <td>{% firstof r.location "-" %}</td>
-                <td class="td-center">{% firstof r.phone "-" %}</td>
-                <td class="td-center"><b>{{ r.total_pc }}</b></td>
-                <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
-
-                <td class="td-center tick-col">
-                  <input type="checkbox"
-                         class="tick tick-group"
-                         {% if r.tick_locked %}disabled{% endif %}
-                         {% if r.ticked_all %}checked{% endif %} />
-                </td>
-              </tr>
-            {% endfor %}
-
-          {% empty %}
-            <tr>
-              <td colspan="9" style="padding:14px;opacity:.7;">No return batch.</td>
+              <td class="td-center tick-col">
+                <input type="checkbox"
+                       class="tick tick-group"
+                       {% if r.tick_locked %}disabled{% endif %}
+                       {% if r.ticked_all %}checked{% endif %} />
+              </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-
-    {% endwith %}
   {% endif %}
 
-  <!-- ========= PP Delivery ========= -->
-  {% with sorted_items=items|dictsort:"order.seller.name" %}
-  {% regroup sorted_items by order.seller.name as pp_shop_groups %}
-
-  <div class="section-title section-flex">
-    <span>PP Delivery</span>
-    <span class="sort-note">Sorted by shop name</span>
+  <div class="section-title-row">
+    <div class="section-title">PP Delivery</div>
+    <div class="sorted-badge no-print">Sorted by shop name</div>
   </div>
 
   <div class="table-wrap">
-    <table class="ds-table wide">
+    <table class="ds-table wide" id="clearPPTable">
       <thead>
         <tr>
           <th class="th-center" style="width:55px;">N</th>
@@ -162,84 +123,68 @@
         </tr>
       </thead>
 
-      <tbody class="pp-body">
-        {% for shop in pp_shop_groups %}
+      <tbody id="clearPPBody">
+        {% for it in items %}
+          {% with o=it.order %}
+            <tr class="{% if it.ticked %}row-ticked{% endif %}"
+                data-item-id="{{ it.id }}"
+                data-cod="{{ o.cod_display|default_if_none:'0' }}"
+                data-seller="{% if o.seller %}{% firstof o.seller.seller_name o.seller.name '-' %}{% else %}-{% endif %}"
+                data-tracking="{% firstof o.full_tracking o.tracking_no o.id %}">
+              <td class="td-center row-number">{{ forloop.counter }}</td>
 
-          <tr class="shop-group-row">
-            <td colspan="12">
-              <div class="shop-group-title">
-                <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
-                <b>{{ shop.list|length }} order{% if shop.list|length > 1 %}s{% endif %}</b>
-              </div>
-            </td>
-          </tr>
+              <td class="td-center">
+                <a class="trk mono" href="/orders/created/{{ o.id }}/">
+                  {% firstof o.full_tracking o.tracking_no o.id %}
+                </a>
+              </td>
 
-          {% for it in shop.list %}
-            {% with o=it.order %}
-              <tr class="pp-row {% if it.ticked %}row-ticked{% endif %}"
-                  data-item-id="{{ it.id }}"
-                  data-cod="{{ o.cod_display|default_if_none:'0' }}">
-                <td class="td-center pp-n-cell"></td>
+              <td class="td-center seller-cell">
+                {% if o.seller %}
+                  {% firstof o.seller.seller_name o.seller.name "-" %}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
 
-                <td class="td-center">
-                  <a class="trk mono" href="/orders/created/{{ o.id }}/">
-                    {% firstof o.full_tracking o.tracking_no o.id %}
-                  </a>
-                </td>
+              <td class="td-center">{% firstof o.seller_order_code o.code "-" %}</td>
+              <td>{% firstof o.receiver_address o.address "-" %}</td>
+              <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
+              <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
+              <td class="td-center">{% firstof o.price "-" %}</td>
+              <td class="td-center"><b>{{ o.cod_display|default_if_none:"0.00" }}</b></td>
 
-                <td class="td-center seller-cell">
-                  {% if o.seller %}
-                    {% firstof o.seller.seller_name o.seller.name "-" %}
-                  {% else %}
-                    -
-                  {% endif %}
-                </td>
+              <td class="td-center">
+                <input class="input reason-input"
+                       id="reason_{{ it.id }}"
+                       value="{{ it.reason|default_if_none:'' }}"
+                       placeholder="Reason..." />
+              </td>
 
-                <td class="td-center">{% firstof o.seller_order_code o.code "-" %}</td>
-                <td>{% firstof o.receiver_address o.address "-" %}</td>
-                <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
-                <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
-                <td class="td-center">{% firstof o.price "-" %}</td>
-                <td class="td-center"><b>{{ o.cod_display|default_if_none:"0.00" }}</b></td>
+              <td class="td-center no-print">
+                <button type="button"
+                        class="btn btn-ghost btn-save-row"
+                        data-item-id="{{ it.id }}"
+                        {% if stage2_done or batch.status == "CANCELLED" %}disabled{% endif %}>
+                  Save
+                </button>
+              </td>
 
-                <td class="td-center">
-                  <input class="input reason-input"
-                         id="reason_{{ it.id }}"
-                         value="{{ it.reason|default_if_none:'' }}"
-                         placeholder="Reason..." />
-                </td>
-
-                <td class="td-center no-print">
-                  <button type="button"
-                          class="btn btn-ghost btn-save-row"
-                          data-item-id="{{ it.id }}"
-                          {% if stage2_done or batch.status == "CANCELLED" %}disabled{% endif %}>
-                    Save
-                  </button>
-                </td>
-
-                <td class="td-center tick-col">
-                  <input type="checkbox"
-                         class="tick tick-one"
-                         {% if it.tick_locked %}disabled{% endif %}
-                         {% if it.ticked %}checked{% endif %} />
-                </td>
-              </tr>
-            {% endwith %}
-          {% endfor %}
-
+              <td class="td-center tick-col">
+                <input type="checkbox"
+                       class="tick tick-one"
+                       {% if it.tick_locked %}disabled{% endif %}
+                       {% if it.ticked %}checked{% endif %} />
+              </td>
+            </tr>
+          {% endwith %}
         {% empty %}
-          <tr>
-            <td colspan="12" style="padding:14px;opacity:.7;">No items.</td>
-          </tr>
+          <tr><td colspan="12" style="padding:14px;opacity:.7;text-align:center;">No items.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  {% endwith %}
-
-  <!-- ========= ACTIONS ========= -->
   <div class="pp-bottom-actions no-print">
     <button class="btn btn-primary"
             type="button"
@@ -273,7 +218,6 @@
     </button>
   </div>
 
-  <!-- ========= MOVED SUMMARY UNDER BUTTONS ========= -->
   <div class="pp-under-actions no-print">
     <div class="mini-money">
       <span class="mm-item mm-target">
@@ -293,7 +237,6 @@
     </div>
   </div>
 
-  <!-- ========= Clear COD ========= -->
   <div class="section-title" style="margin-top:16px;">Clear COD</div>
 
   <div class="cod-summary">
@@ -363,9 +306,7 @@
     return isNaN(n) ? 0 : n;
   }
 
-  function fmtUSD(n){
-    return (Math.round(n * 100) / 100).toFixed(2);
-  }
+  function fmtUSD(n){ return (Math.round(n * 100) / 100).toFixed(2); }
 
   function fmtKHR(n){
     const sign = n < 0 ? "-" : "";
@@ -376,9 +317,41 @@
   function getCookie(name){
     const v = `; ${document.cookie}`;
     const p = v.split(`; ${name}=`);
-    if(p.length === 2) return p.pop().split(";").shift();
+    if(p.length === 2) return p.pop().split(';').shift();
     return "";
   }
+
+  function sortClearPPByShop(){
+    const body = document.getElementById("clearPPBody");
+    if(!body) return;
+
+    const rows = Array.from(body.querySelectorAll("tr[data-seller]"));
+
+    rows.sort(function(a, b){
+      const sellerA = (a.getAttribute("data-seller") || "").toLowerCase();
+      const sellerB = (b.getAttribute("data-seller") || "").toLowerCase();
+      const trackA = (a.getAttribute("data-tracking") || "").toLowerCase();
+      const trackB = (b.getAttribute("data-tracking") || "").toLowerCase();
+
+      if(sellerA < sellerB) return -1;
+      if(sellerA > sellerB) return 1;
+
+      if(trackA < trackB) return -1;
+      if(trackA > trackB) return 1;
+
+      return 0;
+    });
+
+    rows.forEach(function(row, index){
+      const numberCell = row.querySelector(".row-number");
+      if(numberCell){
+        numberCell.textContent = index + 1;
+      }
+      body.appendChild(row);
+    });
+  }
+
+  sortClearPPByShop();
 
   const rate = toNum("{{ settings_obj.usd_to_khr_rate|default_if_none:'4100' }}") || 4100;
   const tol  = toNum("{{ settings_obj.balance_tolerance_khr|default_if_none:'99' }}") || 99;
@@ -395,9 +368,7 @@
   const aba_khr  = document.getElementById("aba_khr");
   const expense  = document.getElementById("expense");
 
-  function setRowTicked(tr, on){
-    tr.classList.toggle("row-ticked", !!on);
-  }
+  function setRowTicked(tr, on){ tr.classList.toggle("row-ticked", !!on); }
 
   async function postJSON(url, data){
     const res = await fetch(url, {
@@ -417,9 +388,7 @@
   async function runSimple(url){
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "X-CSRFToken": getCookie("csrftoken")
-      }
+      headers: {"X-CSRFToken": getCookie("csrftoken")}
     });
 
     const j = await res.json().catch(()=>({}));
@@ -446,14 +415,13 @@
     const au = toNum(aba_usd?.value);
     const ak = toNum(aba_khr?.value);
     const ex = toNum(expense?.value);
-
     return (cu + au) + ((ck + ak) / rate) - ex;
   }
 
   function paintDiff(diffKhr){
     if(!uiDiffPill) return;
 
-    uiDiffPill.classList.remove("diff-ok", "diff-bad");
+    uiDiffPill.classList.remove("diff-ok","diff-bad");
 
     if(Math.abs(diffKhr) <= tol){
       uiDiffPill.classList.add("diff-ok");
@@ -476,7 +444,7 @@
     const ok = Math.abs(diffKhr) <= tol;
 
     if(uiBalanced){
-      uiBalanced.classList.remove("ok", "warn");
+      uiBalanced.classList.remove("ok","warn");
 
       if(ok){
         uiBalanced.classList.add("ok");
@@ -572,9 +540,11 @@
 
     document.querySelectorAll("tr[data-group='return']").forEach(tr=>{
       const raw = tr.getAttribute("data-item-ids") || "";
-      raw.split(",").map(x=>x.trim()).filter(Boolean).forEach(x=>{
-        ids.push(Number(x));
-      });
+
+      raw.split(",")
+        .map(x=>x.trim())
+        .filter(Boolean)
+        .forEach(x=>ids.push(Number(x)));
     });
 
     await postJSON(url, {
@@ -595,12 +565,11 @@
     });
 
     document.querySelectorAll("tr[data-group='return']").forEach(tr=>{
-      setRowTicked(tr, tickAllState);
+      tr.classList.toggle("row-ticked", tickAllState);
     });
 
     tickAllState = !tickAllState;
     btnTickAll.textContent = tickAllState ? "✓ Tick All" : "✕ Untick All";
-
     refreshSummary();
   }
 
@@ -676,6 +645,7 @@
   .pp-card{
     padding:18px;
     border-radius:16px;
+    background:#ecfdf5;
   }
 
   .mono{
@@ -700,7 +670,7 @@
 
   .pp-meta{
     margin-top:6px;
-    opacity:.85;
+    opacity:.9;
     display:flex;
     gap:10px;
     flex-wrap:wrap;
@@ -718,8 +688,8 @@
   }
 
   .big-num{
-    font-size:20px;
-    font-weight:900;
+    font-size:22px;
+    font-weight:1000;
   }
 
   .pp-actions{
@@ -729,6 +699,14 @@
     align-items:center;
   }
 
+  .section-title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:14px;
+  }
+
   .section-title{
     margin-top:14px;
     font-weight:900;
@@ -736,22 +714,13 @@
     font-size:14px;
   }
 
-  .section-flex{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    flex-wrap:wrap;
-  }
-
-  .sort-note{
-    font-size:12px;
-    font-weight:900;
-    color:#16a34a;
-    background:#dcfce7;
-    border:1px solid #bbf7d0;
-    padding:6px 10px;
+  .sorted-badge{
+    padding:7px 11px;
     border-radius:999px;
+    background:#dcfce7;
+    color:#16a34a;
+    font-size:12px;
+    font-weight:1000;
   }
 
   .btn{
@@ -762,6 +731,7 @@
     color:#fff;
     cursor:pointer;
     text-decoration:none;
+    font-weight:800;
   }
 
   .btn-ghost{
@@ -772,6 +742,7 @@
     color:#111;
     cursor:pointer;
     text-decoration:none;
+    font-weight:800;
   }
 
   .btn:disabled,
@@ -842,14 +813,29 @@
 
   .ds-table th,
   .ds-table td{
-    border-bottom:1px solid #eee;
+    border-bottom:1px solid #dceee5;
     padding:10px;
     vertical-align:top;
   }
 
   .ds-table th{
-    background:#fafafa;
+    background:#ffffff;
     font-weight:900;
+    color:#020617;
+  }
+
+  .ds-table td{
+    background:transparent;
+    color:#020617;
+    font-weight:750;
+  }
+
+  .ds-table tbody tr:hover td{
+    background:rgba(255,255,255,.45);
+  }
+
+  .seller-cell{
+    font-weight:1000;
   }
 
   .trk{
@@ -883,64 +869,6 @@
 
   .row-ticked{
     background:#eafff1 !important;
-  }
-
-  .shop-group-row td{
-    padding:10px 12px !important;
-    background:linear-gradient(90deg,#ecfdf5,#f8fafc);
-    border-top:2px solid #bbf7d0;
-    border-bottom:1px solid #d1fae5;
-  }
-
-  .shop-group-title{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-    color:#064e3b;
-    font-size:13px;
-    font-weight:900;
-    letter-spacing:.2px;
-  }
-
-  .shop-group-title b{
-    background:#16a34a;
-    color:#fff;
-    padding:5px 10px;
-    border-radius:999px;
-    font-size:12px;
-  }
-
-  .seller-cell{
-    font-weight:900;
-    color:#0f172a;
-  }
-
-  .return-body{
-    counter-reset:returnNo;
-  }
-
-  .return-row{
-    counter-increment:returnNo;
-  }
-
-  .return-n-cell::before{
-    content:counter(returnNo);
-    font-weight:900;
-  }
-
-  .pp-body{
-    counter-reset:ppNo;
-  }
-
-  .pp-row{
-    counter-increment:ppNo;
-  }
-
-  .pp-n-cell::before{
-    content:counter(ppNo);
-    font-weight:900;
   }
 
   .pp-bottom-actions{
@@ -1111,7 +1039,7 @@
   }
 
   .field-wide{
-    grid-column:span 3;
+    grid-column: span 3;
   }
 
   .cod-submit{
@@ -1122,13 +1050,13 @@
     flex-wrap:wrap;
   }
 
-  @media (max-width:1100px){
+  @media (max-width: 1100px){
     .cod-grid{
       grid-template-columns:repeat(2, minmax(160px, 1fr));
     }
 
     .field-wide{
-      grid-column:span 2;
+      grid-column: span 2;
     }
 
     .pp-under-actions{
@@ -1137,6 +1065,23 @@
 
     .mini-money{
       justify-content:flex-start;
+    }
+  }
+
+  @media print{
+    .no-print{
+      display:none !important;
+    }
+
+    .pp-card{
+      background:#fff;
+      padding:0;
+    }
+
+    .ds-table th,
+    .ds-table td{
+      font-size:11px;
+      padding:7px;
     }
   }
 </style>

@@ -8,6 +8,7 @@ from .views import (
 from .shipper_cod_views import shipper_cod_report, shipper_cod_report_pdf
 from .shipper_commission_views import shipper_commission_report, shipper_commission_report_pdf
 from .profit_dashboard_views import profit_dashboard
+from .views_business_growth import business_growth_tracker
 
 urlpatterns = [
     # ================= DELIVERY REPORT =================
@@ -28,4 +29,5 @@ urlpatterns = [
 
     # ================= DASHBOARD =================
     path("profit-dashboard/", profit_dashboard, name="profit_dashboard"),
+    path("business-growth/", business_growth_tracker, name="business_growth_tracker"),
 ]

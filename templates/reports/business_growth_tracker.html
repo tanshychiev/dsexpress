@@ -1,0 +1,888 @@
+{% extends "base.html" %}
+
+{% block title %}Business Growth Tracker{% endblock %}
+{% block page_title %}Business Growth Tracker{% endblock %}
+{% block page_subtitle %}Monthly done, PP, province, customer growth and shop compare{% endblock %}
+
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+.growth-page {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 22px;
+}
+
+.growth-hero {
+    background: linear-gradient(135deg, #0f172a, #14532d);
+    color: white;
+    border-radius: 30px;
+    padding: 26px;
+    margin-bottom: 18px;
+}
+
+.growth-hero h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 1000;
+}
+
+.growth-hero p {
+    margin: 8px 0 0;
+    color: #d1fae5;
+    font-weight: 700;
+}
+
+.filter-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 24px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 15px 40px rgba(15, 23, 42, .08);
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    align-items: end;
+}
+
+.filter-box label {
+    display: block;
+    font-size: 12px;
+    font-weight: 1000;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.filter-box input {
+    width: 100%;
+    border: 1px solid #dbe3ef;
+    border-radius: 16px;
+    padding: 13px 14px;
+    font-weight: 900;
+    color: #111827;
+}
+
+.filter-btn {
+    border: 0;
+    border-radius: 16px;
+    padding: 14px 18px;
+    font-size: 14px;
+    font-weight: 1000;
+    color: white;
+    background: #16a34a;
+    cursor: pointer;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.summary-box,
+.focus-box {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 24px;
+    padding: 18px;
+    box-shadow: 0 15px 40px rgba(15, 23, 42, .07);
+}
+
+.summary-box.green {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+}
+
+.summary-box.blue {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+.summary-box.orange {
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+
+.summary-box.purple {
+    background: #f5f3ff;
+    border-color: #ddd6fe;
+}
+
+.summary-box span,
+.focus-box span {
+    display: block;
+    font-size: 12px;
+    font-weight: 1000;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.summary-box b,
+.focus-box b {
+    display: block;
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 1000;
+    color: #111827;
+}
+
+.summary-box small,
+.focus-box small {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.focus-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 28px;
+    padding: 22px;
+    margin-bottom: 18px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, .08);
+}
+
+.focus-head,
+.shop-compare-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.focus-head h2,
+.shop-compare-head h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 1000;
+    color: #111827;
+}
+
+.shop-compare-head p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 1000;
+    white-space: nowrap;
+}
+
+.status-pill.up {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status-pill.down {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.status-pill.same {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.focus-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+}
+
+.chart-card,
+.table-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 28px;
+    padding: 22px;
+    margin-bottom: 18px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, .08);
+}
+
+.chart-wrap {
+    height: 430px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.growth-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+}
+
+.growth-table th {
+    text-align: left;
+    padding: 0 12px;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 1000;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.growth-table td {
+    background: #f8fafc;
+    padding: 14px 12px;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 900;
+    color: #111827;
+    white-space: nowrap;
+}
+
+.growth-table td:first-child {
+    border-left: 1px solid #e5e7eb;
+    border-radius: 16px 0 0 16px;
+}
+
+.growth-table td:last-child {
+    border-right: 1px solid #e5e7eb;
+    border-radius: 0 16px 16px 0;
+}
+
+.month-name,
+.shop-name-cell {
+    color: #0f766e !important;
+    font-weight: 1000 !important;
+}
+
+.pp-text {
+    color: #2563eb !important;
+}
+
+.province-text {
+    color: #f59e0b !important;
+}
+
+.new-text {
+    color: #16a34a !important;
+}
+
+.old-text {
+    color: #7c3aed !important;
+}
+
+.goal-box {
+    min-width: 120px;
+}
+
+.goal-box span {
+    font-size: 12px;
+    font-weight: 1000;
+    color: #16a34a;
+}
+
+.goal-line {
+    margin-top: 6px;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.goal-line div {
+    height: 100%;
+    max-width: 100%;
+    background: #22c55e;
+    border-radius: 999px;
+}
+
+.shop-search {
+    width: 280px;
+    max-width: 100%;
+    border: 1px solid #dbe3ef;
+    border-radius: 16px;
+    padding: 13px 14px;
+    font-weight: 900;
+    color: #111827;
+    outline: none;
+}
+
+.shop-search:focus {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, .12);
+}
+
+.shop-name-cell {
+    min-width: 220px;
+}
+
+.shop-compare-table th,
+.shop-compare-table td {
+    text-align: center;
+}
+
+.shop-compare-table th:first-child,
+.shop-compare-table td:first-child {
+    text-align: left;
+}
+
+.month-cell {
+    min-width: 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: center;
+}
+
+.month-cell b {
+    font-size: 15px;
+    font-weight: 1000;
+    color: #111827;
+}
+
+.month-cell small {
+    font-size: 10px;
+    font-weight: 1000;
+    color: #64748b;
+}
+
+.month-cell em {
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 1000;
+    color: #15803d;
+    background: #dcfce7;
+    padding: 2px 6px;
+    border-radius: 999px;
+}
+
+.new-month-cell {
+    background: #ecfdf5 !important;
+    border-color: #bbf7d0 !important;
+}
+
+@media (max-width: 1100px) {
+    .summary-grid,
+    .focus-grid,
+    .filter-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 800px) {
+    .growth-page {
+        padding: 12px;
+    }
+
+    .summary-grid,
+    .focus-grid,
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .focus-head,
+    .shop-compare-head {
+        display: block;
+    }
+
+    .status-pill {
+        margin-top: 10px;
+    }
+
+    .shop-search {
+        margin-top: 12px;
+        width: 100%;
+    }
+
+    .chart-wrap {
+        height: 320px;
+    }
+}
+</style>
+
+<div class="growth-page">
+
+    <div class="growth-hero">
+        <h1>Full Business Growth Tracker</h1>
+        <p>
+            Track monthly done, PP done, province done, expected growth,
+            goal, new customer, old customer and each shop sent pcs.
+        </p>
+    </div>
+
+    <form class="filter-card" method="get">
+        <div class="filter-grid">
+            <div class="filter-box">
+                <label>Months</label>
+                <input type="number" name="months" value="{{ months }}" min="3" max="36">
+            </div>
+
+            <div class="filter-box">
+                <label>Monthly Goal PC</label>
+                <input type="number" name="monthly_goal" value="{{ monthly_goal }}" min="0">
+            </div>
+
+            <div class="filter-box">
+                <label>Expected Growth Rate %</label>
+                <input type="number" step="0.1" name="expected_growth_rate" value="{{ expected_growth_rate }}">
+            </div>
+
+            <button class="filter-btn" type="submit">
+                Update Tracker
+            </button>
+        </div>
+    </form>
+
+    <div class="summary-grid">
+        <div class="summary-box green">
+            <span>Total Done All</span>
+            <b>{{ growth.total_done_all }} pcs</b>
+            <small>Last {{ months }} months</small>
+        </div>
+
+        <div class="summary-box blue">
+            <span>Total Done PP</span>
+            <b>{{ growth.total_done_pp }} pcs</b>
+            <small>Phnom Penh done</small>
+        </div>
+
+        <div class="summary-box orange">
+            <span>Total Done Province</span>
+            <b>{{ growth.total_done_province }} pcs</b>
+            <small>Province done</small>
+        </div>
+
+        <div class="summary-box purple">
+            <span>Total Sent PC</span>
+            <b>{{ growth.total_sent_pc }} pcs</b>
+            <small>Old + new customer sent</small>
+        </div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-box green">
+            <span>New Customers</span>
+            <b>{{ growth.total_new_customers }}</b>
+            <small>Created in each month</small>
+        </div>
+
+        <div class="summary-box green">
+            <span>New Customer Sent</span>
+            <b>{{ growth.total_new_customer_pc }} pcs</b>
+            <small>PC from new customers</small>
+        </div>
+
+        <div class="summary-box blue">
+            <span>Old Customer Sent</span>
+            <b>{{ growth.total_old_customer_pc }} pcs</b>
+            <small>PC from old customers</small>
+        </div>
+
+        <div class="summary-box orange">
+            <span>Expected Growth</span>
+            <b>{{ expected_growth_rate }}%</b>
+            <small>Your target growth rate</small>
+        </div>
+    </div>
+
+    {% if growth.this_month %}
+    <div class="focus-card">
+        <div class="focus-head">
+            <h2>This Month Focus — {{ growth.this_month.month }}</h2>
+
+            <span class="status-pill {{ growth.this_month.expected_growth_status }}">
+                {{ growth.this_month.expected_growth_text }}
+            </span>
+        </div>
+
+        <div class="focus-grid">
+            <div class="focus-box">
+                <span>Done All</span>
+                <b>{{ growth.this_month.done_all }} pcs</b>
+                <small>{{ growth.this_month.actual_growth.text }} vs last month</small>
+            </div>
+
+            <div class="focus-box">
+                <span>Expected Growth</span>
+                <b>{{ growth.this_month.expected_growth_rate }}%</b>
+                <small>Target growth rate</small>
+            </div>
+
+            <div class="focus-box">
+                <span>Expected Done</span>
+                <b>{{ growth.this_month.expected_done_by_growth }} pcs</b>
+                <small>Gap {{ growth.this_month.growth_target_gap }} pcs</small>
+            </div>
+
+            <div class="focus-box">
+                <span>Expected End Month</span>
+                <b>{{ growth.this_month.expected_end_month }} pcs</b>
+                <small>Auto forecast</small>
+            </div>
+
+            <div class="focus-box">
+                <span>Monthly Goal</span>
+                <b>{{ growth.this_month.monthly_goal }} pcs</b>
+                <small>Gap {{ growth.this_month.gap_to_goal }} pcs</small>
+            </div>
+        </div>
+
+        <div class="focus-grid" style="margin-top:14px;">
+            <div class="focus-box">
+                <span>PP Done</span>
+                <b>{{ growth.this_month.done_pp }} pcs</b>
+                <small>Phnom Penh</small>
+            </div>
+
+            <div class="focus-box">
+                <span>Province Done</span>
+                <b>{{ growth.this_month.done_province }} pcs</b>
+                <small>Province</small>
+            </div>
+
+            <div class="focus-box">
+                <span>New Customer</span>
+                <b>{{ growth.this_month.new_customer_count }}</b>
+                <small>{{ growth.this_month.new_customer_growth.text }} vs last month</small>
+            </div>
+
+            <div class="focus-box">
+                <span>New Customer PC</span>
+                <b>{{ growth.this_month.new_customer_pc }} pcs</b>
+                <small>{{ growth.this_month.new_pc_percent }}% of total</small>
+            </div>
+
+            <div class="focus-box">
+                <span>Old Customer PC</span>
+                <b>{{ growth.this_month.old_customer_pc }} pcs</b>
+                <small>{{ growth.this_month.old_pc_percent }}% of total</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="chart-card">
+        <div class="chart-wrap">
+            <canvas id="businessGrowthChart"></canvas>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-wrap">
+            <table class="growth-table">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Done All</th>
+                        <th>PP</th>
+                        <th>Province</th>
+                        <th>Actual Growth</th>
+                        <th>Expected Growth</th>
+                        <th>Expected Done</th>
+                        <th>Growth Status</th>
+                        <th>Expected End</th>
+                        <th>Goal</th>
+                        <th>Achieved</th>
+                        <th>Gap</th>
+                        <th>New Customer</th>
+                        <th>New PC</th>
+                        <th>Old PC</th>
+                        <th>Total Sent</th>
+                        <th>New PC %</th>
+                        <th>Avg PC/New</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for m in growth.months %}
+                    <tr>
+                        <td class="month-name">{{ m.month }}</td>
+                        <td>{{ m.done_all }} pcs</td>
+                        <td class="pp-text">{{ m.done_pp }} pcs</td>
+                        <td class="province-text">{{ m.done_province }} pcs</td>
+
+                        <td>
+                            <span class="status-pill {{ m.actual_growth.status }}">
+                                {{ m.actual_growth.text }}
+                            </span>
+                        </td>
+
+                        <td>{{ m.expected_growth_rate }}%</td>
+                        <td>{{ m.expected_done_by_growth }} pcs</td>
+
+                        <td>
+                            <span class="status-pill {{ m.expected_growth_status }}">
+                                {{ m.expected_growth_text }}
+                            </span>
+                        </td>
+
+                        <td>{{ m.expected_end_month }} pcs</td>
+                        <td>{{ m.monthly_goal }} pcs</td>
+
+                        <td>
+                            <div class="goal-box">
+                                <span>{{ m.goal_percent }}%</span>
+                                <div class="goal-line">
+                                    <div style="width: {{ m.goal_percent }}%;"></div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>{{ m.gap_to_goal }} pcs</td>
+                        <td>{{ m.new_customer_count }}</td>
+                        <td class="new-text">{{ m.new_customer_pc }} pcs</td>
+                        <td class="old-text">{{ m.old_customer_pc }} pcs</td>
+                        <td>{{ m.total_sent_pc }} pcs</td>
+                        <td>{{ m.new_pc_percent }}%</td>
+                        <td>{{ m.avg_pc_per_new_customer }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="18">No business growth data found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="shop-compare-head">
+            <div>
+                <h2>Customer Shop Monthly Compare</h2>
+                <p>
+                    Compare each shop sent pcs by month. N = new customer month, O = old customer month.
+                </p>
+            </div>
+
+            <input
+                id="shopCompareSearch"
+                class="shop-search"
+                type="text"
+                placeholder="Search shop name..."
+            >
+        </div>
+
+        <div class="table-wrap">
+            <table class="growth-table shop-compare-table">
+                <thead>
+                    <tr>
+                        <th>Shop</th>
+                        <th>Created Month</th>
+                        <th>Total Sent</th>
+                        <th>New PC</th>
+                        <th>Old PC</th>
+                        <th>New %</th>
+                        <th>Active Months</th>
+                        <th>Avg / Month</th>
+                        <th>Best Month</th>
+
+                        {% for col in growth.customer_month_columns %}
+                        <th>{{ col.label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+
+                <tbody id="shopCompareBody">
+                    {% for row in growth.customer_shop_rows %}
+                    <tr data-shop="{{ row.shop_name|lower }}">
+                        <td class="shop-name-cell">{{ row.shop_name }}</td>
+                        <td>{{ row.created_month_label }}</td>
+                        <td>{{ row.total_sent }} pcs</td>
+                        <td class="new-text">{{ row.total_new_pc }} pcs</td>
+                        <td class="old-text">{{ row.total_old_pc }} pcs</td>
+                        <td>{{ row.new_pc_percent }}%</td>
+                        <td>{{ row.active_months }}</td>
+                        <td>{{ row.avg_per_active_month }}</td>
+                        <td>{{ row.best_month }} / {{ row.best_month_pc }} pcs</td>
+
+                        {% for cell in row.cells %}
+                        <td class="{% if cell.is_new_month %}new-month-cell{% endif %}">
+                            <div class="month-cell">
+                                <b>{{ cell.sent }}</b>
+
+                                {% if cell.new_pc > 0 %}
+                                <small>N {{ cell.new_pc }}</small>
+                                {% endif %}
+
+                                {% if cell.old_pc > 0 %}
+                                <small>O {{ cell.old_pc }}</small>
+                                {% endif %}
+
+                                {% if cell.is_new_month %}
+                                <em>New</em>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="30">No shop compare data found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{{ growth.chart_labels|json_script:"growth-labels" }}
+{{ growth.chart_done_all|json_script:"growth-done-all" }}
+{{ growth.chart_done_pp|json_script:"growth-done-pp" }}
+{{ growth.chart_done_province|json_script:"growth-done-province" }}
+{{ growth.chart_goal|json_script:"growth-goal" }}
+{{ growth.chart_expected_end_month|json_script:"growth-expected-end" }}
+{{ growth.chart_expected_done_by_growth|json_script:"growth-expected-done" }}
+{{ growth.chart_new_customer_pc|json_script:"growth-new-pc" }}
+{{ growth.chart_old_customer_pc|json_script:"growth-old-pc" }}
+{{ growth.chart_new_customers|json_script:"growth-new-customers" }}
+
+<script>
+function readJson(id) {
+    return JSON.parse(document.getElementById(id).textContent);
+}
+
+const labels = readJson("growth-labels");
+const doneAll = readJson("growth-done-all");
+const donePP = readJson("growth-done-pp");
+const doneProvince = readJson("growth-done-province");
+const goal = readJson("growth-goal");
+const expectedEnd = readJson("growth-expected-end");
+const expectedDone = readJson("growth-expected-done");
+const newPC = readJson("growth-new-pc");
+const oldPC = readJson("growth-old-pc");
+const newCustomers = readJson("growth-new-customers");
+
+new Chart(document.getElementById("businessGrowthChart"), {
+    type: "bar",
+    data: {
+        labels: labels,
+        datasets: [
+            {
+                label: "Done All",
+                data: doneAll,
+                backgroundColor: "#22c55e",
+                borderRadius: 10
+            },
+            {
+                label: "Done PP",
+                data: donePP,
+                backgroundColor: "#3b82f6",
+                borderRadius: 10
+            },
+            {
+                label: "Done Province",
+                data: doneProvince,
+                backgroundColor: "#f59e0b",
+                borderRadius: 10
+            },
+            {
+                label: "New Customer PC",
+                data: newPC,
+                backgroundColor: "#10b981",
+                borderRadius: 10
+            },
+            {
+                label: "Old Customer PC",
+                data: oldPC,
+                backgroundColor: "#8b5cf6",
+                borderRadius: 10
+            },
+            {
+                label: "Goal",
+                data: goal,
+                type: "line",
+                borderColor: "#111827",
+                backgroundColor: "#111827",
+                tension: 0.35
+            },
+            {
+                label: "Expected End Month",
+                data: expectedEnd,
+                type: "line",
+                borderColor: "#ef4444",
+                backgroundColor: "#ef4444",
+                tension: 0.35
+            },
+            {
+                label: "Expected Done by Growth",
+                data: expectedDone,
+                type: "line",
+                borderColor: "#06b6d4",
+                backgroundColor: "#06b6d4",
+                tension: 0.35
+            },
+            {
+                label: "New Customers",
+                data: newCustomers,
+                type: "line",
+                yAxisID: "y1",
+                borderColor: "#a855f7",
+                backgroundColor: "#a855f7",
+                tension: 0.35
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: "bottom"
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                position: "left"
+            },
+            y1: {
+                beginAtZero: true,
+                position: "right",
+                grid: {
+                    drawOnChartArea: false
+                }
+            }
+        }
+    }
+});
+
+(function () {
+    const input = document.getElementById("shopCompareSearch");
+    const body = document.getElementById("shopCompareBody");
+
+    if (!input || !body) return;
+
+    input.addEventListener("input", function () {
+        const q = input.value.toLowerCase().trim();
+        const rows = body.querySelectorAll("tr[data-shop]");
+
+        rows.forEach(function (row) {
+            const shop = row.dataset.shop || "";
+
+            if (!q || shop.includes(q)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    });
+})();
+</script>
+
+{% endblock %}

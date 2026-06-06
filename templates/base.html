@@ -743,6 +743,11 @@
             <span class="dot"></span>
             <span class="menu-label">Profit Dashboard</span>
           </a>
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'business_growth_tracker' %}active{% endif %}" href="{% url 'business_growth_tracker' %}">
+  <span class="dot"></span>
+  <span class="menu-label">Business Growth Tracker</span>
+  <span class="tag tag-report">NEW</span>
+</a>
         </div>
 
         <div class="menu-sep"></div>

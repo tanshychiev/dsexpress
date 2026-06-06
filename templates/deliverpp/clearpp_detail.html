@@ -49,7 +49,14 @@
 
   <!-- ========= Return Batch ========= -->
   {% if return_groups %}
-    <div class="section-title">Return Batch</div>
+    {% with sorted_return_groups=return_groups|dictsort:"seller" %}
+    {% regroup sorted_return_groups by seller as return_shop_groups %}
+
+    <div class="section-title section-flex">
+      <span>Return Batch</span>
+      <span class="sort-note">Sorted by shop name</span>
+    </div>
+
     <div class="table-wrap">
       <table class="ds-table wide">
         <thead>
@@ -65,40 +72,76 @@
             <th class="th-center tick-col tick-head" style="width:140px;">TICK</th>
           </tr>
         </thead>
-        <tbody>
-          {% for r in return_groups %}
-            <tr class="{% if r.ticked_all %}row-ticked{% endif %}"
-                data-group="return"
-                data-item-ids="{{ r.item_ids|join:',' }}">
-              <td class="td-center">{{ forloop.counter }}</td>
-              <td class="td-center">
-                {% if r.label_id %}
-                  <a class="trk mono" href="{% url 'returnshop_label_detail' r.label_id %}">{{ r.code }}</a>
-                {% else %}
-                  <span class="mono">{{ r.code }}</span>
-                {% endif %}
+
+        <tbody class="return-body">
+          {% for shop in return_shop_groups %}
+
+            <tr class="shop-group-row">
+              <td colspan="9">
+                <div class="shop-group-title">
+                  <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
+                  <b>{{ shop.list|length }} return batch{% if shop.list|length > 1 %}es{% endif %}</b>
+                </div>
               </td>
-              <td class="td-center">{% if r.created_at %}{{ r.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
-              <td class="td-center">{% firstof r.seller "-" %}</td>
-              <td>{% firstof r.location "-" %}</td>
-              <td class="td-center">{% firstof r.phone "-" %}</td>
-              <td class="td-center"><b>{{ r.total_pc }}</b></td>
-              <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
-              <td class="td-center tick-col">
-                <input type="checkbox"
-                       class="tick tick-group"
-                       {% if r.tick_locked %}disabled{% endif %}
-                       {% if r.ticked_all %}checked{% endif %} />
-              </td>
+            </tr>
+
+            {% for r in shop.list %}
+              <tr class="return-row {% if r.ticked_all %}row-ticked{% endif %}"
+                  data-group="return"
+                  data-item-ids="{{ r.item_ids|join:',' }}">
+                <td class="td-center return-n-cell"></td>
+
+                <td class="td-center">
+                  {% if r.label_id %}
+                    <a class="trk mono" href="{% url 'returnshop_label_detail' r.label_id %}">{{ r.code }}</a>
+                  {% else %}
+                    <span class="mono">{{ r.code }}</span>
+                  {% endif %}
+                </td>
+
+                <td class="td-center">
+                  {% if r.created_at %}
+                    {{ r.created_at|date:"Y-m-d H:i" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td class="td-center seller-cell">{% firstof r.seller "-" %}</td>
+                <td>{% firstof r.location "-" %}</td>
+                <td class="td-center">{% firstof r.phone "-" %}</td>
+                <td class="td-center"><b>{{ r.total_pc }}</b></td>
+                <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
+
+                <td class="td-center tick-col">
+                  <input type="checkbox"
+                         class="tick tick-group"
+                         {% if r.tick_locked %}disabled{% endif %}
+                         {% if r.ticked_all %}checked{% endif %} />
+                </td>
+              </tr>
+            {% endfor %}
+
+          {% empty %}
+            <tr>
+              <td colspan="9" style="padding:14px;opacity:.7;">No return batch.</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    {% endwith %}
   {% endif %}
 
   <!-- ========= PP Delivery ========= -->
-  <div class="section-title">PP Delivery</div>
+  {% with sorted_items=items|dictsort:"order.seller.name" %}
+  {% regroup sorted_items by order.seller.name as pp_shop_groups %}
+
+  <div class="section-title section-flex">
+    <span>PP Delivery</span>
+    <span class="sort-note">Sorted by shop name</span>
+  </div>
 
   <div class="table-wrap">
     <table class="ds-table wide">
@@ -118,56 +161,83 @@
           <th class="th-center tick-col tick-head" style="width:140px;">TICK</th>
         </tr>
       </thead>
-      <tbody>
-        {% for it in items %}
-          {% with o=it.order %}
-            <tr class="{% if it.ticked %}row-ticked{% endif %}"
-                data-item-id="{{ it.id }}"
-                data-cod="{{ o.cod_display|default_if_none:'0' }}">
-              <td class="td-center">{{ forloop.counter }}</td>
-              <td class="td-center">
-                <a class="trk mono" href="/orders/created/{{ o.id }}/">
-                  {% firstof o.full_tracking o.tracking_no o.id %}
-                </a>
-              </td>
-              <td class="td-center">{% if o.seller %}{% firstof o.seller.seller_name o.seller.name "-" %}{% else %}-{% endif %}</td>
-              <td class="td-center">{% firstof o.seller_order_code o.code "-" %}</td>
-              <td>{% firstof o.receiver_address o.address "-" %}</td>
-              <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
-              <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
-              <td class="td-center">{% firstof o.price "-" %}</td>
-              <td class="td-center"><b>{{ o.cod_display|default_if_none:"0.00" }}</b></td>
 
-              <td class="td-center">
-                <input class="input reason-input"
-                       id="reason_{{ it.id }}"
-                       value="{{ it.reason|default_if_none:'' }}"
-                       placeholder="Reason..." />
-              </td>
+      <tbody class="pp-body">
+        {% for shop in pp_shop_groups %}
 
-              <td class="td-center no-print">
-                <button type="button"
-                        class="btn btn-ghost btn-save-row"
-                        data-item-id="{{ it.id }}"
-                        {% if stage2_done or batch.status == "CANCELLED" %}disabled{% endif %}>
-                  Save
-                </button>
-              </td>
+          <tr class="shop-group-row">
+            <td colspan="12">
+              <div class="shop-group-title">
+                <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
+                <b>{{ shop.list|length }} order{% if shop.list|length > 1 %}s{% endif %}</b>
+              </div>
+            </td>
+          </tr>
 
-              <td class="td-center tick-col">
-                <input type="checkbox"
-                       class="tick tick-one"
-                       {% if it.tick_locked %}disabled{% endif %}
-                       {% if it.ticked %}checked{% endif %} />
-              </td>
-            </tr>
-          {% endwith %}
+          {% for it in shop.list %}
+            {% with o=it.order %}
+              <tr class="pp-row {% if it.ticked %}row-ticked{% endif %}"
+                  data-item-id="{{ it.id }}"
+                  data-cod="{{ o.cod_display|default_if_none:'0' }}">
+                <td class="td-center pp-n-cell"></td>
+
+                <td class="td-center">
+                  <a class="trk mono" href="/orders/created/{{ o.id }}/">
+                    {% firstof o.full_tracking o.tracking_no o.id %}
+                  </a>
+                </td>
+
+                <td class="td-center seller-cell">
+                  {% if o.seller %}
+                    {% firstof o.seller.seller_name o.seller.name "-" %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td class="td-center">{% firstof o.seller_order_code o.code "-" %}</td>
+                <td>{% firstof o.receiver_address o.address "-" %}</td>
+                <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
+                <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
+                <td class="td-center">{% firstof o.price "-" %}</td>
+                <td class="td-center"><b>{{ o.cod_display|default_if_none:"0.00" }}</b></td>
+
+                <td class="td-center">
+                  <input class="input reason-input"
+                         id="reason_{{ it.id }}"
+                         value="{{ it.reason|default_if_none:'' }}"
+                         placeholder="Reason..." />
+                </td>
+
+                <td class="td-center no-print">
+                  <button type="button"
+                          class="btn btn-ghost btn-save-row"
+                          data-item-id="{{ it.id }}"
+                          {% if stage2_done or batch.status == "CANCELLED" %}disabled{% endif %}>
+                    Save
+                  </button>
+                </td>
+
+                <td class="td-center tick-col">
+                  <input type="checkbox"
+                         class="tick tick-one"
+                         {% if it.tick_locked %}disabled{% endif %}
+                         {% if it.ticked %}checked{% endif %} />
+                </td>
+              </tr>
+            {% endwith %}
+          {% endfor %}
+
         {% empty %}
-          <tr><td colspan="12" style="padding:14px;opacity:.7;">No items.</td></tr>
+          <tr>
+            <td colspan="12" style="padding:14px;opacity:.7;">No items.</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  {% endwith %}
 
   <!-- ========= ACTIONS ========= -->
   <div class="pp-bottom-actions no-print">
@@ -178,7 +248,6 @@
             {% if stage2_done or batch.status == "CANCELLED" or stage1_done %}disabled{% endif %}>
       ✅ Clear Delivery
     </button>
-
 
     <button class="btn btn-success"
             type="button"
@@ -194,7 +263,6 @@
             {% if not stage1_done and not stage2_done and batch.status != "CANCELLED" %}disabled{% endif %}>
       ↩ Undo
     </button>
-
 
     <button class="btn btn-danger"
             type="button"
@@ -294,16 +362,21 @@
     const n = Number(s);
     return isNaN(n) ? 0 : n;
   }
-  function fmtUSD(n){ return (Math.round(n * 100) / 100).toFixed(2); }
+
+  function fmtUSD(n){
+    return (Math.round(n * 100) / 100).toFixed(2);
+  }
+
   function fmtKHR(n){
     const sign = n < 0 ? "-" : "";
     const abs = Math.abs(Math.round(n));
     return sign + abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
+
   function getCookie(name){
     const v = `; ${document.cookie}`;
     const p = v.split(`; ${name}=`);
-    if(p.length === 2) return p.pop().split(';').shift();
+    if(p.length === 2) return p.pop().split(";").shift();
     return "";
   }
 
@@ -322,7 +395,9 @@
   const aba_khr  = document.getElementById("aba_khr");
   const expense  = document.getElementById("expense");
 
-  function setRowTicked(tr, on){ tr.classList.toggle("row-ticked", !!on); }
+  function setRowTicked(tr, on){
+    tr.classList.toggle("row-ticked", !!on);
+  }
 
   async function postJSON(url, data){
     const res = await fetch(url, {
@@ -333,6 +408,7 @@
       },
       body: JSON.stringify(data || {})
     });
+
     const j = await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(j.error || "Request failed");
     return j;
@@ -341,8 +417,11 @@
   async function runSimple(url){
     const res = await fetch(url, {
       method: "POST",
-      headers: {"X-CSRFToken": getCookie("csrftoken")}
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken")
+      }
     });
+
     const j = await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(j.error || "Request failed");
     return j;
@@ -350,12 +429,14 @@
 
   function calcTargetUSD(){
     let sum = 0;
+
     document.querySelectorAll("tr[data-item-id]").forEach(tr=>{
       const cb = tr.querySelector("input.tick-one");
       if(cb && cb.checked){
         sum += toNum(tr.getAttribute("data-cod"));
       }
     });
+
     return sum;
   }
 
@@ -365,14 +446,20 @@
     const au = toNum(aba_usd?.value);
     const ak = toNum(aba_khr?.value);
     const ex = toNum(expense?.value);
+
     return (cu + au) + ((ck + ak) / rate) - ex;
   }
 
   function paintDiff(diffKhr){
     if(!uiDiffPill) return;
-    uiDiffPill.classList.remove("diff-ok","diff-bad");
-    if(Math.abs(diffKhr) <= tol) uiDiffPill.classList.add("diff-ok");
-    else uiDiffPill.classList.add("diff-bad");
+
+    uiDiffPill.classList.remove("diff-ok", "diff-bad");
+
+    if(Math.abs(diffKhr) <= tol){
+      uiDiffPill.classList.add("diff-ok");
+    }else{
+      uiDiffPill.classList.add("diff-bad");
+    }
   }
 
   function refreshSummary(){
@@ -387,8 +474,10 @@
     paintDiff(diffKhr);
 
     const ok = Math.abs(diffKhr) <= tol;
+
     if(uiBalanced){
-      uiBalanced.classList.remove("ok","warn");
+      uiBalanced.classList.remove("ok", "warn");
+
       if(ok){
         uiBalanced.classList.add("ok");
         uiBalanced.textContent = "BALANCED";
@@ -414,7 +503,11 @@
       const want = !!cb.checked;
 
       try{
-        const j = await postJSON("{{ toggle_tick_url }}", { item_id: itemId, ticked: want });
+        const j = await postJSON("{{ toggle_tick_url }}", {
+          item_id: itemId,
+          ticked: want
+        });
+
         cb.checked = !!j.ticked;
         setRowTicked(tr, cb.checked);
         refreshSummary();
@@ -425,7 +518,6 @@
     });
   });
 
-  // ✅ FIX: return batch checkbox handler
   document.querySelectorAll("tr[data-group='return']").forEach(tr=>{
     const cb = tr.querySelector("input.tick-group");
     if(!cb) return;
@@ -435,6 +527,7 @@
     cb.addEventListener("change", async ()=>{
       const want = !!cb.checked;
       const raw = tr.getAttribute("data-item-ids") || "";
+
       const itemIds = raw
         .split(",")
         .map(x => x.trim())
@@ -453,6 +546,7 @@
           item_ids: itemIds,
           ticked: want
         });
+
         cb.checked = want;
         setRowTicked(tr, want);
         refreshSummary();
@@ -471,29 +565,49 @@
     if(!url) return;
 
     const ids = [];
+
     document.querySelectorAll("tr[data-item-id]").forEach(tr=>{
       ids.push(Number(tr.getAttribute("data-item-id")));
     });
+
     document.querySelectorAll("tr[data-group='return']").forEach(tr=>{
       const raw = tr.getAttribute("data-item-ids") || "";
-      raw.split(",").map(x=>x.trim()).filter(Boolean).forEach(x=>ids.push(Number(x)));
+      raw.split(",").map(x=>x.trim()).filter(Boolean).forEach(x=>{
+        ids.push(Number(x));
+      });
     });
 
-    await postJSON(url, {item_ids: ids, ticked: tickAllState});
+    await postJSON(url, {
+      item_ids: ids,
+      ticked: tickAllState
+    });
 
-    document.querySelectorAll("input.tick-one").forEach(cb=>{ cb.checked = tickAllState; });
-    document.querySelectorAll("input.tick-group").forEach(cb=>{ cb.checked = tickAllState; });
+    document.querySelectorAll("input.tick-one").forEach(cb=>{
+      cb.checked = tickAllState;
+    });
 
-    document.querySelectorAll("tr[data-item-id]").forEach(tr=> setRowTicked(tr, tickAllState));
-    document.querySelectorAll("tr[data-group='return']").forEach(tr=> tr.classList.toggle("row-ticked", tickAllState));
+    document.querySelectorAll("input.tick-group").forEach(cb=>{
+      cb.checked = tickAllState;
+    });
+
+    document.querySelectorAll("tr[data-item-id]").forEach(tr=>{
+      setRowTicked(tr, tickAllState);
+    });
+
+    document.querySelectorAll("tr[data-group='return']").forEach(tr=>{
+      setRowTicked(tr, tickAllState);
+    });
 
     tickAllState = !tickAllState;
     btnTickAll.textContent = tickAllState ? "✓ Tick All" : "✕ Untick All";
+
     refreshSummary();
   }
 
   if(btnTickAll){
-    btnTickAll.addEventListener("click", ()=> runTickAll().catch(err=>alert(err.message || err)));
+    btnTickAll.addEventListener("click", ()=>{
+      runTickAll().catch(err=>alert(err.message || err));
+    });
   }
 
   const btnClearDelivery = document.getElementById("btnClearDelivery");
@@ -504,6 +618,7 @@
   if(btnClearDelivery){
     btnClearDelivery.addEventListener("click", ()=>{
       if(!confirm("Clear Delivery for ticked shipments?")) return;
+
       runSimple(btnClearDelivery.getAttribute("data-url"))
         .then(()=>location.reload())
         .catch(err=>alert(err.message || err));
@@ -513,6 +628,7 @@
   if(btnCancel){
     btnCancel.addEventListener("click", ()=>{
       if(!confirm("Cancel this batch?")) return;
+
       runSimple(btnCancel.getAttribute("data-url"))
         .then(()=>location.reload())
         .catch(err=>alert(err.message || err));
@@ -522,6 +638,7 @@
   if(btnUndo){
     btnUndo.addEventListener("click", ()=>{
       if(!confirm("Undo (rollback DB) and start again?")) return;
+
       runSimple(btnUndo.getAttribute("data-url"))
         .then(()=>location.reload())
         .catch(err=>alert(err.message || err));
@@ -538,6 +655,7 @@
   function rowSave(itemId){
     const inp = document.getElementById("reason_" + itemId);
     const val = (inp ? inp.value : "").trim();
+
     document.getElementById("rowSaveItemId").value = itemId;
     document.getElementById("rowSaveReasonVal").value = val;
     document.getElementById("rowSaveForm").submit();
@@ -555,44 +673,275 @@
 </script>
 
 <style>
-  .pp-card{padding:18px;border-radius:16px;}
-  .mono{font-family:ui-monospace,Consolas,monospace;}
-  .pp-header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
-  .pp-title{font-size:18px;font-weight:900;display:flex;gap:10px;align-items:center;}
-  .pp-meta{margin-top:6px;opacity:.85;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-  .meta-item{display:inline-flex;gap:6px;align-items:baseline;}
-  .sep{opacity:.5;}
-  .big-num{font-size:20px;font-weight:900;}
-  .pp-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .pp-card{
+    padding:18px;
+    border-radius:16px;
+  }
 
-  .section-title{margin-top:14px;font-weight:900;color:#0f172a;font-size:14px;}
+  .mono{
+    font-family:ui-monospace,Consolas,monospace;
+  }
 
-  .btn{padding:10px 14px;border-radius:12px;border:1px solid #111;background:#111;color:#fff;cursor:pointer;text-decoration:none;}
-  .btn-ghost{padding:10px 14px;border-radius:12px;border:1px solid #ddd;background:#fff;color:#111;cursor:pointer;text-decoration:none;}
-  .btn:disabled,.btn-ghost:disabled{opacity:.35;cursor:not-allowed;}
+  .pp-header{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
 
-  .btn-mini{padding:12px 18px;border-radius:14px;font-size:14px;font-weight:900;border:1px solid #ddd;background:#fff;color:#111;}
-  .btn-tickall{min-width:140px;}
+  .pp-title{
+    font-size:18px;
+    font-weight:900;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
 
-  .btn-primary{background:#0b5cff;border-color:#0b5cff;color:#fff;}
-  .btn-success{background:#12a150;border-color:#12a150;color:#fff;}
-  .btn-danger{background:#e11d48;border-color:#e11d48;color:#fff;}
-  .btn-warning{background:#f59e0b;border-color:#f59e0b;color:#111;}
+  .pp-meta{
+    margin-top:6px;
+    opacity:.85;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
 
-  .table-wrap{margin-top:10px;overflow:auto;}
-  table.wide{min-width:1500px;}
-  .th-center{text-align:center;}
-  .td-center{text-align:center;}
-  .ds-table{width:100%;border-collapse:collapse;}
-  .ds-table th,.ds-table td{border-bottom:1px solid #eee;padding:10px;vertical-align:top;}
-  .ds-table th{background:#fafafa;font-weight:900;}
-  .trk{font-weight:900;text-decoration:underline;color:inherit;}
-  .input{padding:10px 12px;border-radius:12px;border:1px solid #ddd;width:100%;}
-  .reason-input{width:210px;max-width:210px;}
+  .meta-item{
+    display:inline-flex;
+    gap:6px;
+    align-items:baseline;
+  }
 
-  .tick-col{width:140px;}
-  .tick-col input[type="checkbox"]{width:20px;height:20px;transform:scale(1.2);cursor:pointer;}
-  .row-ticked{background:#eafff1 !important;}
+  .sep{
+    opacity:.5;
+  }
+
+  .big-num{
+    font-size:20px;
+    font-weight:900;
+  }
+
+  .pp-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .section-title{
+    margin-top:14px;
+    font-weight:900;
+    color:#0f172a;
+    font-size:14px;
+  }
+
+  .section-flex{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .sort-note{
+    font-size:12px;
+    font-weight:900;
+    color:#16a34a;
+    background:#dcfce7;
+    border:1px solid #bbf7d0;
+    padding:6px 10px;
+    border-radius:999px;
+  }
+
+  .btn{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    cursor:pointer;
+    text-decoration:none;
+  }
+
+  .btn-ghost{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    background:#fff;
+    color:#111;
+    cursor:pointer;
+    text-decoration:none;
+  }
+
+  .btn:disabled,
+  .btn-ghost:disabled{
+    opacity:.35;
+    cursor:not-allowed;
+  }
+
+  .btn-mini{
+    padding:12px 18px;
+    border-radius:14px;
+    font-size:14px;
+    font-weight:900;
+    border:1px solid #ddd;
+    background:#fff;
+    color:#111;
+  }
+
+  .btn-tickall{
+    min-width:140px;
+  }
+
+  .btn-primary{
+    background:#0b5cff;
+    border-color:#0b5cff;
+    color:#fff;
+  }
+
+  .btn-success{
+    background:#12a150;
+    border-color:#12a150;
+    color:#fff;
+  }
+
+  .btn-danger{
+    background:#e11d48;
+    border-color:#e11d48;
+    color:#fff;
+  }
+
+  .btn-warning{
+    background:#f59e0b;
+    border-color:#f59e0b;
+    color:#111;
+  }
+
+  .table-wrap{
+    margin-top:10px;
+    overflow:auto;
+  }
+
+  table.wide{
+    min-width:1500px;
+  }
+
+  .th-center{
+    text-align:center;
+  }
+
+  .td-center{
+    text-align:center;
+  }
+
+  .ds-table{
+    width:100%;
+    border-collapse:collapse;
+  }
+
+  .ds-table th,
+  .ds-table td{
+    border-bottom:1px solid #eee;
+    padding:10px;
+    vertical-align:top;
+  }
+
+  .ds-table th{
+    background:#fafafa;
+    font-weight:900;
+  }
+
+  .trk{
+    font-weight:900;
+    text-decoration:underline;
+    color:inherit;
+  }
+
+  .input{
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    width:100%;
+  }
+
+  .reason-input{
+    width:210px;
+    max-width:210px;
+  }
+
+  .tick-col{
+    width:140px;
+  }
+
+  .tick-col input[type="checkbox"]{
+    width:20px;
+    height:20px;
+    transform:scale(1.2);
+    cursor:pointer;
+  }
+
+  .row-ticked{
+    background:#eafff1 !important;
+  }
+
+  .shop-group-row td{
+    padding:10px 12px !important;
+    background:linear-gradient(90deg,#ecfdf5,#f8fafc);
+    border-top:2px solid #bbf7d0;
+    border-bottom:1px solid #d1fae5;
+  }
+
+  .shop-group-title{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    color:#064e3b;
+    font-size:13px;
+    font-weight:900;
+    letter-spacing:.2px;
+  }
+
+  .shop-group-title b{
+    background:#16a34a;
+    color:#fff;
+    padding:5px 10px;
+    border-radius:999px;
+    font-size:12px;
+  }
+
+  .seller-cell{
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .return-body{
+    counter-reset:returnNo;
+  }
+
+  .return-row{
+    counter-increment:returnNo;
+  }
+
+  .return-n-cell::before{
+    content:counter(returnNo);
+    font-weight:900;
+  }
+
+  .pp-body{
+    counter-reset:ppNo;
+  }
+
+  .pp-row{
+    counter-increment:ppNo;
+  }
+
+  .pp-n-cell::before{
+    content:counter(ppNo);
+    font-weight:900;
+  }
 
   .pp-bottom-actions{
     margin-top:14px;
@@ -617,10 +966,26 @@
     font-size:11px;
     display:inline-block;
   }
-  .pp-yellow{background:#fff7cc;color:#92400e;}
-  .pp-blue{background:#dbeafe;color:#1e40af;}
-  .pp-green{background:#dcfce7;color:#166534;}
-  .pp-red{background:#ffe4e6;color:#9f1239;}
+
+  .pp-yellow{
+    background:#fff7cc;
+    color:#92400e;
+  }
+
+  .pp-blue{
+    background:#dbeafe;
+    color:#1e40af;
+  }
+
+  .pp-green{
+    background:#dcfce7;
+    color:#166534;
+  }
+
+  .pp-red{
+    background:#ffe4e6;
+    color:#9f1239;
+  }
 
   .mini-money{
     display:flex;
@@ -632,66 +997,147 @@
     font-size:13px;
     opacity:.95;
   }
-  .mm-dot{opacity:.45;}
+
+  .mm-dot{
+    opacity:.45;
+  }
+
   .mm-item b{
     font-weight:900;
   }
+
   .mm-target{
     font-size:16px;
     font-weight:900;
   }
+
   .mm-target b{
     font-size:22px;
     font-weight:1000;
     color:#0f172a;
   }
 
-.cod-summary{
-  margin-top:10px;
-  border:1px solid #eee;
-  border-radius:14px;
-  padding:12px;
-  background:#fff;
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-}
+  .cod-summary{
+    margin-top:10px;
+    border:1px solid #eee;
+    border-radius:14px;
+    padding:12px;
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+  }
 
-.cod-pills{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:flex-end;
-  font-weight:900;
-  font-size:13px;
-  width:100%;
-  
-} .cod-pill{display:inline-flex;gap:6px;align-items:center;padding:8px 12px;border-radius:999px;border:1px solid #e5e7eb;}
-  .cod-pill.neutral{background:#f8fafc;}
-  .cod-pill.ok{background:#e8fff0;border-color:#bff0cf;color:#138a3d;}
-  .cod-pill.warn{background:#fff3e0;border-color:#ffd6a3;color:#b45309;}
-  .cod-pill.diff{background:#f8fafc;}
-  .cod-pill.diff-ok{background:#e8fff0;border-color:#bff0cf;color:#138a3d;}
-  .cod-pill.diff-bad{background:#fff0f0;border-color:#ffd0d0;color:#b40000;}
-.cod-note{
-  margin-top:8px;
-  opacity:.7;
-  font-size:12px;
-  text-align:right;
-  width:100%;
-}
-  .cod-form{margin-top:10px;border:1px solid #eee;border-radius:14px;padding:12px;background:#fff;}
-  .cod-grid{display:grid;grid-template-columns:repeat(4, minmax(160px, 1fr));gap:10px;}
-  .field label{display:block;font-weight:900;font-size:12px;margin-bottom:6px;opacity:.8;}
-  .field-wide{grid-column: span 3;}
-  .cod-submit{margin-top:10px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;}
+  .cod-pills{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+    font-weight:900;
+    font-size:13px;
+    width:100%;
+  }
 
-  @media (max-width: 1100px){
-    .cod-grid{grid-template-columns:repeat(2, minmax(160px, 1fr));}
-    .field-wide{grid-column: span 2;}
-    .pp-under-actions{justify-content:flex-start;}
-    .mini-money{justify-content:flex-start;}
+  .cod-pill{
+    display:inline-flex;
+    gap:6px;
+    align-items:center;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid #e5e7eb;
+  }
+
+  .cod-pill.neutral{
+    background:#f8fafc;
+  }
+
+  .cod-pill.ok{
+    background:#e8fff0;
+    border-color:#bff0cf;
+    color:#138a3d;
+  }
+
+  .cod-pill.warn{
+    background:#fff3e0;
+    border-color:#ffd6a3;
+    color:#b45309;
+  }
+
+  .cod-pill.diff{
+    background:#f8fafc;
+  }
+
+  .cod-pill.diff-ok{
+    background:#e8fff0;
+    border-color:#bff0cf;
+    color:#138a3d;
+  }
+
+  .cod-pill.diff-bad{
+    background:#fff0f0;
+    border-color:#ffd0d0;
+    color:#b40000;
+  }
+
+  .cod-note{
+    margin-top:8px;
+    opacity:.7;
+    font-size:12px;
+    text-align:right;
+    width:100%;
+  }
+
+  .cod-form{
+    margin-top:10px;
+    border:1px solid #eee;
+    border-radius:14px;
+    padding:12px;
+    background:#fff;
+  }
+
+  .cod-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(160px, 1fr));
+    gap:10px;
+  }
+
+  .field label{
+    display:block;
+    font-weight:900;
+    font-size:12px;
+    margin-bottom:6px;
+    opacity:.8;
+  }
+
+  .field-wide{
+    grid-column:span 3;
+  }
+
+  .cod-submit{
+    margin-top:10px;
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  @media (max-width:1100px){
+    .cod-grid{
+      grid-template-columns:repeat(2, minmax(160px, 1fr));
+    }
+
+    .field-wide{
+      grid-column:span 2;
+    }
+
+    .pp-under-actions{
+      justify-content:flex-start;
+    }
+
+    .mini-money{
+      justify-content:flex-start;
+    }
   }
 </style>
 {% endblock %}

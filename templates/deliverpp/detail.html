@@ -21,6 +21,7 @@
     <div>
       <div class="pp-title">
         Batch <a class="mono trk" href="{% url 'deliverpp_detail' batch.id %}">{{ batch.code }}</a>
+
         {% if edit_mode %}
           <span class="pp-state pp-orange">EDIT MODE</span>
         {% else %}
@@ -34,10 +35,12 @@
         <span class="meta-item">Shipment: <b>{{ total_shipment }}</b></span>
         <span class="sep">•</span>
         <span class="meta-item">Return batch: <b>{{ total_return_batch }}</b></span>
+
         {% if batch.shipper %}
           <span class="sep">•</span>
           <span class="meta-item">Shipper: <b>{{ batch.shipper.name }}</b></span>
         {% endif %}
+
         {% if batch.created_by %}
           <span class="sep">•</span>
           <span class="meta-item">Created by: <b>{{ batch.created_by.username }}</b></span>
@@ -65,7 +68,7 @@
         <form method="post" style="display:inline;">
           {% csrf_token %}
           <input type="hidden" name="action" value="confirm_save">
-          <button class="btn btn-success" type="submit">✅ Save (Done Editing)</button>
+          <button class="btn btn-success" type="submit">✅ Save</button>
         </form>
       {% endif %}
     </div>
@@ -73,12 +76,14 @@
 
   {% if edit_mode %}
     <div class="section-title">Edit Shipper</div>
+
     <div class="edit-box" style="margin-bottom:12px;">
       <form method="post" class="shipper-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="change_shipper">
 
         <label class="shipper-label">Shipper</label>
+
         <select name="shipper_id" class="shipper-select">
           <option value="">-- Select shipper --</option>
           {% for s in shippers %}
@@ -107,7 +112,7 @@
           </div>
 
           <div class="edit-help">
-            Preview only. Nothing is saved until you click <b>Save (Done Editing)</b>.
+            Preview only. Nothing is saved until you click <b>Save</b>.
           </div>
         </form>
       </div>
@@ -131,10 +136,12 @@
                   <th class="th-center">STATUS</th>
                 </tr>
               </thead>
+
               <tbody>
                 {% for p in preview_rows %}
                   <tr class="{% if p.ok %}preview-row-ok{% else %}preview-row-bad{% endif %}">
                     <td class="td-center">{{ forloop.counter }}</td>
+
                     <td class="td-center">
                       {% if p.order %}
                         <span class="trk mono">{{ p.order.tracking_no }}</span>
@@ -142,18 +149,21 @@
                         -
                       {% endif %}
                     </td>
+
                     <td class="td-center">
                       {% if p.order and p.order.seller %}
-                        {% firstof p.order.seller.seller_name p.order.seller.name "-" %}
+                        {{ p.order.seller.name }}
                       {% else %}
                         -
                       {% endif %}
                     </td>
+
                     <td>{% if p.order %}{% firstof p.order.receiver_address "-" %}{% else %}-{% endif %}</td>
                     <td class="td-center">{% if p.order %}{% firstof p.order.receiver_name "-" %}{% else %}-{% endif %}</td>
                     <td class="td-center">{% if p.order %}{% firstof p.order.receiver_phone "-" %}{% else %}-{% endif %}</td>
                     <td class="td-center">{% if p.order %}{% firstof p.order.price "-" %}{% else %}-{% endif %}</td>
                     <td class="td-center">{% if p.order %}{{ p.order.cod|default_if_none:"0.00" }}{% else %}-{% endif %}</td>
+
                     <td class="td-center">
                       {% if p.ok %}
                         <span class="st-ok">OK</span>
@@ -199,22 +209,7 @@
   {% endif %}
 
   {% if return_blocks %}
-    {% with sorted_return_blocks=return_blocks|dictsort:"shop" %}
-    {% regroup sorted_return_blocks by shop as return_shop_groups %}
-
-    <div class="section-title section-flex">
-      <span>Return Batch</span>
-      <span class="sort-note">Sorted by shop name</span>
-    </div>
-
-    <div class="shop-summary">
-      {% for shop in return_shop_groups %}
-        <div class="shop-pill">
-          <span>{{ shop.grouper|default:"No Shop" }}</span>
-          <b>{{ shop.list|length }}</b>
-        </div>
-      {% endfor %}
-    </div>
+    <div class="section-title">Return Batch</div>
 
     <div class="table-wrap">
       <table class="ds-table wide">
@@ -227,103 +222,65 @@
             <th class="th-center" style="width:150px;">Phone</th>
             <th class="th-center" style="width:110px;">Total PC</th>
             <th class="th-center" style="width:110px;">COD</th>
+
             {% if edit_mode %}
               <th class="th-center" style="width:130px;">Action</th>
             {% endif %}
+
             <th class="th-center" style="width:120px;">Status</th>
           </tr>
         </thead>
 
-        <tbody class="return-body">
-          {% for shop in return_shop_groups %}
+        <tbody>
+          {% for r in return_blocks %}
+            <tr class="{% if r.staged_removed %}row-remove{% endif %}">
+              <td class="td-center">{{ forloop.counter }}</td>
+              <td class="td-center"><span class="trk mono">{{ r.code }}</span></td>
+              <td class="td-center">{% firstof r.shop "-" %}</td>
+              <td>{% firstof r.address "-" %}</td>
+              <td class="td-center">{% firstof r.phone "-" %}</td>
+              <td class="td-center"><b>{{ r.pc }}</b></td>
+              <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
 
-            <tr class="shop-group-row">
-              <td colspan="{% if edit_mode %}9{% else %}8{% endif %}">
-                <div class="shop-group-title">
-                  <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
-                  <b>{{ shop.list|length }} return batch{% if shop.list|length > 1 %}es{% endif %}</b>
-                </div>
-              </td>
-            </tr>
-
-            {% for r in shop.list %}
-              <tr class="return-row {% if r.staged_removed %}row-remove{% endif %}">
-                <td class="td-center return-n-cell"></td>
-                <td class="td-center"><span class="trk mono">{{ r.code }}</span></td>
-                <td class="td-center seller-cell">{% firstof r.shop "-" %}</td>
-                <td>{% firstof r.address "-" %}</td>
-                <td class="td-center">{% firstof r.phone "-" %}</td>
-                <td class="td-center"><b>{{ r.pc }}</b></td>
-                <td class="td-center"><b>{{ r.cod|default_if_none:"0.00" }}</b></td>
-
-                {% if edit_mode %}
-                  <td class="td-center">
-                    {% if r.staged_removed %}
-                      <form method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="undo_remove_return">
-                        <input type="hidden" name="label_code" value="{{ r.label_code }}">
-                        <button class="btn btn-ghost" type="submit">Undo</button>
-                      </form>
-                    {% else %}
-                      <form method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="stage_remove_return">
-                        <input type="hidden" name="label_code" value="{{ r.label_code }}">
-                        <button class="btn btn-danger" type="submit">Remove</button>
-                      </form>
-                    {% endif %}
-                  </td>
-                {% endif %}
-
+              {% if edit_mode %}
                 <td class="td-center">
                   {% if r.staged_removed %}
-                    <span class="st-remove">REMOVE</span>
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="undo_remove_return">
+                      <input type="hidden" name="label_code" value="{{ r.label_code }}">
+                      <button class="btn btn-ghost" type="submit">Undo</button>
+                    </form>
                   {% else %}
-                    <span class="st-ok">ACTIVE</span>
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="stage_remove_return">
+                      <input type="hidden" name="label_code" value="{{ r.label_code }}">
+                      <button class="btn btn-danger" type="submit">Remove</button>
+                    </form>
                   {% endif %}
                 </td>
-              </tr>
-            {% endfor %}
+              {% endif %}
 
-          {% empty %}
-            <tr>
-              <td colspan="{% if edit_mode %}9{% else %}8{% endif %}" style="padding:14px;opacity:.7;">
-                No return batch.
+              <td class="td-center">
+                {% if r.staged_removed %}
+                  <span class="st-remove">REMOVE</span>
+                {% else %}
+                  <span class="st-ok">ACTIVE</span>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-
-    {% endwith %}
   {% endif %}
 
-  {% with sorted_items=items|dictsort:"order.seller.name" %}
-  {% regroup sorted_items by order.seller.name as pp_shop_groups %}
+  <div class="section-title">PP Delivery</div>
 
-  <div class="section-title section-flex">
-    <span>PP Delivery</span>
-    <span class="sort-note">Sorted by shop name</span>
-  </div>
-
-  <div class="shop-summary">
-    {% for shop in pp_shop_groups %}
-      <div class="shop-pill">
-        <span>{{ shop.grouper|default:"No Shop" }}</span>
-        <b>{{ shop.list|length }}</b>
-      </div>
-    {% empty %}
-      <div class="shop-pill muted">
-        <span>No shop data</span>
-        <b>0</b>
-      </div>
-    {% endfor %}
-  </div>
-
+  <!-- SAME TABLE ONLY. NO SHOP SEPARATE ROW. NO SHOP PC COUNT. -->
   <div class="table-wrap">
-    <table class="ds-table wide">
+    <table class="ds-table wide" id="ppDeliveryTable">
       <thead>
         <tr>
           <th class="th-center" style="width:55px;">N</th>
@@ -335,90 +292,110 @@
           <th class="th-center" style="width:110px;">PRICE</th>
           <th class="th-center" style="width:90px;">COD</th>
           <th class="th-center" style="width:220px;">REASON</th>
+
           {% if edit_mode %}
             <th class="th-center" style="width:120px;">ACTION</th>
           {% endif %}
+
           <th class="th-center" style="width:120px;">STATUS</th>
         </tr>
       </thead>
 
-      <tbody class="pp-body">
-        {% for shop in pp_shop_groups %}
+      <tbody id="ppDeliveryBody">
+        {% for it in items %}
+          {% with o=it.order %}
+            <tr
+              class="{% if it.id in staged_remove %}row-remove{% endif %}"
+              data-seller="{% if o.seller %}{% firstof o.seller.seller_name o.seller.name '-' %}{% else %}-{% endif %}"
+              data-tracking="{% firstof o.full_tracking o.tracking_no o.id %}"
+            >
+              <td class="td-center row-number">{{ forloop.counter }}</td>
 
-          <tr class="shop-group-row">
-            <td colspan="{% if edit_mode %}11{% else %}10{% endif %}">
-              <div class="shop-group-title">
-                <span>SHOP: {{ shop.grouper|default:"No Shop" }}</span>
-                <b>{{ shop.list|length }} order{% if shop.list|length > 1 %}s{% endif %}</b>
-              </div>
-            </td>
-          </tr>
+              <td class="td-center">
+                <a class="trk mono" href="/orders/created/{{ o.id }}/">
+                  {% firstof o.full_tracking o.tracking_no o.id %}
+                </a>
+              </td>
 
-          {% for it in shop.list %}
-            {% with o=it.order %}
-              <tr class="pp-row {% if it.id in staged_remove %}row-remove{% endif %}">
-                <td class="td-center pp-n-cell"></td>
-
-                <td class="td-center">
-                  <a class="trk mono" href="/orders/created/{{ o.id }}/">
-                    {% firstof o.full_tracking o.tracking_no o.id %}
-                  </a>
-                </td>
-
-                <td class="td-center seller-cell">
-                  {% if o.seller %}
-                    {% firstof o.seller.seller_name o.seller.name "-" %}
-                  {% else %}
-                    -
-                  {% endif %}
-                </td>
-
-                <td>{% firstof o.receiver_address o.address "-" %}</td>
-                <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
-                <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
-                <td class="td-center">{% firstof o.price "-" %}</td>
-                <td class="td-center"><b>{{ o.cod|default_if_none:"0.00" }}</b></td>
-
-                <td class="td-center">
-                  <button type="button" class="reason-btn" data-modal-open="reasonModal{{ it.id }}">
-                    {% firstof it.reason o.reason "Click to add reason" %}
-                  </button>
-                </td>
-
-                {% if edit_mode %}
-                  <td class="td-center">
-                    {% if it.id in staged_remove %}
-                      <form method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="undo_remove">
-                        <input type="hidden" name="item_id" value="{{ it.id }}">
-                        <button class="btn btn-ghost" type="submit">Undo</button>
-                      </form>
-                    {% else %}
-                      <form method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="stage_remove">
-                        <input type="hidden" name="item_id" value="{{ it.id }}">
-                        <button class="btn btn-danger" type="submit">Remove</button>
-                      </form>
-                    {% endif %}
-                  </td>
+              <td class="td-center seller-cell">
+                {% if o.seller %}
+                  {% firstof o.seller.seller_name o.seller.name "-" %}
+                {% else %}
+                  -
                 {% endif %}
+              </td>
 
+              <td>{% firstof o.receiver_address o.address "-" %}</td>
+              <td class="td-center">{% firstof o.receiver_name o.customer_name "-" %}</td>
+              <td class="td-center">{% firstof o.receiver_phone o.phone "-" %}</td>
+              <td class="td-center">{% firstof o.price "-" %}</td>
+              <td class="td-center"><b>{{ o.cod|default_if_none:"0.00" }}</b></td>
+
+              <td class="td-center">
+                <button type="button" class="reason-btn" data-modal-open="reasonModal{{ it.id }}">
+                  {% firstof it.reason o.reason "Click to add reason" %}
+                </button>
+              </td>
+
+              {% if edit_mode %}
                 <td class="td-center">
                   {% if it.id in staged_remove %}
-                    <span class="st-remove">REMOVE</span>
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="undo_remove">
+                      <input type="hidden" name="item_id" value="{{ it.id }}">
+                      <button class="btn btn-ghost" type="submit">Undo</button>
+                    </form>
                   {% else %}
-                    <span class="st-ok">ACTIVE</span>
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="stage_remove">
+                      <input type="hidden" name="item_id" value="{{ it.id }}">
+                      <button class="btn btn-danger" type="submit">Remove</button>
+                    </form>
                   {% endif %}
                 </td>
-              </tr>
-            {% endwith %}
-          {% endfor %}
+              {% endif %}
 
+              <td class="td-center">
+                {% if it.id in staged_remove %}
+                  <span class="st-remove">REMOVE</span>
+                {% else %}
+                  <span class="st-ok">ACTIVE</span>
+                {% endif %}
+              </td>
+            </tr>
+
+            <div class="reason-modal" id="reasonModal{{ it.id }}">
+              <div class="reason-modal-card">
+                <div class="reason-modal-head">
+                  <div class="reason-modal-title">Update Reason</div>
+                  <button type="button" class="modal-x" data-modal-close="reasonModal{{ it.id }}">×</button>
+                </div>
+
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="save_reasons">
+
+                  <div class="reason-modal-body">
+                    <div class="reason-meta">
+                      Shipment: <b>{% firstof o.tracking_no o.id %}</b>
+                    </div>
+
+                    <textarea class="reason-area" name="reason_{{ it.id }}" placeholder="Type reason / note here...">{% firstof it.reason o.reason "" %}</textarea>
+                  </div>
+
+                  <div class="reason-modal-foot">
+                    <button type="button" class="btn btn-ghost" data-modal-close="reasonModal{{ it.id }}">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Reason</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          {% endwith %}
         {% empty %}
           <tr>
-            <td colspan="{% if edit_mode %}11{% else %}10{% endif %}" style="padding:14px;opacity:.7;">
+            <td colspan="{% if edit_mode %}11{% else %}10{% endif %}" style="padding:14px;opacity:.7;text-align:center;">
               No items.
             </td>
           </tr>
@@ -427,44 +404,41 @@
     </table>
   </div>
 
-  <!-- REASON MODALS OUTSIDE TABLE -->
-  {% for it in sorted_items %}
-    {% with o=it.order %}
-      <div class="reason-modal" id="reasonModal{{ it.id }}">
-        <div class="reason-modal-card">
-          <div class="reason-modal-head">
-            <div class="reason-modal-title">Update Reason</div>
-            <button type="button" class="modal-x" data-modal-close="reasonModal{{ it.id }}">×</button>
-          </div>
-
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="save_reasons">
-
-            <div class="reason-modal-body">
-              <div class="reason-meta">
-                Shipment: <b>{% firstof o.tracking_no o.id %}</b>
-              </div>
-
-              <textarea class="reason-area" name="reason_{{ it.id }}" placeholder="Type reason / note here...">{% firstof it.reason o.reason "" %}</textarea>
-            </div>
-
-            <div class="reason-modal-foot">
-              <button type="button" class="btn btn-ghost" data-modal-close="reasonModal{{ it.id }}">Cancel</button>
-              <button type="submit" class="btn btn-success">Save Reason</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    {% endwith %}
-  {% endfor %}
-
-  {% endwith %}
-
 </div>
 
 <script>
 (function(){
+  function sortPPTableByShop() {
+    var body = document.getElementById("ppDeliveryBody");
+    if (!body) return;
+
+    var rows = Array.prototype.slice.call(body.querySelectorAll("tr[data-seller]"));
+
+    rows.sort(function(a, b) {
+      var sellerA = (a.getAttribute("data-seller") || "").toLowerCase();
+      var sellerB = (b.getAttribute("data-seller") || "").toLowerCase();
+
+      var trackA = (a.getAttribute("data-tracking") || "").toLowerCase();
+      var trackB = (b.getAttribute("data-tracking") || "").toLowerCase();
+
+      if (sellerA < sellerB) return -1;
+      if (sellerA > sellerB) return 1;
+
+      if (trackA < trackB) return -1;
+      if (trackA > trackB) return 1;
+
+      return 0;
+    });
+
+    rows.forEach(function(row, index) {
+      var numberCell = row.querySelector(".row-number");
+      if (numberCell) numberCell.textContent = index + 1;
+      body.appendChild(row);
+    });
+  }
+
+  sortPPTableByShop();
+
   document.querySelectorAll("[data-modal-open]").forEach(function(btn){
     btn.addEventListener("click", function(){
       var id = btn.getAttribute("data-modal-open");
@@ -500,16 +474,64 @@
 </script>
 
 <style>
-  .pp-card{padding:18px;border-radius:16px;width:100%;}
-  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .pp-card{
+    padding:18px;
+    border-radius:16px;
+    width:100%;
+    background:#ecfdf5;
+  }
 
-  .pp-header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
-  .pp-title{font-size:18px;font-weight:900;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-  .pp-meta{margin-top:6px;opacity:.85;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-  .meta-item{display:inline-flex;gap:6px;align-items:baseline;}
-  .sep{opacity:.5;}
-  .big-num{font-size:20px;font-weight:900;}
-  .pp-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .mono{
+    font-family:ui-monospace,Consolas,monospace;
+  }
+
+  .pp-header{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+
+  .pp-title{
+    font-size:18px;
+    font-weight:900;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  .pp-meta{
+    margin-top:6px;
+    opacity:.9;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .meta-item{
+    display:inline-flex;
+    gap:6px;
+    align-items:baseline;
+  }
+
+  .sep{
+    opacity:.5;
+  }
+
+  .big-num{
+    font-size:22px;
+    font-weight:1000;
+  }
+
+  .pp-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
 
   .section-title{
     margin-top:14px;
@@ -517,61 +539,6 @@
     font-weight:900;
     color:#0f172a;
     font-size:14px;
-  }
-
-  .section-flex{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    flex-wrap:wrap;
-  }
-
-  .sort-note{
-    font-size:12px;
-    font-weight:900;
-    color:#16a34a;
-    background:#dcfce7;
-    border:1px solid #bbf7d0;
-    padding:6px 10px;
-    border-radius:999px;
-  }
-
-  .shop-summary{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin:8px 0 12px;
-  }
-
-  .shop-pill{
-    display:inline-flex;
-    align-items:center;
-    gap:9px;
-    padding:8px 12px;
-    border-radius:999px;
-    background:#ffffff;
-    border:1px solid #dbeafe;
-    color:#0f172a;
-    box-shadow:0 8px 18px rgba(15,23,42,.04);
-    font-size:13px;
-    font-weight:800;
-  }
-
-  .shop-pill b{
-    min-width:26px;
-    height:26px;
-    border-radius:999px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    background:#16a34a;
-    color:#fff;
-    font-size:12px;
-  }
-
-  .shop-pill.muted{
-    opacity:.55;
   }
 
   .btn{
@@ -596,10 +563,29 @@
     font-weight:800;
   }
 
-  .btn-primary{background:#0b5cff;border-color:#0b5cff;color:#fff;}
-  .btn-success{background:#12a150;border-color:#12a150;color:#fff;}
-  .btn-danger{background:#e11d48;border-color:#e11d48;color:#fff;}
-  .btn-warning{background:#f59e0b;border-color:#f59e0b;color:#111;}
+  .btn-primary{
+    background:#0b5cff;
+    border-color:#0b5cff;
+    color:#fff;
+  }
+
+  .btn-success{
+    background:#12a150;
+    border-color:#12a150;
+    color:#fff;
+  }
+
+  .btn-danger{
+    background:#e11d48;
+    border-color:#e11d48;
+    color:#fff;
+  }
+
+  .btn-warning{
+    background:#f59e0b;
+    border-color:#f59e0b;
+    color:#111;
+  }
 
   .pp-state{
     padding:4px 10px;
@@ -609,13 +595,34 @@
     display:inline-block;
   }
 
-  .pp-blue{background:#dbeafe;color:#1e40af;}
-  .pp-orange{background:#fff7cc;color:#92400e;}
+  .pp-blue{
+    background:#dbeafe;
+    color:#1e40af;
+  }
 
-  .table-wrap{margin-top:10px;overflow-x:auto;width:100%;}
-  table.wide{width:100%;min-width:100%;}
-  .th-center{text-align:center;}
-  .td-center{text-align:center;}
+  .pp-orange{
+    background:#fff7cc;
+    color:#92400e;
+  }
+
+  .table-wrap{
+    margin-top:10px;
+    overflow-x:auto;
+    width:100%;
+  }
+
+  table.wide{
+    width:100%;
+    min-width:100%;
+  }
+
+  .th-center{
+    text-align:center;
+  }
+
+  .td-center{
+    text-align:center;
+  }
 
   .ds-table{
     width:100%;
@@ -624,14 +631,25 @@
 
   .ds-table th,
   .ds-table td{
-    border-bottom:1px solid #eee;
+    border-bottom:1px solid #dceee5;
     padding:10px;
     vertical-align:middle;
   }
 
   .ds-table th{
-    background:#fafafa;
+    background:#ffffff;
     font-weight:900;
+    color:#020617;
+  }
+
+  .ds-table td{
+    background:transparent;
+    color:#020617;
+    font-weight:750;
+  }
+
+  .ds-table tbody tr:hover td{
+    background:rgba(255,255,255,.45);
   }
 
   .trk{
@@ -640,62 +658,8 @@
     color:inherit;
   }
 
-  .shop-group-row td{
-    padding:10px 12px !important;
-    background:linear-gradient(90deg,#ecfdf5,#f8fafc);
-    border-top:2px solid #bbf7d0;
-    border-bottom:1px solid #d1fae5;
-  }
-
-  .shop-group-title{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-    color:#064e3b;
-    font-size:13px;
-    font-weight:900;
-    letter-spacing:.2px;
-  }
-
-  .shop-group-title b{
-    background:#16a34a;
-    color:#fff;
-    padding:5px 10px;
-    border-radius:999px;
-    font-size:12px;
-  }
-
   .seller-cell{
-    font-weight:900;
-    color:#0f172a;
-  }
-
-  .return-body{
-    counter-reset:returnNo;
-  }
-
-  .return-row{
-    counter-increment:returnNo;
-  }
-
-  .return-n-cell::before{
-    content:counter(returnNo);
-    font-weight:900;
-  }
-
-  .pp-body{
-    counter-reset:ppNo;
-  }
-
-  .pp-row{
-    counter-increment:ppNo;
-  }
-
-  .pp-n-cell::before{
-    content:counter(ppNo);
-    font-weight:900;
+    font-weight:1000;
   }
 
   .edit-grid{
@@ -755,9 +719,21 @@
     font-size:13px;
   }
 
-  .preview-ok{background:#eafff1;border-color:#c7f3d4;}
-  .preview-bad{background:#fff1f2;border-color:#fecdd3;}
-  .preview-warn{background:#fff7ed;border-color:#fed7aa;}
+  .preview-ok{
+    background:#eafff1;
+    border-color:#c7f3d4;
+  }
+
+  .preview-bad{
+    background:#fff1f2;
+    border-color:#fecdd3;
+  }
+
+  .preview-warn{
+    background:#fff7ed;
+    border-color:#fed7aa;
+  }
+
   .preview-empty{
     padding:12px;
     border-radius:12px;
@@ -766,8 +742,13 @@
     opacity:.75;
   }
 
-  .preview-row-ok{background:#f0fdf4;}
-  .preview-row-bad{background:#fff1f2;}
+  .preview-row-ok{
+    background:#f0fdf4;
+  }
+
+  .preview-row-bad{
+    background:#fff1f2;
+  }
 
   .shipper-form{
     display:flex;
@@ -834,9 +815,23 @@
     border:1px solid transparent;
   }
 
-  .msg-success{background:#eafff1;border-color:#c7f3d4;color:#166534;}
-  .msg-error{background:#fff1f2;border-color:#fecdd3;color:#9f1239;}
-  .msg-info{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
+  .msg-success{
+    background:#eafff1;
+    border-color:#c7f3d4;
+    color:#166534;
+  }
+
+  .msg-error{
+    background:#fff1f2;
+    border-color:#fecdd3;
+    color:#9f1239;
+  }
+
+  .msg-info{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+    color:#1d4ed8;
+  }
 
   .reason-modal{
     position:fixed;
@@ -913,7 +908,7 @@
     cursor:pointer;
   }
 
-  @media (max-width:1000px){
+  @media (max-width: 1000px){
     .shipper-form{
       align-items:stretch;
     }
@@ -924,14 +919,20 @@
   }
 
   @media print{
-    .shop-summary,
-    .sort-note{
+    .no-print,
+    .reason-modal{
       display:none !important;
     }
 
-    .shop-group-row td{
-      background:#f5f5f5 !important;
-      color:#111 !important;
+    .pp-card{
+      background:#fff;
+      padding:0;
+    }
+
+    .ds-table th,
+    .ds-table td{
+      font-size:11px;
+      padding:7px;
     }
   }
 </style>

@@ -20,7 +20,7 @@ from .models import OrderStockItem, StockMovement, StockProduct
 from .services import (
     add_stock_in,
     adjust_stock,
-    confirm_stock,
+    confirm_stock as confirm_stock_service,
     current_available_qty,
     get_seller_inventory_setting,
     last_confirmed,
@@ -335,52 +335,156 @@ def adjust_stock_view(request):
 
 @login_required
 def confirm_stock_view(request):
+    """
+    Confirm stock by shop.
+
+    New workflow:
+    - choose seller/shop once
+    - show all active products for that shop
+    - staff can confirm one product row or confirm all rows
+    - if real qty differs from system available qty, service auto creates adjustment
+    """
     if not staff_only(request):
         return redirect("portal:dashboard")
 
     selected_seller = get_selected_seller_from_request(request)
-    selected_product = get_selected_product_from_request(request)
 
     if request.method == "POST":
-        product = selected_product
-        real_qty_raw = (request.POST.get("real_qty") or "").strip()
-        note = (request.POST.get("note") or "").strip()
-
-        if not product:
-            messages.error(request, "Please choose product.")
+        if not selected_seller:
+            messages.error(request, "Please choose seller/shop first.")
             return redirect("inventory:confirm")
 
-        try:
-            real_qty = int(real_qty_raw or 0)
-        except Exception:
-            messages.error(request, "Real qty must be a number.")
-            return redirect("inventory:confirm")
+        only_product_id = (request.POST.get("only_product_id") or "").strip()
+        product_ids = request.POST.getlist("product_id")
 
-        if real_qty < 0:
-            messages.error(request, "Real qty cannot be negative.")
-            return redirect("inventory:confirm")
+        # If user clicked one row Confirm button, only confirm that row.
+        if only_product_id.isdigit():
+            product_ids = [only_product_id]
 
-        confirm_stock(
-            product=product,
-            real_qty=real_qty,
-            actor=request.user,
-            note=note or "Stock confirmed",
+        confirmed_count = 0
+        adjusted_count = 0
+        skipped_count = 0
+
+        with transaction.atomic():
+            for product_id in product_ids:
+                if not str(product_id).isdigit():
+                    skipped_count += 1
+                    continue
+
+                product = (
+                    StockProduct.objects
+                    .filter(
+                        id=int(product_id),
+                        seller=selected_seller,
+                        is_active=True,
+                    )
+                    .first()
+                )
+
+                if not product:
+                    skipped_count += 1
+                    continue
+
+                real_qty_raw = (
+                    request.POST.get(f"real_qty_{product.id}")
+                    or request.POST.get("real_qty")
+                    or ""
+                ).strip()
+
+                note = (
+                    request.POST.get(f"note_{product.id}")
+                    or request.POST.get("note")
+                    or ""
+                ).strip()
+
+                if real_qty_raw == "":
+                    skipped_count += 1
+                    continue
+
+                try:
+                    real_qty = int(real_qty_raw)
+                except Exception:
+                    skipped_count += 1
+                    continue
+
+                if real_qty < 0:
+                    skipped_count += 1
+                    continue
+
+                before_qty = current_available_qty(product)
+
+                confirm_stock_service(
+                    product=product,
+                    real_qty=real_qty,
+                    actor=request.user,
+                    note=(
+                        note
+                        or (
+                            "Confirm stock by shop page. "
+                            f"System available before: {before_qty}, real count: {real_qty}"
+                        )
+                    ),
+                )
+
+                confirmed_count += 1
+
+                if before_qty != real_qty:
+                    adjusted_count += 1
+
+        if confirmed_count:
+            messages.success(
+                request,
+                (
+                    f"✅ Confirmed {confirmed_count} product(s). "
+                    f"Adjusted {adjusted_count}. Skipped {skipped_count}."
+                ),
+            )
+        else:
+            messages.error(request, "No product was confirmed. Please enter real qty.")
+
+        return redirect(f"{request.path}?seller_id={selected_seller.id}")
+
+    products = []
+
+    if selected_seller:
+        qs = (
+            StockProduct.objects
+            .filter(seller=selected_seller, is_active=True)
+            .order_by("name", "sku")
         )
 
-        messages.success(request, f"Stock confirmed: {product.name} = {real_qty}")
-        return redirect("inventory:list")
+        for product in qs:
+            available = current_available_qty(product)
+            reserved = reserved_qty(product)
+            snapshot = last_confirmed(product)
+
+            products.append({
+                "product": product,
+                "product_id": product.id,
+                "photo_url": product.photo.url if product.photo else "",
+                "name": product.name,
+                "sku": product.sku,
+                "product_type": product.product_type,
+                "location": product.location,
+                "current_qty": available + reserved,
+                "reserved_qty": reserved,
+                "available_qty": available,
+                "last_confirmed_at": snapshot.confirmed_at if snapshot else None,
+            })
 
     return render(
         request,
         "inventory/confirm_stock.html",
         {
+            "selected_seller": selected_seller,
             "selected_seller_id": selected_seller.id if selected_seller else "",
             "selected_seller_display": seller_display(selected_seller),
-            "selected_product_id": selected_product.id if selected_product else "",
-            "selected_product_display": product_display(selected_product),
+            "selected_product_id": "",
+            "selected_product_display": "",
+            "products": products,
+            "today": timezone.localdate(),
         },
     )
-
 
 @login_required
 def history(request):

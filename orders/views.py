@@ -402,13 +402,55 @@ def _excel_orders_response(qs, filename: str):
     return resp
 
 
-def _soft_delete_queryset(qs, user):
-    now = timezone.now()
-    return qs.update(
-        is_deleted=True,
-        deleted_at=now,
-        deleted_by=user,
+def _soft_delete_order_with_stock(order, user, note: str = ""):
+    """
+    Soft delete one order safely:
+    1. release inventory stock
+    2. move order to trash
+    """
+    from inventory.services import delete_order_stock
+
+    delete_order_stock(
+        order,
+        actor=user,
+        note=note or "Order moved to trash",
     )
+
+    now = timezone.now()
+
+    order.is_deleted = True
+    order.deleted_at = now
+    order.deleted_by = user
+    order.save(
+        update_fields=[
+            "is_deleted",
+            "deleted_at",
+            "deleted_by",
+        ]
+    )
+
+    return order
+
+
+def _soft_delete_queryset(qs, user):
+    """
+    Bulk soft delete safely.
+
+    Do NOT use qs.update() here because inventory stock needs
+    one-by-one release movement for each order.
+    """
+    orders = list(qs.select_related("seller"))
+    count = 0
+
+    for order in orders:
+        _soft_delete_order_with_stock(
+            order,
+            user,
+            note="Bulk moved to trash",
+        )
+        count += 1
+
+    return count
 
 
 # ============================================================
@@ -2205,43 +2247,54 @@ def order_delete(request, pk):
     order = get_object_or_404(Order, pk=pk, is_deleted=False)
 
     if request.method == "POST":
-        order.soft_delete(user=request.user)
+        with transaction.atomic():
+            _soft_delete_order_with_stock(
+                order,
+                request.user,
+                note="Moved to trash",
+            )
 
-        add_audit_log(
-            module=AuditLog.MODULE_ORDER,
-            obj=order,
-            action=AuditLog.ACTION_DELETE,
-            user=request.user,
-            note="Moved to trash",
-        )
+            add_audit_log(
+                module=AuditLog.MODULE_ORDER,
+                obj=order,
+                action=AuditLog.ACTION_DELETE,
+                user=request.user,
+                note="Moved to trash",
+            )
 
-        messages.success(request, f"Order {order.tracking_no} moved to trash.")
+        messages.success(request, f"Order {order.tracking_no} moved to trash and stock returned.")
         return redirect("order_list")
 
     return render(request, "orders/order_confirm_delete.html", {"order": order})
-
 
 @login_required
 def order_restore(request, pk):
     order = get_object_or_404(Order, pk=pk, is_deleted=True)
 
     if request.method == "POST":
-        order.restore()
+        with transaction.atomic():
+            from inventory.services import restore_order_stock
 
-        add_audit_log(
-            module=AuditLog.MODULE_ORDER,
-            obj=order,
-            action=AuditLog.ACTION_RESTORE,
-            user=request.user,
-            note="Restored from trash",
-        )
+            restore_order_stock(
+                order,
+                actor=request.user,
+                note="Restored from trash",
+            )
 
-        messages.success(request, f"Order {order.tracking_no} restored.")
+            order.restore()
+
+            add_audit_log(
+                module=AuditLog.MODULE_ORDER,
+                obj=order,
+                action=AuditLog.ACTION_RESTORE,
+                user=request.user,
+                note="Restored from trash",
+            )
+
+        messages.success(request, f"Order {order.tracking_no} restored and stock deducted again.")
         return redirect("order_trash")
 
     return render(request, "orders/order_restore_confirm.html", {"order": order})
-
-
 @login_required
 def order_trash(request):
     show = _is_search_clicked(request)

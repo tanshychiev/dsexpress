@@ -1240,3 +1240,298 @@ def save_alias_from_order_link(link: OrderStockLink, actor=None):
         alias.save(update_fields=["product", "created_by"])
 
     return alias
+
+
+def delete_order_stock(order, actor=None, note: str = ""):
+    """
+    Soft delete order / move to trash.
+
+    CREATED / PROCESSING / OUT_FOR_DELIVERY:
+    - stock was deducted when order was created
+    - add stock back by releasing reserved stock
+
+    DELIVERED / DONE:
+    - reserved_qty is already 0
+    - add sold qty back to stock
+
+    RETURNED / VOID / CANCELLED:
+    - normally stock already returned/released
+    - only clear leftover reserved qty if any
+    """
+    if getattr(order, "is_deleted", False):
+        return None
+
+    status = str(getattr(order, "status", "") or "").upper()
+    link = getattr(order, "stock_link", None)
+
+    with transaction.atomic():
+        # Returned / Void / Cancelled should not add stock twice.
+        if status in ["RETURNED", "VOID", "CANCELLED", "CANCELED"]:
+            release_order_stock(
+                order,
+                actor=actor,
+                note=note or f"Deleted closed order {order.tracking_no}: release leftover stock",
+            )
+            release_order_stock_items(
+                order,
+                actor=actor,
+                note=note or f"Deleted closed mixed order {order.tracking_no}: release leftover stock",
+            )
+            return None
+
+        # Delivered / Done: stock was already sold, reserved_qty = 0.
+        # So add back by quantity, but keep item rows for restore.
+        if order_stock_is_done(order):
+            items = (
+                OrderStockItem.objects
+                .select_related("product", "seller")
+                .filter(order=order)
+            )
+
+            has_items = False
+
+            for item in items:
+                has_items = True
+                qty = int(item.quantity or 0)
+
+                if item.product and qty > 0:
+                    create_movement(
+                        seller=item.seller,
+                        product=item.product,
+                        order=order,
+                        movement_type=StockMovement.ADJUSTMENT,
+                        qty_delta=qty,
+                        actor=actor,
+                        note=note or f"Deleted done mixed order {order.tracking_no}: put back {item.product.name} x{qty}",
+                    )
+
+                item.reserved_qty = 0
+                item.save(update_fields=["reserved_qty"])
+
+            if not has_items and link and link.product:
+                qty = int(link.quantity or order.quantity or 0)
+
+                if qty > 0:
+                    create_movement(
+                        seller=link.seller,
+                        product=link.product,
+                        order=order,
+                        movement_type=StockMovement.ADJUSTMENT,
+                        qty_delta=qty,
+                        actor=actor,
+                        note=note or f"Deleted done order {order.tracking_no}: put back {link.product.name} x{qty}",
+                    )
+
+            if link:
+                link.reserved_qty = 0
+                link.shortage_qty = 0
+                link.released_at = timezone.now()
+                link.updated_by = actor
+                link.save(
+                    update_fields=[
+                        "reserved_qty",
+                        "shortage_qty",
+                        "released_at",
+                        "updated_by",
+                        "updated_at",
+                    ]
+                )
+
+            return None
+
+        # Normal active/pending order.
+        release_order_stock(
+            order,
+            actor=actor,
+            note=note or f"Deleted order {order.tracking_no}: stock released",
+        )
+        release_order_stock_items(
+            order,
+            actor=actor,
+            note=note or f"Deleted mixed order {order.tracking_no}: stock released",
+        )
+
+        return None
+
+
+def restore_order_stock(order, actor=None, note: str = ""):
+    """
+    Restore order from trash.
+
+    Because delete_order_stock() added stock back,
+    restoring must deduct stock again.
+    """
+    if not getattr(order, "is_deleted", False):
+        return None
+
+    status = str(getattr(order, "status", "") or "").upper()
+    link = getattr(order, "stock_link", None)
+
+    with transaction.atomic():
+        # Returned / Void / Cancelled should not reserve stock again.
+        if status in ["RETURNED", "VOID", "CANCELLED", "CANCELED"]:
+            return None
+
+        items = list(
+            OrderStockItem.objects
+            .select_related("product", "seller")
+            .filter(order=order)
+        )
+
+        # Delivered / Done restore: deduct sold qty again, reserved stays 0.
+        if order_stock_is_done(order):
+            if items:
+                for item in items:
+                    qty = int(item.quantity or 0)
+
+                    if item.product and qty > 0:
+                        create_movement(
+                            seller=item.seller,
+                            product=item.product,
+                            order=order,
+                            movement_type=StockMovement.ADJUSTMENT,
+                            qty_delta=-qty,
+                            actor=actor,
+                            note=note or f"Restored done mixed order {order.tracking_no}: deduct {item.product.name} x{qty}",
+                        )
+
+                    item.reserved_qty = 0
+                    item.save(update_fields=["reserved_qty"])
+
+            elif link and link.product:
+                qty = int(link.quantity or order.quantity or 0)
+
+                if qty > 0:
+                    create_movement(
+                        seller=link.seller,
+                        product=link.product,
+                        order=order,
+                        movement_type=StockMovement.ADJUSTMENT,
+                        qty_delta=-qty,
+                        actor=actor,
+                        note=note or f"Restored done order {order.tracking_no}: deduct {link.product.name} x{qty}",
+                    )
+
+            if link:
+                link.reserved_qty = 0
+                link.shortage_qty = 0
+                link.updated_by = actor
+                link.save(
+                    update_fields=[
+                        "reserved_qty",
+                        "shortage_qty",
+                        "updated_by",
+                        "updated_at",
+                    ]
+                )
+
+            return None
+
+        # Mixed pending order restore.
+        if items:
+            total_reserved = 0
+            total_shortage = 0
+
+            for item in items:
+                qty = int(item.quantity or 0)
+
+                if not item.product or qty <= 0:
+                    continue
+
+                available_before = current_available_qty(item.product)
+                shortage = max(qty - available_before, 0)
+
+                item.reserved_qty = qty
+                item.shortage_qty = shortage
+                item.status = (
+                    OrderStockItem.STOCK_LACK
+                    if shortage > 0
+                    else OrderStockItem.LINKED
+                )
+                item.save(
+                    update_fields=[
+                        "reserved_qty",
+                        "shortage_qty",
+                        "status",
+                    ]
+                )
+
+                create_movement(
+                    seller=item.seller,
+                    product=item.product,
+                    order=order,
+                    movement_type=(
+                        StockMovement.STOCK_LACK
+                        if shortage > 0
+                        else StockMovement.ORDER_RESERVED
+                    ),
+                    qty_delta=-qty,
+                    actor=actor,
+                    note=note or f"Restored mixed order {order.tracking_no}: reserved {item.product.name} x{qty}. Available before: {available_before}",
+                )
+
+                total_reserved += qty
+                total_shortage += shortage
+
+            if link:
+                link.reserved_qty = total_reserved
+                link.shortage_qty = total_shortage
+                link.status = (
+                    OrderStockLink.STOCK_LACK
+                    if total_shortage > 0
+                    else OrderStockLink.LINKED
+                )
+                link.updated_by = actor
+                link.save(
+                    update_fields=[
+                        "reserved_qty",
+                        "shortage_qty",
+                        "status",
+                        "updated_by",
+                        "updated_at",
+                    ]
+                )
+
+            return None
+
+        # Single pending order restore.
+        if link and link.product:
+            qty = int(link.quantity or order.quantity or 0)
+
+            if qty > 0:
+                available_before = current_available_qty(link.product)
+                shortage = max(qty - available_before, 0)
+
+                create_movement(
+                    seller=link.seller,
+                    product=link.product,
+                    order=order,
+                    movement_type=(
+                        StockMovement.STOCK_LACK
+                        if shortage > 0
+                        else StockMovement.ORDER_RESERVED
+                    ),
+                    qty_delta=-qty,
+                    actor=actor,
+                    note=note or f"Restored order {order.tracking_no}: stock reserved again. Available before: {available_before}",
+                )
+
+                link.reserved_qty = qty
+                link.shortage_qty = shortage
+                link.status = (
+                    OrderStockLink.STOCK_LACK
+                    if shortage > 0
+                    else OrderStockLink.LINKED
+                )
+                link.updated_by = actor
+                link.save(
+                    update_fields=[
+                        "reserved_qty",
+                        "shortage_qty",
+                        "status",
+                        "updated_by",
+                        "updated_at",
+                    ]
+                )
+
+        return None

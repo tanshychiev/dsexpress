@@ -1,1194 +1,887 @@
 {% extends "customerportal/base.html" %}
 {% load static %}
 
-{% block title %}DS EXPRESS{% endblock %}
+{% block title %}Seller Portal{% endblock %}
 
 {% block extra_css %}
 <style>
+  :root{
+    --ds-green:#12a86a;
+    --ds-green-dark:#0d8b57;
+    --ds-mint:#eaf8f0;
+    --ds-mint-2:#dff3e7;
+    --ds-bg:#eef7f2;
+    --ds-text:#182337;
+    --ds-muted:#718096;
+    --ds-border:#dfe9e3;
+    --ds-white:#ffffff;
+  }
+
   *{
     box-sizing:border-box;
   }
 
+  html{
+    background:var(--ds-bg);
+  }
+
   body{
     margin:0;
-    font-family:Arial,sans-serif;
-    background:#f3f4f6;
-    color:#263238;
+    min-height:100vh;
+    font-family:Arial, Helvetica, sans-serif;
+    color:var(--ds-text);
+    background:var(--ds-bg);
+    -webkit-font-smoothing:antialiased;
   }
 
-  .app-shell{
+  button,
+  input{
+    font:inherit;
+  }
+
+  .seller-dashboard{
+    position:relative;
     min-height:100vh;
+    overflow-x:hidden;
+    padding:10px 0 135px;
     background:
-      radial-gradient(circle at top left, rgba(35,184,119,.08), transparent 28%),
-      radial-gradient(circle at top right, rgba(22,154,101,.08), transparent 24%),
-      linear-gradient(180deg,#f4fbf7 0%, #eef6f1 45%, #f7faf8 100%);
-    padding-bottom:95px;
-    position:relative;
-    overflow:hidden;
+      radial-gradient(circle at 5% 8%, rgba(18,168,106,.09), transparent 24%),
+      radial-gradient(circle at 96% 32%, rgba(18,168,106,.08), transparent 25%),
+      linear-gradient(180deg,#f5fbf7 0%, #edf6f1 56%, #f7faf8 100%);
   }
 
-  .page-fx{
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    z-index:0;
-    overflow:hidden;
-  }
-
-  .fx-bubble,
-  .fx-parcel{
-    position:absolute;
-    display:block;
-    pointer-events:none;
-    user-select:none;
-  }
-
-  .fx-bubble{
-    border-radius:50%;
-    opacity:.32;
-    animation:floatBubble linear infinite;
-    filter:blur(1px);
-  }
-
-  .fx-bubble-1{
-    width:140px;
-    height:140px;
-    left:-25px;
-    top:8%;
-    background:radial-gradient(circle at 30% 30%, rgba(64,211,141,.26), rgba(64,211,141,.05) 70%, transparent 72%);
-    animation-duration:18s;
-  }
-
-  .fx-bubble-2{
-    width:90px;
-    height:90px;
-    right:4%;
-    top:24%;
-    background:radial-gradient(circle at 30% 30%, rgba(54,191,126,.20), rgba(54,191,126,.03) 70%, transparent 72%);
-    animation-duration:14s;
-    animation-delay:-4s;
-  }
-
-  .fx-bubble-3{
-    width:165px;
-    height:165px;
-    left:6%;
-    bottom:12%;
-    background:radial-gradient(circle at 30% 30%, rgba(29,167,108,.14), rgba(29,167,108,.03) 72%, transparent 75%);
-    animation-duration:21s;
-    animation-delay:-7s;
-  }
-
-  .fx-bubble-4{
-    width:115px;
-    height:115px;
-    right:-15px;
-    bottom:20%;
-    background:radial-gradient(circle at 30% 30%, rgba(79,217,150,.16), rgba(79,217,150,.03) 70%, transparent 72%);
-    animation-duration:16s;
-    animation-delay:-2s;
-  }
-
-  .fx-bubble-5{
-    width:72px;
-    height:72px;
-    left:52%;
-    top:40%;
-    background:radial-gradient(circle at 30% 30%, rgba(43,190,120,.18), rgba(43,190,120,.03) 70%, transparent 72%);
-    animation-duration:12s;
-    animation-delay:-5s;
-  }
-
-  .fx-parcel{
-    font-size:22px;
-    opacity:.12;
-    animation:floatParcel linear infinite;
-  }
-
-  .fx-parcel-1{
-    left:8%;
-    top:18%;
-    animation-duration:18s;
-  }
-
-  .fx-parcel-2{
-    right:10%;
-    top:52%;
-    font-size:26px;
-    animation-duration:16s;
-    animation-delay:-5s;
-  }
-
-  .fx-parcel-3{
-    left:18%;
-    bottom:10%;
-    font-size:20px;
-    animation-duration:22s;
-    animation-delay:-8s;
-  }
-
-  .fx-parcel-4{
-    right:22%;
-    bottom:26%;
-    font-size:18px;
-    animation-duration:19s;
-    animation-delay:-3s;
-  }
-
-  @keyframes floatBubble{
-    0%{ transform:translate3d(0,0,0) scale(1); }
-    25%{ transform:translate3d(10px,-18px,0) scale(1.04); }
-    50%{ transform:translate3d(-6px,-30px,0) scale(.98); }
-    75%{ transform:translate3d(12px,-14px,0) scale(1.03); }
-    100%{ transform:translate3d(0,0,0) scale(1); }
-  }
-
-  @keyframes floatParcel{
-    0%{ transform:translate3d(0,0,0) rotate(0deg); }
-    20%{ transform:translate3d(8px,-18px,0) rotate(6deg); }
-    40%{ transform:translate3d(-8px,-34px,0) rotate(-5deg); }
-    60%{ transform:translate3d(10px,-18px,0) rotate(4deg); }
-    80%{ transform:translate3d(-4px,-8px,0) rotate(-3deg); }
-    100%{ transform:translate3d(0,0,0) rotate(0deg); }
-  }
-
-  .phone-wrap{
-    max-width:480px;
+  .dashboard-wrap{
+    width:min(480px, 100%);
     margin:0 auto;
-    min-height:100vh;
+    padding:0 14px;
+  }
+
+  .panel{
     position:relative;
-    z-index:1;
+    overflow:hidden;
+    background:rgba(255,255,255,.97);
+    border:1px solid rgba(223,233,227,.85);
+    border-radius:24px;
+    box-shadow:0 10px 25px rgba(26,70,48,.08);
   }
 
-  .top-header{
-    background:linear-gradient(135deg,#179b67,#22b276);
-    color:#fff;
-    padding:18px 18px 28px;
-    border-bottom-left-radius:42px;
-    box-shadow:0 8px 24px rgba(20,134,88,.20);
+  /* =========================================================
+     ACCOUNT SUMMARY
+  ========================================================= */
+  .account-panel{
+    padding:15px;
+    margin-bottom:12px;
   }
 
-  .status-bar{
-    display:none !important;
-  }
-
-  .top-row{
+  .account-heading-row{
     display:flex;
-    align-items:center;
-    justify-content:space-between;
-  }
-
-  .left-top{
-    display:flex;
-    align-items:center;
-    gap:14px;
-  }
-
-  .top-btn{
-    color:#fff;
-    text-decoration:none;
-    font-size:22px;
-    line-height:1;
-  }
-
-  .logo{
-    width:54px;
-    height:54px;
-    border-radius:50%;
-    background:#fff;
-    padding:4px;
-    object-fit:cover;
-    box-shadow:0 4px 14px rgba(0,0,0,.12);
-  }
-
-  .page-title{
-    font-size:21px;
-    font-weight:900;
-    letter-spacing:.2px;
-  }
-
-  .content{
-    padding:16px;
-    position:relative;
-    z-index:1;
-  }
-
-  .summary-card{
-    background:rgba(255,255,255,.96);
-    backdrop-filter:blur(6px);
-    border-radius:22px;
-    box-shadow:0 8px 18px rgba(0,0,0,.07);
-    padding:16px;
-    margin-bottom:14px;
-  }
-
-  .summary-top{
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    gap:12px;
-    margin-bottom:14px;
-  }
-
-  .summary-title-row{
-    display:flex;
-    align-items:center;
+    align-items:flex-start;
     justify-content:space-between;
     gap:10px;
+    margin-bottom:12px;
   }
 
-  .summary-title{
-    font-size:20px;
-    font-weight:950;
-    color:#1f2937;
+  .account-title{
     margin:0;
+    font-size:21px;
     line-height:1.08;
-    letter-spacing:-.03em;
+    font-weight:950;
+    letter-spacing:-.5px;
+    color:var(--ds-text);
   }
 
-  .summary-month-chip{
-    border-radius:999px;
-    padding:7px 11px;
-    background:#eefaf4;
-    color:#0f8f4c;
-    border:1px solid rgba(15,122,69,.12);
+  .account-subtitle{
+    margin:5px 0 0;
     font-size:12px;
+    line-height:1.35;
+    font-weight:700;
+    color:var(--ds-muted);
+  }
+
+  .month-chip{
+    flex:0 0 auto;
+    padding:7px 11px;
+    border:1px solid rgba(18,168,106,.13);
+    border-radius:999px;
+    background:#eefaf4;
+    color:var(--ds-green-dark);
+    font-size:11px;
+    line-height:1;
     font-weight:950;
     white-space:nowrap;
-  }
-
-  .summary-sub{
-    font-size:13px;
-    color:#64748b;
-    margin-top:5px;
-    font-weight:700;
-    line-height:1.35;
-    max-width:290px;
   }
 
   .month-form{
-    width:100%;
+    position:relative;
     display:grid;
-    grid-template-columns:minmax(0,1fr) 102px;
-    align-items:center;
-    gap:10px;
-    min-width:0;
+    grid-template-columns:minmax(0,1fr) 94px;
+    gap:9px;
+    margin-bottom:12px;
   }
 
-  .month-input-wrap{
-    min-height:54px;
-    min-width:0;
-    width:100%;
+  .month-control,
+  .view-button{
+    min-height:52px;
     border:0;
     border-radius:999px;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:8px 14px;
-    background:linear-gradient(180deg,#edf9f3 0%, #e5f6ee 100%);
-    border:1px solid rgba(15,122,69,.14);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.88),
-      0 10px 22px rgba(15,122,69,.08);
     cursor:pointer;
     -webkit-tap-highlight-color:transparent;
     touch-action:manipulation;
-    color:#1f2937;
-    appearance:none;
   }
 
-  .month-input-wrap:active{
-    transform:scale(.98);
+  .month-control{
+    width:100%;
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:7px 14px 7px 9px;
+    color:var(--ds-text);
+    background:linear-gradient(180deg,#edf9f3 0%, #e5f6ee 100%);
+    border:1px solid rgba(18,168,106,.14);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+    text-align:left;
+  }
+
+  .month-control:active,
+  .view-button:active,
+  .pickup-card:active,
+  .quick-link:active,
+  .nav-link:active{
+    transform:scale(.97);
   }
 
   .month-icon{
-    width:34px;
-    height:34px;
-    border-radius:13px;
+    width:35px;
+    height:35px;
+    flex:0 0 35px;
     display:flex;
     align-items:center;
     justify-content:center;
-    background:rgba(255,255,255,.62);
-    color:#0f8f4c;
-    font-size:18px;
-    flex:0 0 auto;
-    box-shadow:inset 0 0 0 1px rgba(15,122,69,.08);
+    border-radius:13px;
+    background:rgba(255,255,255,.78);
+    box-shadow:inset 0 0 0 1px rgba(18,168,106,.08);
+    font-size:17px;
   }
 
-  .month-input-text{
-    display:flex;
-    align-items:center;
-    gap:8px;
+  .month-text{
     min-width:0;
     flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
     white-space:nowrap;
-  }
-
-  .month-input-label{
-    display:none;
-  }
-
-  .month-display{
-    font-size:16px;
+    font-size:15px;
     font-weight:950;
-    color:#1f2937;
-    line-height:1;
   }
 
   .month-caret{
-    margin-left:auto;
-    color:#0f8f4c;
+    flex:0 0 auto;
+    color:var(--ds-green-dark);
     font-size:18px;
     font-weight:950;
-    line-height:1;
   }
 
-  .month-submit{
-    min-height:54px;
-    border:0;
-    border-radius:999px;
-    background:linear-gradient(135deg,#11a768 0%, #19bd77 100%);
-    color:#fff;
-    padding:0 20px;
-    display:inline-flex;
+  .month-native{
+    position:absolute;
+    left:0;
+    top:0;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .view-button{
+    display:flex;
     align-items:center;
     justify-content:center;
     gap:8px;
+    padding:0 15px;
+    color:#fff;
+    background:linear-gradient(135deg,#10a365 0%, #1ac47b 100%);
+    box-shadow:0 9px 19px rgba(18,168,106,.22);
     font-size:15px;
     font-weight:950;
-    cursor:pointer;
-    box-shadow:0 10px 20px rgba(17,166,106,.20);
-    transition:transform .16s ease, box-shadow .16s ease, filter .16s ease;
-    -webkit-tap-highlight-color:transparent;
-    touch-action:manipulation;
-    white-space:nowrap;
   }
 
-  .month-submit:active{
-    transform:scale(.96);
-    box-shadow:0 8px 16px rgba(17,166,106,.18);
-  }
-
-  .month-submit-icon{
+  .view-dot{
     width:8px;
     height:8px;
     border-radius:50%;
-    display:inline-block;
-    background:rgba(255,255,255,.95);
+    background:#fff;
     box-shadow:0 0 0 5px rgba(255,255,255,.16);
   }
 
-  .month-hidden-input{
-    display:none;
-  }
-
-  .month-sheet-backdrop{
-    position:fixed;
-    inset:0;
-    z-index:2000;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding:18px;
-    background:rgba(15,23,42,.26);
-    backdrop-filter:blur(7px);
-  }
-
-  .month-sheet-backdrop.is-open{
-    display:flex;
-  }
-
-  .month-sheet{
-    width:min(430px, calc(100vw - 28px));
-    max-height:calc(100vh - 34px);
-    overflow:auto;
-    border-radius:28px;
-    background:rgba(255,255,255,.98);
-    border:1px solid rgba(15,23,42,.08);
-    box-shadow:0 26px 70px rgba(15,23,42,.22);
-    padding:20px;
-  }
-
-  .month-sheet-top{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    margin-bottom:18px;
-  }
-
-  .month-nav-btn{
-    width:42px;
-    height:42px;
-    border:0;
-    border-radius:15px;
-    background:#f4fbf7;
-    color:#0f172a;
-    font-size:30px;
-    line-height:1;
-    font-weight:900;
-    cursor:pointer;
-    box-shadow:inset 0 0 0 1px rgba(15,122,69,.08);
-    touch-action:manipulation;
-  }
-
-  .month-year-title{
-    font-size:24px;
-    font-weight:950;
-    color:#172033;
-  }
-
-  .month-grid-select{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:10px;
-  }
-
-  .month-option{
-    min-height:56px;
-    border:1px solid rgba(15,23,42,.10);
-    border-radius:15px;
-    background:#fff;
-    color:#0f172a;
-    font-size:16px;
-    font-weight:850;
-    cursor:pointer;
-    box-shadow:0 5px 14px rgba(15,23,42,.04);
-    touch-action:manipulation;
-  }
-
-  .month-option.is-active{
-    color:#fff;
-    border-color:transparent;
-    background:linear-gradient(135deg,#13a96b,#22c67f);
-    box-shadow:0 10px 22px rgba(17,166,106,.24);
-  }
-
-  .month-sheet-actions{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    margin-top:16px;
-  }
-
-  .month-text-btn{
-    border:0;
-    background:transparent;
-    color:#12a86a;
-    font-size:16px;
-    font-weight:950;
-    padding:10px 4px;
-    cursor:pointer;
-    touch-action:manipulation;
-  }
-
-  .profile-badge{
-    width:42px;
-    height:42px;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:linear-gradient(135deg,#e8f8ef,#dff4e8);
-    color:#179b67;
-    font-size:18px;
-    font-weight:900;
-    box-shadow:inset 0 0 0 1px #dbece2;
-    flex:0 0 auto;
-  }
-
+  /* Four cards always stay in one row */
   .money-grid{
     display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:12px;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:7px;
   }
 
   .money-card{
-    background:linear-gradient(180deg,#eaf8f0 0%, #dff3e7 100%);
-    border-radius:16px;
-    text-align:center;
-    padding:14px 8px;
-    box-shadow:0 6px 14px rgba(23,132,88,.10);
-  }
-
-  .money-label{
-    font-size:12px;
-    font-weight:700;
-    color:#64748b;
-    margin-bottom:8px;
-  }
-
-  .money-value{
-    font-size:20px;
-    font-weight:900;
-    color:#1f2937;
-    line-height:1.15;
-  }
-
-  .money-value.is-money{
-    font-size:18px;
-    word-break:break-word;
-  }
-
-  .today-card .hero-sub{
-    margin-bottom:14px;
-  }
-
-  .hero-card{
-    background:rgba(255,255,255,.97);
-    backdrop-filter:blur(6px);
-    border-radius:22px;
-    box-shadow:0 8px 18px rgba(0,0,0,.07);
-    padding:18px 16px;
-    margin-bottom:14px;
-    position:relative;
-    overflow:hidden;
-  }
-
-  .hero-card::before{
-    content:"";
-    position:absolute;
-    right:-30px;
-    top:-30px;
-    width:120px;
-    height:120px;
-    border-radius:50%;
-    background:rgba(34,178,118,.08);
-  }
-
-  .hero-card::after{
-    content:"";
-    position:absolute;
-    left:-20px;
-    bottom:-40px;
-    width:100px;
-    height:100px;
-    border-radius:50%;
-    background:rgba(23,155,103,.06);
-  }
-
-  .hero-eyebrow{
-    font-size:12px;
-    font-weight:900;
-    letter-spacing:.08em;
-    color:#179b67;
-    text-transform:uppercase;
-    margin:0 0 8px;
-    position:relative;
-    z-index:1;
-  }
-
-  .hero-name{
-    font-size:22px;
-    font-weight:900;
-    color:#1f2937;
-    margin:0 0 8px;
-    position:relative;
-    z-index:1;
-  }
-
-  .hero-sub{
-    font-size:14px;
-    color:#64748b;
-    line-height:1.5;
-    margin:0 0 14px;
-    position:relative;
-    z-index:1;
-  }
-
-  .hero-stats{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:10px;
-    position:relative;
-    z-index:1;
-  }
-
-  .hero-stat{
-    background:#f8fbf9;
-    border:1px solid #e6eeea;
-    border-radius:16px;
-    padding:12px 10px;
-    text-align:center;
-  }
-
-  .hero-stat span{
-    display:block;
-    font-size:11px;
-    color:#64748b;
-    font-weight:800;
-    margin-bottom:5px;
-    text-transform:uppercase;
-    letter-spacing:.04em;
-  }
-
-  .hero-stat strong{
-    display:block;
-    font-size:18px;
-    color:#1f2937;
-    font-weight:900;
-  }
-
-  .action-box{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    text-decoration:none;
-    color:inherit;
-    background:linear-gradient(135deg,#179b67,#22b276);
-    border-radius:22px;
-    padding:16px;
-    box-shadow:0 10px 20px rgba(20,134,88,.16);
-    margin-bottom:14px;
-    position:relative;
-    z-index:1;
-  }
-
-  .action-left{
-    display:flex;
-    align-items:center;
-    gap:12px;
     min-width:0;
-  }
-
-  .action-icon-wrap{
-    width:46px;
-    height:46px;
-    border-radius:16px;
-    background:rgba(255,255,255,.18);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex:0 0 46px;
-  }
-
-  .action-icon{
-    font-size:22px;
-    line-height:1;
-  }
-
-  .action-text strong{
-    display:block;
-    font-size:16px;
-    font-weight:900;
-    color:#fff;
-    margin-bottom:4px;
-  }
-
-  .action-text p{
-    margin:0;
-    font-size:12px;
-    color:rgba(255,255,255,.9);
-    line-height:1.45;
-  }
-
-  .action-arrow{
-    color:#fff;
-    font-size:22px;
-    font-weight:900;
-    flex:0 0 auto;
-  }
-
-  .menu-grid{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:12px;
-    margin-bottom:14px;
-    position:relative;
-    z-index:1;
-  }
-
-  .menu-item{
-    background:rgba(255,255,255,.97);
-    backdrop-filter:blur(6px);
-    border-radius:20px;
-    box-shadow:0 8px 18px rgba(0,0,0,.07);
-    text-decoration:none;
-    color:#334155;
-    padding:16px 10px;
+    min-height:72px;
+    padding:10px 4px 9px;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
     text-align:center;
-    min-height:108px;
+    border-radius:15px;
+    background:linear-gradient(180deg,var(--ds-mint) 0%, var(--ds-mint-2) 100%);
+    box-shadow:0 5px 13px rgba(18,130,83,.08);
   }
 
-  .menu-icon{
+  .money-label{
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    margin-bottom:7px;
+    color:#708096;
+    font-size:9px;
+    line-height:1.1;
+    font-weight:850;
+  }
+
+  .money-value{
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--ds-text);
+    font-size:16px;
+    line-height:1.05;
+    font-weight:950;
+  }
+
+  .money-value.money{
+    font-size:14px;
+  }
+
+  /* =========================================================
+     TODAY SUMMARY
+  ========================================================= */
+  .today-panel{
+    padding:15px;
+    margin-bottom:12px;
+  }
+
+  .today-panel::before{
+    content:"";
+    position:absolute;
+    width:120px;
+    height:120px;
+    right:-42px;
+    top:-42px;
+    border-radius:50%;
+    background:rgba(18,168,106,.07);
+  }
+
+  .today-panel::after{
+    content:"";
+    position:absolute;
+    width:90px;
+    height:90px;
+    left:-35px;
+    bottom:-40px;
+    border-radius:50%;
+    background:rgba(18,168,106,.06);
+  }
+
+  .today-eyebrow,
+  .today-title,
+  .today-date,
+  .today-grid{
+    position:relative;
+    z-index:1;
+  }
+
+  .today-eyebrow{
+    margin:0 0 6px;
+    color:var(--ds-green-dark);
+    font-size:10px;
+    line-height:1.2;
+    font-weight:950;
+    letter-spacing:1.15px;
+    text-transform:uppercase;
+  }
+
+  .today-title{
+    margin:0;
+    font-size:21px;
+    line-height:1.08;
+    font-weight:950;
+    letter-spacing:-.4px;
+  }
+
+  .today-date{
+    margin:6px 0 12px;
+    color:var(--ds-muted);
+    font-size:12px;
+    font-weight:700;
+  }
+
+  .today-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+  }
+
+  .today-stat{
+    min-width:0;
+    min-height:70px;
+    padding:10px 5px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #e5ece8;
+    border-radius:16px;
+    background:rgba(250,252,251,.92);
+    text-align:center;
+  }
+
+  .today-stat span{
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    margin-bottom:7px;
+    color:#708096;
+    font-size:9px;
+    line-height:1.1;
+    font-weight:900;
+    letter-spacing:.45px;
+    text-transform:uppercase;
+  }
+
+  .today-stat strong{
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:16px;
+    line-height:1;
+    font-weight:950;
+    color:var(--ds-text);
+  }
+
+  /* =========================================================
+     PICKUP BUTTON
+  ========================================================= */
+  .pickup-card{
+    min-height:74px;
+    margin-bottom:12px;
+    padding:11px 14px 11px 11px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border-radius:23px;
+    background:linear-gradient(135deg,#0fa263 0%, #1bc47b 100%);
+    box-shadow:0 10px 22px rgba(18,140,88,.18);
+    color:#fff;
+    text-decoration:none;
+    transition:transform .15s ease;
+  }
+
+  .pickup-left{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .pickup-icon{
     width:48px;
     height:48px;
-    border-radius:16px;
+    flex:0 0 48px;
     display:flex;
     align-items:center;
     justify-content:center;
+    border-radius:17px;
+    background:rgba(255,255,255,.17);
+    font-size:21px;
+  }
+
+  .pickup-copy{
+    min-width:0;
+  }
+
+  .pickup-copy strong{
+    display:block;
+    margin-bottom:4px;
+    color:#fff;
+    font-size:16px;
+    line-height:1.1;
+    font-weight:950;
+  }
+
+  .pickup-copy small{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:rgba(255,255,255,.9);
+    font-size:10px;
+    line-height:1.2;
+    font-weight:650;
+  }
+
+  .pickup-arrow{
+    flex:0 0 auto;
+    font-size:27px;
+    line-height:1;
+    font-weight:700;
+  }
+
+  /* Four menu buttons always stay in one row */
+  .quick-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:7px;
+  }
+
+  .quick-link{
+    min-width:0;
+    min-height:88px;
+    padding:10px 3px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(223,233,227,.72);
+    border-radius:18px;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 7px 17px rgba(26,70,48,.07);
+    color:#4b5a70;
+    text-align:center;
+    text-decoration:none;
+    transition:transform .15s ease;
+  }
+
+  .quick-icon{
+    width:40px;
+    height:40px;
+    margin-bottom:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:14px;
     background:linear-gradient(180deg,#eaf8f0 0%, #dff3e7 100%);
-    box-shadow:inset 0 0 0 1px #dbece2;
-    font-size:22px;
-    margin-bottom:10px;
+    box-shadow:inset 0 0 0 1px rgba(18,168,106,.1);
+    font-size:19px;
   }
 
-  .menu-item span{
-    font-size:13px;
-    font-weight:800;
-    color:#475569;
-    line-height:1.35;
+  .quick-link span:last-child{
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:10px;
+    line-height:1.1;
+    font-weight:900;
   }
 
+  /* =========================================================
+     FIXED BOTTOM NAVIGATION
+  ========================================================= */
   .bottom-nav{
     position:fixed;
     left:50%;
-    bottom:12px;
+    bottom:calc(14px + env(safe-area-inset-bottom, 0px));
     transform:translateX(-50%);
-    width:min(420px, calc(100% - 24px));
-    background:#fff;
-    border-radius:24px;
-    box-shadow:0 12px 28px rgba(0,0,0,0.12);
+    width:min(430px, calc(100% - 24px));
+    min-height:66px;
+    z-index:9999;
     display:grid;
-    grid-template-columns:repeat(4,1fr);
-    padding:10px 6px;
-    z-index:999;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    align-items:center;
+    padding:7px 6px;
+    border:1px solid rgba(223,233,227,.85);
+    border-radius:23px;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 14px 36px rgba(17,55,37,.18);
+    backdrop-filter:blur(15px);
+    -webkit-backdrop-filter:blur(15px);
   }
 
-  .bottom-link{
-    text-decoration:none;
-    text-align:center;
-    color:#7a7f87;
-    font-size:12px;
-    font-weight:800;
+  .nav-link{
+    min-width:0;
+    min-height:50px;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
     gap:4px;
+    border-radius:15px;
+    color:#7d858f;
+    text-decoration:none;
+    transition:transform .15s ease, color .15s ease, background .15s ease;
   }
 
-  .bottom-link span{
-    font-size:20px;
+  .nav-link.active{
+    color:var(--ds-green-dark);
+    background:#effaf4;
+  }
+
+  .nav-icon{
+    font-size:19px;
     line-height:1;
   }
 
-  .bottom-link.active{
-    color:#169864;
+  .nav-label{
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    text-align:center;
+    font-size:9px;
+    line-height:1;
+    font-weight:900;
   }
 
-  @media (max-width: 520px){
-    .summary-sub{
-      max-width:100%;
+  @media (max-width:390px){
+    .seller-dashboard{
+      padding-top:8px;
     }
 
-    .month-form{
-      grid-template-columns:minmax(0,1fr) 88px;
-      gap:9px;
+    .dashboard-wrap{
+      padding:0 10px;
     }
 
-    .month-input-wrap{
-      min-width:0;
-      width:100%;
-      min-height:56px;
-      padding:8px 12px;
+    .account-panel,
+    .today-panel{
+      padding:13px;
     }
 
-    .month-display{
-      font-size:15px;
+    .account-title,
+    .today-title{
+      font-size:19px;
     }
 
-    .month-submit{
-      min-height:56px;
-      padding:0 14px;
-      min-width:88px;
-    }
-
-    .month-submit-icon{
-      width:7px;
-      height:7px;
-    }
-
-    .month-sheet-backdrop{
-      align-items:flex-end;
-      padding:0 10px 12px;
-    }
-
-    .month-sheet{
-      width:min(430px, calc(100vw - 20px));
-      max-height:calc(100vh - 80px);
-      border-radius:26px;
-      padding:18px;
-    }
-
-    .month-grid-select{
-      gap:8px;
-    }
-
-    .month-option{
-      min-height:52px;
-      font-size:15px;
-    }
-
-    .money-grid{
-      gap:10px;
-    }
-
-    .money-value{
-      font-size:18px;
-    }
-
-    .money-value.is-money{
-      font-size:16px;
-    }
-
-    .hero-stat strong{
-      font-size:16px;
-    }
-
-    .menu-grid{
-      grid-template-columns:repeat(2,1fr);
-    }
-  }
-
-  @media (max-width: 360px){
-    .summary-title{
-      font-size:18px;
-    }
-
-    .summary-month-chip{
+    .account-subtitle{
       font-size:11px;
+    }
+
+    .month-chip{
+      font-size:10px;
       padding:6px 9px;
     }
 
     .month-form{
-      grid-template-columns:1fr;
+      grid-template-columns:minmax(0,1fr) 86px;
+      gap:7px;
     }
 
-    .month-submit{
-      width:100%;
+    .month-control,
+    .view-button{
+      min-height:49px;
+    }
+
+    .month-icon{
+      width:33px;
+      height:33px;
+      flex-basis:33px;
+    }
+
+    .month-text,
+    .view-button{
+      font-size:13px;
+    }
+
+    .money-grid,
+    .quick-grid{
+      gap:5px;
+    }
+
+    .money-card{
+      min-height:68px;
+      padding-left:2px;
+      padding-right:2px;
+      border-radius:13px;
+    }
+
+    .money-label{
+      font-size:8px;
+    }
+
+    .money-value{
+      font-size:14px;
+    }
+
+    .money-value.money{
+      font-size:12px;
+    }
+
+    .today-grid{
+      gap:6px;
+    }
+
+    .today-stat{
+      min-height:66px;
+      padding-left:3px;
+      padding-right:3px;
+    }
+
+    .today-stat span{
+      font-size:8px;
+    }
+
+    .today-stat strong{
+      font-size:14px;
+    }
+
+    .pickup-card{
+      min-height:70px;
+      padding-right:12px;
+    }
+
+    .pickup-icon{
+      width:45px;
+      height:45px;
+      flex-basis:45px;
+    }
+
+    .pickup-copy strong{
+      font-size:14px;
+    }
+
+    .pickup-copy small{
+      font-size:9px;
+    }
+
+    .quick-link{
+      min-height:82px;
+      border-radius:16px;
+    }
+
+    .quick-icon{
+      width:37px;
+      height:37px;
+      margin-bottom:7px;
+      font-size:17px;
+    }
+
+    .quick-link span:last-child{
+      font-size:9px;
+    }
+  }
+
+  @media (max-width:330px){
+    .account-heading-row{
+      gap:6px;
+    }
+
+    .account-title,
+    .today-title{
+      font-size:18px;
+    }
+
+    .month-form{
+      grid-template-columns:minmax(0,1fr) 78px;
+    }
+
+    .view-button{
+      padding:0 10px;
+      font-size:12px;
+    }
+
+    .money-label,
+    .today-stat span,
+    .quick-link span:last-child,
+    .nav-label{
+      font-size:7.5px;
+    }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,
+    *::before,
+    *::after{
+      scroll-behavior:auto !important;
+      transition:none !important;
     }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="app-shell">
+<section class="seller-dashboard">
+  <main class="dashboard-wrap">
 
-  <div class="page-fx" aria-hidden="true">
-    <span class="fx-bubble fx-bubble-1"></span>
-    <span class="fx-bubble fx-bubble-2"></span>
-    <span class="fx-bubble fx-bubble-3"></span>
-    <span class="fx-bubble fx-bubble-4"></span>
-    <span class="fx-bubble fx-bubble-5"></span>
-
-    <span class="fx-parcel fx-parcel-1">📦</span>
-    <span class="fx-parcel fx-parcel-2">📦</span>
-    <span class="fx-parcel fx-parcel-3">📦</span>
-    <span class="fx-parcel fx-parcel-4">📦</span>
-  </div>
-
-  <div class="phone-wrap">
-    <div class="top-header">
-      <div class="status-bar"></div>
-
-      <div class="top-row">
-        <div class="left-top">
-          <a href="#" class="top-btn">←</a>
-          <img src="{% static 'img/favicon.png' %}?v=20260604ds10" alt="DS EXPRESS" class="logo">
-          <div class="page-title">Dashboard</div>
+    <section class="panel account-panel">
+      <div class="account-heading-row">
+        <div>
+          <h1 class="account-title">Account Summary</h1>
+          <p class="account-subtitle">Choose month to view seller account result</p>
         </div>
-
-        <a href="{% url 'portal:change_password' %}" class="top-btn">🔔</a>
-      </div>
-    </div>
-
-    <div class="content">
-      <div class="summary-card">
-        <div class="summary-top">
-          <div class="summary-copy">
-            <div class="summary-title-row">
-              <h2 class="summary-title">Account Summary</h2>
-              <span class="summary-month-chip">{{ selected_month_label }}</span>
-            </div>
-            <div class="summary-sub">Choose month to view seller account result</div>
-          </div>
-
-          <form method="get" class="month-form" id="monthFilterForm">
-            <input
-              type="hidden"
-              name="month"
-              value="{{ selected_month }}"
-              id="monthValueInput"
-              class="month-hidden-input"
-            >
-
-            <button type="button" class="month-input-wrap" id="monthPickerOpen" aria-label="Choose report month">
-              <span class="month-icon">📅</span>
-              <span class="month-input-text">
-                <span class="month-input-label">Month</span>
-                <span class="month-display" id="monthDisplay">{{ selected_month_label }}</span>
-              </span>
-              <span class="month-caret">⌄</span>
-            </button>
-
-            <button type="submit" class="month-submit">
-              <span class="month-submit-icon" aria-hidden="true"></span>
-              <span>View</span>
-            </button>
-          </form>
-        </div>
-
-        <div class="month-sheet-backdrop" id="monthSheetBackdrop" aria-hidden="true">
-          <div class="month-sheet" role="dialog" aria-modal="true" aria-label="Choose report month">
-            <div class="month-sheet-top">
-              <button type="button" class="month-nav-btn" id="monthPrevYear" aria-label="Previous year">‹</button>
-              <div class="month-year-title" id="monthYearTitle">{{ selected_month_year|default:"2026" }}</div>
-              <button type="button" class="month-nav-btn" id="monthNextYear" aria-label="Next year">›</button>
-            </div>
-
-            <div class="month-grid-select" id="monthGridSelect">
-              <button type="button" class="month-option" data-month="01">Jan</button>
-              <button type="button" class="month-option" data-month="02">Feb</button>
-              <button type="button" class="month-option" data-month="03">Mar</button>
-              <button type="button" class="month-option" data-month="04">Apr</button>
-              <button type="button" class="month-option" data-month="05">May</button>
-              <button type="button" class="month-option" data-month="06">Jun</button>
-              <button type="button" class="month-option" data-month="07">Jul</button>
-              <button type="button" class="month-option" data-month="08">Aug</button>
-              <button type="button" class="month-option" data-month="09">Sep</button>
-              <button type="button" class="month-option" data-month="10">Oct</button>
-              <button type="button" class="month-option" data-month="11">Nov</button>
-              <button type="button" class="month-option" data-month="12">Dec</button>
-            </div>
-
-            <div class="month-sheet-actions">
-              <button type="button" class="month-text-btn" id="monthClearBtn">Clear</button>
-              <button type="button" class="month-text-btn" id="monthThisBtn">This month</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="money-grid">
-          <div class="money-card">
-            <div class="money-label">Total Balance</div>
-            <div class="money-value is-money">${{ month_balance|default:0|floatformat:2 }}</div>
-          </div>
-
-          <div class="money-card">
-            <div class="money-label">Delivery</div>
-            <div class="money-value">{{ month_delivered_parcels|default:0 }}</div>
-          </div>
-
-          <div class="money-card">
-            <div class="money-label">Pending</div>
-            <div class="money-value">{{ month_pending_parcels|default:0 }}</div>
-          </div>
-
-          <div class="money-card">
-            <div class="money-label">Done %</div>
-            <div class="money-value">{{ month_done_percent|default:0 }}%</div>
-          </div>
-        </div>
+        <span class="month-chip">{{ selected_month_label }}</span>
       </div>
 
-      <div class="hero-card today-card">
-        <p class="hero-eyebrow">Welcome Back, {{ seller.name }}</p>
-        <h3 class="hero-name">Today Summary</h3>
-        <p class="hero-sub">{{ today_label }}</p>
+      <form method="get" class="month-form" id="monthForm">
+        <button type="button" class="month-control" id="monthTrigger" aria-label="Choose month">
+          <span class="month-icon">📅</span>
+          <span class="month-text" id="monthDisplay">{{ selected_month_label }}</span>
+          <span class="month-caret">⌄</span>
+        </button>
 
-        <div class="hero-stats">
-          <div class="hero-stat">
-            <span>Total COD</span>
-            <strong>${{ today_cod|default:0|floatformat:2 }}</strong>
-          </div>
-          <div class="hero-stat">
-            <span>Total Sent</span>
-            <strong>{{ today_sent|default:0 }}</strong>
-          </div>
-          <div class="hero-stat">
-            <span>Total Done</span>
-            <strong>{{ today_done|default:0 }}</strong>
-          </div>
+        <input
+          type="month"
+          name="month"
+          value="{{ selected_month }}"
+          class="month-native"
+          id="monthInput"
+        >
+
+        <button type="submit" class="view-button">
+          <span class="view-dot"></span>
+          <span>View</span>
+        </button>
+      </form>
+
+      <div class="money-grid">
+        <div class="money-card">
+          <div class="money-label">Total Balance</div>
+          <div class="money-value money">${{ month_balance|default:0|floatformat:2 }}</div>
+        </div>
+
+        <div class="money-card">
+          <div class="money-label">Delivery</div>
+          <div class="money-value">{{ month_delivered_parcels|default:0 }}</div>
+        </div>
+
+        <div class="money-card">
+          <div class="money-label">Pending</div>
+          <div class="money-value">{{ month_pending_parcels|default:0 }}</div>
+        </div>
+
+        <div class="money-card">
+          <div class="money-label">Done %</div>
+          <div class="money-value">{{ month_done_percent|default:0 }}%</div>
         </div>
       </div>
+    </section>
 
-      <a href="{% url 'portal:booking_seller' %}" class="action-box">
-        <div class="action-left">
-          <div class="action-icon-wrap">
-            <div class="action-icon">📦</div>
-          </div>
+    <section class="panel today-panel">
+      <p class="today-eyebrow">Welcome Back, {{ seller.name }}</p>
+      <h2 class="today-title">Today Summary</h2>
+      <p class="today-date">{{ today_label }}</p>
 
-          <div class="action-text">
-            <strong>Create Pickup</strong>
-            <p>Book a rider to collect your parcels quickly</p>
-          </div>
+      <div class="today-grid">
+        <div class="today-stat">
+          <span>Total COD</span>
+          <strong>${{ today_cod|default:0|floatformat:2 }}</strong>
         </div>
 
-        <div class="action-arrow">→</div>
+        <div class="today-stat">
+          <span>Total Sent</span>
+          <strong>{{ today_sent|default:0 }}</strong>
+        </div>
+
+        <div class="today-stat">
+          <span>Total Done</span>
+          <strong>{{ today_done|default:0 }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <a href="{% url 'portal:booking_seller' %}" class="pickup-card">
+      <div class="pickup-left">
+        <span class="pickup-icon">📦</span>
+        <span class="pickup-copy">
+          <strong>Create Pickup</strong>
+          <small>Book a rider to collect your parcels quickly</small>
+        </span>
+      </div>
+      <span class="pickup-arrow">→</span>
+    </a>
+
+    <section class="quick-grid" aria-label="Seller portal menu">
+      <a href="{% url 'portal:orders' %}" class="quick-link">
+        <span class="quick-icon">🛵</span>
+        <span>My Orders</span>
       </a>
 
-      <div class="menu-grid">
-        <a href="{% url 'portal:orders' %}" class="menu-item">
-          <div class="menu-icon">🛵</div>
-          <span>My Orders</span>
-        </a>
+      <a href="{% url 'portal:seller_report' %}" class="quick-link">
+        <span class="quick-icon">📊</span>
+        <span>Report</span>
+      </a>
 
-        <a href="{% url 'portal:seller_report' %}" class="menu-item">
-          <div class="menu-icon">📊</div>
-          <span>Report</span>
-        </a>
+      <a href="{% url 'portal:tracking' %}" class="quick-link">
+        <span class="quick-icon">📍</span>
+        <span>Tracking</span>
+      </a>
 
-        <a href="{% url 'portal:tracking' %}" class="menu-item">
-          <div class="menu-icon">📍</div>
-          <span>Tracking</span>
-        </a>
+      <a href="{% url 'portal:stock' %}" class="quick-link">
+        <span class="quick-icon">📦</span>
+        <span>Inventory</span>
+      </a>
+    </section>
+  </main>
 
-        <a href="/portal/stock/" class="menu-item">
-          <div class="menu-icon">📦</div>
-          <span>Inventory</span>
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <nav class="bottom-nav">
-    <a href="{% url 'portal:dashboard' %}" class="bottom-link active">
-      <span>🏠</span>
-      <small>Home</small>
+  <nav class="bottom-nav" aria-label="Bottom navigation">
+    <a href="{% url 'portal:dashboard' %}" class="nav-link active">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
     </a>
 
-    <a href="tel:+85500000000" class="bottom-link">
-      <span>📞</span>
-      <small>Contact</small>
+    <a href="tel:011789955" class="nav-link">
+      <span class="nav-icon">📞</span>
+      <span class="nav-label">Contact</span>
     </a>
 
-    <a href="#" class="bottom-link">
-      <span>❔</span>
-      <small>Help</small>
+    <a href="https://t.me/DS_Express_Sale" target="_blank" rel="noopener noreferrer" class="nav-link">
+      <span class="nav-icon">❔</span>
+      <span class="nav-label">Help</span>
     </a>
 
-    <a href="{% url 'portal:change_password' %}" class="bottom-link">
-      <span>👤</span>
-      <small>Profile</small>
+    <a href="{% url 'portal:change_password' %}" class="nav-link">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
     </a>
   </nav>
 </section>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-(function () {
-  document.title = "DS EXPRESS";
+  (function () {
+    const trigger = document.getElementById('monthTrigger');
+    const input = document.getElementById('monthInput');
+    const display = document.getElementById('monthDisplay');
 
-  const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-  if (appleTitle) {
-    appleTitle.setAttribute("content", "DS EXPRESS");
-  }
+    if (!trigger || !input || !display) return;
 
-  const appName = document.querySelector('meta[name="application-name"]');
-  if (appName) {
-    appName.setAttribute("content", "DS EXPRESS");
-  }
-})();
-</script>
-
-<script>
-(function () {
-  const form = document.getElementById("monthFilterForm");
-  const input = document.getElementById("monthValueInput");
-  const openBtn = document.getElementById("monthPickerOpen");
-  const display = document.getElementById("monthDisplay");
-  const backdrop = document.getElementById("monthSheetBackdrop");
-  const yearTitle = document.getElementById("monthYearTitle");
-  const prevYear = document.getElementById("monthPrevYear");
-  const nextYear = document.getElementById("monthNextYear");
-  const clearBtn = document.getElementById("monthClearBtn");
-  const thisBtn = document.getElementById("monthThisBtn");
-  const monthButtons = Array.from(document.querySelectorAll(".month-option"));
-
-  if (!form || !input || !openBtn || !display || !backdrop || !yearTitle) return;
-
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  let selectedValue = input.value || "";
-  let pickerYear = selectedValue && selectedValue.indexOf("-") > -1
-    ? parseInt(selectedValue.split("-")[0], 10)
-    : new Date().getFullYear();
-
-  function valueToLabel(value) {
-    if (!value || value.indexOf("-") === -1) return "This month";
-    const parts = value.split("-");
-    const year = parts[0];
-    const monthIndex = Math.max(0, Math.min(11, parseInt(parts[1], 10) - 1));
-    return monthNames[monthIndex] + " " + year;
-  }
-
-  function setOpen(open) {
-    backdrop.classList.toggle("is-open", open);
-    backdrop.setAttribute("aria-hidden", open ? "false" : "true");
-    document.body.style.overflow = open ? "hidden" : "";
-    if (open) renderPicker();
-  }
-
-  function renderPicker() {
-    yearTitle.textContent = pickerYear;
-    monthButtons.forEach(function (btn) {
-      const value = pickerYear + "-" + btn.dataset.month;
-      btn.classList.toggle("is-active", value === selectedValue);
+    trigger.addEventListener('click', function () {
+      try {
+        if (typeof input.showPicker === 'function') {
+          input.showPicker();
+        } else {
+          input.click();
+        }
+      } catch (error) {
+        input.click();
+      }
     });
-  }
 
-  function setMonth(value, submitNow) {
-    selectedValue = value;
-    input.value = value;
-    display.textContent = valueToLabel(value);
-    renderPicker();
-    setOpen(false);
-    if (submitNow) form.submit();
-  }
+    input.addEventListener('change', function () {
+      if (!input.value) return;
 
-  openBtn.addEventListener("click", function () {
-    setOpen(true);
-  });
+      const parts = input.value.split('-');
+      const year = Number(parts[0]);
+      const month = Number(parts[1]);
 
-  backdrop.addEventListener("click", function (event) {
-    if (event.target === backdrop) setOpen(false);
-  });
+      if (!year || !month) return;
 
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") setOpen(false);
-  });
-
-  if (prevYear) {
-    prevYear.addEventListener("click", function () {
-      pickerYear -= 1;
-      renderPicker();
+      const date = new Date(year, month - 1, 1);
+      display.textContent = date.toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric'
+      });
     });
-  }
-
-  if (nextYear) {
-    nextYear.addEventListener("click", function () {
-      pickerYear += 1;
-      renderPicker();
-    });
-  }
-
-  monthButtons.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      setMonth(pickerYear + "-" + btn.dataset.month, true);
-    });
-  });
-
-  if (clearBtn) {
-    clearBtn.addEventListener("click", function () {
-      setMonth("", true);
-    });
-  }
-
-  if (thisBtn) {
-    thisBtn.addEventListener("click", function () {
-      const now = new Date();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      pickerYear = now.getFullYear();
-      setMonth(pickerYear + "-" + month, true);
-    });
-  }
-
-  display.textContent = valueToLabel(input.value);
-  renderPicker();
-})();
+  })();
 </script>
 {% endblock %}

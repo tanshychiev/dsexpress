@@ -577,6 +577,8 @@ def seller_login(request):
                 form.add_error(None, "This seller account is inactive.")
             else:
                 login(request, user)
+                
+                request.session.set_expiry(settings.SESSION_COOKIE_AGE)
 
                 SellerPortalSession.objects.create(
                     seller=account.seller,
@@ -747,36 +749,75 @@ def dashboard(request):
         request.GET.get("month", "")
     )
 
-    qs = Order.objects.filter(seller=seller, is_deleted=False)
+    qs = Order.objects.filter(
+        seller=seller,
+        is_deleted=False,
+    )
 
-    pending_statuses = [
+    # These statuses are shown as Pending in the seller dashboard.
+    # getattr() keeps this code safe if a status constant is not defined
+    # on an older version of the Order model.
+    pending_statuses = {
         Order.STATUS_CREATED,
         Order.STATUS_INBOUND,
+        getattr(Order, "STATUS_PROCESSING", "PROCESSING"),
         Order.STATUS_OUT_FOR_DELIVERY,
         Order.STATUS_PROVINCE_ASSIGNED,
         Order.STATUS_RETURN_ASSIGNED,
-        Order.STATUS_RETURNING,
-    ]
+        getattr(Order, "STATUS_RETURNING", "RETURNING"),
+    }
 
     month_qs = qs.filter(
         created_at__date__gte=month_start,
         created_at__date__lte=month_end,
     )
-    month_delivered_qs = month_qs.filter(status=Order.STATUS_DELIVERED)
 
-    month_total_sent = month_qs.count()
+    month_delivered_qs = month_qs.filter(
+        status=Order.STATUS_DELIVERED,
+    )
+
     month_delivered_parcels = month_delivered_qs.count()
-    month_pending_parcels = month_qs.filter(status__in=pending_statuses).count()
-    month_balance = month_delivered_qs.aggregate(total=Sum("price"))["total"] or 0
-    month_done_percent = _safe_pct(month_delivered_parcels, month_total_sent)
+
+    month_pending_parcels = month_qs.filter(
+        status__in=pending_statuses,
+    ).count()
+
+    month_balance = (
+        month_delivered_qs.aggregate(total=Sum("price"))["total"] or 0
+    )
+
+    # FIX:
+    # The dashboard displays only Delivery and Pending, so Done %
+    # must use the same two visible totals.
+    #
+    # Example:
+    # 54 delivered / (54 delivered + 4 pending) = 93.10%
+    #
+    # Returned and void orders are not included in this percentage.
+    month_delivery_total = (
+        month_delivered_parcels + month_pending_parcels
+    )
+
+    month_done_percent = _safe_pct(
+        month_delivered_parcels,
+        month_delivery_total,
+    )
 
     today = timezone.localdate()
-    today_sent_qs = qs.filter(created_at__date=today)
-    today_done_qs = qs.filter(status=Order.STATUS_DELIVERED, done_at=today)
+
+    today_sent_qs = qs.filter(
+        created_at__date=today,
+    )
+
+    today_done_qs = qs.filter(
+        status=Order.STATUS_DELIVERED,
+        done_at=today,
+    )
 
     context = {
         "seller": seller,
 
+        # Account Summary
         "selected_month": selected_month,
         "selected_month_label": month_start.strftime("%B %Y"),
         "month_balance": month_balance,
@@ -784,20 +825,34 @@ def dashboard(request):
         "month_pending_parcels": month_pending_parcels,
         "month_done_percent": month_done_percent,
 
+        # Today Summary
         "today_label": today.strftime("%d %B %Y"),
-        "today_cod": today_done_qs.aggregate(total=Sum("price"))["total"] or 0,
+        "today_cod": (
+            today_done_qs.aggregate(total=Sum("price"))["total"] or 0
+        ),
         "today_sent": today_sent_qs.count(),
         "today_done": today_done_qs.count(),
 
+        # Existing dashboard totals
         "total_parcels": qs.count(),
-        "pending_parcels": qs.filter(status__in=pending_statuses).count(),
-        "out_for_delivery": qs.filter(status=Order.STATUS_OUT_FOR_DELIVERY).count(),
-        "delivered_parcels": qs.filter(status=Order.STATUS_DELIVERED).count(),
+        "pending_parcels": qs.filter(
+            status__in=pending_statuses,
+        ).count(),
+        "out_for_delivery": qs.filter(
+            status=Order.STATUS_OUT_FOR_DELIVERY,
+        ).count(),
+        "delivered_parcels": qs.filter(
+            status=Order.STATUS_DELIVERED,
+        ).count(),
         "cod_balance": month_balance,
         "recent_orders": qs.order_by("-id")[:10],
     }
 
-    return render(request, "customerportal/dashboard.html", context)
+    return render(
+        request,
+        "customerportal/dashboard.html",
+        context,
+    )
 
 
 # =========================================================

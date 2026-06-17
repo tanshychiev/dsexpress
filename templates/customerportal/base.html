@@ -16,13 +16,13 @@
 
   <title>DS EXPRESS</title>
 
-  <link rel="icon" type="image/png" href="{{ ds_icon_192 }}?v=20260604fit3">
-  <link rel="shortcut icon" type="image/png" href="{{ ds_icon_192 }}?v=20260604fit3">
+  <link rel="icon" type="image/png" href="{{ ds_icon_192 }}?v=20260617loginfix1">
+  <link rel="shortcut icon" type="image/png" href="{{ ds_icon_192 }}?v=20260617loginfix1">
 
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ ds_icon_180 }}?v=20260604fit3">
-  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ ds_icon_180 }}?v=20260604fit3">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ ds_icon_180 }}?v=20260617loginfix1">
+  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ ds_icon_180 }}?v=20260617loginfix1">
 
-  <link rel="manifest" href="{{ ds_manifest }}?v=20260604fit3">
+  <link rel="manifest" href="{{ ds_manifest }}?v=20260617loginfix1">
 
   <meta name="application-name" content="DS EXPRESS">
   <meta name="apple-mobile-web-app-title" content="DS EXPRESS">
@@ -36,7 +36,7 @@
     document.title = "DS EXPRESS";
   </script>
 
-  <link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}?v=20260604fit3">
+  <link rel="stylesheet" href="{% static 'customerportal/css/portal.css' %}?v=20260617loginfix1">
   {% block extra_css %}{% endblock %}
 
   <style>
@@ -535,7 +535,7 @@
   <div class="portal-container header-inner">
     <a href="{% url 'portal:home' %}" class="brand">
       <span class="logo">
-        <img src="{{ ds_icon_192 }}?v=20260604fit3" alt="DS EXPRESS">
+        <img src="{{ ds_icon_192 }}?v=20260617loginfix1" alt="DS EXPRESS">
       </span>
       <span>DS EXPRESS</span>
     </a>
@@ -582,7 +582,7 @@
   <div class="portal-container footer-inner">
     <div class="footer-brand">
       <div class="footer-logo">
-        <img src="{{ ds_icon_192 }}?v=20260604fit3" alt="DS EXPRESS">
+        <img src="{{ ds_icon_192 }}?v=20260617loginfix1" alt="DS EXPRESS">
       </div>
       <div>
         <div class="footer-title">DS EXPRESS</div>
@@ -597,7 +597,7 @@
   </div>
 </footer>
 
-<script src="{% static 'customerportal/js/portal.js' %}?v=20260604fit3"></script>
+<script src="{% static 'customerportal/js/portal.js' %}?v=20260617loginfix1"></script>
 
 <script>
 (function () {
@@ -615,39 +615,7 @@
 })();
 </script>
 
-{% if request.user.is_authenticated %}
-<script>
-(function () {
-  const INACTIVITY_LIMIT = 5 * 60 * 1000;
-  let inactivityTimer = null;
-
-  function logoutNow() {
-    alert("Your session expired after 5 minutes of inactivity. Please sign in again.");
-    window.location.href = "{% url 'portal:logout' %}";
-  }
-
-  function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(logoutNow, INACTIVITY_LIMIT);
-  }
-
-  [
-    "load",
-    "mousemove",
-    "mousedown",
-    "click",
-    "scroll",
-    "keypress",
-    "touchstart"
-  ].forEach(function (eventName) {
-    document.addEventListener(eventName, resetInactivityTimer, true);
-  });
-
-  resetInactivityTimer();
-})();
-</script>
-{% endif %}
-
+{# Login expiry is controlled by Django session settings. #}
 {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -172,11 +172,15 @@ LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
-SESSION_COOKIE_AGE = 90000
+# Keep seller portal login for up to 10 years
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 365 * 10
+
+# Refresh the expiry whenever the customer uses the website
 SESSION_SAVE_EVERY_REQUEST = True
+
+# Do not logout when browser closes
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
-SELLER_PORTAL_SESSION_TIMEOUT = 60 * 60 * 24 * 180  # seller portal = 6 months
-
-
+# Seller portal middleware timeout
+SELLER_PORTAL_SESSION_TIMEOUT = 60 * 60 * 24 * 365 * 10
 

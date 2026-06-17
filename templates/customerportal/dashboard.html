@@ -101,7 +101,7 @@
   .month-chip{
     flex:0 0 auto;
     padding:7px 11px;
-    border:1px solid rgba(18,168,106,.13);
+    border:1px solid rgba(18,168,106,.15);
     border-radius:999px;
     background:#eefaf4;
     color:var(--ds-green-dark);
@@ -109,6 +109,14 @@
     line-height:1;
     font-weight:950;
     white-space:nowrap;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+    touch-action:manipulation;
+  }
+
+  .month-chip:active{
+    transform:scale(.96);
   }
 
   .month-form{
@@ -119,7 +127,216 @@
     margin-bottom:12px;
   }
 
-  .month-control,
+  /* =========================================================
+     MOBILE MONTH PICKER
+  ========================================================= */
+  .month-picker-overlay{
+    position:fixed;
+    inset:0;
+    z-index:12000;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:16px;
+    background:rgba(15,23,42,.46);
+    backdrop-filter:blur(3px);
+    -webkit-backdrop-filter:blur(3px);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .18s ease, visibility .18s ease;
+  }
+
+  .month-picker-overlay.is-open{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+  }
+
+  .month-picker-sheet{
+    width:min(430px,100%);
+    max-height:calc(100vh - 32px);
+    overflow:auto;
+    padding:10px 16px calc(16px + env(safe-area-inset-bottom,0px));
+    border-radius:26px 26px 20px 20px;
+    background:#fff;
+    box-shadow:0 24px 60px rgba(15,23,42,.28);
+    transform:translateY(28px);
+    transition:transform .22s ease;
+  }
+
+  .month-picker-overlay.is-open .month-picker-sheet{
+    transform:translateY(0);
+  }
+
+  .month-picker-handle{
+    width:42px;
+    height:5px;
+    margin:0 auto 13px;
+    border-radius:999px;
+    background:#d8e2dc;
+  }
+
+  .month-picker-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .month-picker-title{
+    margin:0;
+    color:var(--ds-text);
+    font-size:18px;
+    line-height:1.15;
+    font-weight:950;
+  }
+
+  .month-picker-close{
+    width:36px;
+    height:36px;
+    flex:0 0 36px;
+    display:grid;
+    place-items:center;
+    border:0;
+    border-radius:12px;
+    background:#f1f6f3;
+    color:#526174;
+    font-size:20px;
+    cursor:pointer;
+  }
+
+  .month-year-bar{
+    display:grid;
+    grid-template-columns:44px minmax(0,1fr) 44px;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+  }
+
+  .month-year-button{
+    width:44px;
+    height:44px;
+    display:grid;
+    place-items:center;
+    border:1px solid #e1ebe5;
+    border-radius:14px;
+    background:#f8fbf9;
+    color:var(--ds-green-dark);
+    font-size:22px;
+    line-height:1;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .month-year-label{
+    min-width:0;
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:14px;
+    background:linear-gradient(180deg,#edf9f3 0%,#e6f5ed 100%);
+    color:var(--ds-text);
+    font-size:18px;
+    font-weight:950;
+  }
+
+  .month-picker-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:9px;
+  }
+
+  .month-option{
+    min-width:0;
+    min-height:48px;
+    padding:0 6px;
+    border:1px solid #e2ebe6;
+    border-radius:14px;
+    background:#fbfdfc;
+    color:#3e4b5d;
+    font-size:14px;
+    font-weight:850;
+    cursor:pointer;
+    transition:transform .12s ease, background .12s ease, color .12s ease, border-color .12s ease;
+  }
+
+  .month-option:active{
+    transform:scale(.96);
+  }
+
+  .month-option.is-selected{
+    border-color:var(--ds-green);
+    background:linear-gradient(135deg,#0fa263 0%,#1bc47b 100%);
+    color:#fff;
+    box-shadow:0 7px 16px rgba(18,168,106,.22);
+  }
+
+  .month-option.is-current:not(.is-selected){
+    border-color:rgba(18,168,106,.35);
+    background:#effaf4;
+    color:var(--ds-green-dark);
+  }
+
+  .month-picker-selection{
+    min-height:42px;
+    margin:14px 0 0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(15,122,69,.12);
+    border-radius:14px;
+    background:#f1faf5;
+    color:var(--ds-green-dark);
+    text-align:center;
+    font-size:13px;
+    line-height:1.2;
+    font-weight:900;
+  }
+
+  .month-picker-tip{
+    margin:8px 0 0;
+    color:#718078;
+    text-align:center;
+    font-size:10px;
+    line-height:1.35;
+    font-weight:700;
+  }
+
+  .month-picker-actions{
+    display:grid;
+    grid-template-columns:1fr 1.35fr;
+    gap:9px;
+    margin-top:15px;
+  }
+
+  .month-picker-action{
+    min-height:48px;
+    border:0;
+    border-radius:15px;
+    font-size:14px;
+    font-weight:950;
+    cursor:pointer;
+  }
+
+  .month-picker-cancel{
+    background:#eef3f0;
+    color:#5a6778;
+  }
+
+  .month-picker-apply{
+    background:linear-gradient(135deg,#0fa263 0%,#1bc47b 100%);
+    color:#fff;
+    box-shadow:0 8px 18px rgba(18,168,106,.20);
+  }
+
+  body.month-picker-open{
+    overflow:hidden;
+    touch-action:none;
+  }
+
   .view-button{
     min-height:52px;
     border:0;
@@ -132,15 +349,31 @@
   .month-control{
     width:100%;
     min-width:0;
+    min-height:52px;
     display:flex;
     align-items:center;
     gap:10px;
     padding:7px 14px 7px 9px;
+    border:1px solid rgba(18,168,106,.16);
+    border-radius:999px;
+    background:linear-gradient(180deg,#edf9f3 0%,#e5f6ee 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.92),
+      0 6px 16px rgba(15,122,69,.06);
     color:var(--ds-text);
-    background:linear-gradient(180deg,#edf9f3 0%, #e5f6ee 100%);
-    border:1px solid rgba(18,168,106,.14);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
     text-align:left;
+    cursor:pointer;
+    touch-action:manipulation;
+    -webkit-appearance:none;
+    appearance:none;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+
+  .month-control:hover{
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.92),
+      0 9px 20px rgba(15,122,69,.10);
   }
 
   .month-control:active,
@@ -179,16 +412,6 @@
     color:var(--ds-green-dark);
     font-size:18px;
     font-weight:950;
-  }
-
-  .month-native{
-    position:absolute;
-    left:0;
-    top:0;
-    width:1px;
-    height:1px;
-    opacity:0;
-    pointer-events:none;
   }
 
   .view-button{
@@ -372,6 +595,8 @@
      PICKUP BUTTON
   ========================================================= */
   .pickup-card{
+    position:relative;
+    isolation:isolate;
     min-height:74px;
     margin-bottom:12px;
     padding:11px 14px 11px 11px;
@@ -379,12 +604,103 @@
     align-items:center;
     justify-content:space-between;
     gap:10px;
+    overflow:hidden;
     border-radius:23px;
-    background:linear-gradient(135deg,#0fa263 0%, #1bc47b 100%);
-    box-shadow:0 10px 22px rgba(18,140,88,.18);
+    background:linear-gradient(110deg,#0d9858 0%,#13b66b 48%,#20c97e 100%);
+    box-shadow:0 10px 24px rgba(18,140,88,.22);
     color:#fff;
     text-decoration:none;
-    transition:transform .15s ease;
+    transition:transform .15s ease, box-shadow .2s ease;
+    animation:pickupSoftBlink 2.8s ease-in-out infinite;
+  }
+
+  .pickup-card::before{
+    content:"";
+    position:absolute;
+    z-index:-1;
+    top:-35%;
+    bottom:-35%;
+    left:-45%;
+    width:34%;
+    pointer-events:none;
+    background:linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,.08) 24%,
+      rgba(255,255,255,.42) 50%,
+      rgba(255,255,255,.08) 76%,
+      transparent 100%
+    );
+    transform:skewX(-18deg);
+    animation:pickupShine 2.5s linear infinite;
+  }
+
+  .pickup-card::after{
+    content:"";
+    position:absolute;
+    z-index:-1;
+    inset:0;
+    pointer-events:none;
+    border-radius:inherit;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+
+  .pickup-card:hover{
+    box-shadow:0 14px 30px rgba(18,140,88,.28);
+  }
+
+  .pickup-left,
+  .pickup-arrow{
+    position:relative;
+    z-index:1;
+  }
+
+  .pickup-icon{
+    animation:pickupIconPulse 1.8s ease-in-out infinite;
+  }
+
+  .pickup-arrow{
+    animation:pickupArrowMove 1.15s ease-in-out infinite;
+  }
+
+  @keyframes pickupShine{
+    0%{
+      left:-45%;
+    }
+    100%{
+      left:125%;
+    }
+  }
+
+  @keyframes pickupSoftBlink{
+    0%,100%{
+      filter:brightness(1);
+    }
+    50%{
+      filter:brightness(1.07);
+    }
+  }
+
+  @keyframes pickupIconPulse{
+    0%,100%{
+      transform:scale(1);
+      background:rgba(255,255,255,.17);
+    }
+    50%{
+      transform:scale(1.05);
+      background:rgba(255,255,255,.25);
+    }
+  }
+
+  @keyframes pickupArrowMove{
+    0%,100%{
+      transform:translateX(0);
+      opacity:.86;
+    }
+    50%{
+      transform:translateX(5px);
+      opacity:1;
+    }
   }
 
   .pickup-left{
@@ -437,99 +753,166 @@
     font-weight:700;
   }
 
-  /* Four menu buttons always stay in one row */
+  /* Four modern menu buttons always stay in one row */
   .quick-grid{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:7px;
+    gap:8px;
+    padding:4px 2px 2px;
   }
 
   .quick-link{
     min-width:0;
-    min-height:88px;
-    padding:10px 3px 8px;
+    min-height:94px;
+    padding:8px 2px 6px;
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
-    border:1px solid rgba(223,233,227,.72);
+    justify-content:flex-start;
+    border:0;
     border-radius:18px;
-    background:rgba(255,255,255,.97);
-    box-shadow:0 7px 17px rgba(26,70,48,.07);
-    color:#4b5a70;
+    background:transparent;
+    box-shadow:none;
+    color:#415167;
     text-align:center;
     text-decoration:none;
-    transition:transform .15s ease;
+    -webkit-tap-highlight-color:transparent;
+    transition:
+      transform .15s ease,
+      color .15s ease,
+      background .15s ease;
+  }
+
+  .quick-link:active{
+    transform:scale(.95);
+    background:rgba(18,168,106,.06);
   }
 
   .quick-icon{
-    width:40px;
-    height:40px;
-    margin-bottom:8px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:14px;
-    background:linear-gradient(180deg,#eaf8f0 0%, #dff3e7 100%);
-    box-shadow:inset 0 0 0 1px rgba(18,168,106,.1);
-    font-size:19px;
+    width:58px;
+    height:58px;
+    margin-bottom:9px;
+    display:grid;
+    place-items:center;
+    border-radius:20px;
+    background:
+      linear-gradient(145deg,#f8fffB 0%,#e4f7ed 100%);
+    border:1px solid rgba(15,122,69,.16);
+    box-shadow:
+      0 10px 22px rgba(15,122,69,.13),
+      inset 0 1px 0 rgba(255,255,255,.95);
+    color:#0f9b5c;
   }
+
+  .quick-icon svg{
+    width:31px;
+    height:31px;
+    display:block;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.9;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+
+
 
   .quick-link span:last-child{
     width:100%;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
-    font-size:10px;
-    line-height:1.1;
+    color:inherit;
+    font-size:11px;
+    line-height:1.15;
     font-weight:900;
+    letter-spacing:-.01em;
   }
 
   /* =========================================================
-     FIXED BOTTOM NAVIGATION
+     MODERN FIXED BOTTOM NAVIGATION
   ========================================================= */
   .bottom-nav{
     position:fixed;
     left:50%;
-    bottom:calc(14px + env(safe-area-inset-bottom, 0px));
+    bottom:calc(12px + env(safe-area-inset-bottom,0px));
     transform:translateX(-50%);
-    width:min(430px, calc(100% - 24px));
-    min-height:66px;
+    width:min(430px,calc(100% - 22px));
+    min-height:72px;
     z-index:9999;
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
     align-items:center;
-    padding:7px 6px;
-    border:1px solid rgba(223,233,227,.85);
-    border-radius:23px;
+    gap:3px;
+    padding:7px;
+    border:1px solid rgba(15,122,69,.12);
+    border-radius:25px;
     background:rgba(255,255,255,.96);
-    box-shadow:0 14px 36px rgba(17,55,37,.18);
-    backdrop-filter:blur(15px);
-    -webkit-backdrop-filter:blur(15px);
+    box-shadow:
+      0 16px 40px rgba(17,55,37,.18),
+      inset 0 1px 0 rgba(255,255,255,.95);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
   }
 
   .nav-link{
     min-width:0;
-    min-height:50px;
+    min-height:56px;
+    padding:4px 1px;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
     gap:4px;
-    border-radius:15px;
-    color:#7d858f;
+    border-radius:18px;
+    color:#66756d;
     text-decoration:none;
-    transition:transform .15s ease, color .15s ease, background .15s ease;
+    -webkit-tap-highlight-color:transparent;
+    transition:
+      transform .15s ease,
+      color .15s ease,
+      background .15s ease;
+  }
+
+  .nav-link:active{
+    transform:scale(.95);
   }
 
   .nav-link.active{
-    color:var(--ds-green-dark);
-    background:#effaf4;
+    color:#087746;
+    background:linear-gradient(145deg,#effbf5 0%,#e3f6ec 100%);
   }
 
   .nav-icon{
-    font-size:19px;
-    line-height:1;
+    width:34px;
+    height:34px;
+    flex:0 0 34px;
+    display:grid;
+    place-items:center;
+    border-radius:12px;
+    background:#edf8f2;
+    border:1px solid rgba(15,122,69,.11);
+    color:#119b5e;
+    box-shadow:0 5px 12px rgba(15,122,69,.08);
+  }
+
+  .nav-link.active .nav-icon{
+    color:#ffffff;
+    border-color:transparent;
+    background:linear-gradient(145deg,#0e9e5d 0%,#18bd75 100%);
+    box-shadow:0 7px 15px rgba(15,157,93,.24);
+  }
+
+  .nav-icon svg{
+    width:20px;
+    height:20px;
+    display:block;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
   }
 
   .nav-label{
@@ -654,15 +1037,42 @@
     }
 
     .quick-link{
-      min-height:82px;
-      border-radius:16px;
+      min-height:88px;
+      padding-left:1px;
+      padding-right:1px;
     }
 
     .quick-icon{
-      width:37px;
-      height:37px;
-      margin-bottom:7px;
-      font-size:17px;
+      width:52px;
+      height:52px;
+      margin-bottom:8px;
+      border-radius:18px;
+    }
+
+    .quick-icon svg{
+      width:28px;
+      height:28px;
+    }
+
+    .quick-link span:last-child{
+      font-size:10px;
+    }
+  }
+
+  @media (max-width:360px){
+    .quick-grid{
+      gap:3px;
+    }
+
+    .quick-icon{
+      width:48px;
+      height:48px;
+      border-radius:17px;
+    }
+
+    .quick-icon svg{
+      width:25px;
+      height:25px;
     }
 
     .quick-link span:last-child{
@@ -703,6 +1113,7 @@
     *::after{
       scroll-behavior:auto !important;
       transition:none !important;
+      animation:none !important;
     }
   }
 </style>
@@ -718,21 +1129,30 @@
           <h1 class="account-title">Account Summary</h1>
           <p class="account-subtitle">Choose month to view seller account result</p>
         </div>
-        <span class="month-chip">{{ selected_month_label }}</span>
+        <button
+          type="button"
+          class="month-chip"
+          id="monthChipTrigger"
+          aria-label="Change account summary month"
+        >{{ selected_month_label }}</button>
       </div>
 
       <form method="get" class="month-form" id="monthForm">
-        <button type="button" class="month-control" id="monthTrigger" aria-label="Choose month">
+        <button
+          type="button"
+          class="month-control"
+          id="monthTrigger"
+          aria-label="Choose month"
+        >
           <span class="month-icon">📅</span>
           <span class="month-text" id="monthDisplay">{{ selected_month_label }}</span>
           <span class="month-caret">⌄</span>
         </button>
 
         <input
-          type="month"
+          type="hidden"
           name="month"
           value="{{ selected_month }}"
-          class="month-native"
           id="monthInput"
         >
 
@@ -801,45 +1221,160 @@
 
     <section class="quick-grid" aria-label="Seller portal menu">
       <a href="{% url 'portal:orders' %}" class="quick-link">
-        <span class="quick-icon">🛵</span>
+        <span class="quick-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 7.5h11.5v9H3z"></path>
+            <path d="M14.5 10h3l3 3v3.5h-6z"></path>
+            <path d="M6.5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"></path>
+            <path d="M17.5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"></path>
+            <path d="M3 11h6"></path>
+          </svg>
+        </span>
         <span>My Orders</span>
       </a>
 
       <a href="{% url 'portal:seller_report' %}" class="quick-link">
-        <span class="quick-icon">📊</span>
+        <span class="quick-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 20V10"></path>
+            <path d="M10 20V4"></path>
+            <path d="M16 20v-7"></path>
+            <path d="M22 20V7"></path>
+            <path d="M2 20h21"></path>
+          </svg>
+        </span>
         <span>Report</span>
       </a>
 
       <a href="{% url 'portal:tracking' %}" class="quick-link">
-        <span class="quick-icon">📍</span>
+        <span class="quick-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"></path>
+            <circle cx="12" cy="10" r="2.6"></circle>
+          </svg>
+        </span>
         <span>Tracking</span>
       </a>
 
       <a href="{% url 'portal:stock' %}" class="quick-link">
-        <span class="quick-icon">📦</span>
+        <span class="quick-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3 3.8 7.5 12 12l8.2-4.5z"></path>
+            <path d="M3.8 7.5V16.5L12 21l8.2-4.5V7.5"></path>
+            <path d="M12 12v9"></path>
+          </svg>
+        </span>
         <span>Inventory</span>
       </a>
     </section>
   </main>
 
+  <div
+    class="month-picker-overlay"
+    id="monthPickerOverlay"
+    aria-hidden="true"
+  >
+    <section
+      class="month-picker-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="monthPickerTitle"
+    >
+      <div class="month-picker-handle"></div>
+
+      <div class="month-picker-header">
+        <h2 class="month-picker-title" id="monthPickerTitle">Select month</h2>
+        <button
+          type="button"
+          class="month-picker-close"
+          id="monthPickerClose"
+          aria-label="Close month picker"
+        >×</button>
+      </div>
+
+      <div class="month-year-bar">
+        <button
+          type="button"
+          class="month-year-button"
+          id="monthYearPrev"
+          aria-label="Previous year"
+        >‹</button>
+
+        <div class="month-year-label" id="monthYearLabel">2026</div>
+
+        <button
+          type="button"
+          class="month-year-button"
+          id="monthYearNext"
+          aria-label="Next year"
+        >›</button>
+      </div>
+
+      <div class="month-picker-grid" id="monthPickerGrid"></div>
+
+      <div class="month-picker-selection" id="monthPickerSelection">
+        {{ selected_month_label }}
+      </div>
+
+      <p class="month-picker-tip">
+        Select a month, then tap Apply Month.
+      </p>
+
+      <div class="month-picker-actions">
+        <button
+          type="button"
+          class="month-picker-action month-picker-cancel"
+          id="monthPickerCancel"
+        >Cancel</button>
+
+        <button
+          type="button"
+          class="month-picker-action month-picker-apply"
+          id="monthPickerApply"
+        >Apply Month</button>
+      </div>
+    </section>
+  </div>
+
   <nav class="bottom-nav" aria-label="Bottom navigation">
     <a href="{% url 'portal:dashboard' %}" class="nav-link active">
-      <span class="nav-icon">🏠</span>
+      <span class="nav-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 10.5 12 3l9 7.5"></path>
+          <path d="M5.5 9.5V21h13V9.5"></path>
+          <path d="M9.5 21v-6h5v6"></path>
+        </svg>
+      </span>
       <span class="nav-label">Home</span>
     </a>
 
     <a href="tel:011789955" class="nav-link">
-      <span class="nav-icon">📞</span>
+      <span class="nav-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M5.4 3.8 8 3l2 5-2.2 1.4a15 15 0 0 0 6.8 6.8L16 14l5 2-0.8 2.6a3 3 0 0 1-3.4 2.1C9.4 19.2 4.8 14.6 3.3 7.2A3 3 0 0 1 5.4 3.8z"></path>
+        </svg>
+      </span>
       <span class="nav-label">Contact</span>
     </a>
 
     <a href="https://t.me/DS_Express_Sale" target="_blank" rel="noopener noreferrer" class="nav-link">
-      <span class="nav-icon">❔</span>
+      <span class="nav-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M21 11.5a8.5 8.5 0 0 1-9 8.5 9.2 9.2 0 0 1-4-.9L3 21l1.6-4.5A8.4 8.4 0 1 1 21 11.5z"></path>
+          <path d="M9.6 9a2.5 2.5 0 0 1 4.8.9c0 1.8-2.4 2-2.4 3.5"></path>
+          <path d="M12 16.8h.01"></path>
+        </svg>
+      </span>
       <span class="nav-label">Help</span>
     </a>
 
     <a href="{% url 'portal:change_password' %}" class="nav-link">
-      <span class="nav-icon">👤</span>
+      <span class="nav-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>
+        </svg>
+      </span>
       <span class="nav-label">Profile</span>
     </a>
   </nav>
@@ -848,40 +1383,250 @@
 
 {% block extra_js %}
 <script>
-  (function () {
-    const trigger = document.getElementById('monthTrigger');
-    const input = document.getElementById('monthInput');
-    const display = document.getElementById('monthDisplay');
+(function () {
+  "use strict";
 
-    if (!trigger || !input || !display) return;
+  function initDsMonthPicker() {
+    const form = document.getElementById("monthForm");
+    const monthTrigger = document.getElementById("monthTrigger");
+    const monthChipTrigger = document.getElementById("monthChipTrigger");
+    const input = document.getElementById("monthInput");
+    const display = document.getElementById("monthDisplay");
 
-    trigger.addEventListener('click', function () {
-      try {
-        if (typeof input.showPicker === 'function') {
-          input.showPicker();
-        } else {
-          input.click();
+    const overlay = document.getElementById("monthPickerOverlay");
+    const sheet = overlay ? overlay.querySelector(".month-picker-sheet") : null;
+    const closeButton = document.getElementById("monthPickerClose");
+    const cancelButton = document.getElementById("monthPickerCancel");
+    const applyButton = document.getElementById("monthPickerApply");
+    const previousYearButton = document.getElementById("monthYearPrev");
+    const nextYearButton = document.getElementById("monthYearNext");
+    const yearLabel = document.getElementById("monthYearLabel");
+    const monthGrid = document.getElementById("monthPickerGrid");
+    const selectionLabel = document.getElementById("monthPickerSelection");
+
+    if (
+      !form ||
+      !monthTrigger ||
+      !input ||
+      !display ||
+      !overlay ||
+      !sheet ||
+      !monthGrid ||
+      !yearLabel ||
+      !selectionLabel
+    ) {
+      return;
+    }
+
+    const monthNames = [
+      "Jan", "Feb", "Mar", "Apr",
+      "May", "Jun", "Jul", "Aug",
+      "Sep", "Oct", "Nov", "Dec"
+    ];
+
+    const fullMonthNames = [
+      "January", "February", "March", "April",
+      "May", "June", "July", "August",
+      "September", "October", "November", "December"
+    ];
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+
+    let visibleYear = currentYear;
+    let pendingYear = currentYear;
+    let pendingMonth = currentMonth;
+    let isSubmitting = false;
+
+    function parseMonthValue(value) {
+      const match = /^(\d{4})-(\d{2})$/.exec(String(value || ""));
+
+      if (!match) {
+        return {
+          year: currentYear,
+          month: currentMonth
+        };
+      }
+
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+
+      return {
+        year: year || currentYear,
+        month: month >= 1 && month <= 12 ? month : currentMonth
+      };
+    }
+
+    function buildMonthValue(year, month) {
+      return String(year) + "-" + String(month).padStart(2, "0");
+    }
+
+    function buildShortLabel(year, month) {
+      return monthNames[month - 1] + " " + String(year);
+    }
+
+    function buildFullLabel(year, month) {
+      return fullMonthNames[month - 1] + " " + String(year);
+    }
+
+    function updateSelectionLabel() {
+      selectionLabel.textContent = buildFullLabel(
+        pendingYear,
+        pendingMonth
+      );
+    }
+
+    function renderMonths() {
+      yearLabel.textContent = String(visibleYear);
+      monthGrid.innerHTML = "";
+
+      monthNames.forEach(function (monthName, index) {
+        const monthNumber = index + 1;
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "month-option";
+        button.textContent = monthName;
+        button.setAttribute(
+          "aria-label",
+          fullMonthNames[index] + " " + String(visibleYear)
+        );
+
+        if (
+          visibleYear === pendingYear &&
+          monthNumber === pendingMonth
+        ) {
+          button.classList.add("is-selected");
         }
-      } catch (error) {
-        input.click();
+
+        if (
+          visibleYear === currentYear &&
+          monthNumber === currentMonth
+        ) {
+          button.classList.add("is-current");
+        }
+
+        button.addEventListener("click", function () {
+          pendingYear = visibleYear;
+          pendingMonth = monthNumber;
+          updateSelectionLabel();
+          renderMonths();
+        });
+
+        monthGrid.appendChild(button);
+      });
+    }
+
+    function openPicker(event) {
+      if (event) {
+        event.preventDefault();
+      }
+
+      const selected = parseMonthValue(input.value);
+
+      visibleYear = selected.year;
+      pendingYear = selected.year;
+      pendingMonth = selected.month;
+      isSubmitting = false;
+
+      updateSelectionLabel();
+      renderMonths();
+
+      overlay.classList.add("is-open");
+      overlay.setAttribute("aria-hidden", "false");
+      document.body.classList.add("month-picker-open");
+    }
+
+    function closePicker() {
+      overlay.classList.remove("is-open");
+      overlay.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("month-picker-open");
+    }
+
+    function applyMonth() {
+      if (isSubmitting) {
+        return;
+      }
+
+      isSubmitting = true;
+
+      input.value = buildMonthValue(
+        pendingYear,
+        pendingMonth
+      );
+
+      display.textContent = buildShortLabel(
+        pendingYear,
+        pendingMonth
+      );
+
+      if (monthChipTrigger) {
+        monthChipTrigger.textContent = buildFullLabel(
+          pendingYear,
+          pendingMonth
+        );
+      }
+
+      closePicker();
+
+      window.setTimeout(function () {
+        if (typeof form.requestSubmit === "function") {
+          form.requestSubmit();
+        } else {
+          form.submit();
+        }
+      }, 90);
+    }
+
+    monthTrigger.addEventListener("click", openPicker);
+
+    if (monthChipTrigger) {
+      monthChipTrigger.addEventListener("click", openPicker);
+    }
+
+    previousYearButton.addEventListener("click", function () {
+      visibleYear -= 1;
+      renderMonths();
+    });
+
+    nextYearButton.addEventListener("click", function () {
+      visibleYear += 1;
+      renderMonths();
+    });
+
+    applyButton.addEventListener("click", applyMonth);
+    closeButton.addEventListener("click", closePicker);
+    cancelButton.addEventListener("click", closePicker);
+
+    overlay.addEventListener("click", function (event) {
+      if (event.target === overlay) {
+        closePicker();
       }
     });
 
-    input.addEventListener('change', function () {
-      if (!input.value) return;
-
-      const parts = input.value.split('-');
-      const year = Number(parts[0]);
-      const month = Number(parts[1]);
-
-      if (!year || !month) return;
-
-      const date = new Date(year, month - 1, 1);
-      display.textContent = date.toLocaleDateString('en-US', {
-        month: 'short',
-        year: 'numeric'
-      });
+    sheet.addEventListener("click", function (event) {
+      event.stopPropagation();
     });
-  })();
+
+    document.addEventListener("keydown", function (event) {
+      if (
+        event.key === "Escape" &&
+        overlay.classList.contains("is-open")
+      ) {
+        closePicker();
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      initDsMonthPicker
+    );
+  } else {
+    initDsMonthPicker();
+  }
+})();
 </script>
 {% endblock %}

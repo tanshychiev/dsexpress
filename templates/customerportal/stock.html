@@ -657,27 +657,7 @@
     </div>
   </div>
 
-  <nav class="bottom-nav">
-    <a href="/portal/dashboard/" class="nav-item">
-      <div class="nav-icon">🏠</div>
-      <div>Home</div>
-    </a>
-
-    <a href="/portal/orders/" class="nav-item">
-      <div class="nav-icon">📦</div>
-      <div>Orders</div>
-    </a>
-
-    <a href="/portal/report/" class="nav-item">
-      <div class="nav-icon">📊</div>
-      <div>Report</div>
-    </a>
-
-    <a href="/portal/stock/" class="nav-item active">
-      <div class="nav-icon">📦</div>
-      <div>Stock</div>
-    </a>
-  </nav>
+  {% include "customerportal/navbar.html" %}
 
   <script>
     (function () {

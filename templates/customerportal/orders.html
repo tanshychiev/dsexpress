@@ -44,10 +44,29 @@
     }
 
     .top-btn{
+      width:34px;
+      height:34px;
+      flex:0 0 34px;
+      display:grid;
+      place-items:center;
+      border-radius:14px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
       color:#fff;
       text-decoration:none;
-      font-size:22px;
+      font-size:20px;
       line-height:1;
+      font-weight:900;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      -webkit-tap-highlight-color:transparent;
+      transition:transform .15s ease, background .15s ease;
+    }
+
+    .top-btn:active{
+      transform:scale(.94);
+      background:rgba(255,255,255,.22);
     }
 
     .logo{
@@ -760,7 +779,7 @@
     <div class="top-header">
 <div class="top-row">
         <div class="left-top">
-          <a href="{% url 'portal:dashboard' %}" class="top-btn">←</a>
+          <a href="{% url 'portal:dashboard' %}" class="top-btn" aria-label="Back to dashboard">‹</a>
           <img src="{% static 'img/ds-logo.png' %}" alt="DS Express" class="logo">
           <div class="page-title">My Orders</div>
         </div>
@@ -952,27 +971,7 @@
     </div>
   </div>
 
-  <div class="bottom-nav">
-    <a href="{% url 'portal:dashboard' %}" class="nav-item">
-      <div class="nav-icon">🏠</div>
-      <div>Home</div>
-    </a>
-
-    <a href="{% url 'portal:booking_public' %}" class="nav-item">
-      <div class="nav-icon">📞</div>
-      <div>Contact</div>
-    </a>
-
-    <a href="{% url 'portal:orders' %}" class="nav-item active">
-      <div class="nav-icon">📦</div>
-      <div>Orders</div>
-    </a>
-
-    <a href="{% url 'portal:dashboard' %}" class="nav-item">
-      <div class="nav-icon">👤</div>
-      <div>Profile</div>
-    </a>
-  </div>
+  {% include "customerportal/navbar.html" %}
 
   <script>
     (function(){

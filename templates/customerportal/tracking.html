@@ -611,8 +611,8 @@
     .timeline-line::before{
       content:"";
       position:absolute;
-      left:10%;
-      right:10%;
+      left:14%;
+      right:14%;
       top:14px;
       height:4px;
       background:#dceae4;
@@ -622,7 +622,7 @@
     .timeline-line::after{
       content:"";
       position:absolute;
-      left:10%;
+      left:14%;
       top:14px;
       height:4px;
       border-radius:999px;
@@ -636,12 +636,12 @@
     }
 
     .timeline-done{
-      --progress:64%;
+      --progress:72%;
       --line-color:linear-gradient(90deg,#179b67,#22b276);
     }
 
     .timeline-return{
-      --progress:92%;
+      --progress:72%;
       --line-color:linear-gradient(90deg,#179b67 0%,#22b276 48%,#ef4444 48%,#ef4444 100%);
     }
 
@@ -649,7 +649,7 @@
       position:relative;
       z-index:2;
       display:grid;
-      grid-template-columns:repeat(4,1fr);
+      grid-template-columns:repeat(3,1fr);
       justify-items:center;
       align-items:center;
     }
@@ -682,7 +682,7 @@
 
     .timeline-labels{
       display:grid;
-      grid-template-columns:repeat(4,1fr);
+      grid-template-columns:repeat(3,1fr);
       gap:4px;
       font-size:10px;
       color:#64748b;
@@ -1107,7 +1107,7 @@
 
                   {% if order.main_status == "DELIVERED" or order.main_status == "DONE" %}
                     <div class="status-badge badge-delivered">Delivered</div>
-                  {% elif order.main_status == "RETURN" or order.main_status == "RETURNED" %}
+                  {% elif order.main_status == "RETURN" or order.main_status == "RETURNED" or order.main_status == "RETURN_ASSIGNED" %}
                     <div class="status-badge badge-return">Returned</div>
                   {% else %}
                     <div class="status-badge badge-processing">Processing</div>
@@ -1141,7 +1141,7 @@
 
                   {% if order.main_status == "DELIVERED" or order.main_status == "DONE" %}
                     <div class="timeline-wrap timeline-done">
-                  {% elif order.main_status == "RETURN" or order.main_status == "RETURNED" %}
+                  {% elif order.main_status == "RETURN" or order.main_status == "RETURNED" or order.main_status == "RETURN_ASSIGNED" %}
                     <div class="timeline-wrap timeline-return">
                   {% else %}
                     <div class="timeline-wrap timeline-processing">
@@ -1153,11 +1153,7 @@
 
                           {% if order.main_status == "DELIVERED" or order.main_status == "DONE" %}
                             <div class="point done">✓</div>
-                          {% else %}
-                            <div class="point inactive">•</div>
-                          {% endif %}
-
-                          {% if order.main_status == "RETURN" or order.main_status == "RETURNED" %}
+                          {% elif order.main_status == "RETURN" or order.main_status == "RETURNED" or order.main_status == "RETURN_ASSIGNED" %}
                             <div class="point returned">✓</div>
                           {% else %}
                             <div class="point inactive">•</div>
@@ -1169,16 +1165,12 @@
                         <div class="green">Create</div>
                         <div class="green">Processing</div>
 
-                        {% if order.main_status == "DELIVERED" or order.main_status == "DONE" %}
+                        {% if order.main_status == "RETURN" or order.main_status == "RETURNED" or order.main_status == "RETURN_ASSIGNED" %}
+                          <div class="red">Returned</div>
+                        {% elif order.main_status == "DELIVERED" or order.main_status == "DONE" %}
                           <div class="green">Delivered</div>
                         {% else %}
                           <div>Delivered</div>
-                        {% endif %}
-
-                        {% if order.main_status == "RETURN" or order.main_status == "RETURNED" %}
-                          <div class="red">Returned</div>
-                        {% else %}
-                          <div>Returned</div>
                         {% endif %}
                       </div>
                     </div>
@@ -1196,27 +1188,7 @@
     </div>
   </div>
 
-  <div class="bottom-nav">
-    <a href="{% url 'portal:dashboard' %}" class="nav-item">
-      <div class="nav-icon">🏠</div>
-      <div>Home</div>
-    </a>
-
-    <a href="{% url 'portal:orders' %}" class="nav-item">
-      <div class="nav-icon">📦</div>
-      <div>Orders</div>
-    </a>
-
-    <a href="{% url 'portal:tracking' %}" class="nav-item active">
-      <div class="nav-icon">📍</div>
-      <div>Track</div>
-    </a>
-
-    <a href="{% url 'portal:change_password' %}" class="nav-item">
-      <div class="nav-icon">👤</div>
-      <div>Profile</div>
-    </a>
-  </div>
+  {% include "customerportal/navbar.html" %}
 
   <div class="picker-overlay" id="pickerOverlay" aria-hidden="true">
     <div class="date-sheet">

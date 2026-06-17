@@ -1243,27 +1243,7 @@
     </div>
   </div>
 
-  <div class="bottom-nav">
-    <a href="{% url 'portal:dashboard' %}" class="nav-item">
-      <div class="nav-icon">🏠</div>
-      <div>Home</div>
-    </a>
-
-    <a href="{% url 'portal:orders' %}" class="nav-item">
-      <div class="nav-icon">📦</div>
-      <div>Orders</div>
-    </a>
-
-    <a href="{% url 'portal:seller_report' %}" class="nav-item active">
-      <div class="nav-icon">📊</div>
-      <div>Report</div>
-    </a>
-
-    <a href="{% url 'portal:dashboard' %}" class="nav-item">
-      <div class="nav-icon">👤</div>
-      <div>Profile</div>
-    </a>
-  </div>
+  {% include "customerportal/navbar.html" %}
 
   <div class="picker-overlay" id="pickerOverlay" aria-hidden="true">
     <div class="date-sheet">

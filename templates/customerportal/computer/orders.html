@@ -1,0 +1,361 @@
+{% extends "customerportal/computer/base.html" %}
+
+{% block title %}
+Orders | DS EXPRESS Computer Portal
+{% endblock %}
+
+{% block nav_orders %}active{% endblock %}
+
+{% block content %}
+
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Order management</p>
+    <h1>Orders</h1>
+
+    <p class="computer-subtitle">
+      View and search all orders for {{ seller.name }}.
+    </p>
+  </div>
+
+  <div class="computer-user-card">
+    <span class="computer-avatar">
+      {{ seller.name|slice:":1" }}
+    </span>
+
+    <span>
+      <strong>{{ seller.name }}</strong>
+      <small>Seller account</small>
+    </span>
+  </div>
+</header>
+
+<section class="computer-filter-card">
+
+  <form method="get" class="computer-filter-form">
+
+    <label class="computer-field">
+      <span>Period</span>
+
+      <select name="period" data-period-select>
+        <option
+          value="today"
+          {% if period == 'today' %}selected{% endif %}
+        >
+          Today
+        </option>
+
+        <option
+          value="yesterday"
+          {% if period == 'yesterday' %}selected{% endif %}
+        >
+          Yesterday
+        </option>
+
+        <option
+          value="last_7_days"
+          {% if period == 'last_7_days' %}selected{% endif %}
+        >
+          Last 7 days
+        </option>
+
+        <option
+          value="last_30_days"
+          {% if period == 'last_30_days' %}selected{% endif %}
+        >
+          Last 30 days
+        </option>
+
+        <option
+          value="this_month"
+          {% if period == 'this_month' %}selected{% endif %}
+        >
+          This month
+        </option>
+
+        <option
+          value="custom"
+          {% if period == 'custom' %}selected{% endif %}
+        >
+          Custom date
+        </option>
+      </select>
+    </label>
+
+    <div
+      class="computer-custom-dates {% if period == 'custom' %}show{% endif %}"
+      data-custom-dates
+    >
+
+      <label class="computer-field">
+        <span>From</span>
+
+        <input
+          type="date"
+          name="from"
+          value="{{ date_from }}"
+          max="{{ today_iso }}"
+        >
+      </label>
+
+      <label class="computer-field">
+        <span>To</span>
+
+        <input
+          type="date"
+          name="to"
+          value="{{ date_to }}"
+          max="{{ today_iso }}"
+        >
+      </label>
+
+    </div>
+
+    <label class="computer-field computer-search-field">
+      <span>Search</span>
+
+      <input
+        type="search"
+        name="q"
+        value="{{ q }}"
+        placeholder="Tracking, customer or phone"
+      >
+    </label>
+
+    <label class="computer-field">
+      <span>Status</span>
+
+      <select name="status">
+
+        <option
+          value="ALL"
+          {% if status_filter == 'ALL' %}selected{% endif %}
+        >
+          All statuses
+        </option>
+
+        <option
+          value="PENDING"
+          {% if status_filter == 'PENDING' %}selected{% endif %}
+        >
+          Pending
+        </option>
+
+        <option
+          value="DELIVERED"
+          {% if status_filter == 'DELIVERED' %}selected{% endif %}
+        >
+          Delivered
+        </option>
+
+        <option
+          value="RETURNED"
+          {% if status_filter == 'RETURNED' %}selected{% endif %}
+        >
+          Returned
+        </option>
+
+        <option
+          value="PROVINCE"
+          {% if status_filter == 'PROVINCE' %}selected{% endif %}
+        >
+          Province
+        </option>
+
+        <option
+          value="VOID"
+          {% if status_filter == 'VOID' %}selected{% endif %}
+        >
+          Void
+        </option>
+
+      </select>
+    </label>
+
+    <button
+      type="submit"
+      class="computer-apply-button"
+    >
+      Apply
+    </button>
+
+  </form>
+
+  <div class="computer-period-label">
+    <span>Showing data for</span>
+    <strong>{{ period_label }}</strong>
+  </div>
+
+</section>
+
+<section class="computer-stat-grid four-cards">
+
+  <article class="computer-stat-card">
+    <div class="computer-stat-head">
+      <span>Total Orders</span>
+      <b>📦</b>
+    </div>
+
+    <strong>{{ summary_total }}</strong>
+    <small>Created in selected period</small>
+  </article>
+
+  <article class="computer-stat-card success">
+    <div class="computer-stat-head">
+      <span>Delivered</span>
+      <b>✓</b>
+    </div>
+
+    <strong>{{ summary_delivered }}</strong>
+    <small>Completed orders</small>
+  </article>
+
+  <article class="computer-stat-card warning">
+    <div class="computer-stat-head">
+      <span>Pending</span>
+      <b>◷</b>
+    </div>
+
+    <strong>{{ summary_pending }}</strong>
+    <small>Still processing</small>
+  </article>
+
+  <article class="computer-stat-card danger">
+    <div class="computer-stat-head">
+      <span>Returned</span>
+      <b>↩</b>
+    </div>
+
+    <strong>{{ summary_returned }}</strong>
+    <small>Returned orders</small>
+  </article>
+
+</section>
+
+<section class="computer-table-card computer-full-card">
+
+  <header class="computer-card-header">
+    <div>
+      <h2>Order List</h2>
+      <p>Search, sort, download or print.</p>
+    </div>
+
+    <div class="computer-table-tools">
+
+      <input
+        type="search"
+        data-table-search="ordersTable"
+        placeholder="Search current result…"
+      >
+
+      <button
+        type="button"
+        data-csv-button="ordersTable"
+        data-filename="ds-orders"
+      >
+        Download Excel
+      </button>
+
+      <button
+        type="button"
+        data-print-button
+      >
+        Print / PDF
+      </button>
+
+    </div>
+  </header>
+
+  <div class="computer-table-scroll large">
+
+    <table
+      class="computer-report-table orders-table"
+      id="ordersTable"
+      data-page-size="20"
+    >
+
+      <thead>
+        <tr>
+          <th data-type="date">Created</th>
+          <th>Tracking No.</th>
+          <th>Seller Order</th>
+          <th>Receiver</th>
+          <th>Phone</th>
+          <th>Address</th>
+          <th>Product</th>
+          <th data-type="number">Qty</th>
+          <th data-type="number">COD</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for order in orders %}
+
+        <tr>
+          <td data-value="{{ order.created_at|date:'Y-m-d H:i' }}">
+            {{ order.created_at|date:"d/m/Y H:i" }}
+          </td>
+
+          <td>
+            <strong>{{ order.tracking_no }}</strong>
+          </td>
+
+          <td>
+            {{ order.seller_order_code|default:"-" }}
+          </td>
+
+          <td>
+            {{ order.receiver_name|default:"-" }}
+          </td>
+
+          <td>
+            {{ order.receiver_phone|default:"-" }}
+          </td>
+
+          <td class="wide-cell">
+            {{ order.receiver_address|default:"-" }}
+          </td>
+
+          <td class="wide-cell">
+            {{ order.product_desc|default:"-" }}
+          </td>
+
+          <td data-value="{{ order.quantity }}">
+            {{ order.quantity }}
+          </td>
+
+          <td data-value="{{ order.computer_cod }}">
+            ${{ order.computer_cod|floatformat:2 }}
+          </td>
+
+          <td>
+            <span class="computer-status {{ order.computer_status_key }}">
+              {{ order.computer_status_label }}
+            </span>
+          </td>
+        </tr>
+
+        {% empty %}
+
+        <tr class="computer-empty-row">
+          <td colspan="10">No orders found.</td>
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  <div
+    class="computer-pagination"
+    data-pagination-for="ordersTable"
+  ></div>
+
+</section>
+
+{% endblock %}

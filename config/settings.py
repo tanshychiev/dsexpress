@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "orders",
     "provinceops",
     "returnshop",
+    "provincecod",
     "deliverpp",
     "reports",
     "inventory.apps.InventoryConfig",

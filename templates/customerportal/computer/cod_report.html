@@ -1,0 +1,336 @@
+{% extends "customerportal/computer/base.html" %}
+
+{% block title %}
+COD Report | DS EXPRESS Computer Portal
+{% endblock %}
+
+{% block nav_cod_report %}active{% endblock %}
+
+{% block content %}
+
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Financial summary</p>
+    <h1>COD Report</h1>
+
+    <p class="computer-subtitle">
+      Delivered-order COD, fees and net balance for
+      {{ seller.name }}.
+    </p>
+  </div>
+
+  <div class="computer-user-card">
+    <span class="computer-avatar">
+      {{ seller.name|slice:":1" }}
+    </span>
+
+    <span>
+      <strong>{{ seller.name }}</strong>
+      <small>Seller account</small>
+    </span>
+  </div>
+</header>
+
+<section class="computer-filter-card">
+
+  <form method="get" class="computer-filter-form">
+
+    <label class="computer-field">
+      <span>Period</span>
+
+      <select name="period" data-period-select">
+
+        <option
+          value="today"
+          {% if period == 'today' %}selected{% endif %}
+        >
+          Today
+        </option>
+
+        <option
+          value="yesterday"
+          {% if period == 'yesterday' %}selected{% endif %}
+        >
+          Yesterday
+        </option>
+
+        <option
+          value="last_7_days"
+          {% if period == 'last_7_days' %}selected{% endif %}
+        >
+          Last 7 days
+        </option>
+
+        <option
+          value="last_30_days"
+          {% if period == 'last_30_days' %}selected{% endif %}
+        >
+          Last 30 days
+        </option>
+
+        <option
+          value="this_month"
+          {% if period == 'this_month' %}selected{% endif %}
+        >
+          This month
+        </option>
+
+        <option
+          value="custom"
+          {% if period == 'custom' %}selected{% endif %}
+        >
+          Custom date
+        </option>
+
+      </select>
+    </label>
+
+    <div
+      class="computer-custom-dates {% if period == 'custom' %}show{% endif %}"
+      data-custom-dates
+    >
+
+      <label class="computer-field">
+        <span>From</span>
+
+        <input
+          type="date"
+          name="from"
+          value="{{ date_from }}"
+          max="{{ today_iso }}"
+        >
+      </label>
+
+      <label class="computer-field">
+        <span>To</span>
+
+        <input
+          type="date"
+          name="to"
+          value="{{ date_to }}"
+          max="{{ today_iso }}"
+        >
+      </label>
+
+    </div>
+
+    <button
+      type="submit"
+      class="computer-apply-button"
+    >
+      Apply
+    </button>
+
+  </form>
+
+  <div class="computer-period-label">
+    <span>Showing data for</span>
+    <strong>{{ period_label }}</strong>
+  </div>
+
+</section>
+
+<section class="computer-stat-grid">
+
+  <article class="computer-stat-card">
+    <div class="computer-stat-head">
+      <span>Delivered Orders</span>
+      <b>✓</b>
+    </div>
+
+    <strong>{{ total_orders }}</strong>
+    <small>Orders included</small>
+  </article>
+
+  <article class="computer-stat-card money">
+    <div class="computer-stat-head">
+      <span>Total COD</span>
+      <b>$</b>
+    </div>
+
+    <strong>${{ total_cod|floatformat:2 }}</strong>
+    <small>Collected COD</small>
+  </article>
+
+  <article class="computer-stat-card fee">
+    <div class="computer-stat-head">
+      <span>Total Fees</span>
+      <b>−</b>
+    </div>
+
+    <strong>${{ total_fees|floatformat:2 }}</strong>
+    <small>All delivery fees</small>
+  </article>
+
+  <article class="computer-stat-card balance">
+    <div class="computer-stat-head">
+      <span>Net Balance</span>
+      <b>◎</b>
+    </div>
+
+    <strong>${{ net_balance|floatformat:2 }}</strong>
+    <small>COD minus fees</small>
+  </article>
+
+</section>
+
+<section class="computer-fee-breakdown">
+
+  <div>
+    <span>Delivery Fee</span>
+    <strong>${{ total_delivery_fee|floatformat:2 }}</strong>
+  </div>
+
+  <div>
+    <span>Additional Fee</span>
+    <strong>${{ total_additional_fee|floatformat:2 }}</strong>
+  </div>
+
+  <div>
+    <span>Province Fee</span>
+    <strong>${{ total_province_fee|floatformat:2 }}</strong>
+  </div>
+
+</section>
+
+<section class="computer-table-card computer-full-card">
+
+  <header class="computer-card-header">
+
+    <div>
+      <h2>COD Transactions</h2>
+      <p>Delivered orders only.</p>
+    </div>
+
+    <div class="computer-table-tools">
+
+      <input
+        type="search"
+        data-table-search="codTable"
+        placeholder="Search…"
+      >
+
+      <button
+        type="button"
+        data-csv-button="codTable"
+        data-filename="cod-report"
+      >
+        Download Excel
+      </button>
+
+      <button
+        type="button"
+        data-print-button
+      >
+        Print / PDF
+      </button>
+
+    </div>
+
+  </header>
+
+  <div class="computer-table-scroll large">
+
+    <table
+      class="computer-report-table cod-table"
+      id="codTable"
+      data-page-size="20"
+    >
+
+      <thead>
+        <tr>
+          <th data-type="date">Done Date</th>
+          <th>Tracking No.</th>
+          <th>Receiver</th>
+          <th>Phone</th>
+          <th data-type="number">COD</th>
+          <th data-type="number">Delivery Fee</th>
+          <th data-type="number">Additional</th>
+          <th data-type="number">Province Fee</th>
+          <th data-type="number">Total Fee</th>
+          <th data-type="number">Net</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for order in rows %}
+
+        <tr>
+          <td data-value="{{ order.done_at|date:'Y-m-d' }}">
+            {{ order.done_at|date:"d/m/Y" }}
+          </td>
+
+          <td>
+            <strong>{{ order.tracking_no }}</strong>
+          </td>
+
+          <td>
+            {{ order.receiver_name|default:"-" }}
+          </td>
+
+          <td>
+            {{ order.receiver_phone|default:"-" }}
+          </td>
+
+          <td data-value="{{ order.computer_cod }}">
+            ${{ order.computer_cod|floatformat:2 }}
+          </td>
+
+          <td data-value="{{ order.computer_delivery_fee }}">
+            ${{ order.computer_delivery_fee|floatformat:2 }}
+          </td>
+
+          <td data-value="{{ order.computer_additional_fee }}">
+            ${{ order.computer_additional_fee|floatformat:2 }}
+          </td>
+
+          <td data-value="{{ order.computer_province_fee }}">
+            ${{ order.computer_province_fee|floatformat:2 }}
+          </td>
+
+          <td data-value="{{ order.computer_total_fee }}">
+            ${{ order.computer_total_fee|floatformat:2 }}
+          </td>
+
+          <td data-value="{{ order.computer_net }}">
+            <strong>
+              ${{ order.computer_net|floatformat:2 }}
+            </strong>
+          </td>
+        </tr>
+
+        {% empty %}
+
+        <tr class="computer-empty-row">
+          <td colspan="10">No COD transactions.</td>
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <td colspan="4">Total</td>
+          <td>${{ total_cod|floatformat:2 }}</td>
+          <td>${{ total_delivery_fee|floatformat:2 }}</td>
+          <td>${{ total_additional_fee|floatformat:2 }}</td>
+          <td>${{ total_province_fee|floatformat:2 }}</td>
+          <td>${{ total_fees|floatformat:2 }}</td>
+          <td>${{ net_balance|floatformat:2 }}</td>
+        </tr>
+      </tfoot>
+
+    </table>
+
+  </div>
+
+  <div
+    class="computer-pagination"
+    data-pagination-for="codTable"
+  ></div>
+
+</section>
+
+{% endblock %}

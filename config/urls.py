@@ -1,40 +1,69 @@
-from django.conf import settings
+﻿from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
 from django.views.generic import RedirectView
 
-from orders import views as order_views
 from accounts import views as account_views
-
+from orders import views as order_views
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+path("admin/", admin.site.urls),
 
-    path("accounts/login/", account_views.staff_login, name="login"),
-    path("accounts/logout/", account_views.staff_logout, name="logout"),
-    path("accounts/", include("django.contrib.auth.urls")),
+path(
+    "accounts/login/",
+    account_views.staff_login,
+    name="login",
+),
+path(
+    "accounts/logout/",
+    account_views.staff_logout,
+    name="logout",
+),
+path(
+    "accounts/",
+    include("django.contrib.auth.urls"),
+),
 
-    path("", RedirectView.as_view(url="/orders/", permanent=False)),
-
-    path("", include("provinceops.urls")),
-    path("", include("returnshop.urls")),
-    path("deliver-pp/", include("deliverpp.urls")),
-
-    path("orders/", include("orders.urls")),
-    path("", include("masterdata.urls")),
-    path("users/", include("accounts.urls")),
-
-    path(
-        "api/sellers/autocomplete/",
-        order_views.seller_autocomplete,
-        name="seller_autocomplete",
+path(
+    "",
+    RedirectView.as_view(
+        url="/orders/",
+        permanent=False,
     ),
+),
 
-    path("reports/", include("reports.urls")),
-    path("inventory/", include("inventory.urls")),
-    path("portal/", include("customerportal.urls")),
-    path("finance/", include("financeops.urls")),
+# Operations
+path("", include("provinceops.urls")),
+path("", include("returnshop.urls")),
+path("deliver-pp/", include("deliverpp.urls")),
+
+# Province COD
+path(
+    "province-cod/",
+    include("provincecod.urls"),
+),
+
+# Orders and master data
+path("orders/", include("orders.urls")),
+path("", include("masterdata.urls")),
+path("users/", include("accounts.urls")),
+
+path(
+    "api/sellers/autocomplete/",
+    order_views.seller_autocomplete,
+    name="seller_autocomplete",
+),
+
+# Other modules
+path("reports/", include("reports.urls")),
+path("inventory/", include("inventory.urls")),
+path("portal/", include("customerportal.urls")),
+path("finance/", include("financeops.urls")),
+
 ]
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns += static(
+settings.MEDIA_URL,
+document_root=settings.MEDIA_ROOT,
+)

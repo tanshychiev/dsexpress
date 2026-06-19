@@ -1,0 +1,228 @@
+{% extends "customerportal/computer/base.html" %}
+
+{% block title %}Inventory | DS EXPRESS Computer Portal{% endblock %}
+{% block nav_inventory %}active{% endblock %}
+
+{% block content %}
+
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Stock management</p>
+    <h1>Inventory</h1>
+    <p class="computer-subtitle">
+      Current stock for {{ seller.name }}.
+    </p>
+  </div>
+
+  <div class="computer-user-card">
+    <span class="computer-avatar">
+      {{ seller.name|slice:":1" }}
+    </span>
+
+    <span>
+      <strong>{{ seller.name }}</strong>
+      <small>Seller account</small>
+    </span>
+  </div>
+</header>
+
+{% if not inventory_enabled %}
+<section class="computer-notice-card">
+  Inventory is hidden or disabled for this seller account.
+</section>
+{% endif %}
+
+<section class="computer-stat-grid four-cards">
+  <article class="computer-stat-card">
+    <div class="computer-stat-head">
+      <span>Products</span>
+      <b>▦</b>
+    </div>
+    <strong>{{ total_products }}</strong>
+    <small>Active stock products</small>
+  </article>
+
+  <article class="computer-stat-card info">
+    <div class="computer-stat-head">
+      <span>Total Stock</span>
+      <b>□</b>
+    </div>
+    <strong>{{ total_current }}</strong>
+    <small>Available plus reserved</small>
+  </article>
+
+  <article class="computer-stat-card warning">
+    <div class="computer-stat-head">
+      <span>Reserved</span>
+      <b>◷</b>
+    </div>
+    <strong>{{ total_reserved }}</strong>
+    <small>Reserved by active orders</small>
+  </article>
+
+  <article class="computer-stat-card success">
+    <div class="computer-stat-head">
+      <span>Available</span>
+      <b>✓</b>
+    </div>
+    <strong>{{ total_available }}</strong>
+    <small>Ready to sell</small>
+  </article>
+</section>
+
+<section class="computer-table-card computer-full-card">
+  <header class="computer-card-header inventory-card-header">
+    <div>
+      <h2>Product Inventory</h2>
+      <p>Search, sort, download or print the stock list.</p>
+    </div>
+
+    <div class="computer-table-tools inventory-tools">
+      <form method="get" class="inventory-search-form">
+        <span class="inventory-search-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m16.5 16.5 4 4"></path>
+          </svg>
+        </span>
+
+        <input
+          type="search"
+          name="q"
+          value="{{ q }}"
+          data-table-search="inventoryTable"
+          placeholder="Search SKU, product name or type"
+          aria-label="Search inventory"
+        >
+
+        {% if q %}
+        <a
+          href="{% url 'portal:computer_inventory' %}"
+          class="inventory-clear-button"
+        >
+          Clear
+        </a>
+        {% endif %}
+
+        <button type="submit" class="inventory-search-button">
+          Search
+        </button>
+      </form>
+
+      <button
+        type="button"
+        data-csv-button="inventoryTable"
+        data-filename="ds-inventory"
+      >
+        Download Excel
+      </button>
+
+      <button
+        type="button"
+        data-print-button
+      >
+        Print / PDF
+      </button>
+    </div>
+  </header>
+
+  <div class="computer-table-scroll large">
+    <table
+      class="computer-report-table inventory-table"
+      id="inventoryTable"
+      data-page-size="20"
+    >
+      <thead>
+        <tr>
+          <th>Product ID</th>
+          <th>Image</th>
+          <th>SKU</th>
+          <th>Product Name</th>
+          <th>Type</th>
+          <th>Location</th>
+          <th data-type="number">Total Stock</th>
+          <th data-type="number">Reserved</th>
+          <th data-type="number">Available</th>
+          <th data-type="date">Last Confirmed</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for row in stock_rows %}
+        <tr>
+          <td data-value="{{ row.product_id }}">
+            {{ row.product_id }}
+          </td>
+
+          <td class="inventory-image-cell">
+            <div class="computer-product-thumb">
+              {% if row.photo_url %}
+                <img
+                  class="computer-product-image"
+                  src="{{ row.photo_url }}"
+                  alt="{{ row.name }}"
+                  width="40"
+                  height="40"
+                  loading="lazy"
+                >
+              {% else %}
+                <span class="computer-image-placeholder">No image</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <td>
+            <strong>{{ row.sku|default:"-" }}</strong>
+          </td>
+
+          <td>{{ row.name|default:"-" }}</td>
+          <td>{{ row.product_type|default:"-" }}</td>
+          <td>{{ row.location|default:"-" }}</td>
+
+          <td data-value="{{ row.current_qty }}">
+            {{ row.current_qty }}
+          </td>
+
+          <td data-value="{{ row.reserved_qty }}">
+            {{ row.reserved_qty }}
+          </td>
+
+          <td data-value="{{ row.available_qty }}">
+            <strong>{{ row.available_qty }}</strong>
+          </td>
+
+          <td data-value="{{ row.last_confirmed_at|date:'Y-m-d H:i' }}">
+            {% if row.last_confirmed_at %}
+              {{ row.last_confirmed_at|date:"d/m/Y H:i" }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+
+        {% empty %}
+        <tr class="computer-empty-row">
+          <td colspan="10">No inventory found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <td colspan="6">Total</td>
+          <td>{{ total_current }}</td>
+          <td>{{ total_reserved }}</td>
+          <td>{{ total_available }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div
+    class="computer-pagination"
+    data-pagination-for="inventoryTable"
+  ></div>
+</section>
+
+{% endblock %}

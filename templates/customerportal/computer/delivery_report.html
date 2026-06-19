@@ -1,0 +1,370 @@
+{% extends "customerportal/computer/base.html" %}
+
+{% block title %}
+Delivery Report | DS EXPRESS Computer Portal
+{% endblock %}
+
+{% block nav_delivery_report %}active{% endblock %}
+
+{% block content %}
+
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Delivery performance</p>
+    <h1>Delivery Report</h1>
+
+    <p class="computer-subtitle">
+      Delivered, pending and returned order performance for
+      {{ seller.name }}.
+    </p>
+  </div>
+
+  <div class="computer-user-card">
+    <span class="computer-avatar">
+      {{ seller.name|slice:":1" }}
+    </span>
+
+    <span>
+      <strong>{{ seller.name }}</strong>
+      <small>Seller account</small>
+    </span>
+  </div>
+</header>
+
+<section class="computer-filter-card">
+
+  <form method="get" class="computer-filter-form">
+
+    <label class="computer-field">
+      <span>Period</span>
+
+      <select name="period" data-period-select">
+
+        <option
+          value="today"
+          {% if period == 'today' %}selected{% endif %}
+        >
+          Today
+        </option>
+
+        <option
+          value="yesterday"
+          {% if period == 'yesterday' %}selected{% endif %}
+        >
+          Yesterday
+        </option>
+
+        <option
+          value="last_7_days"
+          {% if period == 'last_7_days' %}selected{% endif %}
+        >
+          Last 7 days
+        </option>
+
+        <option
+          value="last_30_days"
+          {% if period == 'last_30_days' %}selected{% endif %}
+        >
+          Last 30 days
+        </option>
+
+        <option
+          value="this_month"
+          {% if period == 'this_month' %}selected{% endif %}
+        >
+          This month
+        </option>
+
+        <option
+          value="custom"
+          {% if period == 'custom' %}selected{% endif %}
+        >
+          Custom date
+        </option>
+
+      </select>
+    </label>
+
+    <div
+      class="computer-custom-dates {% if period == 'custom' %}show{% endif %}"
+      data-custom-dates
+    >
+
+      <label class="computer-field">
+        <span>From</span>
+
+        <input
+          type="date"
+          name="from"
+          value="{{ date_from }}"
+          max="{{ today_iso }}"
+        >
+      </label>
+
+      <label class="computer-field">
+        <span>To</span>
+
+        <input
+          type="date"
+          name="to"
+          value="{{ date_to }}"
+          max="{{ today_iso }}"
+        >
+      </label>
+
+    </div>
+
+    <button
+      type="submit"
+      class="computer-apply-button"
+    >
+      Apply
+    </button>
+
+  </form>
+
+  <div class="computer-period-label">
+    <span>Showing data for</span>
+    <strong>{{ period_label }}</strong>
+  </div>
+
+</section>
+
+<section class="computer-stat-grid">
+
+  <article class="computer-stat-card">
+    <div class="computer-stat-head">
+      <span>Created</span>
+      <b>📦</b>
+    </div>
+
+    <strong>{{ total_created }}</strong>
+    <small>Orders created</small>
+  </article>
+
+  <article class="computer-stat-card success">
+    <div class="computer-stat-head">
+      <span>Delivered</span>
+      <b>✓</b>
+    </div>
+
+    <strong>{{ total_delivered }}</strong>
+    <small>{{ delivery_rate }}% delivery rate</small>
+  </article>
+
+  <article class="computer-stat-card warning">
+    <div class="computer-stat-head">
+      <span>Pending</span>
+      <b>◷</b>
+    </div>
+
+    <strong>{{ total_pending }}</strong>
+    <small>Still processing</small>
+  </article>
+
+  <article class="computer-stat-card danger">
+    <div class="computer-stat-head">
+      <span>Returned</span>
+      <b>↩</b>
+    </div>
+
+    <strong>{{ total_returned }}</strong>
+    <small>{{ return_rate }}% return rate</small>
+  </article>
+
+</section>
+
+<section class="computer-split-grid">
+
+  <article class="computer-table-card">
+
+    <header class="computer-card-header">
+      <div>
+        <h2>Delivered Orders</h2>
+        <p>Orders completed during the selected period.</p>
+      </div>
+
+      <div class="computer-table-tools">
+
+        <input
+          type="search"
+          data-table-search="deliveredTable"
+          placeholder="Search…"
+        >
+
+        <button
+          type="button"
+          data-csv-button="deliveredTable"
+          data-filename="delivery-report"
+        >
+          Download Excel
+        </button>
+
+      </div>
+    </header>
+
+    <div class="computer-table-scroll large">
+
+      <table
+        class="computer-report-table compact-table"
+        id="deliveredTable"
+        data-page-size="15"
+      >
+
+        <thead>
+          <tr>
+            <th data-type="date">Done Date</th>
+            <th>Tracking No.</th>
+            <th>Receiver</th>
+            <th>Phone</th>
+            <th data-type="number">COD</th>
+            <th data-type="number">Fee</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {% for order in completed_rows %}
+
+          <tr>
+            <td data-value="{{ order.done_at|date:'Y-m-d' }}">
+              {{ order.done_at|date:"d/m/Y" }}
+            </td>
+
+            <td>
+              <strong>{{ order.tracking_no }}</strong>
+            </td>
+
+            <td>
+              {{ order.receiver_name|default:"-" }}
+            </td>
+
+            <td>
+              {{ order.receiver_phone|default:"-" }}
+            </td>
+
+            <td data-value="{{ order.computer_cod }}">
+              ${{ order.computer_cod|floatformat:2 }}
+            </td>
+
+            <td data-value="{{ order.computer_fee }}">
+              ${{ order.computer_fee|floatformat:2 }}
+            </td>
+          </tr>
+
+          {% empty %}
+
+          <tr class="computer-empty-row">
+            <td colspan="6">No delivered orders.</td>
+          </tr>
+
+          {% endfor %}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+    <div
+      class="computer-pagination"
+      data-pagination-for="deliveredTable"
+    ></div>
+
+  </article>
+
+  <article class="computer-table-card">
+
+    <header class="computer-card-header">
+      <div>
+        <h2>Returned Orders</h2>
+        <p>Orders returned during the selected period.</p>
+      </div>
+
+      <div class="computer-table-tools">
+
+        <input
+          type="search"
+          data-table-search="returnedTable"
+          placeholder="Search…"
+        >
+
+        <button
+          type="button"
+          data-csv-button="returnedTable"
+          data-filename="return-report"
+        >
+          Download Excel
+        </button>
+
+      </div>
+    </header>
+
+    <div class="computer-table-scroll large">
+
+      <table
+        class="computer-report-table compact-table"
+        id="returnedTable"
+        data-page-size="15"
+      >
+
+        <thead>
+          <tr>
+            <th data-type="date">Return Date</th>
+            <th>Tracking No.</th>
+            <th>Receiver</th>
+            <th>Phone</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {% for order in returned_rows %}
+
+          <tr>
+            <td data-value="{{ order.done_at|date:'Y-m-d' }}">
+              {{ order.done_at|date:"d/m/Y" }}
+            </td>
+
+            <td>
+              <strong>{{ order.tracking_no }}</strong>
+            </td>
+
+            <td>
+              {{ order.receiver_name|default:"-" }}
+            </td>
+
+            <td>
+              {{ order.receiver_phone|default:"-" }}
+            </td>
+
+            <td class="wide-cell">
+              {{ order.reason|default:order.remark|default:"-" }}
+            </td>
+          </tr>
+
+          {% empty %}
+
+          <tr class="computer-empty-row">
+            <td colspan="5">No returned orders.</td>
+          </tr>
+
+          {% endfor %}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+    <div
+      class="computer-pagination"
+      data-pagination-for="returnedTable"
+    ></div>
+
+  </article>
+
+</section>
+
+{% endblock %}

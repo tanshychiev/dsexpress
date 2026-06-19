@@ -1,0 +1,251 @@
+{% extends "customerportal/computer/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard | DS EXPRESS Computer Portal{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Seller overview</p>
+    <h1>Computer Dashboard</h1>
+    <p class="computer-subtitle">Orders, delivery performance and COD summary for {{ seller.name }}.</p>
+  </div>
+
+  <div class="computer-topbar-actions">
+    <div class="computer-user-card">
+      <span class="computer-avatar">{{ seller.name|slice:":1" }}</span>
+      <span>
+        <strong>{{ seller.name }}</strong>
+        <small>Seller account</small>
+      </span>
+    </div>
+  </div>
+</header>
+
+<section class="computer-filter-card">
+  <form method="get" class="computer-filter-form" id="computerFilterForm">
+    <label class="computer-field">
+      <span>Period</span>
+      <select name="period" id="computerPeriod">
+        <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+        <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+        <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 days</option>
+        <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 days</option>
+        <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This month</option>
+        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom date</option>
+      </select>
+    </label>
+
+    <div class="computer-custom-dates {% if period == 'custom' %}show{% endif %}" id="computerCustomDates">
+      <label class="computer-field">
+        <span>From</span>
+        <input type="date" name="from" value="{{ date_from }}" max="{{ today_iso }}">
+      </label>
+      <label class="computer-field">
+        <span>To</span>
+        <input type="date" name="to" value="{{ date_to }}" max="{{ today_iso }}">
+      </label>
+    </div>
+
+    <button type="submit" class="computer-apply-button">Apply</button>
+  </form>
+
+  <div class="computer-period-label">
+    <span>Showing data for</span>
+    <strong>{{ period_label }}</strong>
+  </div>
+</section>
+
+<section class="computer-stat-grid">
+  <article class="computer-stat-card">
+    <div class="computer-stat-head"><span>Total Orders</span><b>📦</b></div>
+    <strong>{{ total_orders }}</strong>
+    <small>Orders created in this period</small>
+  </article>
+  <article class="computer-stat-card success">
+    <div class="computer-stat-head"><span>Delivered</span><b>✓</b></div>
+    <strong>{{ total_delivered }}</strong>
+    <small>{{ delivery_rate }}% delivery rate</small>
+  </article>
+  <article class="computer-stat-card warning">
+    <div class="computer-stat-head"><span>Pending</span><b>◷</b></div>
+    <strong>{{ total_pending }}</strong>
+    <small>Current pending orders</small>
+  </article>
+  <article class="computer-stat-card danger">
+    <div class="computer-stat-head"><span>Returned</span><b>↩</b></div>
+    <strong>{{ total_returned }}</strong>
+    <small>{{ return_rate }}% return rate</small>
+  </article>
+  <article class="computer-stat-card info">
+    <div class="computer-stat-head"><span>Province</span><b>⌖</b></div>
+    <strong>{{ total_province }}</strong>
+    <small>Province orders created</small>
+  </article>
+  <article class="computer-stat-card money">
+    <div class="computer-stat-head"><span>Total COD</span><b>$</b></div>
+    <strong>${{ total_cod|floatformat:2 }}</strong>
+    <small>Collected from delivered orders</small>
+  </article>
+  <article class="computer-stat-card fee">
+    <div class="computer-stat-head"><span>Delivery Fees</span><b>−</b></div>
+    <strong>${{ total_fees|floatformat:2 }}</strong>
+    <small>Delivery, additional and province fees</small>
+  </article>
+  <article class="computer-stat-card balance">
+    <div class="computer-stat-head"><span>Net Balance</span><b>◎</b></div>
+    <strong>${{ net_balance|floatformat:2 }}</strong>
+    <small>COD minus all fees</small>
+  </article>
+</section>
+
+
+<section class="computer-insight-grid">
+  <article class="computer-insight-card">
+    <span>Cancellation Rate</span>
+    <strong>{{ cancellation_rate }}%</strong>
+    <small>{{ cancelled_orders }} cancelled or void order{{ cancelled_orders|pluralize }}</small>
+  </article>
+
+  <article class="computer-insight-card">
+    <span>Status of the Order</span>
+    <strong>{{ total_pending }} Pending</strong>
+    <small>{{ total_delivered }} delivered · {{ total_returned }} returned</small>
+  </article>
+
+  <article class="computer-insight-card">
+    <span>Automatic Stock</span>
+    <strong>{{ automatic_stock_status }}</strong>
+    <small>
+      {{ dashboard_inventory_products }} products ·
+      {{ dashboard_available_stock }} available ·
+      {{ dashboard_reserved_stock }} reserved
+    </small>
+  </article>
+</section>
+
+<section class="computer-content-grid">
+  <article class="computer-table-card">
+    <header class="computer-card-header">
+      <div>
+        <h2>Daily Order Summary</h2>
+        <p>Click a column heading to sort the table.</p>
+      </div>
+      <div class="computer-table-tools">
+        <input type="search" id="computerTableSearch" placeholder="Search date…" aria-label="Search report">
+        <button type="button" id="computerCsvButton">Download Excel</button>
+        <button type="button" id="computerPrintButton">Print / PDF</button>
+      </div>
+    </header>
+
+    <div class="computer-table-scroll">
+      <table class="computer-report-table" id="computerReportTable">
+        <thead>
+          <tr>
+            <th data-type="date">Date</th>
+            <th data-type="number">New Orders</th>
+            <th data-type="number">Delivered</th>
+            <th data-type="number">Pending</th>
+            <th data-type="number">Returned</th>
+            <th data-type="number">Province</th>
+            <th data-type="number">Delivery Rate</th>
+            <th data-type="number">Return Rate</th>
+            <th data-type="number">COD</th>
+            <th data-type="number">Delivery Fee</th>
+            <th data-type="number">Net Balance</th>
+          </tr>
+        </thead>
+        <tbody id="computerReportBody">
+          {% for row in daily_rows %}
+          <tr>
+            <td data-value="{{ row.date|date:'Y-m-d' }}">{{ row.date|date:"d/m/Y" }}</td>
+            <td data-value="{{ row.new_orders }}">{{ row.new_orders }}</td>
+            <td data-value="{{ row.delivered }}">{{ row.delivered }}</td>
+            <td data-value="{{ row.pending }}">{{ row.pending }}</td>
+            <td data-value="{{ row.returned }}">{{ row.returned }}</td>
+            <td data-value="{{ row.province }}">{{ row.province }}</td>
+            <td class="rate-success" data-value="{{ row.delivery_rate }}">{{ row.delivery_rate }}%</td>
+            <td class="rate-danger" data-value="{{ row.return_rate }}">{{ row.return_rate }}%</td>
+            <td data-value="{{ row.cod }}">${{ row.cod|floatformat:2 }}</td>
+            <td data-value="{{ row.fees }}">${{ row.fees|floatformat:2 }}</td>
+            <td data-value="{{ row.net }}">${{ row.net|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr class="computer-empty-row"><td colspan="11">No report data found.</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td>{{ total_orders }}</td>
+            <td>{{ total_delivered }}</td>
+            <td>{{ total_pending }}</td>
+            <td>{{ total_returned }}</td>
+            <td>{{ total_province }}</td>
+            <td>{{ delivery_rate }}%</td>
+            <td>{{ return_rate }}%</td>
+            <td>${{ total_cod|floatformat:2 }}</td>
+            <td>${{ total_fees|floatformat:2 }}</td>
+            <td>${{ net_balance|floatformat:2 }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <footer class="computer-pagination">
+      <span id="computerPaginationInfo">Showing report rows</span>
+      <div>
+        <button type="button" id="computerPreviousPage">Previous</button>
+        <span id="computerPageNumber">1</span>
+        <button type="button" id="computerNextPage">Next</button>
+      </div>
+    </footer>
+  </article>
+
+  <aside class="computer-side-column">
+    <article class="computer-side-card">
+      <header class="computer-card-header compact">
+        <div>
+          <h2>Recent Orders</h2>
+          <p>Latest seller activity</p>
+        </div>
+        <a href="{% url 'portal:computer_orders' %}">View all</a>
+      </header>
+      <div class="computer-recent-list">
+        {% for order in recent_orders %}
+        <div class="computer-recent-item">
+          <span class="computer-order-icon">📦</span>
+          <span class="computer-order-copy">
+            <strong>{{ order.tracking_no }}</strong>
+            <small>{{ order.receiver_name|default:"No receiver" }} · ${{ order.price|default:0|floatformat:2 }}</small>
+          </span>
+          <span class="computer-status {{ order.computer_status_key }}">{{ order.computer_status_label }}</span>
+        </div>
+        {% empty %}
+        <p class="computer-empty-message">No recent orders.</p>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="computer-side-card">
+      <header class="computer-card-header compact">
+        <div>
+          <h2>Quick Actions</h2>
+          <p>Common seller tools</p>
+        </div>
+      </header>
+      <div class="computer-quick-grid">
+        <a href="{% url 'portal:computer_orders' %}"><span>＋</span><strong>Create Pickup</strong></a>
+        <a href="{% url 'portal:computer_delivery_report' %}"><span>⌖</span><strong>Delivery Report</strong></a>
+        <a href="{% url 'portal:computer_cod_report' %}"><span>$</span><strong>COD Report</strong></a>
+        <a href="{% url 'portal:computer_dashboard' %}"><span>▦</span><strong>Dashboard</strong></a>
+      </div>
+    </article>
+  </aside>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'customerportal/js/computer_dashboard.js' %}?v=20260619a"></script>
+{% endblock %}

@@ -195,19 +195,25 @@ def batch_list(request):
 @login_required
 def batch_create(request):
     session_key = _scan_session_key()
-    scanned_codes = request.session.get(session_key, [])
 
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
 
         if action == "scan_add":
-            posted_codes = _parse_codes(request.POST.get("scan_codes", ""))
+            posted_codes = _parse_codes(
+                request.POST.get("scan_codes", "")
+            )
 
             if not posted_codes:
-                messages.error(request, "Please scan tracking code(s).")
+                messages.error(
+                    request,
+                    "Please scan tracking code(s).",
+                )
                 return redirect("provincecod:batch_create")
 
-            existing = list(request.session.get(session_key, []))
+            existing = list(
+                request.session.get(session_key, [])
+            )
             seen = set(existing)
             added = 0
 
@@ -219,107 +225,197 @@ def batch_create(request):
 
             request.session[session_key] = existing
             request.session.modified = True
-            messages.success(request, f"Added {added} tracking code(s).")
+
+            messages.success(
+                request,
+                f"Added {added} tracking code(s).",
+            )
             return redirect("provincecod:batch_create")
 
         if action == "scan_clear":
             request.session[session_key] = []
             request.session.modified = True
-            messages.success(request, "Scanned list cleared.")
+
+            messages.success(
+                request,
+                "Scanned list cleared.",
+            )
             return redirect("provincecod:batch_create")
 
         if action == "remove_scan":
-            code = (request.POST.get("code") or "").strip()
-            existing = list(request.session.get(session_key, []))
+            code = (
+                request.POST.get("code") or ""
+            ).strip()
+
+            existing = list(
+                request.session.get(session_key, [])
+            )
 
             request.session[session_key] = [
-                value for value in existing if value != code
+                value
+                for value in existing
+                if value != code
             ]
             request.session.modified = True
+
             return redirect("provincecod:batch_create")
 
-        if action == "confirm_create":
-            shipper_id = (request.POST.get("shipper_id") or "").strip()
-            remark = (request.POST.get("remark") or "").strip()
+        # The current template sends "confirm_sent".
+        # "confirm_create" is also accepted for older templates.
+        if action in {"confirm_create", "confirm_sent"}:
+            shipper_id = (
+                request.POST.get("shipper_id") or ""
+            ).strip()
+
+            remark = (
+                request.POST.get("remark") or ""
+            ).strip()
+
             checked_ids = [
                 int(value)
-                for value in request.POST.getlist("checked_ids")
+                for value in request.POST.getlist(
+                    "checked_ids"
+                )
                 if str(value).isdigit()
             ]
 
             if not shipper_id.isdigit():
-                messages.error(request, "Please select a carrier.")
+                messages.error(
+                    request,
+                    "Please select a carrier.",
+                )
                 return redirect("provincecod:batch_create")
 
-            shipper = _active_carriers().filter(pk=int(shipper_id)).first()
+            shipper = (
+                _active_carriers()
+                .filter(pk=int(shipper_id))
+                .first()
+            )
 
             if not shipper:
-                messages.error(request, "Selected carrier is invalid.")
+                messages.error(
+                    request,
+                    "Selected carrier is invalid.",
+                )
                 return redirect("provincecod:batch_create")
 
-            allowed_orders, _, _ = _get_scanned_orders(
+            scanned_codes = list(
                 request.session.get(session_key, [])
             )
-            allowed_map = {order.id: order for order in allowed_orders}
+
+            allowed_orders, _, _ = _get_scanned_orders(
+                scanned_codes
+            )
+
+            allowed_map = {
+                order.id: order
+                for order in allowed_orders
+            }
+
             selected_orders = [
-                allowed_map[oid]
-                for oid in checked_ids
-                if oid in allowed_map
+                allowed_map[order_id]
+                for order_id in checked_ids
+                if order_id in allowed_map
             ]
 
             if not selected_orders:
-                messages.error(request, "Please tick at least one allowed order.")
+                messages.error(
+                    request,
+                    "Please tick at least one allowed order.",
+                )
                 return redirect("provincecod:batch_create")
 
-            with transaction.atomic():
-                batch = ProvinceCODBatch.objects.create(
-                    created_by=request.user,
-                    shipper=shipper,
-                    assigned_at=timezone.now(),
-                    remark=remark,
-                    status=ProvinceCODBatch.STATUS_PENDING,
-                )
-
-                for order in selected_orders:
-                    old_status = _order_status(order)
-
-                    ProvinceCODItem.objects.create(
-                        batch=batch,
-                        order=order,
-                        original_cod=_order_cod(order),
-                        status_before=old_status,
-                    )
-
-                    Order.objects.filter(pk=order.pk).update(
-                        status="PROCESSING",
-                        delivery_shipper=shipper,
-                        updated_at=timezone.now(),
-                        updated_by=request.user,
-                    )
-
-                    OrderActivity.objects.create(
-                        order=order,
-                        action="ASSIGN_PROVINCE_COD",
-                        old_status=old_status,
-                        new_status="PROCESSING",
-                        actor=request.user,
+            try:
+                with transaction.atomic():
+                    batch = ProvinceCODBatch.objects.create(
+                        created_by=request.user,
                         shipper=shipper,
-                        note=f"Assigned to Province COD batch PVCOD-{batch.id}.",
+                        assigned_at=timezone.now(),
+                        remark=remark,
+                        status=ProvinceCODBatch.STATUS_PENDING,
                     )
 
+                    for order in selected_orders:
+                        old_status = _order_status(order)
+
+                        ProvinceCODItem.objects.create(
+                            batch=batch,
+                            order=order,
+                            original_cod=_order_cod(order),
+                            status_before=old_status,
+                        )
+
+                        Order.objects.filter(
+                            pk=order.pk
+                        ).update(
+                            status="PROCESSING",
+                            delivery_shipper=shipper,
+                            updated_at=timezone.now(),
+                            updated_by=request.user,
+                        )
+
+                        OrderActivity.objects.create(
+                            order=order,
+                            action="ASSIGN_PROVINCE_COD",
+                            old_status=old_status,
+                            new_status="PROCESSING",
+                            actor=request.user,
+                            shipper=shipper,
+                            note=(
+                                "Assigned to Province COD batch "
+                                f"PVCOD-{batch.id}."
+                            ),
+                        )
+
+                    # Immediately finish this new batch as SENT.
+                    # The service changes normal order status to DONE,
+                    # sets current order COD to zero, and keeps the
+                    # original COD in Province COD tracking.
+                    complete_batch_sent(
+                        batch,
+                        request.user,
+                    )
+
+            except ValueError as exc:
+                messages.error(request, str(exc))
+                return redirect("provincecod:batch_create")
+
+            # Clear only after successful completion.
             request.session[session_key] = []
             request.session.modified = True
-            messages.success(request, "Province COD batch created.")
-            return redirect("provincecod:batch_detail", pk=batch.id)
 
-    scanned_codes = request.session.get(session_key, [])
-    allowed_orders, error_orders, not_found = _get_scanned_orders(scanned_codes)
+            messages.success(
+                request,
+                (
+                    f"{len(selected_orders)} Province COD "
+                    "order(s) completed as sent in batch "
+                    f"PVCOD-{batch.id}."
+                ),
+            )
+
+            return redirect(
+                "provincecod:batch_detail",
+                pk=batch.id,
+            )
+
+    scanned_codes = list(
+        request.session.get(session_key, [])
+    )
+
+    allowed_orders, error_orders, not_found = (
+        _get_scanned_orders(scanned_codes)
+    )
 
     return render(
         request,
         "provincecod/batch_create.html",
         {
-            "rows_allowed": [_row_for_order(o) for o in allowed_orders],
+            # The template places this back inside the textarea.
+            "scan_value": "\n".join(scanned_codes),
+            "rows_allowed": [
+                _row_for_order(order)
+                for order in allowed_orders
+            ],
             "rows_error": [
                 _row_for_order(order, error=reason)
                 for order, reason in error_orders

@@ -1,0 +1,457 @@
+{% extends "customerportal/base.html" %}
+{% load static %}
+
+{% block title %}DS EXPRESS Customer Login{% endblock %}
+{% block body_class %}computer-customer-login{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ds-green: #0f8f68;
+    --ds-green-dark: #087653;
+    --ds-ink: #172033;
+    --ds-muted: #6f7f99;
+    --ds-line: #dce6e3;
+    --ds-card: rgba(255, 255, 255, 0.92);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body.computer-customer-login {
+    min-height: 100vh;
+    margin: 0;
+    background:
+      radial-gradient(circle at 10% 10%, rgba(70, 219, 174, 0.30), transparent 28%),
+      radial-gradient(circle at 92% 18%, rgba(102, 184, 255, 0.18), transparent 25%),
+      linear-gradient(135deg, #edfdf7 0%, #eef6f8 48%, #eaf5fb 100%);
+    color: var(--ds-ink);
+  }
+
+  .customer-login-shell {
+    min-height: 100vh;
+    padding: 48px 24px;
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .customer-login-shell::before,
+  .customer-login-shell::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+    pointer-events: none;
+  }
+
+  .customer-login-shell::before {
+    width: 320px;
+    height: 320px;
+    left: -110px;
+    bottom: -120px;
+    background: rgba(25, 191, 137, 0.11);
+  }
+
+  .customer-login-shell::after {
+    width: 260px;
+    height: 260px;
+    right: -80px;
+    top: 80px;
+    background: rgba(58, 142, 211, 0.10);
+  }
+
+  .customer-login-card {
+    width: min(100%, 470px);
+    padding: 30px;
+    border: 1px solid rgba(220, 230, 227, 0.9);
+    border-radius: 30px;
+    background: var(--ds-card);
+    box-shadow: 0 28px 80px rgba(32, 66, 74, 0.17);
+    backdrop-filter: blur(16px);
+    position: relative;
+    z-index: 1;
+  }
+
+  .customer-login-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .customer-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .customer-logo {
+    width: 48px;
+    height: 48px;
+    padding: 4px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 143, 104, 0.20);
+    overflow: hidden;
+  }
+
+  .customer-logo img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+
+  .customer-brand-name {
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  .customer-brand-subtitle {
+    margin-top: 3px;
+    color: var(--ds-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .customer-login-badge {
+    padding: 8px 12px;
+    border: 1px solid #a9ebd4;
+    border-radius: 999px;
+    background: #effdf7;
+    color: var(--ds-green-dark);
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .customer-login-title {
+    margin: 0;
+    font-size: clamp(30px, 5vw, 38px);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+  }
+
+  .customer-login-description {
+    margin: 10px 0 24px;
+    color: var(--ds-muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .customer-alert {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border: 1px solid #ffcaca;
+    border-radius: 14px;
+    background: #fff4f4;
+    color: #c43c3c;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .customer-field {
+    margin-bottom: 16px;
+  }
+
+  .customer-field label {
+    display: block;
+    margin-bottom: 7px;
+    color: #3d4b61;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .customer-input-wrap {
+    min-height: 52px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #cbd8e6;
+    border-radius: 15px;
+    background: #f5f9ff;
+    transition: 0.2s ease;
+  }
+
+  .customer-input-wrap:focus-within {
+    border-color: var(--ds-green);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(15, 143, 104, 0.10);
+  }
+
+  .customer-input-icon {
+    width: 20px;
+    flex: 0 0 auto;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  .customer-input-wrap input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ds-ink);
+    font: inherit;
+    font-size: 14px;
+  }
+
+  .customer-password-toggle {
+    padding: 7px 9px;
+    border: 0;
+    border-radius: 9px;
+    background: #e7f8f1;
+    color: var(--ds-green-dark);
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+  }
+
+  .customer-field-error {
+    margin-top: 6px;
+    color: #c43c3c;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .customer-form-row {
+    margin: 3px 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .customer-remember {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #45546b;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .customer-remember input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--ds-green);
+  }
+
+  .customer-help-text {
+    color: var(--ds-muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .customer-login-button {
+    width: 100%;
+    min-height: 53px;
+    border: 0;
+    border-radius: 15px;
+    background: linear-gradient(135deg, var(--ds-green), #16a98c);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 14px 30px rgba(15, 143, 104, 0.24);
+    transition: 0.2s ease;
+  }
+
+  .customer-login-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 34px rgba(15, 143, 104, 0.30);
+  }
+
+  .customer-login-footer {
+    margin-top: 18px;
+    padding-top: 17px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-top: 1px solid var(--ds-line);
+    color: var(--ds-muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .customer-mobile-switch {
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  .customer-mobile-switch a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--ds-green-dark);
+    font-size: 12px;
+    font-weight: 900;
+    text-decoration: none;
+  }
+
+  .customer-mobile-switch a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 560px) {
+    .customer-login-shell {
+      padding: 20px 14px;
+    }
+
+    .customer-login-card {
+      padding: 22px;
+      border-radius: 24px;
+    }
+
+    .customer-login-badge {
+      display: none;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="customer-login-shell">
+  <div class="customer-login-card">
+
+    <div class="customer-login-header">
+      <div class="customer-brand">
+        <div class="customer-logo">
+          <img src="{% static 'img/favicon.png' %}" alt="DS EXPRESS">
+        </div>
+
+        <div>
+          <div class="customer-brand-name">DS Express</div>
+          <div class="customer-brand-subtitle">Customer Portal</div>
+        </div>
+      </div>
+
+      <div class="customer-login-badge">Customer Login</div>
+    </div>
+
+    <h1 class="customer-login-title">Welcome back</h1>
+
+    <p class="customer-login-description">
+      Sign in to review orders, delivery reports, COD, and inventory from your computer.
+    </p>
+
+    <form method="post" action="{% url 'portal:computer_login' %}">
+      {% csrf_token %}
+
+            {% if form.non_field_errors %}
+        <div class="customer-alert">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="customer-field">
+        <label for="id_username">Username</label>
+
+        <div class="customer-input-wrap">
+          <span class="customer-input-icon">👤</span>
+
+          <input
+            type="text"
+            name="username"
+            id="id_username"
+            value="{{ form.username.value|default:'' }}"
+            placeholder="Enter customer username"
+            autocomplete="username"
+            required
+          >
+        </div>
+
+        {% if form.username.errors %}
+          <div class="customer-field-error">
+            {{ form.username.errors|striptags }}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="customer-field">
+        <label for="id_password">Password</label>
+
+        <div class="customer-input-wrap">
+          <span class="customer-input-icon">🔒</span>
+
+          <input
+            type="password"
+            name="password"
+            id="id_password"
+            placeholder="Enter password"
+            autocomplete="current-password"
+            required
+          >
+
+          <button
+            type="button"
+            class="customer-password-toggle"
+            onclick="toggleCustomerPassword()"
+          >
+            Show
+          </button>
+        </div>
+
+        {% if form.password.errors %}
+          <div class="customer-field-error">
+            {{ form.password.errors|striptags }}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="customer-form-row">
+        <label class="customer-remember">
+          <input type="checkbox" name="remember_me">
+          <span>Keep me signed in</span>
+        </label>
+
+        <span class="customer-help-text">Customer accounts only</span>
+      </div>
+
+      <button type="submit" class="customer-login-button">
+        Login to Customer Portal
+      </button>
+    </form>
+
+    <div class="customer-mobile-switch">
+      <a href="{% url 'portal:login' %}">
+        <span>📱</span>
+        Switch to Mobile Login
+      </a>
+    </div>
+
+    <div class="customer-login-footer">
+      <span>Module: Customer Portal</span>
+      <span>Status: Active</span>
+    </div>
+
+  </div>
+</section>
+
+<script>
+  function toggleCustomerPassword() {
+    const passwordInput = document.getElementById("id_password");
+    const toggleButton = document.querySelector(".customer-password-toggle");
+
+    if (!passwordInput || !toggleButton) {
+      return;
+    }
+
+    const isHidden = passwordInput.type === "password";
+    passwordInput.type = isHidden ? "text" : "password";
+    toggleButton.textContent = isHidden ? "Hide" : "Show";
+  }
+</script>
+{% endblock %}

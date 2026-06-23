@@ -5,16 +5,35 @@
 {% block body_class %}portal-login{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'customerportal/css/login.css' %}?v=20260604ds">
+<link
+  rel="stylesheet"
+  href="{% static 'customerportal/css/login.css' %}?v=20260623desktoplogin"
+>
 
-<!-- Force iPhone / PWA name and icon even from login page -->
-<link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}?v=20260604ds">
-<link rel="shortcut icon" type="image/png" href="{% static 'img/favicon.png' %}?v=20260604ds">
-
-<link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/favicon.png' %}?v=20260604ds">
-<link rel="apple-touch-icon-precomposed" sizes="180x180" href="{% static 'img/favicon.png' %}?v=20260604ds">
-
-<link rel="manifest" href="{% static 'img/manifest/ds-express.webmanifest' %}?v=20260604ds">
+<link
+  rel="icon"
+  type="image/png"
+  href="{% static 'img/favicon.png' %}?v=20260623desktoplogin"
+>
+<link
+  rel="shortcut icon"
+  type="image/png"
+  href="{% static 'img/favicon.png' %}?v=20260623desktoplogin"
+>
+<link
+  rel="apple-touch-icon"
+  sizes="180x180"
+  href="{% static 'img/favicon.png' %}?v=20260623desktoplogin"
+>
+<link
+  rel="apple-touch-icon-precomposed"
+  sizes="180x180"
+  href="{% static 'img/favicon.png' %}?v=20260623desktoplogin"
+>
+<link
+  rel="manifest"
+  href="{% static 'img/manifest/ds-express.webmanifest' %}?v=20260623desktoplogin"
+>
 
 <meta name="application-name" content="DS EXPRESS">
 <meta name="apple-mobile-web-app-title" content="DS EXPRESS">
@@ -27,13 +46,15 @@
 
 {% block content %}
 <section class="mobile-login-page">
-
   <div class="app-phone">
 
     <div class="app-top">
       <div class="app-logo-wrap">
         <div class="app-logo-img">
-          <img src="{% static 'img/favicon.png' %}?v=20260604ds" alt="DS EXPRESS">
+          <img
+            src="{% static 'img/favicon.png' %}?v=20260623desktoplogin"
+            alt="DS EXPRESS"
+          >
         </div>
 
         <div>
@@ -42,7 +63,19 @@
         </div>
       </div>
 
-      <div class="app-chip">COD</div>
+      <div class="app-top-actions">
+        <a
+          href="{% url 'portal:computer_login' %}"
+          class="desktop-mode-btn"
+          aria-label="Switch to desktop mode"
+          title="Switch to desktop mode"
+        >
+          <span class="desktop-mode-icon">🖥️</span>
+          <span class="desktop-mode-text">Desktop</span>
+        </a>
+
+        <div class="app-chip">COD</div>
+      </div>
     </div>
 
     <div class="welcome-block">
@@ -87,6 +120,7 @@
 
         <div class="field-box">
           <span class="field-icon">👤</span>
+
           <input
             type="text"
             name="username"
@@ -99,7 +133,9 @@
         </div>
 
         {% if form.username.errors %}
-          <div class="field-error">{{ form.username.errors|striptags }}</div>
+          <div class="field-error">
+            {{ form.username.errors|striptags }}
+          </div>
         {% endif %}
       </div>
 
@@ -108,6 +144,7 @@
 
         <div class="field-box password-box">
           <span class="field-icon">🔒</span>
+
           <input
             type="password"
             name="password"
@@ -117,13 +154,20 @@
             required
           >
 
-          <button type="button" class="toggle-password" onclick="togglePassword()">
+          <button
+            type="button"
+            class="toggle-password"
+            onclick="togglePassword()"
+            aria-label="Show password"
+          >
             Show
           </button>
         </div>
 
         {% if form.password.errors %}
-          <div class="field-error">{{ form.password.errors|striptags }}</div>
+          <div class="field-error">
+            {{ form.password.errors|striptags }}
+          </div>
         {% endif %}
       </div>
 
@@ -137,18 +181,19 @@
       </div>
 
       <button type="submit" class="login-btn">
-        Login
+        <span>Login</span>
         <span>→</span>
       </button>
 
       <div class="request-line">
         <span>Need a seller account?</span>
-        <a href="{% url 'portal:booking_public' %}">Request Pickup</a>
+        <a href="{% url 'portal:booking_public' %}">
+          Request Pickup
+        </a>
       </div>
     </form>
 
   </div>
-
 </section>
 
 <style>
@@ -177,6 +222,81 @@
     text-transform: uppercase;
     letter-spacing: 0.01em;
   }
+
+  .app-top-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    flex: 0 0 auto;
+  }
+
+  .desktop-mode-btn {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 9px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+    transition:
+      background 0.2s ease,
+      color 0.2s ease,
+      border-color 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .desktop-mode-btn:hover {
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #087b48;
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+
+  .desktop-mode-btn:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.45);
+    outline-offset: 2px;
+  }
+
+  .desktop-mode-icon {
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .desktop-mode-text {
+    line-height: 1;
+  }
+
+  @media (max-width: 380px) {
+    .app-top-actions {
+      gap: 5px;
+    }
+
+    .desktop-mode-btn {
+      width: 30px;
+      height: 30px;
+      min-height: 30px;
+      padding: 0;
+    }
+
+    .desktop-mode-text {
+      display: none;
+    }
+
+    .desktop-mode-icon {
+      font-size: 13px;
+    }
+  }
 </style>
 
 <script>
@@ -184,19 +304,21 @@
 
   function togglePassword() {
     const passwordInput = document.getElementById("id_password");
-    const toggleBtn = document.querySelector(".toggle-password");
+    const toggleButton = document.querySelector(".toggle-password");
 
-    if (!passwordInput || !toggleBtn) {
+    if (!passwordInput || !toggleButton) {
       return;
     }
 
-    if (passwordInput.type === "password") {
-      passwordInput.type = "text";
-      toggleBtn.textContent = "Hide";
-    } else {
-      passwordInput.type = "password";
-      toggleBtn.textContent = "Show";
-    }
+    const passwordIsHidden = passwordInput.type === "password";
+
+    passwordInput.type = passwordIsHidden ? "text" : "password";
+    toggleButton.textContent = passwordIsHidden ? "Hide" : "Show";
+
+    toggleButton.setAttribute(
+      "aria-label",
+      passwordIsHidden ? "Hide password" : "Show password"
+    );
   }
 </script>
 {% endblock %}

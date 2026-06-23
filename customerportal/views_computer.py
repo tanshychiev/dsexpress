@@ -261,12 +261,12 @@ def _common_context(seller, period, start_date, end_date, period_label):
 # COMPUTER DASHBOARD
 # =========================================================
 
-@login_required
+@login_required(login_url="portal:computer_login")
 def computer_dashboard(request):
     seller = _get_logged_in_seller(request)
 
     if seller is None:
-        return redirect("portal:login")
+        return redirect("portal:computer_login")
 
     period, start_date, end_date, period_label = _get_report_range(request)
     seller_orders = _base_seller_orders(seller)
@@ -456,12 +456,12 @@ def computer_dashboard(request):
 # COMPUTER ORDERS
 # =========================================================
 
-@login_required
+@login_required(login_url="portal:computer_login")
 def computer_orders(request):
     seller = _get_logged_in_seller(request)
 
     if seller is None:
-        return redirect("portal:login")
+        return redirect("portal:computer_login")
 
     period, start_date, end_date, period_label = _get_report_range(request)
     q = (request.GET.get("q") or "").strip()
@@ -546,12 +546,12 @@ def computer_orders(request):
 # COMPUTER DELIVERY REPORT
 # =========================================================
 
-@login_required
+@login_required(login_url="portal:computer_login")
 def computer_delivery_report(request):
     seller = _get_logged_in_seller(request)
 
     if seller is None:
-        return redirect("portal:login")
+        return redirect("portal:computer_login")
 
     period, start_date, end_date, period_label = _get_report_range(request)
     seller_orders = _base_seller_orders(seller)
@@ -623,12 +623,12 @@ def computer_delivery_report(request):
 # COMPUTER COD REPORT
 # =========================================================
 
-@login_required
+@login_required(login_url="portal:computer_login")
 def computer_cod_report(request):
     seller = _get_logged_in_seller(request)
 
     if seller is None:
-        return redirect("portal:login")
+        return redirect("portal:computer_login")
 
     period, start_date, end_date, period_label = _get_report_range(request)
 
@@ -688,12 +688,12 @@ def computer_cod_report(request):
 # COMPUTER INVENTORY
 # =========================================================
 
-@login_required
+@login_required(login_url="portal:computer_login")
 def computer_inventory(request):
     seller = _get_logged_in_seller(request)
 
     if seller is None:
-        return redirect("portal:login")
+        return redirect("portal:computer_login")
 
     setting = get_seller_inventory_setting(seller)
 

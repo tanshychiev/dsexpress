@@ -21,9 +21,6 @@ def money(value):
         return ZERO
 
 
-# =========================================================
-# PROVINCE COD BATCH
-# =========================================================
 class ProvinceCODBatch(models.Model):
     STATUS_PENDING = "PENDING"
     STATUS_SENT = "SENT"
@@ -35,12 +32,21 @@ class ProvinceCODBatch(models.Model):
         (STATUS_CANCELLED, "Cancelled"),
     ]
 
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(
+        default=timezone.now,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="province_cod_batches_created",
+        null=True,
+        blank=True,
     )
 
     shipper = models.ForeignKey(
@@ -97,14 +103,13 @@ class ProvinceCODBatch(models.Model):
 
     class Meta:
         ordering = ["-id"]
+        verbose_name = "Province COD Batch"
+        verbose_name_plural = "Province COD Batches"
 
     def __str__(self):
-        return f"PVCOD-{self.id}"
+        return f"PVCOD-{self.id or 'NEW'}"
 
 
-# =========================================================
-# PROVINCE COD ITEM
-# =========================================================
 class ProvinceCODItem(models.Model):
     STATUS_SENT = "SENT"
     STATUS_RECEIVED = "RECEIVED"
@@ -142,7 +147,6 @@ class ProvinceCODItem(models.Model):
         related_name="province_cod_items",
     )
 
-    # Order values before Province COD assignment.
     original_cod = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -155,42 +159,37 @@ class ProvinceCODItem(models.Model):
         default="",
     )
 
-    # First fee deducted when Complete Sent is clicked.
     province_fee = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=ZERO,
     )
 
-    # Saved carrier pricing for later payment.
     carrier_fixed_fee = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=ZERO,
     )
 
-    # Example: 0.01 means 1%.
     carrier_percent_rate = models.DecimalField(
         max_digits=8,
         decimal_places=6,
         default=Decimal("0.000000"),
+        help_text="0.01 means 1 percent.",
     )
 
-    # Actual fee confirmed when J&T pays DS Express.
     carrier_fee = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=ZERO,
     )
 
-    # Final amount payable to seller after J&T payment.
     net_cod = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=ZERO,
     )
 
-    # Blank before the batch is completed.
     cod_status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -205,7 +204,6 @@ class ProvinceCODItem(models.Model):
         db_index=True,
     )
 
-    # Customer received confirmation.
     received_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -232,7 +230,6 @@ class ProvinceCODItem(models.Model):
         default="",
     )
 
-    # J&T/bus paid DS Express.
     paid_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -253,7 +250,6 @@ class ProvinceCODItem(models.Model):
         default="",
     )
 
-    # Returned parcel.
     returned_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -272,7 +268,6 @@ class ProvinceCODItem(models.Model):
         default="",
     )
 
-    # DS Express transferred the final COD to seller.
     seller_settled = models.BooleanField(
         default=False,
         db_index=True,
@@ -306,6 +301,8 @@ class ProvinceCODItem(models.Model):
 
     class Meta:
         ordering = ["-id"]
+        verbose_name = "Province COD Item"
+        verbose_name_plural = "Province COD Items"
 
         constraints = [
             models.UniqueConstraint(
@@ -320,11 +317,9 @@ class ProvinceCODItem(models.Model):
         ]
 
     def __str__(self):
-        return (
-            f"{self.batch_id} - "
-            f"{self.order.tracking_no} - "
-            f"{self.cod_status or 'NOT SENT'}"
-        )
+        tracking_no = getattr(self.order, "tracking_no", self.order_id)
+        status = self.cod_status or "NOT SENT"
+        return f"{self.batch_id} - {tracking_no} - {status}"
 
     @property
     def seller(self):
@@ -338,15 +333,10 @@ class ProvinceCODItem(models.Model):
         percentage_fee = money(
             self.original_cod * self.carrier_percent_rate
         )
-
-        return money(
-            self.carrier_fixed_fee + percentage_fee
-        )
+        return money(self.carrier_fixed_fee + percentage_fee)
 
     def calculate_net_cod(self):
-        return money(
-            self.original_cod - self.carrier_fee
-        )
+        return money(self.original_cod - self.carrier_fee)
 
     def save(self, *args, **kwargs):
         self.original_cod = money(self.original_cod)
@@ -364,7 +354,6 @@ class ProvinceCODItem(models.Model):
             self.seller_settled_by = None
 
         else:
-            # SENT and RECEIVED are not financially completed.
             self.net_cod = ZERO
 
         super().save(*args, **kwargs)

@@ -1,0 +1,119 @@
+```html
+{% comment %}
+Usage:
+
+Mobile page:
+{% include "customerportal/includes/mode_switch.html" with current_mode="mobile" %}
+
+Desktop page:
+{% include "customerportal/includes/mode_switch.html" with current_mode="desktop" %}
+{% endcomment %}
+
+<div class="portal-mode-switch">
+
+  {% if current_mode == "desktop" %}
+    <a
+      href="{% url 'portal:dashboard' %}"
+      class="portal-mode-button"
+      onclick="savePortalMode('mobile')"
+      title="Switch to mobile mode"
+    >
+      <span class="portal-mode-icon">📱</span>
+      <span class="portal-mode-text">Mobile</span>
+    </a>
+  {% else %}
+    <a
+      href="{% url 'portal:computer_dashboard' %}"
+      class="portal-mode-button"
+      onclick="savePortalMode('desktop')"
+      title="Switch to desktop mode"
+    >
+      <span class="portal-mode-icon">🖥️</span>
+      <span class="portal-mode-text">Desktop</span>
+    </a>
+  {% endif %}
+
+</div>
+
+<style>
+  .portal-mode-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .portal-mode-button {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition:
+      background 0.2s ease,
+      color 0.2s ease,
+      border-color 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .portal-mode-button:hover {
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #087b48;
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+
+  .portal-mode-button:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.45);
+    outline-offset: 2px;
+  }
+
+  .portal-mode-icon {
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .portal-mode-text {
+    line-height: 1;
+  }
+
+  @media (max-width: 380px) {
+    .portal-mode-button {
+      width: 32px;
+      height: 32px;
+      min-height: 32px;
+      padding: 0;
+    }
+
+    .portal-mode-text {
+      display: none;
+    }
+
+    .portal-mode-icon {
+      font-size: 14px;
+    }
+  }
+</style>
+
+<script>
+  function savePortalMode(mode) {
+    try {
+      localStorage.setItem("ds_portal_mode", mode);
+    } catch (error) {
+      console.log("Portal mode could not be saved.");
+    }
+  }
+</script>
+```

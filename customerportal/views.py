@@ -543,12 +543,16 @@ class SellerLoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput)
 
 
-def seller_login(request):
+def _seller_login_page(request, template_name, success_url):
+    """
+    Shared seller authentication for mobile and computer portal login pages.
+    Staff users are never allowed into the seller portal.
+    """
     if request.user.is_authenticated:
         seller = get_user_seller(request.user)
 
         if seller:
-            return redirect("portal:dashboard")
+            return redirect(success_url)
 
         logout(request)
 
@@ -558,47 +562,100 @@ def seller_login(request):
         username = form.cleaned_data["username"]
         password = form.cleaned_data["password"]
 
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(
+            request,
+            username=username,
+            password=password,
+        )
 
         if user is None:
             form.add_error(None, "Invalid username or password.")
+
         elif user.is_staff:
-            form.add_error(None, "Staff account cannot login to seller portal.")
+            form.add_error(
+                None,
+                "Staff account cannot login to seller portal.",
+            )
+
         else:
             account = getattr(user, "account", None)
+            seller = getattr(account, "seller", None) if account else None
+            account_type = getattr(account, "account_type", "") if account else ""
 
-            if not account:
-                form.add_error(None, "This account is not a seller portal account.")
-            elif account.account_type != "seller":
-                form.add_error(None, "This account is not a seller portal account.")
-            elif not account.seller:
-                form.add_error(None, "This account is not a seller portal account.")
-            elif not account.seller.is_active:
-                form.add_error(None, "This seller account is inactive.")
+            if not account or account_type != "seller":
+                form.add_error(
+                    None,
+                    "This account is not a seller portal account.",
+                )
+
+            elif not seller:
+                form.add_error(
+                    None,
+                    "This account is not connected to a seller.",
+                )
+
+            elif not seller.is_active:
+                form.add_error(
+                    None,
+                    "This seller account is inactive.",
+                )
+
             else:
                 login(request, user)
-                
-                request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+
+                remember_me = request.POST.get("remember_me") == "on"
+
+                if remember_me:
+                    request.session.set_expiry(
+                        settings.SESSION_COOKIE_AGE
+                    )
+                else:
+                    request.session.set_expiry(0)
 
                 SellerPortalSession.objects.create(
-                    seller=account.seller,
+                    seller=seller,
                     user=user,
                     login_at=timezone.now(),
                     last_activity_at=timezone.now(),
                     ip_address=get_client_ip(request),
-                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:1000],
+                    user_agent=request.META.get(
+                        "HTTP_USER_AGENT",
+                        "",
+                    )[:1000],
                 )
 
-                return redirect("portal:dashboard")
+                return redirect(success_url)
 
-    return render(request, "customerportal/login.html", {"form": form})
+    return render(
+        request,
+        template_name,
+        {
+            "form": form,
+        },
+    )
+
+
+def seller_login(request):
+    return _seller_login_page(
+        request=request,
+        template_name="customerportal/login.html",
+        success_url="portal:dashboard",
+    )
+
+
+def computer_login(request):
+    return _seller_login_page(
+        request=request,
+        template_name="customerportal/computer/computer_login.html",
+        success_url="portal:computer_dashboard",
+    )
 
 
 def seller_logout(request):
     seller = get_user_seller(request.user)
 
     if seller:
-        session = (
+        portal_session = (
             SellerPortalSession.objects
             .filter(
                 user=request.user,
@@ -609,10 +666,15 @@ def seller_logout(request):
             .first()
         )
 
-        if session:
-            session.logout_at = timezone.now()
-            session.last_activity_at = timezone.now()
-            session.save(update_fields=["logout_at", "last_activity_at"])
+        if portal_session:
+            portal_session.logout_at = timezone.now()
+            portal_session.last_activity_at = timezone.now()
+            portal_session.save(
+                update_fields=[
+                    "logout_at",
+                    "last_activity_at",
+                ]
+            )
 
     logout(request)
     return redirect("portal:login")

@@ -4,7 +4,6 @@ from decimal import Decimal
 
 from django.db.models import Q
 
-from provincecod.models import ProvinceCODBatch, ProvinceCODItem
 from provinceops.models import ProvinceBatch, ProvinceBatchItem
 
 
@@ -15,6 +14,7 @@ DONE_STATUSES = {
     "DELIVERED",
     "DONE",
     "PROVINCE_ASSIGNED",
+    "SENT",
 }
 
 RETURNED_STATUSES = {
@@ -105,8 +105,7 @@ def classify_row(order):
     - done
     - pending
 
-    Province COD orders stay internally classified as done so they remain
-    inside the completed section and completed totals.
+    SENT is treated as a completed delivery row.
     """
     status = (getattr(order, "status", "") or "").upper().strip()
 
@@ -119,84 +118,11 @@ def classify_row(order):
     return "pending"
 
 
-def _latest_active_province_cod_item(order):
-    """
-    Return the latest Province COD item that is not inside a cancelled batch.
-
-    Uses prefetched data when available. Otherwise it safely queries the
-    Province COD table.
-    """
-    prefetched_cache = getattr(order, "_prefetched_objects_cache", {}) or {}
-    prefetched_items = prefetched_cache.get("province_cod_items")
-
-    if prefetched_items is not None:
-        active_items = [
-            item
-            for item in prefetched_items
-            if (
-                getattr(getattr(item, "batch", None), "status", "")
-                != ProvinceCODBatch.STATUS_CANCELLED
-            )
-        ]
-
-        if not active_items:
-            return None
-
-        return max(
-            active_items,
-            key=lambda item: getattr(item, "id", 0) or 0,
-        )
-
-    return (
-        ProvinceCODItem.objects
-        .select_related("batch")
-        .filter(order_id=getattr(order, "id", None))
-        .exclude(batch__status=ProvinceCODBatch.STATUS_CANCELLED)
-        .order_by("-id")
-        .first()
-    )
-
-
 def display_status(order):
-    """
-    Display status used by Delivery Report.
+    status = (getattr(order, "status", "") or "").upper().strip()
 
-    Province COD workflow:
-    - SENT / RECEIVED / PAID => SENT COD
-    - RETURNED => RETURNED
-
-    The Order itself can remain DONE internally.
-    """
-    province_cod_item = _latest_active_province_cod_item(order)
-
-    if province_cod_item:
-        cod_status = (
-            getattr(province_cod_item, "cod_status", "")
-            or ""
-        ).upper().strip()
-
-        batch_status = (
-            getattr(
-                getattr(province_cod_item, "batch", None),
-                "status",
-                "",
-            )
-            or ""
-        ).upper().strip()
-
-        if cod_status == ProvinceCODItem.STATUS_RETURNED:
-            return "RETURNED"
-
-        if (
-            cod_status
-            in {
-                ProvinceCODItem.STATUS_SENT,
-                ProvinceCODItem.STATUS_RECEIVED,
-                ProvinceCODItem.STATUS_PAID,
-            }
-            or batch_status == ProvinceCODBatch.STATUS_SENT
-        ):
-            return "SENT COD"
+    if status == "SENT":
+        return "SENT"
 
     row_type = classify_row(order)
 
@@ -215,7 +141,7 @@ def report_money(order):
     Do NOT change DB.
 
     Pending and returned rows show 0.
-    Done rows, including SENT COD, use the current order money values.
+    Done/Sent rows show their current values.
     """
     row_type = classify_row(order)
 
@@ -316,8 +242,8 @@ def get_done_queryset(Order, cleaned):
     Done rows:
     - Normal / PP done: from Order.done_at
     - Province done: from ProvinceBatchItem.batch.assigned_at
-    - Province COD orders remain in done results but display SENT COD
-    - No delivery_date field is used
+    - Province COD sent: Order.status = SENT
+    - No delivery_date field used.
     """
     seller = cleaned.get("seller")
     d_from = cleaned.get("delivery_date_from")
@@ -326,7 +252,6 @@ def get_done_queryset(Order, cleaned):
     base_qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")
-        .prefetch_related("province_cod_items__batch")
         .filter(
             is_deleted=False,
             status__in=(DONE_STATUSES | RETURNED_STATUSES),
@@ -383,7 +308,6 @@ def get_done_queryset(Order, cleaned):
     province_done_qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")
-        .prefetch_related("province_cod_items__batch")
         .filter(
             is_deleted=False,
             id__in=province_ids,
@@ -408,7 +332,6 @@ def get_pending_queryset(Order, cleaned):
     qs = (
         Order.objects
         .select_related("seller", "delivery_shipper")
-        .prefetch_related("province_cod_items__batch")
         .filter(is_deleted=False)
         .exclude(
             status__in=(
@@ -485,9 +408,9 @@ def calc_totals(rows):
     total_fee = Decimal("0.00")
 
     for o in rows:
-        money = report_money(o)
-        total_cod += Decimal(str(money["cod"] or 0))
-        total_fee += Decimal(str(money["total_fee"] or 0))
+        money_values = report_money(o)
+        total_cod += Decimal(str(money_values["cod"] or 0))
+        total_fee += Decimal(str(money_values["total_fee"] or 0))
 
     total_cod = total_cod.quantize(Decimal("0.00"))
     total_fee = total_fee.quantize(Decimal("0.00"))

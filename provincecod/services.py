@@ -269,15 +269,15 @@ def complete_batch_sent(batch, user):
             ]
         )
 
-        # DONE is already used by the existing province delivery flow/report.
-        # update() is used so done_at is not cleared by Order.save().
+        # Province COD orders now use the real Order status SENT.
+        # update() keeps the selected done_at date.
         Order.objects.filter(pk=order.pk).update(
             cod=ZERO,
             delivery_fee=ZERO,
             province_fee=item.province_fee,
             additional_fee=ZERO,
             delivery_shipper=batch.shipper,
-            status="DONE",
+            status="SENT",
             done_at=sent_date,
             updated_at=sent_time,
             updated_by=user,
@@ -288,7 +288,7 @@ def complete_batch_sent(batch, user):
             user=user,
             action="COMPLETE_PROVINCE_COD_SENT",
             old_status=old_status,
-            new_status="DONE",
+            new_status="SENT",
             shipper=batch.shipper,
             note=(
                 f"Province COD batch PVCOD-{batch.id} sent. "
@@ -517,7 +517,11 @@ def mark_item_seller_settled(item, user):
 
 @transaction.atomic
 def undo_seller_settlement(item):
-    item = ProvinceCODItem.objects.select_for_update().get(pk=item.pk)
+    item = (
+        ProvinceCODItem.objects
+        .select_for_update()
+        .get(pk=item.pk)
+    )
 
     item.seller_settled = False
     item.seller_settled_at = None

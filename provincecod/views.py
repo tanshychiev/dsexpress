@@ -368,7 +368,7 @@ def batch_create(request):
                         )
 
                     # Immediately finish this new batch as SENT.
-                    # The service changes normal order status to DONE,
+                    # The service changes normal order status to SENT,
                     # sets current order COD to zero, and keeps the
                     # original COD in Province COD tracking.
                     complete_batch_sent(
@@ -549,7 +549,7 @@ def batch_detail(request, pk):
                 complete_batch_sent(batch, request.user)
                 messages.success(
                     request,
-                    "Batch completed as SENT. Orders are DONE in Delivery Report.",
+                    "Batch completed as SENT. Orders are SENT in Delivery Report.",
                 )
 
             elif action == "cancel":

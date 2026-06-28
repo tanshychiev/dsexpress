@@ -4,369 +4,720 @@
   {% if mode == "edit" %}Edit Seller{% else %}New Seller{% endif %}
 {% endblock %}
 
-{% block page_subtitle %}Shop profile / portal setup{% endblock %}
+{% block page_subtitle %}Shop profile, portal users and activity{% endblock %}
 
 {% block content %}
 <style>
-  .seller-wrap{
+  .seller-page{display:grid;gap:18px}
+  .seller-grid{
     display:grid;
-    grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);
+    grid-template-columns:minmax(0,1.12fr) minmax(330px,.88fr);
     gap:18px;
+    align-items:start;
   }
-  .card{
-    background:#fff;
-    border:1px solid #e5e7eb;
-    border-radius:18px;
-    box-shadow:0 10px 24px rgba(15,23,42,.06);
+  .seller-card{
     overflow:hidden;
+    border:1px solid #e2e8e4;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 30px rgba(15,23,42,.06);
   }
-  .card-head{
-    padding:18px 18px 14px;
-    border-bottom:1px solid #eef2f7;
+  .seller-card-head{
+    padding:18px 20px 15px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    border-bottom:1px solid #edf1ee;
+    background:linear-gradient(180deg,#fff,#fbfdfc);
   }
-  .card-title{
-    font-size:20px;
-    font-weight:900;
-    color:#0f172a;
+  .seller-card-title{
     margin:0;
+    color:#172235;
+    font-size:19px;
+    line-height:1.15;
+    font-weight:950;
+    letter-spacing:-.025em;
   }
-  .card-sub{
+  .seller-card-sub{
     margin-top:5px;
-    color:#64748b;
-    font-size:13px;
+    color:#718096;
+    font-size:11px;
+    line-height:1.5;
+    font-weight:700;
   }
-  .card-body{
-    padding:18px;
-  }
-  .section-title{
-    font-size:13px;
-    font-weight:900;
-    color:#0f172a;
+  .seller-card-body{padding:20px}
+  .seller-section-title{
     margin:0 0 12px;
+    color:#0f7a45;
+    font-size:10px;
+    font-weight:950;
+    letter-spacing:.12em;
     text-transform:uppercase;
-    letter-spacing:.04em;
   }
-  .form-grid{
+  .seller-form-grid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:14px;
   }
-  .field{
-    display:flex;
-    flex-direction:column;
-    gap:7px;
-  }
-  .field.full{
-    grid-column:1 / -1;
-  }
-  .field label{
-    font-size:13px;
-    font-weight:800;
+  .seller-field{min-width:0;display:grid;gap:7px}
+  .seller-field.full{grid-column:1/-1}
+  .seller-field label{
     color:#334155;
+    font-size:11px;
+    font-weight:900;
   }
-  .input{
+  .seller-input{
     width:100%;
-    border:1px solid #d7dee7;
+    min-height:43px;
+    padding:0 13px;
+    border:1px solid #d8e1db;
     border-radius:12px;
-    padding:11px 12px;
-    font-size:14px;
     outline:none;
     background:#fff;
-  }
-  .input:focus{
-    border-color:#0f766e;
-    box-shadow:0 0 0 4px rgba(15,118,110,.10);
-  }
-  .hint{
+    color:#172235;
     font-size:12px;
-    color:#64748b;
+    font-weight:750;
+    transition:.16s ease;
   }
-  .check-row{
+  .seller-input:focus{
+    border-color:#9ccdb3;
+    box-shadow:0 0 0 4px rgba(15,122,69,.09);
+  }
+  .seller-input:disabled{background:#f3f6f4;color:#77837d}
+  .seller-hint{
+    color:#7b8781;
+    font-size:9px;
+    line-height:1.5;
+    font-weight:700;
+  }
+  .seller-check{
+    min-height:43px;
+    padding:0 13px;
     display:flex;
     align-items:center;
     gap:10px;
-    padding:12px 14px;
-    border:1px solid #d7dee7;
+    border:1px solid #d8e1db;
     border-radius:12px;
-    background:#f8fafc;
+    background:#f8fbf9;
+    color:#334155;
+    font-size:11px;
+    font-weight:850;
   }
-  .check-row input{
-    width:18px;
-    height:18px;
-    accent-color:#0f766e;
-  }
-  .actions{
+  .seller-check input{width:17px;height:17px;accent-color:#0f7a45}
+  .seller-divider{height:1px;margin:20px 0;background:#edf1ee}
+  .seller-actions{
+    margin-top:20px;
     display:flex;
     justify-content:flex-end;
     gap:10px;
-    margin-top:18px;
   }
-  .btn{
+  .seller-btn{
+    min-height:42px;
+    padding:0 16px;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    border-radius:12px;
-    padding:10px 16px;
-    font-size:14px;
-    font-weight:900;
-    text-decoration:none;
-    cursor:pointer;
     border:1px solid transparent;
-  }
-  .btn-primary{
-    background:#0f766e;
-    color:#fff;
-    border-color:#0f766e;
-  }
-  .btn-ghost{
-    background:#fff;
-    color:#0f172a;
-    border-color:#d7dee7;
-  }
-  .sep{
-    height:1px;
-    background:#eef2f7;
-    margin:18px 0;
-  }
-  .alert{
-    padding:12px 14px;
     border-radius:12px;
-    margin-bottom:14px;
-    font-size:14px;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:950;
+    cursor:pointer;
   }
-  .alert-danger{
+  .seller-btn-primary{border-color:#0f7a45;background:#0f7a45;color:#fff}
+  .seller-btn-primary:hover{background:#075c34}
+  .seller-btn-ghost{border-color:#d8e1db;background:#fff;color:#334155}
+  .seller-alert{
+    padding:13px 15px;
     border:1px solid #fecaca;
+    border-radius:13px;
     background:#fef2f2;
     color:#b91c1c;
+    font-size:11px;
+    font-weight:850;
   }
-  .stat-list{
-    display:grid;
-    gap:10px;
-  }
-  .stat{
-    border:1px solid #e5e7eb;
-    border-radius:14px;
-    padding:12px 14px;
-    background:#fff;
-  }
-  .stat-label{
-    font-size:12px;
-    color:#64748b;
-    font-weight:700;
-    margin-bottom:5px;
-  }
-  .stat-value{
-    font-size:16px;
-    color:#0f172a;
-    font-weight:900;
-  }
-  .pill{
+  .seller-status-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .seller-pill{
     display:inline-flex;
     align-items:center;
-    gap:6px;
-    padding:6px 10px;
+    justify-content:center;
+    min-height:28px;
+    padding:0 10px;
     border-radius:999px;
+    font-size:9px;
+    font-weight:950;
+  }
+  .seller-pill-online{border:1px solid #b7e6c8;background:#ecfdf3;color:#087848}
+  .seller-pill-offline{border:1px solid #e5e7eb;background:#f8fafc;color:#64748b}
+  .seller-pill-owner{border:1px solid #cce7d7;background:#eef8f2;color:#0f7a45}
+  .seller-pill-active{border:1px solid #b7e6c8;background:#ecfdf3;color:#087848}
+  .seller-pill-disabled{border:1px solid #f1d49c;background:#fff7e6;color:#8a5a00}
+  .seller-pill-archived{border:1px solid #efc7c7;background:#fff0f0;color:#b94242}
+  .seller-stat-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .seller-stat{
+    min-width:0;
+    padding:13px;
+    border:1px solid #e3e9e5;
+    border-radius:15px;
+    background:#fff;
+  }
+  .seller-stat-label{color:#7b8781;font-size:9px;font-weight:800}
+  .seller-stat-value{
+    margin-top:5px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    color:#172235;
+    font-size:17px;
+    line-height:1.15;
+    font-weight:950;
+  }
+  .seller-stat-note{margin-top:4px;color:#94a099;font-size:8px;font-weight:700}
+  .seller-wide-card{grid-column:1/-1}
+  .seller-table-wrap{width:100%;overflow:auto}
+  .seller-table{width:100%;min-width:880px;border-collapse:collapse}
+  .seller-table th{
+    padding:11px 13px;
+    border-bottom:1px solid #e7ece9;
+    background:#f7faf8;
+    color:#718096;
+    text-align:left;
+    font-size:9px;
+    font-weight:950;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .seller-table td{
+    padding:12px 13px;
+    border-bottom:1px solid #edf1ee;
+    color:#334155;
+    font-size:10px;
+    font-weight:750;
+    vertical-align:middle;
+  }
+  .seller-table tr:last-child td{border-bottom:0}
+  .seller-user{display:flex;align-items:center;gap:9px}
+  .seller-user-avatar{
+    width:34px;
+    height:34px;
+    flex:0 0 34px;
+    display:grid;
+    place-items:center;
+    border-radius:11px;
+    background:#eaf7f0;
+    color:#0f7a45;
     font-size:12px;
-    font-weight:900;
+    font-weight:950;
+    text-transform:uppercase;
   }
-  .pill-on{
-    background:#ecfdf5;
-    color:#047857;
-    border:1px solid #bbf7d0;
+  .seller-user strong{display:block;color:#172235;font-size:10px;font-weight:950}
+  .seller-user small{display:block;margin-top:3px;color:#8b9690;font-size:8px;font-weight:700}
+  .seller-two-columns{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:18px;
   }
-  .pill-off{
-    background:#fff1f2;
-    color:#be123c;
-    border:1px solid #fecdd3;
+  .seller-mini-list{display:grid}
+  .seller-mini-row{
+    min-height:52px;
+    padding:10px 0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:1px solid #edf1ee;
   }
-  .mini-note{
-    margin-top:10px;
-    font-size:12px;
-    color:#64748b;
-    line-height:1.5;
+  .seller-mini-row:last-child{border-bottom:0}
+  .seller-mini-main{min-width:0}
+  .seller-mini-main strong{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#263347;
+    font-size:10px;
+    font-weight:950;
   }
-
-  @media (max-width: 980px){
-    .seller-wrap{
-      grid-template-columns:1fr;
-    }
+  .seller-mini-main small{display:block;margin-top:4px;color:#89948e;font-size:8px;font-weight:700}
+  .seller-mini-value{
+    flex:0 0 auto;
+    color:#0f7a45;
+    font-size:11px;
+    font-weight:950;
+    text-align:right;
+  }
+  .seller-empty{
+    padding:18px;
+    border:1px dashed #d9e2dc;
+    border-radius:14px;
+    background:#f9fbfa;
+    color:#7b8781;
+    text-align:center;
+    font-size:10px;
+    font-weight:800;
+  }
+  @media(max-width:1050px){
+    .seller-grid,.seller-two-columns{grid-template-columns:1fr}
+  }
+  @media(max-width:680px){
+    .seller-form-grid,.seller-stat-grid{grid-template-columns:1fr}
+    .seller-field.full{grid-column:auto}
+    .seller-card-head,.seller-card-body{padding-left:14px;padding-right:14px}
+    .seller-actions{display:grid;grid-template-columns:1fr 1fr}
   }
 </style>
 
-{% if error %}
-  <div class="alert alert-danger">
-    <b>{{ error }}</b>
-  </div>
-{% endif %}
+<div class="seller-page">
+  {% if error %}
+    <div class="seller-alert">{{ error }}</div>
+  {% endif %}
 
-<div class="seller-wrap">
-
-  <div class="card">
-    <div class="card-head">
-      <div class="card-title">
-        {% if mode == "edit" %}Update Seller{% else %}Create Seller{% endif %}
-      </div>
-      <div class="card-sub">Manage seller profile and portal access in one page.</div>
-    </div>
-
-    <div class="card-body">
-      <form method="post" novalidate>
-        {% csrf_token %}
-
-        <div class="section-title">Seller Information</div>
-
-        <div class="form-grid">
-          <div class="field">
-            <label>Name</label>
-            <input class="input" name="name" value="{{ row.name|default:'' }}" required />
-          </div>
-
-          <div class="field">
-            <label>Phone</label>
-            <input class="input" name="phone" value="{{ row.phone|default:'' }}" />
-          </div>
-
-          <div class="field full">
-            <label>Address</label>
-            <input class="input" name="address" value="{{ row.address|default:'' }}" />
-          </div>
-
-          {% if mode == "edit" %}
-          <div class="field">
-            <label>Seller Code</label>
-            <input class="input" value="{{ row.code }}" disabled />
-          </div>
-          {% endif %}
-
-          <div class="field">
-            <label>Status</label>
-            <div class="check-row">
-              <input
-                type="checkbox"
-                name="is_active"
-                value="1"
-                {% if row.is_active %}checked{% endif %}
-              >
-              <span>Active seller</span>
-            </div>
+  <div class="seller-grid">
+    <section class="seller-card">
+      <header class="seller-card-head">
+        <div>
+          <h2 class="seller-card-title">
+            {% if mode == "edit" %}Update Seller{% else %}Create Seller{% endif %}
+          </h2>
+          <div class="seller-card-sub">
+            Manage the shop profile, owner login and additional-user limit.
           </div>
         </div>
 
-        <div class="sep"></div>
-
-        <div class="section-title">Portal Login</div>
-
-        <div class="form-grid">
-          <div class="field full">
-            <div class="check-row">
-              <input
-                type="checkbox"
-                id="portal_enabled"
-                name="portal_enabled"
-                value="1"
-                {% if portal_data.portal_enabled %}checked{% endif %}
-              >
-              <span>Enable seller portal login</span>
-            </div>
-            <div class="hint">If enabled, seller can login to portal using username and password below.</div>
-          </div>
-
-          <div class="field">
-            <label>Portal Username</label>
-            <input
-              class="input portal-input"
-              name="portal_username"
-              value="{{ portal_data.portal_username|default:'' }}"
-              placeholder="Example: seller code or shop username"
-            />
-          </div>
-
-          <div class="field">
-            <label>{% if mode == "edit" %}Reset / New Password{% else %}Temporary Password{% endif %}</label>
-            <input
-              class="input portal-input"
-              name="portal_password"
-              type="text"
-              value=""
-              placeholder="{% if mode == 'edit' %}Leave blank to keep current password{% else %}Required for new portal account{% endif %}"
-            />
-          </div>
-        </div>
-
-        <div class="actions">
-          <a class="btn btn-ghost" href="{% url 'seller_list' %}">Cancel</a>
-          <button class="btn btn-primary" type="submit">Save Seller</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-head">
-      <div class="card-title">Portal Activity</div>
-      <div class="card-sub">Quick tracking for this seller portal account.</div>
-    </div>
-
-    <div class="card-body">
-      {% if mode == "edit" and activity %}
-        <div style="margin-bottom:12px;">
-          {% if activity.is_online_now %}
-            <span class="pill pill-on">Online Now</span>
+        {% if mode == "edit" %}
+          {% if row.is_active %}
+            <span class="seller-pill seller-pill-active">Active Seller</span>
           {% else %}
-            <span class="pill pill-off">Offline</span>
+            <span class="seller-pill seller-pill-disabled">Inactive Seller</span>
           {% endif %}
-        </div>
+        {% endif %}
+      </header>
 
-        <div class="stat-list">
-          <div class="stat">
-            <div class="stat-label">Portal Enabled</div>
-            <div class="stat-value">{% if activity.portal_enabled %}Yes{% else %}No{% endif %}</div>
-          </div>
+      <div class="seller-card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
 
-          <div class="stat">
-            <div class="stat-label">Portal Username</div>
-            <div class="stat-value">{{ activity.portal_username|default:"-" }}</div>
-          </div>
+          <h3 class="seller-section-title">Seller information</h3>
 
-          <div class="stat">
-            <div class="stat-label">Last Login</div>
-            <div class="stat-value">
-              {% if activity.last_login_at %}{{ activity.last_login_at|date:"d M Y, h:i A" }}{% else %}-{% endif %}
+          <div class="seller-form-grid">
+            <div class="seller-field">
+              <label for="seller_name">Name</label>
+              <input
+                id="seller_name"
+                class="seller-input"
+                name="name"
+                value="{{ row.name|default:'' }}"
+                required
+              >
+            </div>
+
+            <div class="seller-field">
+              <label for="seller_phone">Phone</label>
+              <input
+                id="seller_phone"
+                class="seller-input"
+                name="phone"
+                value="{{ row.phone|default:'' }}"
+              >
+            </div>
+
+            <div class="seller-field full">
+              <label for="seller_address">Address</label>
+              <input
+                id="seller_address"
+                class="seller-input"
+                name="address"
+                value="{{ row.address|default:'' }}"
+              >
+            </div>
+
+            {% if mode == "edit" %}
+              <div class="seller-field">
+                <label>Seller Code</label>
+                <input class="seller-input" value="{{ row.code }}" disabled>
+              </div>
+            {% endif %}
+
+            <div class="seller-field">
+              <label>Seller Status</label>
+              <label class="seller-check">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  value="1"
+                  {% if row.is_active %}checked{% endif %}
+                >
+                <span>Active seller</span>
+              </label>
+              <div class="seller-hint">
+                When inactive, the owner and every linked shop user are blocked.
+              </div>
             </div>
           </div>
 
-          <div class="stat">
-            <div class="stat-label">Last Activity</div>
-            <div class="stat-value">
-              {% if activity.last_activity_at %}{{ activity.last_activity_at|date:"d M Y, h:i A" }}{% else %}-{% endif %}
+          <div class="seller-divider"></div>
+
+          <h3 class="seller-section-title">Portal users</h3>
+
+          <div class="seller-form-grid">
+            <div class="seller-field">
+              <label for="max_portal_users">Maximum Additional Users</label>
+              <input
+                id="max_portal_users"
+                class="seller-input"
+                type="number"
+                min="0"
+                max="1000"
+                step="1"
+                name="max_portal_users"
+                value="{{ row.max_portal_users|default:5 }}"
+                required
+              >
+              <div class="seller-hint">
+                The main owner is not counted. Set 0 to allow only the owner.
+              </div>
+            </div>
+
+            {% if mode == "edit" and activity %}
+              <div class="seller-field">
+                <label>Current User Usage</label>
+                <div class="seller-check">
+                  <span>
+                    {{ activity.active_additional_count }} active /
+                    {{ row.max_portal_users }} allowed ·
+                    {{ activity.available_slots }} available
+                  </span>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="seller-divider"></div>
+
+          <h3 class="seller-section-title">Main owner login</h3>
+
+          <div class="seller-form-grid">
+            <div class="seller-field full">
+              <label class="seller-check">
+                <input
+                  type="checkbox"
+                  id="portal_enabled"
+                  name="portal_enabled"
+                  value="1"
+                  {% if portal_data.portal_enabled %}checked{% endif %}
+                >
+                <span>Enable main owner portal login</span>
+              </label>
+              <div class="seller-hint">
+                Additional users are managed by the owner from Shop Users.
+              </div>
+            </div>
+
+            <div class="seller-field">
+              <label for="portal_username">Owner Username</label>
+              <input
+                id="portal_username"
+                class="seller-input portal-input"
+                name="portal_username"
+                value="{{ portal_data.portal_username|default:'' }}"
+                placeholder="Shop username"
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="seller-field">
+              <label for="portal_password">
+                {% if mode == "edit" %}Reset / New Password{% else %}Temporary Password{% endif %}
+              </label>
+              <input
+                id="portal_password"
+                class="seller-input portal-input"
+                name="portal_password"
+                type="text"
+                value=""
+                placeholder="{% if mode == 'edit' %}Leave blank to keep current password{% else %}Required for a new owner account{% endif %}"
+                autocomplete="new-password"
+              >
             </div>
           </div>
 
-          <div class="stat">
-            <div class="stat-label">Today Login Count</div>
-            <div class="stat-value">{{ activity.today_login_count }}</div>
+          <div class="seller-actions">
+            <a class="seller-btn seller-btn-ghost" href="{% url 'seller_list' %}">
+              Cancel
+            </a>
+            <button class="seller-btn seller-btn-primary" type="submit">
+              Save Seller
+            </button>
           </div>
+        </form>
+      </div>
+    </section>
 
-          <div class="stat">
-            <div class="stat-label">Today Total Usage</div>
-            <div class="stat-value">{{ activity.today_total_minutes }} min</div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-label">This Month Usage</div>
-            <div class="stat-value">{{ activity.month_total_minutes }} min</div>
+    <section class="seller-card">
+      <header class="seller-card-head">
+        <div>
+          <h2 class="seller-card-title">Portal Overview</h2>
+          <div class="seller-card-sub">
+            Combined activity for the owner and additional users.
           </div>
         </div>
-      {% else %}
-        <div class="stat">
-          <div class="stat-label">Portal Activity</div>
-          <div class="stat-value">Not available yet</div>
-          <div class="mini-note">Save seller first, then enable portal login and seller activity will appear here.</div>
-        </div>
-      {% endif %}
-    </div>
+
+        {% if mode == "edit" %}
+          <a
+            class="seller-btn seller-btn-ghost"
+            href="{% url 'seller_portal_report' row.id %}"
+          >
+            Full Report
+          </a>
+        {% endif %}
+      </header>
+
+      <div class="seller-card-body">
+        {% if mode == "edit" and activity %}
+          <div class="seller-status-row" style="margin-bottom:12px;">
+            {% if activity.is_online_now %}
+              <span class="seller-pill seller-pill-online">
+                {{ activity.online_count }} Online Now
+              </span>
+            {% else %}
+              <span class="seller-pill seller-pill-offline">Offline</span>
+            {% endif %}
+
+            {% if activity.portal_enabled %}
+              <span class="seller-pill seller-pill-active">Owner Login Enabled</span>
+            {% else %}
+              <span class="seller-pill seller-pill-disabled">Owner Login Disabled</span>
+            {% endif %}
+          </div>
+
+          <div class="seller-stat-grid">
+            <article class="seller-stat">
+              <div class="seller-stat-label">Linked Accounts</div>
+              <div class="seller-stat-value">{{ activity.total_linked_accounts }}</div>
+              <div class="seller-stat-note">Owner and additional users</div>
+            </article>
+
+            <article class="seller-stat">
+              <div class="seller-stat-label">Active Additional Users</div>
+              <div class="seller-stat-value">
+                {{ activity.active_additional_count }} / {{ row.max_portal_users }}
+              </div>
+              <div class="seller-stat-note">{{ activity.available_slots }} slots available</div>
+            </article>
+
+            <article class="seller-stat">
+              <div class="seller-stat-label">Online Now</div>
+              <div class="seller-stat-value">{{ activity.online_count }}</div>
+              <div class="seller-stat-note">Active within 5 minutes</div>
+            </article>
+
+            <article class="seller-stat">
+              <div class="seller-stat-label">Roles</div>
+              <div class="seller-stat-value">{{ activity.role_count }}</div>
+              <div class="seller-stat-note">Seller permission roles</div>
+            </article>
+
+            <article class="seller-stat">
+              <div class="seller-stat-label">Today Usage</div>
+              <div class="seller-stat-value">{{ activity.today_total_minutes }} min</div>
+              <div class="seller-stat-note">
+                {{ activity.today_active_users }} users · {{ activity.today_page_views }} views
+              </div>
+            </article>
+
+            <article class="seller-stat">
+              <div class="seller-stat-label">This Month Usage</div>
+              <div class="seller-stat-value">{{ activity.month_total_minutes }} min</div>
+              <div class="seller-stat-note">
+                {{ activity.month_active_users }} users · {{ activity.month_page_views }} views
+              </div>
+            </article>
+
+            <article class="seller-stat">
+              <div class="seller-stat-label">Archived Users</div>
+              <div class="seller-stat-value">{{ activity.archived_count }}</div>
+              <div class="seller-stat-note">
+                {{ activity.disabled_count }} disabled, not archived
+              </div>
+            </article>
+
+            <article class="seller-stat">
+              <div class="seller-stat-label">Last Activity</div>
+              <div class="seller-stat-value" style="font-size:12px;">
+                {% if activity.last_activity_at %}
+                  {{ activity.last_activity_at|date:"d M Y, H:i" }}
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+              <div class="seller-stat-note">
+                Owner: {{ activity.portal_username|default:"Not created" }}
+              </div>
+            </article>
+          </div>
+        {% else %}
+          <div class="seller-empty">
+            Save the seller first. Portal activity will appear here.
+          </div>
+        {% endif %}
+      </div>
+    </section>
   </div>
 
+  {% if mode == "edit" and activity %}
+    <section class="seller-card seller-wide-card">
+      <header class="seller-card-head">
+        <div>
+          <h2 class="seller-card-title">Linked Portal Accounts</h2>
+          <div class="seller-card-sub">
+            These users share the same seller, orders, reports and inventory.
+          </div>
+        </div>
+      </header>
+
+      <div class="seller-table-wrap">
+        <table class="seller-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Username</th>
+              <th>Account Type</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Last Login</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for account in activity.accounts %}
+              <tr>
+                <td>
+                  <div class="seller-user">
+                    <span class="seller-user-avatar">
+                      {{ account.user.username|slice:":1" }}
+                    </span>
+                    <span>
+                      <strong>
+                        {{ account.user.get_full_name|default:account.user.username }}
+                      </strong>
+                      <small>{{ account.user.email|default:"No email" }}</small>
+                    </span>
+                  </div>
+                </td>
+                <td>{{ account.user.username }}</td>
+                <td>
+                  {% if account.is_main_owner %}
+                    <span class="seller-pill seller-pill-owner">Main Owner</span>
+                  {% else %}
+                    Additional User
+                  {% endif %}
+                </td>
+                <td>
+                  {% if account.is_main_owner %}
+                    Full Access
+                  {% elif account.seller_role %}
+                    {{ account.seller_role.name }}
+                  {% else %}
+                    No role
+                  {% endif %}
+                </td>
+                <td>
+                  {% if account.is_archived %}
+                    <span class="seller-pill seller-pill-archived">Archived</span>
+                  {% elif account.user.is_active %}
+                    <span class="seller-pill seller-pill-active">Active</span>
+                  {% else %}
+                    <span class="seller-pill seller-pill-disabled">Disabled</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if account.user.last_login %}
+                    {{ account.user.last_login|date:"d M Y, H:i" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>{{ account.created_at|date:"d M Y" }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7">
+                  <div class="seller-empty">No linked seller accounts.</div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="seller-two-columns">
+      <section class="seller-card">
+        <header class="seller-card-head">
+          <div>
+            <h2 class="seller-card-title">Most Used Pages</h2>
+            <div class="seller-card-sub">Current month usage.</div>
+          </div>
+        </header>
+
+        <div class="seller-card-body">
+          {% if activity.top_pages %}
+            <div class="seller-mini-list">
+              {% for page in activity.top_pages %}
+                <div class="seller-mini-row">
+                  <div class="seller-mini-main">
+                    <strong>{{ page.page_name|default:page.page_key }}</strong>
+                    <small>{{ page.page_views }} page views</small>
+                  </div>
+                  <div class="seller-mini-value">{{ page.active_minutes }} min</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="seller-empty">No page usage recorded yet.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="seller-card">
+        <header class="seller-card-head">
+          <div>
+            <h2 class="seller-card-title">Recent Login Sessions</h2>
+            <div class="seller-card-sub">Latest sessions for all linked users.</div>
+          </div>
+        </header>
+
+        <div class="seller-card-body">
+          {% if activity.recent_sessions %}
+            <div class="seller-mini-list">
+              {% for session in activity.recent_sessions %}
+                <div class="seller-mini-row">
+                  <div class="seller-mini-main">
+                    <strong>{{ session.user.username }}</strong>
+                    <small>
+                      {{ session.login_at|date:"d M Y, H:i" }}
+                      {% if session.last_page_name %} · {{ session.last_page_name }}{% endif %}
+                    </small>
+                  </div>
+                  <div class="seller-mini-value">
+                    {% if session.logout_at %}Logged out{% else %}Open{% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="seller-empty">No login history recorded yet.</div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  {% endif %}
 </div>
 
 <script>
@@ -375,9 +726,9 @@
     const portalInputs = document.querySelectorAll(".portal-input");
 
     function togglePortalFields() {
-      const enabled = portalEnabled && portalEnabled.checked;
-      portalInputs.forEach(function (el) {
-        el.disabled = !enabled;
+      const enabled = Boolean(portalEnabled && portalEnabled.checked);
+      portalInputs.forEach(function (field) {
+        field.disabled = !enabled;
       });
     }
 

@@ -1,0 +1,235 @@
+{% extends "customerportal/computer/base.html" %}
+{% load portal_permissions %}
+
+{% block title %}Shop Users | DS EXPRESS{% endblock %}
+{% block nav_shop_users %}active{% endblock %}
+
+{% block content %}
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Access management</p>
+    <h1>Shop Users</h1>
+    <p class="computer-subtitle">
+      Create users for {{ seller.name }} and control their roles.
+    </p>
+  </div>
+
+  <div class="computer-topbar-actions">
+    {% if available_slots > 0 %}
+      <a
+        href="{% url 'portal:shop_user_create' %}"
+        class="computer-primary-button"
+      >
+        + Create User
+      </a>
+    {% endif %}
+
+    <div class="computer-user-card">
+      <span class="computer-avatar">
+        {{ seller.name|slice:":1" }}
+      </span>
+      <span>
+        <strong>{{ seller.name }}</strong>
+        <small>{{ request.user|portal_role_name }}</small>
+      </span>
+    </div>
+  </div>
+</header>
+
+<section class="computer-stat-grid four-cards">
+  <article class="computer-stat-card success">
+    <div class="computer-stat-head">
+      <span>Active Users</span><b>✓</b>
+    </div>
+    <strong>{{ active_count }}</strong>
+    <small>Additional active accounts</small>
+  </article>
+
+  <article class="computer-stat-card info">
+    <div class="computer-stat-head">
+      <span>User Limit</span><b>👥</b>
+    </div>
+    <strong>{{ user_limit }}</strong>
+    <small>Main owner is not counted</small>
+  </article>
+
+  <article class="computer-stat-card">
+    <div class="computer-stat-head">
+      <span>Available Slots</span><b>＋</b>
+    </div>
+    <strong>{{ available_slots }}</strong>
+    <small>Users that can still be activated</small>
+  </article>
+
+  <article class="computer-stat-card danger">
+    <div class="computer-stat-head">
+      <span>Archived</span><b>↩</b>
+    </div>
+    <strong>{{ archived_count }}</strong>
+    <small>{{ inactive_count }} disabled but not archived</small>
+  </article>
+</section>
+
+{% if available_slots <= 0 %}
+  <div class="computer-notice-card">
+    Your shop has reached the limit of {{ user_limit }} active additional users.
+    Disable or archive a user, or contact DS Express to increase the limit.
+  </div>
+{% endif %}
+
+<section class="computer-table-card computer-full-card">
+  <header class="computer-card-header">
+    <div>
+      <h2>User Accounts</h2>
+      <p>The main owner is protected and does not use a quota slot.</p>
+    </div>
+
+    <div class="computer-table-tools">
+      <a
+        href="{% url 'portal:shop_role_list' %}"
+        class="computer-secondary-link"
+      >
+        Manage Roles
+      </a>
+    </div>
+  </header>
+
+  <div class="computer-table-scroll large">
+    <table class="computer-report-table shop-user-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Last Login</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for account in accounts %}
+          <tr>
+            <td>
+              <div class="shop-user-identity">
+                <span class="shop-user-avatar">
+                  {{ account.user.username|slice:":1" }}
+                </span>
+                <span>
+                  <strong>
+                    {{ account.user.get_full_name|default:account.user.username }}
+                  </strong>
+                  <small>{{ account.user.email|default:"No email" }}</small>
+                </span>
+              </div>
+            </td>
+
+            <td>{{ account.user.username }}</td>
+
+            <td>
+              {% if account.is_main_owner %}
+                <span class="computer-status delivered">Shop Owner</span>
+              {% elif account.seller_role %}
+                {{ account.seller_role.name }}
+              {% else %}
+                <span class="computer-status returned">No Role</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if account.is_archived %}
+                <span class="computer-status void">Archived</span>
+              {% elif account.user.is_active %}
+                <span class="computer-status delivered">Active</span>
+              {% else %}
+                <span class="computer-status pending">Disabled</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if account.user.last_login %}
+                {{ account.user.last_login|date:"d/m/Y H:i" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>{{ account.created_at|date:"d/m/Y" }}</td>
+
+            <td>
+              {% if account.is_main_owner %}
+                <span class="shop-owner-protected">Protected owner</span>
+              {% else %}
+                <div class="shop-action-row">
+                  {% if not account.is_archived %}
+                    <a
+                      href="{% url 'portal:shop_user_edit' account.id %}"
+                      class="shop-action-button"
+                    >
+                      Edit
+                    </a>
+
+                    {% if request.user|portal_has_perm:"users.reset_password" %}
+                    <a
+                      href="{% url 'portal:shop_user_password' account.id %}"
+                      class="shop-action-button"
+                    >
+                      Password
+                    </a>
+                    {% endif %}
+
+                    <form
+                      method="post"
+                      action="{% url 'portal:shop_user_toggle_active' account.id %}"
+                    >
+                      {% csrf_token %}
+                      <button
+                        type="submit"
+                        class="shop-action-button warning"
+                      >
+                        {% if account.user.is_active %}Disable{% else %}Activate{% endif %}
+                      </button>
+                    </form>
+
+                    <form
+                      method="post"
+                      action="{% url 'portal:shop_user_archive' account.id %}"
+                      onsubmit="return confirm('Delete this shop user? The account will be archived and can be restored later.');"
+                    >
+                      {% csrf_token %}
+                      <button
+                        type="submit"
+                        class="shop-action-button danger"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  {% else %}
+                    <form
+                      method="post"
+                      action="{% url 'portal:shop_user_restore' account.id %}"
+                    >
+                      {% csrf_token %}
+                      <button
+                        type="submit"
+                        class="shop-action-button success"
+                      >
+                        Restore
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr class="computer-empty-row">
+            <td colspan="7">No seller users found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

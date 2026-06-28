@@ -1,4 +1,4 @@
-{% load static %}
+{% load static portal_permissions %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +15,7 @@
 
   <link
     rel="stylesheet"
-    href="{% static 'customerportal/css/computer_portal.css' %}?v=20260619d"
+    href="{% static 'customerportal/css/computer_portal.css' %}?v=20260628users1"
   >
 
   {% block extra_css %}{% endblock %}
@@ -48,6 +48,7 @@
         class="computer-nav"
         aria-label="Computer portal navigation"
       >
+        {% if request.user|portal_has_perm:"dashboard.view" %}
         <a
           href="{% url 'portal:computer_dashboard' %}"
           class="computer-nav-link {% block nav_dashboard %}{% endblock %}"
@@ -59,7 +60,9 @@
           </svg>
           <span>Dashboard</span>
         </a>
+        {% endif %}
 
+        {% if request.user|portal_has_perm:"orders.view" %}
         <a
           href="{% url 'portal:computer_orders' %}"
           class="computer-nav-link {% block nav_orders %}{% endblock %}"
@@ -70,7 +73,9 @@
           </svg>
           <span>Orders</span>
         </a>
+        {% endif %}
 
+        {% if request.user|portal_has_perm:"delivery_report.view" %}
         <a
           href="{% url 'portal:computer_delivery_report' %}"
           class="computer-nav-link {% block nav_delivery_report %}{% endblock %}"
@@ -80,7 +85,9 @@
           </svg>
           <span>Delivery Report</span>
         </a>
+        {% endif %}
 
+        {% if request.user|portal_has_perm:"cod_report.view" %}
         <a
           href="{% url 'portal:computer_cod_report' %}"
           class="computer-nav-link {% block nav_cod_report %}{% endblock %}"
@@ -91,7 +98,9 @@
           </svg>
           <span>COD Report</span>
         </a>
+        {% endif %}
 
+        {% if request.user|portal_has_perm:"inventory.view" %}
         <a
           href="{% url 'portal:computer_inventory' %}"
           class="computer-nav-link {% block nav_inventory %}{% endblock %}"
@@ -103,6 +112,41 @@
           </svg>
           <span>Inventory</span>
         </a>
+        {% endif %}
+
+        {% if request.user|portal_has_perm:"users.manage" or request.user|portal_has_perm:"roles.manage" %}
+          <p class="computer-nav-heading computer-nav-subheading">
+            Shop management
+          </p>
+        {% endif %}
+
+        {% if request.user|portal_has_perm:"users.manage" %}
+        <a
+          href="{% url 'portal:shop_user_list' %}"
+          class="computer-nav-link {% block nav_shop_users %}{% endblock %}"
+        >
+          <svg viewBox="0 0 24 24">
+            <circle cx="9" cy="8" r="3"></circle>
+            <path d="M3 20c0-4 2.5-6 6-6s6 2 6 6"></path>
+            <circle cx="18" cy="8" r="2.5"></circle>
+            <path d="M16 14c3.5 0 5 2 5 5"></path>
+          </svg>
+          <span>Shop Users</span>
+        </a>
+        {% endif %}
+
+        {% if request.user|portal_has_perm:"roles.manage" %}
+        <a
+          href="{% url 'portal:shop_role_list' %}"
+          class="computer-nav-link {% block nav_shop_roles %}{% endblock %}"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3 4 7v5c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V7z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
+          <span>Roles & Permissions</span>
+        </a>
+        {% endif %}
       </nav>
 
       <div class="computer-sidebar-bottom">
@@ -126,6 +170,16 @@
     </aside>
 
     <main class="computer-main">
+      {% if messages %}
+        <div class="computer-message-stack">
+          {% for message in messages %}
+            <div class="computer-message {{ message.tags|default:'info' }}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
       {% block content %}{% endblock %}
     </main>
   </div>

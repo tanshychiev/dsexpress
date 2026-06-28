@@ -14,7 +14,15 @@ class Seller(models.Model):
     address = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
-    # Seller portal login
+    # Maximum ACTIVE additional users. The main owner does not count.
+    # DS Express staff can change this per seller without changing code.
+    max_portal_users = models.PositiveIntegerField(
+        default=5,
+        verbose_name="Maximum Additional Portal Users",
+        help_text="The main owner is not included in this limit.",
+    )
+
+    # Main seller portal owner login.
     portal_user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         null=True,

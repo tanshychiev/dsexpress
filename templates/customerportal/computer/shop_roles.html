@@ -1,0 +1,132 @@
+{% extends "customerportal/computer/base.html" %}
+
+{% block title %}Roles & Permissions | DS EXPRESS{% endblock %}
+{% block nav_shop_roles %}active{% endblock %}
+
+{% block content %}
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Access control</p>
+    <h1>Roles & Permissions</h1>
+    <p class="computer-subtitle">
+      Decide which pages and actions each shop user can access.
+    </p>
+  </div>
+
+  <div class="computer-topbar-actions">
+    <a
+      href="{% url 'portal:shop_role_create' %}"
+      class="computer-primary-button"
+    >
+      + Create Role
+    </a>
+
+    <div class="computer-user-card">
+      <span class="computer-avatar">
+        {{ seller.name|slice:":1" }}
+      </span>
+      <span>
+        <strong>{{ seller.name }}</strong>
+        <small>Role management</small>
+      </span>
+    </div>
+  </div>
+</header>
+
+<section class="computer-table-card computer-full-card">
+  <header class="computer-card-header">
+    <div>
+      <h2>Shop Roles</h2>
+      <p>Recommended roles can be edited or disabled, but not deleted.</p>
+    </div>
+  </header>
+
+  <div class="computer-table-scroll large">
+    <table class="computer-report-table shop-role-table">
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Description</th>
+          <th>Permissions</th>
+          <th>Active Users</th>
+          <th>Status</th>
+          <th>Type</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for role in roles %}
+          <tr>
+            <td><strong>{{ role.name }}</strong></td>
+            <td class="wide-cell">{{ role.description|default:"-" }}</td>
+            <td>{{ role.permission_count }}</td>
+            <td>{{ role.assigned_user_count }}</td>
+            <td>
+              {% if role.is_active %}
+                <span class="computer-status delivered">Active</span>
+              {% else %}
+                <span class="computer-status pending">Disabled</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if role.is_recommended %}
+                <span class="computer-status province">Recommended</span>
+              {% else %}
+                Custom
+              {% endif %}
+            </td>
+            <td>
+              <div class="shop-action-row">
+                <a
+                  href="{% url 'portal:shop_role_edit' role.id %}"
+                  class="shop-action-button"
+                >
+                  Edit
+                </a>
+
+                <form
+                  method="post"
+                  action="{% url 'portal:shop_role_duplicate' role.id %}"
+                >
+                  {% csrf_token %}
+                  <button type="submit" class="shop-action-button">
+                    Copy
+                  </button>
+                </form>
+
+                <form
+                  method="post"
+                  action="{% url 'portal:shop_role_toggle_active' role.id %}"
+                >
+                  {% csrf_token %}
+                  <button type="submit" class="shop-action-button warning">
+                    {% if role.is_active %}Disable{% else %}Activate{% endif %}
+                  </button>
+                </form>
+
+                {% if not role.is_recommended %}
+                  <form
+                    method="post"
+                    action="{% url 'portal:shop_role_delete' role.id %}"
+                    onsubmit="return confirm('Delete this role?');"
+                  >
+                    {% csrf_token %}
+                    <button type="submit" class="shop-action-button danger">
+                      Delete
+                    </button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr class="computer-empty-row">
+            <td colspan="7">No roles found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

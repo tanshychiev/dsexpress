@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block page_title %}Seller Portal Report{% endblock %}
+{% block page_subtitle %}{{ row.name }} user activity and login history{% endblock %}
+
+{% block content %}
+<style>
+  .spr-page{display:grid;gap:14px}
+  .spr-hero{
+    padding:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+    border-radius:22px;background:linear-gradient(135deg,#075c34,#13a866);color:#fff;
+    box-shadow:0 14px 34px rgba(15,122,69,.18)
+  }
+  .spr-hero h1{margin:0;font-size:24px;font-weight:950;letter-spacing:-.03em}
+  .spr-hero p{margin:6px 0 0;font-size:11px;font-weight:700;opacity:.9}
+  .spr-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .spr-btn{
+    min-height:40px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid rgba(255,255,255,.35);border-radius:12px;background:#fff;color:#075c34;
+    text-decoration:none;font-size:10px;font-weight:950;cursor:pointer
+  }
+  .spr-card{overflow:hidden;border:1px solid #e1e8e4;border-radius:19px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.055)}
+  .spr-card-head{padding:15px 17px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid #edf1ee}
+  .spr-card-head h2{margin:0;color:#172235;font-size:16px;font-weight:950}
+  .spr-card-head p{margin:5px 0 0;color:#718096;font-size:9px;font-weight:700}
+  .spr-card-body{padding:16px 17px}
+  .spr-filter{display:grid;grid-template-columns:180px 170px 170px auto;gap:10px;align-items:end}
+  .spr-field{display:grid;gap:6px}
+  .spr-field label{color:#64748b;font-size:8px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+  .spr-input{width:100%;min-height:40px;padding:0 11px;border:1px solid #d9e2dc;border-radius:11px;background:#fff;color:#172235;font-size:10px;font-weight:750;outline:none}
+  .spr-filter-actions{display:flex;gap:8px}
+  .spr-filter-btn{min-height:40px;padding:0 14px;border:0;border-radius:11px;background:#172235;color:#fff;font-size:9px;font-weight:950;cursor:pointer}
+  .spr-stat-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  .spr-stat{padding:13px;border:1px solid #e2e9e5;border-radius:15px;background:#fff}
+  .spr-stat span{display:block;color:#7b8781;font-size:8px;font-weight:850}
+  .spr-stat strong{display:block;margin-top:6px;color:#172235;font-size:18px;line-height:1;font-weight:950}
+  .spr-stat small{display:block;margin-top:5px;color:#94a099;font-size:7px;font-weight:700}
+  .spr-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .spr-table-wrap{width:100%;overflow:auto}
+  .spr-table{width:100%;min-width:760px;border-collapse:collapse}
+  .spr-table th{padding:10px 11px;border-bottom:1px solid #e5ebe7;background:#f7faf8;color:#64748b;text-align:left;font-size:8px;font-weight:950;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+  .spr-table td{padding:11px;border-bottom:1px solid #edf1ee;color:#334155;font-size:9px;font-weight:750;vertical-align:middle}
+  .spr-table tr:last-child td{border-bottom:0}
+  .spr-user{display:flex;align-items:center;gap:8px}
+  .spr-avatar{width:31px;height:31px;flex:0 0 31px;display:grid;place-items:center;border-radius:10px;background:#eaf7f0;color:#0f7a45;font-size:11px;font-weight:950;text-transform:uppercase}
+  .spr-user strong{display:block;color:#172235;font-size:9px;font-weight:950}
+  .spr-user small{display:block;margin-top:2px;color:#8a9690;font-size:7px;font-weight:700}
+  .spr-status{display:inline-flex;min-height:25px;padding:0 8px;align-items:center;border-radius:999px;font-size:7px;font-weight:950}
+  .spr-status.open{border:1px solid #b7e6c8;background:#ecfdf3;color:#087848}
+  .spr-status.closed{border:1px solid #e2e8f0;background:#f8fafc;color:#64748b}
+  .spr-empty{padding:24px;text-align:center;color:#7b8781;font-size:10px;font-weight:800}
+  .spr-list{display:grid}
+  .spr-list-row{min-height:54px;padding:10px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf1ee}
+  .spr-list-row:last-child{border-bottom:0}
+  .spr-list-main{min-width:0}
+  .spr-list-main strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#263347;font-size:9px;font-weight:950}
+  .spr-list-main small{display:block;margin-top:4px;color:#89948e;font-size:7px;font-weight:700}
+  .spr-list-value{flex:0 0 auto;color:#0f7a45;font-size:10px;font-weight:950;text-align:right}
+  @media(max-width:1200px){.spr-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:850px){.spr-hero{flex-direction:column}.spr-filter,.spr-two{grid-template-columns:1fr}.spr-filter-actions>*{width:100%}}
+  @media(max-width:600px){.spr-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+
+<div class="spr-page">
+  <section class="spr-hero">
+    <div>
+      <h1>{{ row.name }}</h1>
+      <p>
+        Seller {{ row.code }} · {{ start_date|date:"d M Y" }} to {{ end_date|date:"d M Y" }}
+      </p>
+    </div>
+
+    <div class="spr-actions">
+      <a class="spr-btn" href="{% url 'seller_edit' row.id %}">Edit Seller</a>
+      <a class="spr-btn" href="{% url 'seller_list' %}?search=1">Seller List</a>
+    </div>
+  </section>
+
+  <section class="spr-card">
+    <div class="spr-card-body">
+      <form method="get" class="spr-filter">
+        <div class="spr-field">
+          <label>Period</label>
+          <select class="spr-input" name="period" id="sprPeriod">
+            <option value="today" {% if period == "today" %}selected{% endif %}>Today</option>
+            <option value="last_7_days" {% if period == "last_7_days" %}selected{% endif %}>Last 7 Days</option>
+            <option value="last_30_days" {% if period == "last_30_days" %}selected{% endif %}>Last 30 Days</option>
+            <option value="this_month" {% if period == "this_month" %}selected{% endif %}>This Month</option>
+            <option value="custom" {% if period == "custom" %}selected{% endif %}>Custom</option>
+          </select>
+        </div>
+
+        <div class="spr-field">
+          <label>From</label>
+          <input class="spr-input spr-custom-date" type="date" name="from" value="{{ start_date|date:'Y-m-d' }}">
+        </div>
+
+        <div class="spr-field">
+          <label>To</label>
+          <input class="spr-input spr-custom-date" type="date" name="to" value="{{ end_date|date:'Y-m-d' }}">
+        </div>
+
+        <div class="spr-filter-actions">
+          <button class="spr-filter-btn" type="submit">Run Report</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="spr-stat-grid">
+    <article class="spr-stat">
+      <span>Active Hours</span>
+      <strong>{{ totals.active_hours }}</strong>
+      <small>{{ totals.active_minutes }} minutes</small>
+    </article>
+    <article class="spr-stat">
+      <span>Page Views</span>
+      <strong>{{ totals.page_views }}</strong>
+      <small>Portal page requests</small>
+    </article>
+    <article class="spr-stat">
+      <span>Active Users</span>
+      <strong>{{ totals.active_users }}</strong>
+      <small>Unique users in range</small>
+    </article>
+    <article class="spr-stat">
+      <span>Active Days</span>
+      <strong>{{ totals.active_days }}</strong>
+      <small>Days with activity</small>
+    </article>
+    <article class="spr-stat">
+      <span>Linked Accounts</span>
+      <strong>{{ account_summary.total_linked_accounts }}</strong>
+      <small>{{ account_summary.active_additional_count }} active additional</small>
+    </article>
+    <article class="spr-stat">
+      <span>Online Now</span>
+      <strong>{{ account_summary.online_count }}</strong>
+      <small>Active within 5 minutes</small>
+    </article>
+  </section>
+
+  <section class="spr-card">
+    <header class="spr-card-head">
+      <div>
+        <h2>Usage by User</h2>
+        <p>Measured active time, page views and active days.</p>
+      </div>
+    </header>
+
+    <div class="spr-table-wrap">
+      <table class="spr-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Username</th>
+            <th>Active Hours</th>
+            <th>Active Minutes</th>
+            <th>Page Views</th>
+            <th>Active Days</th>
+            <th>Last Seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in user_rows %}
+            <tr>
+              <td>
+                <div class="spr-user">
+                  <span class="spr-avatar">{{ item.user__username|slice:":1" }}</span>
+                  <span>
+                    <strong>{{ item.display_name }}</strong>
+                    <small>Seller portal user</small>
+                  </span>
+                </div>
+              </td>
+              <td>{{ item.user__username }}</td>
+              <td>{{ item.active_hours }}</td>
+              <td>{{ item.active_minutes }}</td>
+              <td>{{ item.page_views }}</td>
+              <td>{{ item.active_days }}</td>
+              <td>
+                {% if item.last_seen_at %}{{ item.last_seen_at|date:"d M Y, H:i" }}{% else %}-{% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7"><div class="spr-empty">No usage in this period.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="spr-two">
+    <section class="spr-card">
+      <header class="spr-card-head">
+        <div>
+          <h2>Most Used Pages</h2>
+          <p>Ranked by active time and page views.</p>
+        </div>
+      </header>
+      <div class="spr-card-body">
+        {% if top_pages %}
+          <div class="spr-list">
+            {% for page in top_pages %}
+              <div class="spr-list-row">
+                <div class="spr-list-main">
+                  <strong>{{ page.page_name|default:page.page_key }}</strong>
+                  <small>{{ page.page_views }} views · {{ page.page_key }}</small>
+                </div>
+                <div class="spr-list-value">{{ page.active_minutes }} min</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="spr-empty">No page usage in this period.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="spr-card">
+      <header class="spr-card-head">
+        <div>
+          <h2>Daily Usage</h2>
+          <p>Combined shop activity for each day.</p>
+        </div>
+      </header>
+      <div class="spr-card-body">
+        {% if daily_rows %}
+          <div class="spr-list">
+            {% for day in daily_rows %}
+              <div class="spr-list-row">
+                <div class="spr-list-main">
+                  <strong>{{ day.usage_date|date:"d M Y" }}</strong>
+                  <small>{{ day.active_users }} users · {{ day.page_views }} views</small>
+                </div>
+                <div class="spr-list-value">{{ day.active_minutes }} min</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="spr-empty">No daily usage in this period.</div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <section class="spr-card">
+    <header class="spr-card-head">
+      <div>
+        <h2>Login Sessions</h2>
+        <p>Latest 100 sessions in the selected period.</p>
+      </div>
+    </header>
+    <div class="spr-table-wrap">
+      <table class="spr-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Login</th>
+            <th>Last Activity</th>
+            <th>Logout</th>
+            <th>Active Minutes</th>
+            <th>Last Page</th>
+            <th>IP</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for session in sessions %}
+            <tr>
+              <td>{{ session.user.username }}</td>
+              <td>{{ session.login_at|date:"d M Y, H:i" }}</td>
+              <td>{{ session.last_activity_at|date:"d M Y, H:i" }}</td>
+              <td>{% if session.logout_at %}{{ session.logout_at|date:"d M Y, H:i" }}{% else %}-{% endif %}</td>
+              <td>{{ session.duration_minutes }}</td>
+              <td>{{ session.last_page_name|default:"-" }}</td>
+              <td>{{ session.ip_address|default:"-" }}</td>
+              <td>
+                {% if session.logout_at %}
+                  <span class="spr-status closed">Closed</span>
+                {% else %}
+                  <span class="spr-status open">Open</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8"><div class="spr-empty">No login sessions in this period.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="spr-card">
+    <header class="spr-card-head">
+      <div>
+        <h2>User & Role Audit History</h2>
+        <p>Latest 100 user, password and role management actions.</p>
+      </div>
+    </header>
+    <div class="spr-table-wrap">
+      <table class="spr-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Action</th>
+            <th>Performed By</th>
+            <th>Target User</th>
+            <th>Description</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in audit_logs %}
+            <tr>
+              <td>{{ log.created_at|date:"d M Y, H:i" }}</td>
+              <td>{{ log.action }}</td>
+              <td>{{ log.performed_by.username|default:"System" }}</td>
+              <td>{{ log.target_user.username|default:"-" }}</td>
+              <td>{{ log.description|default:"-" }}</td>
+              <td>{{ log.ip_address|default:"-" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><div class="spr-empty">No audit history in this period.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+  (function () {
+    const period = document.getElementById("sprPeriod");
+    const dates = document.querySelectorAll(".spr-custom-date");
+
+    function updateDates() {
+      const isCustom = period && period.value === "custom";
+      dates.forEach(function (input) {
+        input.disabled = !isCustom;
+      });
+    }
+
+    if (period) {
+      period.addEventListener("change", updateDates);
+      updateDates();
+    }
+  })();
+</script>
+{% endblock %}

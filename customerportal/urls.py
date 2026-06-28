@@ -10,6 +10,23 @@ from .views_computer import (
 )
 from .views_order_report import seller_order_report
 from .views_report import seller_report_page
+from .views_shop_roles import (
+    shop_role_create,
+    shop_role_delete,
+    shop_role_duplicate,
+    shop_role_edit,
+    shop_role_list,
+    shop_role_toggle_active,
+)
+from .views_shop_users import (
+    shop_user_archive,
+    shop_user_create,
+    shop_user_edit,
+    shop_user_list,
+    shop_user_password,
+    shop_user_restore,
+    shop_user_toggle_active,
+)
 
 
 app_name = "portal"
@@ -83,5 +100,74 @@ urlpatterns = [
         "computer/inventory/",
         computer_inventory,
         name="computer_inventory",
+    ),
+
+    # Shop users
+    path(
+        "computer/shop-users/",
+        shop_user_list,
+        name="shop_user_list",
+    ),
+    path(
+        "computer/shop-users/create/",
+        shop_user_create,
+        name="shop_user_create",
+    ),
+    path(
+        "computer/shop-users/<int:account_id>/edit/",
+        shop_user_edit,
+        name="shop_user_edit",
+    ),
+    path(
+        "computer/shop-users/<int:account_id>/password/",
+        shop_user_password,
+        name="shop_user_password",
+    ),
+    path(
+        "computer/shop-users/<int:account_id>/toggle-active/",
+        shop_user_toggle_active,
+        name="shop_user_toggle_active",
+    ),
+    path(
+        "computer/shop-users/<int:account_id>/archive/",
+        shop_user_archive,
+        name="shop_user_archive",
+    ),
+    path(
+        "computer/shop-users/<int:account_id>/restore/",
+        shop_user_restore,
+        name="shop_user_restore",
+    ),
+
+    # Shop roles
+    path(
+        "computer/shop-roles/",
+        shop_role_list,
+        name="shop_role_list",
+    ),
+    path(
+        "computer/shop-roles/create/",
+        shop_role_create,
+        name="shop_role_create",
+    ),
+    path(
+        "computer/shop-roles/<int:role_id>/edit/",
+        shop_role_edit,
+        name="shop_role_edit",
+    ),
+    path(
+        "computer/shop-roles/<int:role_id>/duplicate/",
+        shop_role_duplicate,
+        name="shop_role_duplicate",
+    ),
+    path(
+        "computer/shop-roles/<int:role_id>/toggle-active/",
+        shop_role_toggle_active,
+        name="shop_role_toggle_active",
+    ),
+    path(
+        "computer/shop-roles/<int:role_id>/delete/",
+        shop_role_delete,
+        name="shop_role_delete",
     ),
 ]

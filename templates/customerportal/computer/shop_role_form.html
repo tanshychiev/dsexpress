@@ -1,0 +1,118 @@
+{% extends "customerportal/computer/base.html" %}
+{% load portal_permissions %}
+
+{% block title %}
+  {% if mode == "edit" %}Edit Role{% else %}Create Role{% endif %} | DS EXPRESS
+{% endblock %}
+{% block nav_shop_roles %}active{% endblock %}
+
+{% block content %}
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Access control</p>
+    <h1>{% if mode == "edit" %}Edit Role{% else %}Create Role{% endif %}</h1>
+    <p class="computer-subtitle">
+      Choose exactly what users with this role can view and change.
+    </p>
+  </div>
+
+  <a href="{% url 'portal:shop_role_list' %}" class="computer-back-link">
+    ← Back to roles
+  </a>
+</header>
+
+<section class="shop-form-card">
+  {% if errors %}
+    <div class="shop-form-errors">
+      {% for error in errors %}
+        <div>{{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" class="shop-form">
+    {% csrf_token %}
+
+    <div class="shop-form-grid">
+      <label class="computer-field">
+        <span>Role Name</span>
+        <input
+          type="text"
+          name="name"
+          value="{{ form_data.name }}"
+          required
+        >
+      </label>
+
+      <div class="shop-toggle-field">
+        <span>Status</span>
+        <label class="shop-check-row">
+          <input
+            type="checkbox"
+            name="is_active"
+            value="1"
+            {% if form_data.is_active %}checked{% endif %}
+          >
+          <span>Active role</span>
+        </label>
+      </div>
+
+      <label class="computer-field shop-field-full">
+        <span>Description</span>
+        <input
+          type="text"
+          name="description"
+          value="{{ form_data.description }}"
+          placeholder="What is this role used for?"
+        >
+      </label>
+    </div>
+
+    <div class="shop-permission-groups">
+      {% for group in permission_groups %}
+        <section class="shop-permission-card">
+          <header>
+            <h2>{{ group.name }}</h2>
+          </header>
+
+          <div class="shop-permission-list">
+            {% for permission_key, permission_label in group.permissions %}
+              <label class="shop-permission-row">
+                <span>
+                  <strong>{{ permission_label }}</strong>
+                  <small>{{ permission_key }}</small>
+                </span>
+
+                <input
+                  type="checkbox"
+                  name="{{ permission_key }}"
+                  value="1"
+                  {% if selected_permissions|dict_get:permission_key %}checked{% endif %}
+                  {% if permission_key == "dashboard.view" %}disabled{% endif %}
+                >
+
+                {% if permission_key == "dashboard.view" %}
+                  <input
+                    type="hidden"
+                    name="{{ permission_key }}"
+                    value="1"
+                  >
+                {% endif %}
+              </label>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    </div>
+
+    <div class="shop-form-actions">
+      <a href="{% url 'portal:shop_role_list' %}" class="shop-cancel-button">
+        Cancel
+      </a>
+      <button type="submit" class="computer-primary-button">
+        {% if mode == "edit" %}Save Role{% else %}Create Role{% endif %}
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

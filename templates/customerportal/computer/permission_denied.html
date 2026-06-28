@@ -1,0 +1,20 @@
+{% extends "customerportal/computer/base.html" %}
+
+{% block title %}Access Denied | DS EXPRESS{% endblock %}
+
+{% block content %}
+<section class="shop-denied-card">
+  <div class="shop-denied-icon">🔒</div>
+  <h1>Access Denied</h1>
+  <p>
+    Your role does not allow this page.
+    Ask the shop owner to update your permissions.
+  </p>
+  <a
+    href="{% url 'portal:computer_dashboard' %}"
+    class="computer-primary-button"
+  >
+    Back to Dashboard
+  </a>
+</section>
+{% endblock %}

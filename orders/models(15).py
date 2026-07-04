@@ -255,9 +255,6 @@ class SellerUploadBatch(models.Model):
         null=True,
     )
     original_filename = models.CharField(max_length=255, blank=True, default="")
-    # Batch-level note written when uploading the file.
-    # This is different from row remark in the Excel.
-    upload_remark = models.TextField(blank=True, default="")
 
     status = models.CharField(
         max_length=20,
@@ -341,14 +338,6 @@ class SellerUploadRow(models.Model):
     row_number = models.PositiveIntegerField(default=0)
 
     seller_order_code = models.CharField(max_length=100, blank=True, default="")
-    seller_name = models.CharField(max_length=255, blank=True, default="")
-
-    # Customer product description is free text. SKU is used to match inventory.
-    product_name_input = models.CharField(max_length=255, blank=True, default="")
-    sku_input = models.CharField(max_length=100, blank=True, default="")
-    matched_product_name = models.CharField(max_length=255, blank=True, default="")
-    matched_sku = models.CharField(max_length=100, blank=True, default="")
-
     receiver_name = models.CharField(max_length=200, blank=True, default="")
     receiver_phone = models.CharField(max_length=50, blank=True, default="")
     receiver_address = models.TextField(blank=True, default="")
@@ -390,8 +379,6 @@ class SellerUploadRow(models.Model):
         indexes = [
             models.Index(fields=["batch", "status"]),
             models.Index(fields=["seller_order_code"]),
-            models.Index(fields=["sku_input"]),
-            models.Index(fields=["matched_sku"]),
         ]
 
     def __str__(self):

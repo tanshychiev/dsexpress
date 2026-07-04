@@ -7,6 +7,10 @@ from .views_computer import (
     computer_delivery_report,
     computer_inventory,
     computer_orders,
+    computer_upload_order_delete,
+    computer_upload_order_detail,
+    computer_upload_orders,
+    download_customer_upload_sample,
 )
 from .views_order_report import seller_order_report
 from .views_report import seller_report_page
@@ -100,6 +104,26 @@ urlpatterns = [
         "computer/inventory/",
         computer_inventory,
         name="computer_inventory",
+    ),
+    path(
+        "computer/upload-orders/",
+        computer_upload_orders,
+        name="computer_upload_orders",
+    ),
+    path(
+        "computer/upload-orders/sample/",
+        download_customer_upload_sample,
+        name="download_customer_upload_sample",
+    ),
+    path(
+        "computer/upload-orders/<int:batch_id>/",
+        computer_upload_order_detail,
+        name="computer_upload_order_detail",
+    ),
+    path(
+        "computer/upload-orders/<int:batch_id>/delete/",
+        computer_upload_order_delete,
+        name="computer_upload_order_delete",
     ),
 
     # Shop users

@@ -105,11 +105,10 @@ def _detail_url(batch_id: int, edit: bool = False) -> str:
 
 
 def _get_pp_shippers():
-    qs = Shipper.objects.all()
-    try:
-        return qs.filter(shipper_type="DELIVERY")
-    except Exception:
-        return qs
+    return Shipper.objects.filter(
+        is_active=True,
+        shipper_type=Shipper.TYPE_DELIVERY,
+    ).order_by("name")
 
 
 def _order_is_allowed_for_pp(o: Order) -> bool:
@@ -818,7 +817,7 @@ def pp_delivery_create(request):
                     else:
                         normal_to_update.append(o)
 
-                selected_shipper = Shipper.objects.filter(id=int(shipper_id)).first()
+                selected_shipper = _get_pp_shippers().filter(id=int(shipper_id)).first()
                 _set_order_status_after_pp_assign(
                     normal_to_update,
                     is_return=False,
@@ -1058,7 +1057,7 @@ def pp_delivery_detail(request, batch_id: int):
                 messages.error(request, "Please select shipper.")
                 return redirect(_detail_url(batch.id, edit=True))
 
-            selected_shipper = Shipper.objects.filter(id=int(shipper_id)).first()
+            selected_shipper = _get_pp_shippers().filter(id=int(shipper_id)).first()
             if not selected_shipper:
                 messages.error(request, "Selected shipper not found.")
                 return redirect(_detail_url(batch.id, edit=True))

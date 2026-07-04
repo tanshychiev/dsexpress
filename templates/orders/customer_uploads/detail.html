@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Upload Detail | DS EXPRESS{% endblock %}
+{% block page_title %}Customer Upload Detail{% endblock %}
+{% block page_subtitle %}Review customer uploaded file before import{% endblock %}
+
+{% block extra_css %}
+<style>
+  .wrap{
+    display:grid;
+    gap:16px;
+  }
+  .card{
+    border:1px solid var(--border);
+    border-radius:20px;
+    background:#fff;
+    box-shadow:var(--shadow);
+    padding:18px;
+  }
+  .head{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    align-items:flex-start;
+  }
+  .muted{
+    color:var(--muted);
+    font-size:12px;
+    font-weight:800;
+  }
+  .file-info{
+    margin-top:12px;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .info-box{
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:#f8fafc;
+    padding:12px 14px;
+  }
+  .info-label{
+    display:block;
+    margin-bottom:5px;
+    color:var(--muted);
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .info-value{
+    font-size:13px;
+    font-weight:850;
+    color:#0f172a;
+    white-space:normal;
+    word-break:break-word;
+  }
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(120px,1fr));
+    gap:10px;
+  }
+  .stat{
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:14px;
+    background:#f8fafc;
+  }
+  .stat b{
+    display:block;
+    font-size:22px;
+  }
+  .stat span{
+    color:var(--muted);
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+  }
+  .status{
+    display:inline-flex;
+    align-items:center;
+    min-height:27px;
+    padding:0 10px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:950;
+  }
+  .PENDING{background:#fff7ed;color:#c2410c;}
+  .IMPORTED{background:#ecfdf5;color:#047857;}
+  .REJECTED{background:#fef2f2;color:#b91c1c;}
+  .APPROVED{background:#eff6ff;color:#1d4ed8;}
+  .VALID{background:#ecfdf5;color:#047857;}
+  .ERROR{background:#fef2f2;color:#b91c1c;}
+  .DUPLICATE{background:#fff7ed;color:#c2410c;}
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:0 13px;
+    border-radius:12px;
+    font-size:12px;
+    font-weight:950;
+    text-decoration:none;
+    border:1px solid #ccebd9;
+    background:#eefaf3;
+    color:#0f7a45;
+    cursor:pointer;
+  }
+  .btn-danger{
+    background:#fef2f2;
+    color:#b91c1c;
+    border-color:#fecaca;
+  }
+  .btn-main{
+    background:#0f7a45;
+    color:#fff;
+    border-color:#0f7a45;
+  }
+  .table-wrap{
+    overflow:auto;
+    border:1px solid var(--border);
+    border-radius:16px;
+  }
+  table{
+    width:100%;
+    min-width:1500px;
+    border-collapse:collapse;
+    font-size:12px;
+    background:#fff;
+  }
+  th,td{
+    padding:10px 11px;
+    border-bottom:1px solid #edf2f7;
+    text-align:left;
+    vertical-align:top;
+  }
+  th{
+    background:#f8fafc;
+    color:#475569;
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    white-space:nowrap;
+  }
+  td{
+    white-space:nowrap;
+  }
+  .n-col{
+    width:42px;
+    text-align:center;
+    color:#64748b;
+    font-weight:950;
+  }
+  .status-col{
+    width:78px;
+  }
+  .error-col{
+    width:180px;
+  }
+  .err{
+    max-width:180px;
+    white-space:normal;
+    color:#b91c1c;
+    font-weight:850;
+  }
+  .order-code{
+    font-weight:900;
+  }
+  .product-name{
+    max-width:160px;
+    white-space:normal;
+    font-weight:950;
+    color:#0f7a45;
+  }
+  .sku{
+    font-family:ui-monospace,Consolas,monospace;
+    color:#334155;
+    font-weight:900;
+  }
+  .desc{
+    max-width:210px;
+    white-space:normal;
+    font-weight:850;
+    color:#0f172a;
+  }
+  .address{
+    max-width:260px;
+    white-space:normal;
+    color:#0f172a;
+    font-weight:750;
+  }
+  .row-remark{
+    max-width:170px;
+    white-space:normal;
+    color:#475569;
+    font-weight:850;
+  }
+  .money{
+    font-weight:950;
+  }
+  .reject-box{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:10px;
+    margin-top:10px;
+  }
+  .reject-box input{
+    height:40px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:0 12px;
+    font-size:12px;
+    font-weight:800;
+  }
+  @media(max-width:900px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .head,.reject-box{display:block;}
+    .reject-box .btn{margin-top:8px;}
+    .file-info{grid-template-columns:1fr;}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <section class="card">
+    <div class="head">
+      <div>
+        <h2 style="margin:0;">{{ batch.code }} · {{ batch.seller.name }}</h2>
+        <div class="muted">{{ batch.created_at|date:"d-M-Y H:i" }}</div>
+      </div>
+      <div>
+        <span class="status {{ batch.status }}">{{ batch.status }}</span>
+        <a class="btn" href="{% url 'staff_customer_upload_list' %}">Back</a>
+      </div>
+    </div>
+
+    <div class="file-info">
+      <div class="info-box">
+        <span class="info-label">File Name</span>
+        <div class="info-value">{{ batch.original_filename|default:"-" }}</div>
+      </div>
+      <div class="info-box">
+        <span class="info-label">Upload Remark</span>
+        <div class="info-value">{{ batch.upload_remark|default:"-" }}</div>
+      </div>
+    </div>
+
+    {% if batch.reject_reason %}
+      <div style="margin-top:12px;padding:12px;border-radius:12px;background:#fef2f2;color:#b91c1c;font-weight:850;">
+        Reject reason: {{ batch.reject_reason }}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="stats">
+    <div class="stat"><b>{{ batch.total_rows }}</b><span>Total</span></div>
+    <div class="stat"><b>{{ batch.valid_rows }}</b><span>Valid</span></div>
+    <div class="stat"><b>{{ batch.error_rows }}</b><span>Error</span></div>
+    <div class="stat"><b>{{ batch.duplicate_rows }}</b><span>Duplicate</span></div>
+    <div class="stat"><b>{{ batch.imported_count }}</b><span>Imported</span></div>
+  </section>
+
+  {% if batch.status == 'PENDING' %}
+    <section class="card">
+      <form method="post" action="{% url 'staff_customer_upload_approve' batch.id %}" style="display:inline;">
+        {% csrf_token %}
+        <button class="btn btn-main" type="submit" onclick="return confirm('Approve and import this upload?')">
+          Approve Import
+        </button>
+      </form>
+
+      <form method="post" action="{% url 'staff_customer_upload_reject' batch.id %}" class="reject-box">
+        {% csrf_token %}
+        <input type="text" name="reject_reason" placeholder="Reject reason required" required>
+        <button class="btn btn-danger" type="submit">Reject Upload</button>
+      </form>
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <h3 style="margin:0 0 14px;">Preview rows</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="n-col">N.</th>
+            <th class="status-col">Status</th>
+            <th class="error-col">Error</th>
+            <th>Order Code</th>
+            <th>Seller</th>
+            <th>Inventory Product</th>
+            <th>SKU</th>
+            <th>Product Description</th>
+            <th>Qty</th>
+            <th>COD</th>
+            <th>Receiver Name</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Row Remark</th>
+            <th>Order</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td class="n-col">{{ forloop.counter }}</td>
+              <td class="status-col"><span class="status {{ row.status }}">{{ row.status }}</span></td>
+              <td class="err">{{ row.error_message|default:"-" }}</td>
+              <td class="order-code">{{ row.seller_order_code|default:"-" }}</td>
+              <td>{{ row.seller_name|default:"-" }}</td>
+              <td class="product-name">{{ row.display_inventory_product|default:"-" }}</td>
+              <td class="sku">{{ row.display_inventory_sku|default:"-" }}</td>
+              <td class="desc">{{ row.display_product_description|default:"-" }}</td>
+              <td>{{ row.quantity }}</td>
+              <td class="money">{{ row.cod }}</td>
+              <td>{{ row.receiver_name|default:"-" }}</td>
+              <td>{{ row.receiver_phone|default:"-" }}</td>
+              <td class="address">{{ row.receiver_address|default:"-" }}</td>
+              <td class="row-remark">{{ row.remark|default:"-" }}</td>
+              <td>
+                {% if row.imported_order %}
+                  {{ row.imported_order.tracking_no }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="15" style="text-align:center;color:var(--muted);padding:24px;">
+                No rows.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

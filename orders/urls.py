@@ -1,5 +1,12 @@
 from django.urls import path
+
 from . import views
+from .views_customer_uploads import (
+    staff_customer_upload_approve,
+    staff_customer_upload_detail,
+    staff_customer_upload_list,
+    staff_customer_upload_reject,
+)
 
 urlpatterns = [
 
@@ -53,6 +60,30 @@ urlpatterns = [
         name="delete_import_batch",
     ),
 
+    # ====================================================
+    # CUSTOMER UPLOAD APPROVAL - STAFF INTERNAL SYSTEM
+    # URL: /orders/customer-uploads/
+    # ====================================================
+    path(
+        "customer-uploads/",
+        staff_customer_upload_list,
+        name="staff_customer_upload_list",
+    ),
+    path(
+        "customer-uploads/<int:batch_id>/",
+        staff_customer_upload_detail,
+        name="staff_customer_upload_detail",
+    ),
+    path(
+        "customer-uploads/<int:batch_id>/approve/",
+        staff_customer_upload_approve,
+        name="staff_customer_upload_approve",
+    ),
+    path(
+        "customer-uploads/<int:batch_id>/reject/",
+        staff_customer_upload_reject,
+        name="staff_customer_upload_reject",
+    ),
 
     # ====================================================
     # BULK UPDATE
@@ -83,28 +114,17 @@ urlpatterns = [
         name="download_bulk_update_batch_excel",
     ),
 
-    # legacy routes (old templates compatibility)
+    # legacy routes old templates compatibility
     path("upload-update/", views.bulk_update, name="upload_update"),
+
     path(
         "update-template/",
         views.download_update_template,
         name="download_update_template_legacy",
     ),
 
-
     # ====================================================
-    # API
-    # ====================================================
-    # seller_autocomplete already added above
-    # path(
-    #     "api/sellers/autocomplete/",
-    #     views.seller_autocomplete,
-    #     name="seller_autocomplete",
-    # ),
-
-
-    # ====================================================
-    # TRASH SYSTEM (NEW SAFETY FEATURE)
+    # TRASH SYSTEM
     # ====================================================
     path("trash/", views.order_trash, name="order_trash"),
 
@@ -119,7 +139,6 @@ urlpatterns = [
         views.order_restore,
         name="order_restore",
     ),
-
 
     # ====================================================
     # AUDIT LOG PAGE

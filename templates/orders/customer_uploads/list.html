@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Uploads{% endblock %}
+{% block page_title %}Customer Uploads{% endblock %}
+{% block page_subtitle %}Review seller Excel uploads before creating real orders{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cu-wrap{display:grid;gap:16px;}
+  .cu-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  .cu-card{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:18px;}
+  .cu-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 13px;border-radius:12px;font-size:12px;font-weight:950;text-decoration:none;border:1px solid #cfe5d8;background:#eefaf3;color:var(--green-dark);}
+  .cu-btn.active{background:var(--green);border-color:var(--green);color:#fff;}
+  .cu-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:16px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;background:#fff;}
+  th,td{padding:11px 12px;border-bottom:1px solid #edf2f7;text-align:left;vertical-align:top;}
+  th{background:#f8fafc;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  .status{display:inline-flex;align-items:center;min-height:25px;padding:0 9px;border-radius:999px;font-size:10px;font-weight:950;}
+  .PENDING{background:#fff7ed;color:#c2410c}.IMPORTED{background:#ecfdf5;color:#047857}.REJECTED{background:#fef2f2;color:#b91c1c}.APPROVED{background:#eff6ff;color:#1d4ed8}
+  .file-cell{max-width:230px;white-space:normal;color:#0f172a;font-weight:850;}
+  .remark-cell{max-width:260px;white-space:normal;color:#475569;font-weight:800;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cu-wrap">
+  <div class="cu-card">
+    <div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;">
+      <div>
+        <h2 style="margin:0;font-size:22px;font-weight:950;">Customer Upload Approval</h2>
+        <div style="color:var(--muted);font-size:12px;font-weight:750;margin-top:5px;">Pending uploads: {{ pending_count }}</div>
+      </div>
+      <div class="cu-actions">
+        <a class="cu-btn {% if status == 'PENDING' %}active{% endif %}" href="?status=PENDING">Pending</a>
+        <a class="cu-btn {% if status == 'IMPORTED' %}active{% endif %}" href="?status=IMPORTED">Imported</a>
+        <a class="cu-btn {% if status == 'REJECTED' %}active{% endif %}" href="?status=REJECTED">Rejected</a>
+        <a class="cu-btn {% if status == 'ALL' %}active{% endif %}" href="?status=ALL">All</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="cu-card">
+    <div class="cu-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Batch</th>
+            <th>Shop</th>
+            <th>File Name</th>
+            <th>Upload Remark</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Valid</th>
+            <th>Error</th>
+            <th>Duplicate</th>
+            <th>Imported</th>
+            <th>Uploaded By</th>
+            <th>Time</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for batch in batches %}
+          <tr>
+            <td>{{ batch.code }}</td>
+            <td>{{ batch.seller.name }}</td>
+            <td class="file-cell">{{ batch.display_filename|default:batch.original_filename|default:"-" }}</td>
+            <td class="remark-cell">{{ batch.display_upload_remark|default:batch.upload_remark|default:"-" }}</td>
+            <td><span class="status {{ batch.status }}">{{ batch.status }}</span></td>
+            <td>{{ batch.total_rows }}</td>
+            <td>{{ batch.valid_rows }}</td>
+            <td>{{ batch.error_rows }}</td>
+            <td>{{ batch.duplicate_rows }}</td>
+            <td>{{ batch.imported_count }}</td>
+            <td>{{ batch.uploaded_by.username|default:"-" }}</td>
+            <td>{{ batch.created_at|date:"d-M-Y H:i" }}</td>
+            <td><a class="cu-btn" href="{% url 'staff_customer_upload_detail' batch.id %}">Review</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="13" style="text-align:center;color:var(--muted);padding:24px;">No uploads found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -15,7 +15,7 @@
 
   <link
     rel="stylesheet"
-    href="{% static 'customerportal/css/computer_portal.css' %}?v=20260628users1"
+    href="{% static 'customerportal/css/computer_portal.css' %}?v=20260704upload1"
   >
 
   {% block extra_css %}{% endblock %}
@@ -72,6 +72,18 @@
             <path d="M8 9h8M8 13h8M8 17h5"></path>
           </svg>
           <span>Orders</span>
+        </a>
+
+        <a
+          href="{% url 'portal:computer_upload_orders' %}"
+          class="computer-nav-link {% block nav_upload_orders %}{% endblock %}"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3v12"></path>
+            <path d="m7 10 5 5 5-5"></path>
+            <path d="M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2"></path>
+          </svg>
+          <span>Upload Orders</span>
         </a>
         {% endif %}
 

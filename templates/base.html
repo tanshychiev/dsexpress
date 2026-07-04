@@ -1,4 +1,4 @@
-{% load static %}
+{% load static portal_uploads %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -777,6 +777,7 @@
       </a>
 
       <nav class="menu" aria-label="Main navigation">
+        {% customer_upload_pending_count as customer_upload_pending_count %}
 
         <div class="menu-title open" data-target="group-orders">Orders</div>
         <div class="menu-group" id="group-orders">
@@ -799,6 +800,17 @@
               </svg>
             </span>
             <span class="menu-label">Import Orders</span>
+          </a>
+
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.url_name == 'staff_customer_upload_list' or request.resolver_match and request.resolver_match.url_name == 'staff_customer_upload_detail' %}active{% endif %}" href="{% url 'staff_customer_upload_list' %}">
+            <span class="menu-icon-wrap">
+              <svg class="menu-icon" viewBox="0 0 24 24">
+                <path d="M12 3v12"></path>
+                <path d="m7 10 5 5 5-5"></path>
+                <path d="M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2"></path>
+              </svg>
+            </span>
+            <span class="menu-label">Customer Uploads{% if customer_upload_pending_count %} ({{ customer_upload_pending_count }}){% endif %}</span>
           </a>
 
           <a class="menu-item {% if request.path|slice:':15' == '/orders/update/' or request.path == '/orders/update/upload/' %}active{% endif %}" href="/orders/update/upload/">

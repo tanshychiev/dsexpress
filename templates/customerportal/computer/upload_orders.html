@@ -1,0 +1,163 @@
+{% extends "customerportal/computer/base.html" %}
+
+{% block title %}Upload Orders | DS EXPRESS{% endblock %}
+{% block nav_upload_orders %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  .upload-wrap{max-width:1180px;margin:0 auto;display:grid;gap:18px;}
+  .upload-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+  .upload-title{margin:0;font-size:26px;font-weight:950;color:#102033;letter-spacing:-.04em;}
+  .upload-sub{margin:6px 0 0;color:#64748b;font-size:13px;font-weight:700;}
+  .upload-card{border:1px solid #e2e8f0;border-radius:22px;background:#fff;box-shadow:0 14px 35px rgba(15,23,42,.06);padding:22px;}
+  .upload-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;}
+  .upload-box{border:1px dashed #b7ddc8;background:#f8fffb;border-radius:18px;padding:20px;}
+  .upload-box h3{margin:0 0 8px;font-size:18px;color:#0f5132;}
+  .upload-box p{margin:0 0 14px;color:#64748b;font-size:13px;line-height:1.6;font-weight:700;}
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+  .btn-primary,.btn-light,.btn-delete,.btn-disabled{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border-radius:13px;font-size:12px;font-weight:950;text-decoration:none;border:0;cursor:pointer;}
+  .btn-primary{background:#0f7a45;color:white;box-shadow:0 10px 22px rgba(15,122,69,.18);}
+  .btn-light{background:#eefaf3;color:#0f7a45;border:1px solid #ccebd9;}
+  .btn-danger-light{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+  .btn-delete{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:0 12px;min-height:38px;}
+  .btn-disabled{background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;padding:0 12px;min-height:38px;}
+  .file-input{display:block;width:100%;padding:13px;border:1px solid #dbe6df;border-radius:13px;background:#fff;font-size:13px;font-weight:700;}
+  .upload-remark{display:block;width:100%;min-height:74px;margin-top:12px;padding:12px;border:1px solid #dbe6df;border-radius:13px;background:#fff;color:#102033;font-size:13px;font-weight:750;resize:vertical;}
+  .rule-list{margin:0;padding-left:18px;color:#475569;font-size:13px;line-height:1.8;font-weight:700;}
+  .filter-grid{display:grid;grid-template-columns:1.2fr .7fr .7fr .7fr auto auto;gap:10px;align-items:end;}
+  .field label{display:block;margin-bottom:5px;color:#475569;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.04em;}
+  .field input,.field select{width:100%;height:40px;border:1px solid #dbe6df;border-radius:12px;padding:0 11px;background:#fff;color:#102033;font-size:12px;font-weight:800;}
+  .result-line{margin-top:10px;color:#64748b;font-size:12px;font-weight:800;}
+  .table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:18px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;background:#fff;}
+  th,td{padding:11px 12px;border-bottom:1px solid #edf2f7;text-align:left;vertical-align:top;}
+  th{background:#f8fafc;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  .status{display:inline-flex;align-items:center;min-height:25px;padding:0 9px;border-radius:999px;font-size:10px;font-weight:950;}
+  .st-PENDING{background:#fff7ed;color:#c2410c;}.st-IMPORTED{background:#ecfdf5;color:#047857;}.st-REJECTED{background:#fef2f2;color:#b91c1c;}.st-APPROVED{background:#eff6ff;color:#1d4ed8;}
+  .pages{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .action-cell{display:flex;gap:8px;align-items:center;}
+  .file-cell{max-width:230px;white-space:normal;color:#0f172a;font-weight:850;}
+  .remark-cell{max-width:260px;white-space:normal;color:#475569;font-weight:800;}
+  @media(max-width:1050px){.filter-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:850px){.upload-grid{grid-template-columns:1fr}.upload-head{display:block}.filter-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="upload-wrap">
+  <div class="upload-head">
+    <div>
+      <h1 class="upload-title">Upload Orders</h1>
+      <p class="upload-sub">Product Description is customer text. Inventory matching uses SKU.</p>
+    </div>
+    <a class="btn-light" href="{% url 'portal:download_customer_upload_sample' %}">Download DS Sample</a>
+  </div>
+
+  <div class="upload-grid">
+    <section class="upload-card">
+      <div class="upload-box">
+        <h3>Upload official Excel</h3>
+        <p>If one row has an error, the whole upload is auto rejected. Only clean uploads go to staff approval.</p>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input class="file-input" type="file" name="file" accept=".xlsx" required>
+          <textarea class="upload-remark" name="upload_remark" placeholder="Upload remark for this file, example: Morning batch / Only delivery / Call customer before delivery"></textarea>
+          <div style="height:12px"></div>
+          <div class="btn-row">
+            <button class="btn-primary" type="submit">Upload for Approval</button>
+            <a class="btn-light" href="{% url 'portal:download_customer_upload_sample' %}">Download Sample</a>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="upload-card">
+      <h3 style="margin:0 0 10px;font-size:18px;">Rules</h3>
+      <ul class="rule-list">
+        <li>Use DS official sample only.</li>
+        <li>Product Description can be any customer text.</li>
+        <li>SKU is required and controls inventory matching.</li>
+        <li>Detail page shows inventory product name from SKU for checking.</li>
+        <li>Upload remark is for the whole file and will show in upload history.</li>
+        <li>Pending uploads can be deleted before staff prepares them.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="upload-card">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <h3 style="margin:0;font-size:18px;">Upload History</h3>
+        <div class="result-line">Default shows last 3 days. Showing {{ result_count }} result(s). 50 rows per page.</div>
+      </div>
+    </div>
+
+    <form method="get" class="filter-grid">
+      <div class="field"><label>Search</label><input type="text" name="q" value="{{ history_q }}" placeholder="Batch, file name, upload remark, order code, seller, phone, SKU..."></div>
+      <div class="field"><label>Status</label><select name="status"><option value="ALL" {% if history_status == 'ALL' %}selected{% endif %}>All</option><option value="PENDING" {% if history_status == 'PENDING' %}selected{% endif %}>Pending</option><option value="REJECTED" {% if history_status == 'REJECTED' %}selected{% endif %}>Rejected</option><option value="IMPORTED" {% if history_status == 'IMPORTED' %}selected{% endif %}>Imported</option></select></div>
+      <div class="field"><label>From</label><input type="date" name="from" value="{{ date_from }}"></div>
+      <div class="field"><label>To</label><input type="date" name="to" value="{{ date_to }}"></div>
+      <button class="btn-primary" type="submit">Search</button>
+      <a class="btn-light btn-danger-light" href="?period=all{% if history_q %}&q={{ history_q|urlencode }}{% endif %}{% if history_status != 'ALL' %}&status={{ history_status }}{% endif %}">Search All</a>
+    </form>
+
+    <div style="height:14px"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Batch</th>
+            <th>File Name</th>
+            <th>Upload Remark</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Valid</th>
+            <th>Error</th>
+            <th>Duplicate</th>
+            <th>Imported</th>
+            <th>Uploaded</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for batch in batches %}
+          <tr>
+            <td>{{ batch.code }}</td>
+            <td class="file-cell">{{ batch.display_filename|default:batch.original_filename|default:"-" }}</td>
+            <td class="remark-cell">{{ batch.display_upload_remark|default:batch.upload_remark|default:"-" }}</td>
+            <td><span class="status st-{{ batch.status }}">{{ batch.status }}</span></td>
+            <td>{{ batch.total_rows }}</td>
+            <td>{{ batch.valid_rows }}</td>
+            <td>{{ batch.error_rows }}</td>
+            <td>{{ batch.duplicate_rows }}</td>
+            <td>{{ batch.imported_count }}</td>
+            <td>{{ batch.created_at|date:"d-M-Y H:i" }}</td>
+            <td class="action-cell">
+              <a class="btn-light" href="{% url 'portal:computer_upload_order_detail' batch.id %}">View</a>
+              {% if batch.status == 'PENDING' %}
+                <form method="post" action="{% url 'portal:computer_upload_order_delete' batch.id %}" style="margin:0;">
+                  {% csrf_token %}
+                  <button class="btn-delete" type="submit" onclick="return confirm('Delete this pending upload?')">🗑</button>
+                </form>
+              {% else %}
+                <button class="btn-disabled" type="button" onclick="alert('You cannot delete this file. The file has already been prepared. Please contact support team.')">🗑</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="11" style="text-align:center;color:#64748b;padding:22px;">No uploads found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pages">
+      {% if page_obj.has_previous %}<a class="btn-light" href="?page={{ page_obj.previous_page_number }}&period={{ history_period }}&status={{ history_status }}&from={{ date_from }}&to={{ date_to }}{% if history_q %}&q={{ history_q|urlencode }}{% endif %}">Previous</a>{% endif %}
+      <span class="result-line">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}<a class="btn-light" href="?page={{ page_obj.next_page_number }}&period={{ history_period }}&status={{ history_status }}&from={{ date_from }}&to={{ date_to }}{% if history_q %}&q={{ history_q|urlencode }}{% endif %}">Next</a>{% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

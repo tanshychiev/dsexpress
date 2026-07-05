@@ -42,15 +42,14 @@
   .pc-report-title p{margin:4px 0 0;color:#64748b;font-size:12px;font-weight:850}
   .pc-top-actions{display:flex;gap:8px;flex-wrap:wrap}
 
-  .pc-table-shell{padding:10px 12px 12px;background:#f8fafc}
-  .pc-table-wrap{overflow:auto;border:1px solid #cbd9e7;border-radius:14px;background:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
-  .pc-table{width:100%;min-width:1760px;border-collapse:collapse;border-spacing:0;table-layout:fixed;background:#fff}
-  .pc-table th{position:sticky;top:0;z-index:3;background:#0f5f9c;color:#fff;border:1px solid #0b4775;padding:0;text-align:center;vertical-align:middle}
-  .pc-table th a{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;min-height:34px;box-sizing:border-box;padding:8px 7px;color:#fff;text-decoration:none;font-size:9.5px;font-weight:950;letter-spacing:.025em;text-transform:uppercase;line-height:1.12;white-space:normal;text-align:center}
-  .pc-table th.no-sort{height:34px;box-sizing:border-box;padding:8px 7px;color:#fff;font-size:9.5px;font-weight:950;letter-spacing:.025em;text-transform:uppercase;line-height:1.12;white-space:normal;text-align:center}
+  .pc-table-shell{padding:14px;background:#f8fafc}
+  .pc-table-wrap{overflow:auto;border:1px solid #cbd9e7;border-radius:17px;background:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
+  .pc-table{width:100%;min-width:1700px;border-collapse:separate;border-spacing:0;table-layout:fixed;background:#fff}
+  .pc-table th{position:sticky;top:0;z-index:3;background:#0f5f9c;color:#fff;border-right:1px solid rgba(255,255,255,.18);border-bottom:1px solid #0b4775;text-align:left}
+  .pc-table th a,.pc-table th.no-sort{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:10px 9px;color:#fff;text-decoration:none;font-size:10px;font-weight:950;letter-spacing:.035em;text-transform:uppercase;line-height:1.15;white-space:normal}
   .pc-table th a:hover{background:#0b5086}
-  .sort-mark{color:#d1fae5;font-size:9px;flex:0 0 auto;line-height:1}
-  .pc-table td{padding:8px 7px;font-size:11.5px;border:1px solid #e5edf5;vertical-align:middle;background:#fff;color:#0f172a;line-height:1.25;word-break:break-word}
+  .sort-mark{color:#d1fae5;font-size:10px;flex:0 0 auto}
+  .pc-table td{padding:10px 9px;font-size:12px;border-right:1px solid #e5edf5;border-bottom:1px solid #e5edf5;vertical-align:middle;background:#fff;color:#0f172a;line-height:1.25;word-break:break-word}
   .pc-table tbody tr:nth-child(even) td{background:#fbfdff}
   .pc-table tbody tr:hover td{background:#effbf4!important}
   .pc-table tbody tr:last-child td{border-bottom:0}
@@ -79,23 +78,6 @@
   .pc-total-box{min-width:330px;border:1px solid #dbe6ef;border-radius:15px;background:#f8fafc;padding:10px 12px}
   .pc-total-row{display:flex;justify-content:space-between;gap:16px;padding:4px 0;font-size:13px;font-weight:900;color:#0f172a}
   .pc-total-row span:first-child{color:#64748b;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
-
-
-  .pc-summary-card{padding:0;overflow:hidden;border-radius:22px;background:#fff;border:1px solid #dbe6ef;box-shadow:0 14px 34px rgba(15,23,42,.06)}
-  .pc-summary-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:15px 18px;background:linear-gradient(135deg,#ffffff 0%,#eefbf4 100%);border-bottom:1px solid #dbe6ef}
-  .pc-summary-head h2{margin:0;font-size:19px;font-weight:950;color:#0f172a}
-  .pc-summary-head p{margin:4px 0 0;font-size:12px;color:#64748b;font-weight:800}
-  .pc-summary-badge{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 12px;border-radius:999px;background:#ecfdf5;color:#0f8a4b;border:1px solid #bbf7d0;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.03em}
-  .pc-summary-shell{padding:10px 12px 12px;background:#f8fafc}
-  .pc-summary-wrap{overflow:auto;border:1px solid #dbe6ef;border-radius:14px;background:#fff}
-  .pc-summary-table{width:100%;min-width:980px;border-collapse:collapse;table-layout:fixed;background:#fff}
-  .pc-summary-table th{background:#0f5f9c;color:#fff;border:1px solid #0b4775;padding:9px 8px;text-align:center;font-size:10px;font-weight:950;text-transform:uppercase;line-height:1.15;white-space:normal}
-  .pc-summary-table td{border:1px solid #e5edf5;padding:9px 8px;text-align:center;font-size:12px;font-weight:850;color:#0f172a;background:#fff}
-  .pc-summary-table tbody tr:nth-child(even) td{background:#fbfdff}
-  .pc-summary-table tbody tr:hover td{background:#effbf4}
-  .pc-summary-table .money{font-weight:950;color:#087847;white-space:nowrap;text-align:right}
-  .pc-summary-table .rate{font-weight:950;color:#0f8a4b}
-  .pc-summary-table .return-money{font-weight:950;color:#b91c1c;white-space:nowrap;text-align:right}
 
   @media(max-width:1100px){.pc-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-table{min-width:1500px}}
   @media(max-width:700px){.pc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-field{min-width:100%}.pc-title{font-size:23px}.pc-report-head{align-items:flex-start}.pc-top-actions{width:100%}.pc-top-actions .pc-btn{flex:1}}
@@ -187,60 +169,9 @@
     <div class="pc-stat"><span>Total Orders</span><strong>{{ summary.count }}</strong></div>
     <div class="pc-stat"><span>Pending</span><strong>{{ summary.pending }}</strong></div>
     <div class="pc-stat"><span>Sent / Received</span><strong>{{ summary.sent }} / {{ summary.received }}</strong></div>
-    <div class="pc-stat"><span>Returned</span><strong>{{ summary.returned }}</strong></div>
-    <div class="pc-stat"><span>Done Rate</span><strong>{{ summary.done_rate|floatformat:1 }}%</strong></div>
-    <div class="pc-stat"><span>Done COD</span><strong>${{ summary.done_net_cod|floatformat:2 }}</strong></div>
-  </div>
-
-  <div class="pc-summary-card">
-    <div class="pc-summary-head">
-      <div>
-        <h2>COD List Summary</h2>
-        <p>Grouped by COD action date: sent, received, settled and returned. Not by order created date.</p>
-      </div>
-      <div class="pc-summary-badge">{{ date_from }} → {{ date_to }}</div>
-    </div>
-
-    <div class="pc-summary-shell">
-      <div class="pc-summary-wrap">
-        <table class="pc-summary-table">
-          <thead>
-            <tr>
-              <th style="width:105px">Date</th>
-              <th>Sent<br>Orders</th>
-              <th>Sent<br>COD</th>
-              <th>Received<br>Orders</th>
-              <th>Received<br>COD</th>
-              <th>Settled<br>Orders</th>
-              <th>Settled<br>COD</th>
-              <th>Returned<br>Orders</th>
-              <th>Returned<br>COD</th>
-              <th>Done<br>Rate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in cod_daily_rows %}
-              <tr>
-                <td><b>{{ row.date|date:"d/m/Y" }}</b></td>
-                <td>{{ row.sent_orders }}</td>
-                <td class="money">${{ row.sent_cod|floatformat:2 }}</td>
-                <td>{{ row.received_orders }}</td>
-                <td class="money">${{ row.received_cod|floatformat:2 }}</td>
-                <td>{{ row.settled_orders }}</td>
-                <td class="money">${{ row.settled_cod|floatformat:2 }}</td>
-                <td>{{ row.returned_orders }}</td>
-                <td class="return-money">${{ row.returned_cod|floatformat:2 }}</td>
-                <td class="rate">{{ row.done_rate|floatformat:1 }}%</td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="10" class="pc-empty">No COD summary data.</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <div class="pc-stat"><span>Paid / Settled</span><strong>{{ summary.paid }} / {{ summary.settled }}</strong></div>
+    <div class="pc-stat"><span>Original COD</span><strong>${{ summary.original_cod|floatformat:2 }}</strong></div>
+    <div class="pc-stat"><span>Net COD</span><strong>${{ summary.net_cod|floatformat:2 }}</strong></div>
   </div>
 
   <div class="pc-report-card">
@@ -350,7 +281,15 @@
           </tbody>
         </table>
       </div>
-</div>
+
+      <div class="pc-total-bar">
+        <div class="pc-total-box">
+          <div class="pc-total-row"><span>Original COD</span><strong>${{ summary.original_cod|floatformat:2 }}</strong></div>
+          <div class="pc-total-row"><span>Province Fee</span><strong>${{ summary.province_fee|floatformat:2 }}</strong></div>
+          <div class="pc-total-row"><span>Carrier Fee</span><strong>${{ summary.carrier_fee|floatformat:2 }}</strong></div>
+          <div class="pc-total-row"><span>Net COD</span><strong>${{ summary.net_cod|floatformat:2 }}</strong></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

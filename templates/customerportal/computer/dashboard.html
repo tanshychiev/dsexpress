@@ -1,251 +1,448 @@
 {% extends "customerportal/computer/base.html" %}
-{% load static %}
 
-{% block title %}Dashboard | DS EXPRESS Computer Portal{% endblock %}
+{% block title %}Dashboard | DS EXPRESS{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
 
-{% block content %}
-<header class="computer-topbar">
-  <div>
-    <p class="computer-eyebrow">Seller overview</p>
-    <h1>Computer Dashboard</h1>
-    <p class="computer-subtitle">Orders, delivery performance and COD summary for {{ seller.name }}.</p>
-  </div>
-
-  <div class="computer-topbar-actions">
-    <div class="computer-user-card">
-      <span class="computer-avatar">{{ seller.name|slice:":1" }}</span>
-      <span>
-        <strong>{{ seller.name }}</strong>
-        <small>Seller account</small>
-      </span>
-    </div>
-  </div>
-</header>
-
-<section class="computer-filter-card">
-  <form method="get" class="computer-filter-form" id="computerFilterForm">
-    <label class="computer-field">
-      <span>Period</span>
-      <select name="period" id="computerPeriod">
-        <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
-        <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
-        <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 days</option>
-        <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 days</option>
-        <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This month</option>
-        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom date</option>
-      </select>
-    </label>
-
-    <div class="computer-custom-dates {% if period == 'custom' %}show{% endif %}" id="computerCustomDates">
-      <label class="computer-field">
-        <span>From</span>
-        <input type="date" name="from" value="{{ date_from }}" max="{{ today_iso }}">
-      </label>
-      <label class="computer-field">
-        <span>To</span>
-        <input type="date" name="to" value="{{ date_to }}" max="{{ today_iso }}">
-      </label>
-    </div>
-
-    <button type="submit" class="computer-apply-button">Apply</button>
-  </form>
-
-  <div class="computer-period-label">
-    <span>Showing data for</span>
-    <strong>{{ period_label }}</strong>
-  </div>
-</section>
-
-<section class="computer-stat-grid">
-  <article class="computer-stat-card">
-    <div class="computer-stat-head"><span>Total Orders</span><b>📦</b></div>
-    <strong>{{ total_orders }}</strong>
-    <small>Orders created in this period</small>
-  </article>
-  <article class="computer-stat-card success">
-    <div class="computer-stat-head"><span>Delivered</span><b>✓</b></div>
-    <strong>{{ total_delivered }}</strong>
-    <small>{{ delivery_rate }}% delivery rate</small>
-  </article>
-  <article class="computer-stat-card warning">
-    <div class="computer-stat-head"><span>Pending</span><b>◷</b></div>
-    <strong>{{ total_pending }}</strong>
-    <small>Current pending orders</small>
-  </article>
-  <article class="computer-stat-card danger">
-    <div class="computer-stat-head"><span>Returned</span><b>↩</b></div>
-    <strong>{{ total_returned }}</strong>
-    <small>{{ return_rate }}% return rate</small>
-  </article>
-  <article class="computer-stat-card info">
-    <div class="computer-stat-head"><span>Province</span><b>⌖</b></div>
-    <strong>{{ total_province }}</strong>
-    <small>Province orders created</small>
-  </article>
-  <article class="computer-stat-card money">
-    <div class="computer-stat-head"><span>Total COD</span><b>$</b></div>
-    <strong>${{ total_cod|floatformat:2 }}</strong>
-    <small>Collected from delivered orders</small>
-  </article>
-  <article class="computer-stat-card fee">
-    <div class="computer-stat-head"><span>Delivery Fees</span><b>−</b></div>
-    <strong>${{ total_fees|floatformat:2 }}</strong>
-    <small>Delivery, additional and province fees</small>
-  </article>
-  <article class="computer-stat-card balance">
-    <div class="computer-stat-head"><span>Net Balance</span><b>◎</b></div>
-    <strong>${{ net_balance|floatformat:2 }}</strong>
-    <small>COD minus all fees</small>
-  </article>
-</section>
-
-
-<section class="computer-insight-grid">
-  <article class="computer-insight-card">
-    <span>Cancellation Rate</span>
-    <strong>{{ cancellation_rate }}%</strong>
-    <small>{{ cancelled_orders }} cancelled or void order{{ cancelled_orders|pluralize }}</small>
-  </article>
-
-  <article class="computer-insight-card">
-    <span>Status of the Order</span>
-    <strong>{{ total_pending }} Pending</strong>
-    <small>{{ total_delivered }} delivered · {{ total_returned }} returned</small>
-  </article>
-
-  <article class="computer-insight-card">
-    <span>Automatic Stock</span>
-    <strong>{{ automatic_stock_status }}</strong>
-    <small>
-      {{ dashboard_inventory_products }} products ·
-      {{ dashboard_available_stock }} available ·
-      {{ dashboard_reserved_stock }} reserved
-    </small>
-  </article>
-</section>
-
-<section class="computer-content-grid">
-  <article class="computer-table-card">
-    <header class="computer-card-header">
-      <div>
-        <h2>Daily Order Summary</h2>
-        <p>Click a column heading to sort the table.</p>
-      </div>
-      <div class="computer-table-tools">
-        <input type="search" id="computerTableSearch" placeholder="Search date…" aria-label="Search report">
-        <button type="button" id="computerCsvButton">Download Excel</button>
-        <button type="button" id="computerPrintButton">Print / PDF</button>
-      </div>
-    </header>
-
-    <div class="computer-table-scroll">
-      <table class="computer-report-table" id="computerReportTable">
-        <thead>
-          <tr>
-            <th data-type="date">Date</th>
-            <th data-type="number">New Orders</th>
-            <th data-type="number">Delivered</th>
-            <th data-type="number">Pending</th>
-            <th data-type="number">Returned</th>
-            <th data-type="number">Province</th>
-            <th data-type="number">Delivery Rate</th>
-            <th data-type="number">Return Rate</th>
-            <th data-type="number">COD</th>
-            <th data-type="number">Delivery Fee</th>
-            <th data-type="number">Net Balance</th>
-          </tr>
-        </thead>
-        <tbody id="computerReportBody">
-          {% for row in daily_rows %}
-          <tr>
-            <td data-value="{{ row.date|date:'Y-m-d' }}">{{ row.date|date:"d/m/Y" }}</td>
-            <td data-value="{{ row.new_orders }}">{{ row.new_orders }}</td>
-            <td data-value="{{ row.delivered }}">{{ row.delivered }}</td>
-            <td data-value="{{ row.pending }}">{{ row.pending }}</td>
-            <td data-value="{{ row.returned }}">{{ row.returned }}</td>
-            <td data-value="{{ row.province }}">{{ row.province }}</td>
-            <td class="rate-success" data-value="{{ row.delivery_rate }}">{{ row.delivery_rate }}%</td>
-            <td class="rate-danger" data-value="{{ row.return_rate }}">{{ row.return_rate }}%</td>
-            <td data-value="{{ row.cod }}">${{ row.cod|floatformat:2 }}</td>
-            <td data-value="{{ row.fees }}">${{ row.fees|floatformat:2 }}</td>
-            <td data-value="{{ row.net }}">${{ row.net|floatformat:2 }}</td>
-          </tr>
-          {% empty %}
-          <tr class="computer-empty-row"><td colspan="11">No report data found.</td></tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td>Total</td>
-            <td>{{ total_orders }}</td>
-            <td>{{ total_delivered }}</td>
-            <td>{{ total_pending }}</td>
-            <td>{{ total_returned }}</td>
-            <td>{{ total_province }}</td>
-            <td>{{ delivery_rate }}%</td>
-            <td>{{ return_rate }}%</td>
-            <td>${{ total_cod|floatformat:2 }}</td>
-            <td>${{ total_fees|floatformat:2 }}</td>
-            <td>${{ net_balance|floatformat:2 }}</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-
-    <footer class="computer-pagination">
-      <span id="computerPaginationInfo">Showing report rows</span>
-      <div>
-        <button type="button" id="computerPreviousPage">Previous</button>
-        <span id="computerPageNumber">1</span>
-        <button type="button" id="computerNextPage">Next</button>
-      </div>
-    </footer>
-  </article>
-
-  <aside class="computer-side-column">
-    <article class="computer-side-card">
-      <header class="computer-card-header compact">
-        <div>
-          <h2>Recent Orders</h2>
-          <p>Latest seller activity</p>
-        </div>
-        <a href="{% url 'portal:computer_orders' %}">View all</a>
-      </header>
-      <div class="computer-recent-list">
-        {% for order in recent_orders %}
-        <div class="computer-recent-item">
-          <span class="computer-order-icon">📦</span>
-          <span class="computer-order-copy">
-            <strong>{{ order.tracking_no }}</strong>
-            <small>{{ order.receiver_name|default:"No receiver" }} · ${{ order.price|default:0|floatformat:2 }}</small>
-          </span>
-          <span class="computer-status {{ order.computer_status_key }}">{{ order.computer_status_label }}</span>
-        </div>
-        {% empty %}
-        <p class="computer-empty-message">No recent orders.</p>
-        {% endfor %}
-      </div>
-    </article>
-
-    <article class="computer-side-card">
-      <header class="computer-card-header compact">
-        <div>
-          <h2>Quick Actions</h2>
-          <p>Common seller tools</p>
-        </div>
-      </header>
-      <div class="computer-quick-grid">
-        <a href="{% url 'portal:computer_orders' %}"><span>＋</span><strong>Create Pickup</strong></a>
-        <a href="{% url 'portal:computer_delivery_report' %}"><span>⌖</span><strong>Delivery Report</strong></a>
-        <a href="{% url 'portal:computer_cod_report' %}"><span>$</span><strong>COD Report</strong></a>
-        <a href="{% url 'portal:computer_dashboard' %}"><span>▦</span><strong>Dashboard</strong></a>
-      </div>
-    </article>
-  </aside>
-</section>
+{% block extra_css %}
+<style>
+  .dash-wrap{
+    max-width:1280px;
+    margin:0 auto;
+    display:grid;
+    gap:18px;
+  }
+  .dash-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .dash-title{
+    margin:0;
+    font-size:28px;
+    line-height:1.1;
+    font-weight:950;
+    letter-spacing:-.04em;
+    color:#102033;
+  }
+  .dash-sub{
+    margin:7px 0 0;
+    color:#64748b;
+    font-size:13px;
+    font-weight:750;
+  }
+  .card{
+    border:1px solid #e2e8f0;
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 14px 35px rgba(15,23,42,.06);
+    padding:20px;
+  }
+  .filter-card{
+    padding:14px;
+  }
+  .filter-form{
+    display:grid;
+    grid-template-columns:.8fr .8fr .8fr auto auto;
+    gap:10px;
+    align-items:end;
+  }
+  .field label{
+    display:block;
+    margin-bottom:5px;
+    color:#475569;
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .field input,.field select{
+    width:100%;
+    height:40px;
+    border:1px solid #dbe6df;
+    border-radius:12px;
+    padding:0 11px;
+    background:#fff;
+    color:#102033;
+    font-size:12px;
+    font-weight:850;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:40px;
+    padding:0 14px;
+    border-radius:13px;
+    font-size:12px;
+    font-weight:950;
+    text-decoration:none;
+    border:1px solid #ccebd9;
+    background:#eefaf3;
+    color:#0f7a45;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .btn-main{
+    background:#0f7a45;
+    border-color:#0f7a45;
+    color:#fff;
+    box-shadow:0 10px 22px rgba(15,122,69,.18);
+  }
+  .btn-soft{
+    background:#fff7ed;
+    color:#c2410c;
+    border-color:#fed7aa;
+  }
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+  }
+  .kpi{
+    border:1px solid #e2e8f0;
+    border-radius:18px;
+    background:#fff;
+    padding:16px;
+    box-shadow:0 10px 25px rgba(15,23,42,.04);
+  }
+  .kpi-label{
+    color:#64748b;
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  .kpi-value{
+    margin-top:7px;
+    color:#102033;
+    font-size:26px;
+    font-weight:950;
+    letter-spacing:-.04em;
+  }
+  .kpi-note{
+    margin-top:4px;
+    color:#64748b;
+    font-size:11px;
+    font-weight:750;
+  }
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+  .section-title{
+    margin:0;
+    color:#102033;
+    font-size:18px;
+    font-weight:950;
+  }
+  .section-sub{
+    margin:5px 0 0;
+    color:#64748b;
+    font-size:12px;
+    font-weight:750;
+    line-height:1.5;
+  }
+  .hint-box{
+    margin-bottom:12px;
+    padding:11px 13px;
+    border:1px solid #bfdbfe;
+    background:#eff6ff;
+    color:#1e40af;
+    border-radius:14px;
+    font-size:12px;
+    font-weight:850;
+    line-height:1.55;
+  }
+  .table-wrap{
+    overflow:auto;
+    border:1px solid #e2e8f0;
+    border-radius:18px;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:12px;
+    white-space:nowrap;
+    background:#fff;
+  }
+  th,td{
+    padding:12px 12px;
+    border-bottom:1px solid #edf2f7;
+    text-align:left;
+    vertical-align:middle;
+  }
+  th{
+    background:#f8fafc;
+    color:#475569;
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  #daily-summary-table th{
+    white-space:normal;
+    line-height:1.22;
+    min-width:86px;
+  }
+  #daily-summary-table th.small-head{min-width:74px;}
+  #daily-summary-table th.date-head{min-width:92px;}
+  #daily-summary-table th.money-head{min-width:82px;}
+  tbody tr:hover{background:#fbfdfc;}
+  .num{text-align:right;font-weight:900;color:#102033;}
+  .money{text-align:right;font-weight:950;color:#102033;}
+  .rate-good{color:#047857;font-weight:950;}
+  .rate-bad{color:#dc2626;font-weight:950;}
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    min-height:25px;
+    padding:0 9px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:950;
+    background:#f1f5f9;
+    color:#475569;
+  }
+  .status-delivered{background:#ecfdf5;color:#047857;}
+  .status-pending{background:#fff7ed;color:#c2410c;}
+  .status-returned{background:#fef2f2;color:#b91c1c;}
+  .two-grid{
+    display:grid;
+    grid-template-columns:1.2fr .8fr;
+    gap:18px;
+  }
+  .mini-list{
+    display:grid;
+    gap:10px;
+  }
+  .mini-item{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    padding:12px;
+    background:#f8fafc;
+  }
+  .mini-title{font-size:12px;font-weight:950;color:#102033;}
+  .mini-sub{margin-top:3px;font-size:11px;font-weight:750;color:#64748b;}
+  .print-only{display:none;}
+  @media(max-width:1050px){
+    .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .filter-form{grid-template-columns:1fr 1fr;}
+    .two-grid{grid-template-columns:1fr;}
+  }
+  @media(max-width:700px){
+    .kpi-grid{grid-template-columns:1fr;}
+    .filter-form{grid-template-columns:1fr;}
+    .dash-title{font-size:24px;}
+  }
+  @media print{
+    .no-print,.filter-card,.btn{display:none !important;}
+    .dash-wrap{max-width:none;gap:12px;}
+    .card,.kpi{box-shadow:none;border-color:#d1d5db;}
+    .print-only{display:block;}
+  }
+</style>
 {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'customerportal/js/computer_dashboard.js' %}?v=20260619a"></script>
+{% block content %}
+<div class="dash-wrap">
+  <div class="dash-head">
+    <div>
+      <h1 class="dash-title">Computer Dashboard</h1>
+      <p class="dash-sub">{{ seller.name|default:"Seller" }} · {{ period_label }}</p>
+      {% if uses_830_order_day %}
+        <p class="dash-sub" style="margin-top:4px;">Starek order day: previous day 8:30 PM → selected date 8:29 PM</p>
+      {% endif %}
+    </div>
+    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" type="button" onclick="downloadDailySummaryCSV()">Download Excel</button>
+      <button class="btn btn-soft" type="button" onclick="window.print()">Print / PDF</button>
+    </div>
+  </div>
+
+  <section class="card filter-card no-print">
+    <form method="get" class="filter-form">
+      <div class="field">
+        <label>Period</label>
+        <select name="period" id="periodSelect" onchange="toggleCustomDate()">
+          <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+          <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+          <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 days</option>
+          <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 days</option>
+          <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This month</option>
+          <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last month</option>
+          <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom</option>
+        </select>
+      </div>
+      <div class="field custom-date-field">
+        <label>From</label>
+        <input type="date" name="from" value="{{ date_from }}" max="{{ today_iso }}">
+      </div>
+      <div class="field custom-date-field">
+        <label>To</label>
+        <input type="date" name="to" value="{{ date_to }}" max="{{ today_iso }}">
+      </div>
+      <button class="btn btn-main" type="submit">Search</button>
+      <a class="btn" href="{% url 'portal:computer_dashboard' %}">Reset</a>
+    </form>
+  </section>
+
+  <section class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Created Orders</div>
+      <div class="kpi-value">{{ total_orders }}</div>
+      <div class="kpi-note">Orders in selected period</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Delivered</div>
+      <div class="kpi-value">{{ total_delivered }}</div>
+      <div class="kpi-note">{{ delivery_rate|floatformat:1 }}% delivered from created orders</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Still Pending</div>
+      <div class="kpi-value">{{ total_pending }}</div>
+      <div class="kpi-note">Not finished yet</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Returned</div>
+      <div class="kpi-value">{{ total_returned }}</div>
+      <div class="kpi-note">{{ return_rate|floatformat:1 }}% returned from created orders</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Province COD</div>
+      <div class="kpi-value">${{ total_province_cod|floatformat:2 }}</div>
+      <div class="kpi-note">Province COD from selected period</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">COD Collected</div>
+      <div class="kpi-value">${{ total_cod|floatformat:2 }}</div>
+      <div class="kpi-note">From delivered orders in selected period</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Delivery Fee</div>
+      <div class="kpi-value">${{ total_fees|floatformat:2 }}</div>
+      <div class="kpi-note">Fee from delivered orders in selected period</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Net Balance</div>
+      <div class="kpi-value">${{ net_balance|floatformat:2 }}</div>
+      <div class="kpi-note">COD minus delivery fee</div>
+    </div>
+  </section>
+
+  <section class="card" id="daily-summary-card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Daily Order Summary</h2>
+        <p class="section-sub">This report is grouped by created date. Delivered, pending, returned, province COD, COD and fee are counted from orders created in that same row date. The last row shows average counts and overall totals.</p>
+        {% if uses_830_order_day %}
+          <p class="section-sub" style="margin-top:4px;">For Starek only: each order day runs from previous day 8:30 PM to selected date 8:29 PM.</p>
+        {% endif %}
+      </div>
+    </div>
+
+
+    <div class="table-wrap">
+      <table id="daily-summary-table">
+        <thead>
+          <tr>
+            {% if uses_830_order_day %}<th class="date-head">DS Order<br>Day</th>{% else %}<th class="date-head">Created<br>Date</th>{% endif %}
+            <th class="num small-head">Created<br>Orders</th>
+            <th class="num">Delivered<br>from Created</th>
+            <th class="num small-head">Still<br>Pending</th>
+            <th class="num">Returned<br>from Created</th>
+            <th class="money money-head">Province<br>COD</th>
+            <th class="num small-head">Delivered<br>%</th>
+            <th class="num small-head">Returned<br>%</th>
+            <th class="money money-head">COD</th>
+            <th class="money money-head">Delivery<br>Fee</th>
+            <th class="money money-head">Net<br>Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in daily_rows %}
+            <tr>
+              <td><b>{{ row.date|date:"d/m/Y" }}</b></td>
+              <td class="num">{{ row.new_orders }}</td>
+              <td class="num">{{ row.delivered }}</td>
+              <td class="num">{{ row.pending }}</td>
+              <td class="num">{{ row.returned }}</td>
+              <td class="money">${{ row.province_cod|floatformat:2 }}</td>
+              <td class="num rate-good">{{ row.delivery_rate|floatformat:1 }}%</td>
+              <td class="num rate-bad">{{ row.return_rate|floatformat:1 }}%</td>
+              <td class="money">${{ row.cod|floatformat:2 }}</td>
+              <td class="money">${{ row.fees|floatformat:2 }}</td>
+              <td class="money">${{ row.net|floatformat:2 }}</td>
+            </tr>
+          {% endfor %}
+
+          {% if daily_rows %}
+            <tr class="summary-average-row">
+              <td class="summary-average-label">Average / Total</td>
+              <td class="num">{{ daily_average_row.new_orders|floatformat:2 }}</td>
+              <td class="num">{{ daily_average_row.delivered|floatformat:2 }}</td>
+              <td class="num">{{ daily_average_row.pending|floatformat:2 }}</td>
+              <td class="num">{{ daily_average_row.returned|floatformat:2 }}</td>
+              <td class="money">${{ daily_average_row.province_cod|floatformat:2 }}</td>
+              <td class="num rate-good">{{ daily_average_row.delivery_rate|floatformat:1 }}%</td>
+              <td class="num rate-bad">{{ daily_average_row.return_rate|floatformat:1 }}%</td>
+              <td class="money">${{ daily_average_row.cod|floatformat:2 }}</td>
+              <td class="money">${{ daily_average_row.fees|floatformat:2 }}</td>
+              <td class="money">${{ daily_average_row.net|floatformat:2 }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="11" style="text-align:center;color:#64748b;padding:24px;font-weight:800;">No order data found.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  function toggleCustomDate(){
+    const select = document.getElementById('periodSelect');
+    const fields = document.querySelectorAll('.custom-date-field');
+    const show = select && select.value === 'custom';
+    fields.forEach(function(field){
+      field.style.display = show ? 'block' : 'none';
+    });
+  }
+
+  function downloadDailySummaryCSV(){
+    const table = document.getElementById('daily-summary-table');
+    if(!table){ return; }
+
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const csv = rows.map(function(row){
+      return Array.from(row.querySelectorAll('th,td')).map(function(cell){
+        const value = cell.innerText.replace(/\s+/g, ' ').trim().replace(/"/g, '""');
+        return '"' + value + '"';
+      }).join(',');
+    }).join('\n');
+
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'ds_daily_order_summary_{{ date_from }}_{{ date_to }}.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  document.addEventListener('DOMContentLoaded', toggleCustomDate);
+</script>
 {% endblock %}

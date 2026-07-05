@@ -1,0 +1,257 @@
+{% extends "customerportal/computer/base.html" %}
+
+{% block title %}
+Province COD List | DS EXPRESS Computer Portal
+{% endblock %}
+
+{% block nav_cod_report %}active{% endblock %}
+
+{% block content %}
+
+<header class="computer-topbar">
+  <div>
+    <p class="computer-eyebrow">Province COD</p>
+    <h1>Province COD List</h1>
+
+    <p class="computer-subtitle">
+      Province COD orders, status, province fee and net balance for
+      {{ seller.name }}.
+    </p>
+  </div>
+
+  <div class="computer-user-card">
+    <span class="computer-avatar">
+      {{ seller.name|slice:":1" }}
+    </span>
+
+    <span>
+      <strong>{{ seller.name }}</strong>
+      <small>Seller account</small>
+    </span>
+  </div>
+</header>
+
+<section class="computer-filter-card">
+
+  <form method="get" class="computer-filter-form">
+
+    <label class="computer-field">
+      <span>Period</span>
+
+      <select name="period" data-period-select>
+        <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+        <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+        <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 days</option>
+        <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 days</option>
+        <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This month</option>
+        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom date</option>
+      </select>
+    </label>
+
+    <div
+      class="computer-custom-dates {% if period == 'custom' %}show{% endif %}"
+      data-custom-dates
+    >
+      <label class="computer-field">
+        <span>From</span>
+        <input type="date" name="from" value="{{ date_from }}" max="{{ today_iso }}">
+      </label>
+
+      <label class="computer-field">
+        <span>To</span>
+        <input type="date" name="to" value="{{ date_to }}" max="{{ today_iso }}">
+      </label>
+    </div>
+
+    <button type="submit" class="computer-apply-button">Apply</button>
+  </form>
+
+  <div class="computer-period-label">
+    <span>Showing data for</span>
+    <strong>{{ period_label }}</strong>
+  </div>
+
+</section>
+
+<section class="computer-stat-grid">
+
+  <article class="computer-stat-card">
+    <div class="computer-stat-head">
+      <span>Province Orders</span>
+      <b>⌖</b>
+    </div>
+    <strong>{{ total_orders }}</strong>
+    <small>Orders in province COD list</small>
+  </article>
+
+  <article class="computer-stat-card warning">
+    <div class="computer-stat-head">
+      <span>Sent COD</span>
+      <b>◷</b>
+    </div>
+    <strong>{{ sent_cod_count }}</strong>
+    <small>Waiting province COD update</small>
+  </article>
+
+  <article class="computer-stat-card success">
+    <div class="computer-stat-head">
+      <span>Done</span>
+      <b>✓</b>
+    </div>
+    <strong>{{ done_count }}</strong>
+    <small>Delivered province orders</small>
+  </article>
+
+  <article class="computer-stat-card danger">
+    <div class="computer-stat-head">
+      <span>Returned</span>
+      <b>↩</b>
+    </div>
+    <strong>{{ returned_count }}</strong>
+    <small>Returned province orders</small>
+  </article>
+
+  <article class="computer-stat-card money">
+    <div class="computer-stat-head">
+      <span>Total COD</span>
+      <b>$</b>
+    </div>
+    <strong>${{ total_cod|floatformat:2 }}</strong>
+    <small>Province order COD</small>
+  </article>
+
+  <article class="computer-stat-card fee">
+    <div class="computer-stat-head">
+      <span>Province Fee</span>
+      <b>−</b>
+    </div>
+    <strong>${{ total_province_fee|floatformat:2 }}</strong>
+    <small>Total province fees</small>
+  </article>
+
+  <article class="computer-stat-card balance">
+    <div class="computer-stat-head">
+      <span>Net Balance</span>
+      <b>◎</b>
+    </div>
+    <strong>${{ net_balance|floatformat:2 }}</strong>
+    <small>COD minus province fee</small>
+  </article>
+
+</section>
+
+<section class="computer-table-card computer-full-card">
+
+  <header class="computer-card-header">
+    <div>
+      <h2>Province COD Orders</h2>
+      <p>Orders sent to province delivery with COD.</p>
+    </div>
+
+    <div class="computer-table-tools">
+      <input
+        type="search"
+        data-table-search="provinceCodTable"
+        placeholder="Search…"
+      >
+
+      <button
+        type="button"
+        data-csv-button="provinceCodTable"
+        data-filename="province-cod-list"
+      >
+        Download Excel
+      </button>
+
+      <button type="button" data-print-button>
+        Print / PDF
+      </button>
+    </div>
+  </header>
+
+  <div class="computer-table-scroll large">
+    <table
+      class="computer-report-table cod-table"
+      id="provinceCodTable"
+      data-page-size="20"
+    >
+      <thead>
+        <tr>
+          <th data-type="date">Date</th>
+          <th>Tracking No.</th>
+          <th>Receiver</th>
+          <th>Phone</th>
+          <th>Address</th>
+          <th data-type="number">COD</th>
+          <th data-type="number">Province Fee</th>
+          <th data-type="number">Net</th>
+          <th>Status</th>
+          <th>Reason / Remark</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for order in rows %}
+        <tr>
+          <td data-value="{% if order.done_at %}{{ order.done_at|date:'Y-m-d' }}{% else %}{{ order.created_at|date:'Y-m-d' }}{% endif %}">
+            {% if order.done_at %}
+              {{ order.done_at|date:"d/m/Y" }}
+            {% else %}
+              {{ order.created_at|date:"d/m/Y" }}
+            {% endif %}
+          </td>
+
+          <td><strong>{{ order.tracking_no }}</strong></td>
+          <td>{{ order.receiver_name|default:"-" }}</td>
+          <td>{{ order.receiver_phone|default:"-" }}</td>
+          <td class="wide-cell">{{ order.receiver_address|default:"-" }}</td>
+
+          <td data-value="{{ order.computer_cod }}">
+            ${{ order.computer_cod|floatformat:2 }}
+          </td>
+
+          <td data-value="{{ order.computer_province_fee }}">
+            ${{ order.computer_province_fee|floatformat:2 }}
+          </td>
+
+          <td data-value="{{ order.province_cod_net }}">
+            <strong>${{ order.province_cod_net|floatformat:2 }}</strong>
+          </td>
+
+          <td>
+            <span class="computer-status {{ order.province_cod_status_key }}">
+              {{ order.province_cod_status_label }}
+            </span>
+          </td>
+
+          <td class="wide-cell">
+            {{ order.reason|default:order.remark|default:"-" }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr class="computer-empty-row">
+          <td colspan="10">No province COD orders.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <td colspan="5">Total</td>
+          <td>${{ total_cod|floatformat:2 }}</td>
+          <td>${{ total_province_fee|floatformat:2 }}</td>
+          <td>${{ net_balance|floatformat:2 }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div
+    class="computer-pagination"
+    data-pagination-for="provinceCodTable"
+  ></div>
+
+</section>
+
+{% endblock %}

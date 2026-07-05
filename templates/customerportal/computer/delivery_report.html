@@ -1,370 +1,234 @@
 {% extends "customerportal/computer/base.html" %}
+{% load static %}
 
-{% block title %}
-Delivery Report | DS EXPRESS Computer Portal
-{% endblock %}
-
+{% block title %}Delivery Report | DS EXPRESS{% endblock %}
 {% block nav_delivery_report %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+  .report-page{display:grid;gap:16px;}
+  .report-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;}
+  .report-eyebrow{margin:0 0 4px;color:#0f7a45;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;}
+  .report-head h1{margin:0;color:#0f172a;font-size:30px;font-weight:950;line-height:1;}
+  .report-subtitle{margin:8px 0 0;color:#64748b;font-size:13px;font-weight:750;}
+  .seller-card{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:18px;background:#fff;border:1px solid #dbe3ec;box-shadow:0 10px 28px rgba(15,23,42,.06);min-width:150px;}
+  .seller-avatar{width:36px;height:36px;border-radius:14px;display:grid;place-items:center;background:#e8f7ef;color:#0f7a45;font-weight:950;}
+  .seller-card strong{display:block;font-size:13px;color:#0f172a;}.seller-card small{display:block;font-size:10px;color:#64748b;font-weight:800;}
+
+  .filter-card{padding:16px;border:1px solid #dbe3ec;border-radius:18px;background:#fff;box-shadow:0 14px 35px rgba(15,23,42,.06);}
+  .filter-grid{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:12px;align-items:end;}
+  .field label{display:block;margin-bottom:6px;color:#475569;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.04em;}
+  .field input,.field select{width:100%;height:42px;border:1px solid #d8dde6;border-radius:12px;background:#fff;padding:0 12px;color:#0f172a;font-size:12px;font-weight:800;}
+  .field-search{grid-column:span 2;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:none;border-radius:12px;text-decoration:none;font-size:12px;font-weight:950;cursor:pointer;white-space:nowrap;}
+  .btn-show{background:#124b84;color:#fff;min-width:150px;}.btn-excel{background:#12824f;color:#fff;}.btn-print{background:#eefaf3;color:#0f7a45;border:1px solid #ccebd9;}
+  .actions{display:flex;gap:8px;align-items:end;}
+
+  .range-box{background:#f8fafc;border:1px solid #dbe3ec;border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}
+  .range-title{font-size:13px;font-weight:950;color:#17324d;margin-bottom:4px;}.range-line{font-size:12px;color:#475569;line-height:1.5;font-weight:750;}
+  .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;}
+  .summary-card{background:#fff;border:1px solid #dbe3ec;border-radius:16px;padding:16px;box-shadow:0 3px 10px rgba(0,0,0,.03);}
+  .summary-label{font-size:12px;color:#64748b;font-weight:850;margin-bottom:8px;}.summary-value{font-size:28px;font-weight:950;color:#17324d;line-height:1;}.summary-note{margin-top:8px;color:#64748b;font-size:11px;font-weight:750;}
+
+  .report-wrapper{background:#fff;border:1px solid #dbe3ec;border-radius:18px;padding:16px;box-shadow:0 14px 35px rgba(15,23,42,.06);}
+  .report-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  .report-title{text-align:center;flex:1;}.report-title h2{margin:0;color:#17324d;font-size:20px;font-weight:950;}.report-title p{margin:4px 0 0;color:#475569;font-size:12px;font-weight:750;}
+  .current-search{height:38px;min-width:260px;border:1px solid #94a3b8;border-radius:0;padding:0 10px;font-size:13px;}
+  .tool-actions{display:flex;gap:8px;align-items:center;}
+  .table-wrap{overflow-x:auto;border:1px solid #d9e0e8;border-radius:14px;width:100%;}
+  .rtable{width:100%;min-width:1450px;border-collapse:collapse;background:#fff;table-layout:fixed;}
+  .rtable th{background:#124b84;color:#fff;padding:8px 6px;border:1px solid #d0d7df;font-size:11px;text-align:center;white-space:normal;line-height:1.2;}
+  .rtable td{padding:6px 6px;border:1px solid #d9e0e8;font-size:11px;vertical-align:top;white-space:normal;word-break:break-word;overflow-wrap:break-word;line-height:1.25;}
+  .rtable td.num{text-align:right;white-space:nowrap;}.rtable td.center{text-align:center;}
+  .row-pending{background:#fff6cc;}.row-returned{background:#dff4df;}.row-returned td{color:#166534;font-weight:700;}
+  .status-badge{display:inline-flex;align-items:center;justify-content:center;min-width:72px;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:950;line-height:1;}
+  .status-done{background:#e8f0ff;color:#1e40af;}.status-returned{background:#dcfce7;color:#166534;}.status-pending{background:#fff7cc;color:#92400e;}
+  .totals-box{margin-top:12px;display:flex;justify-content:flex-end;}.totals-inner{min-width:320px;background:#f8fafc;border:1px solid #dbe3ec;border-radius:14px;padding:12px 14px;}.totals-row{display:flex;justify-content:space-between;gap:14px;font-size:14px;padding:4px 0;}.totals-row strong{color:#0f172a;}
+  .empty-box{text-align:center;padding:34px 20px;color:#6b7280;font-weight:850;background:#fff;border:1px dashed #cbd5e1;border-radius:16px;}
+
+  @media(max-width:1200px){.filter-grid{grid-template-columns:repeat(2,minmax(180px,1fr));}.field-search{grid-column:span 2;}.summary-grid{grid-template-columns:repeat(2,1fr);}.report-toolbar{display:grid;grid-template-columns:1fr;}.report-title{text-align:left;}.current-search{width:100%;min-width:0;}}
+  @media(max-width:720px){.report-head{display:block}.seller-card{margin-top:12px}.filter-grid,.summary-grid{grid-template-columns:1fr;}.field-search{grid-column:auto}.actions{display:grid;grid-template-columns:1fr}.btn{width:100%;}.range-box{display:block}.tool-actions{display:grid;grid-template-columns:1fr}.report-wrapper{padding:12px;}}
+  @media print{.computer-sidebar,.filter-card,.tool-actions,.current-search,.seller-card{display:none!important}.computer-main{padding:0!important}.report-wrapper{box-shadow:none;border:none}.report-head{display:none}.range-box{border:none}.rtable{min-width:1200px}.rtable th,.rtable td{font-size:9px;padding:4px}}
+</style>
+{% endblock %}
+
 {% block content %}
-
-<header class="computer-topbar">
-  <div>
-    <p class="computer-eyebrow">Delivery performance</p>
-    <h1>Delivery Report</h1>
-
-    <p class="computer-subtitle">
-      Delivered, pending and returned order performance for
-      {{ seller.name }}.
-    </p>
-  </div>
-
-  <div class="computer-user-card">
-    <span class="computer-avatar">
-      {{ seller.name|slice:":1" }}
-    </span>
-
-    <span>
-      <strong>{{ seller.name }}</strong>
-      <small>Seller account</small>
-    </span>
-  </div>
-</header>
-
-<section class="computer-filter-card">
-
-  <form method="get" class="computer-filter-form">
-
-    <label class="computer-field">
-      <span>Period</span>
-
-      <select name="period" data-period-select">
-
-        <option
-          value="today"
-          {% if period == 'today' %}selected{% endif %}
-        >
-          Today
-        </option>
-
-        <option
-          value="yesterday"
-          {% if period == 'yesterday' %}selected{% endif %}
-        >
-          Yesterday
-        </option>
-
-        <option
-          value="last_7_days"
-          {% if period == 'last_7_days' %}selected{% endif %}
-        >
-          Last 7 days
-        </option>
-
-        <option
-          value="last_30_days"
-          {% if period == 'last_30_days' %}selected{% endif %}
-        >
-          Last 30 days
-        </option>
-
-        <option
-          value="this_month"
-          {% if period == 'this_month' %}selected{% endif %}
-        >
-          This month
-        </option>
-
-        <option
-          value="custom"
-          {% if period == 'custom' %}selected{% endif %}
-        >
-          Custom date
-        </option>
-
-      </select>
-    </label>
-
-    <div
-      class="computer-custom-dates {% if period == 'custom' %}show{% endif %}"
-      data-custom-dates
-    >
-
-      <label class="computer-field">
-        <span>From</span>
-
-        <input
-          type="date"
-          name="from"
-          value="{{ date_from }}"
-          max="{{ today_iso }}"
-        >
-      </label>
-
-      <label class="computer-field">
-        <span>To</span>
-
-        <input
-          type="date"
-          name="to"
-          value="{{ date_to }}"
-          max="{{ today_iso }}"
-        >
-      </label>
-
+<div class="report-page">
+  <header class="report-head">
+    <div>
+      <p class="report-eyebrow">Delivery performance</p>
+      <h1>Delivery Report</h1>
+      <p class="report-subtitle">Same report logic as the internal system. Shop is locked to {{ seller.name }}.</p>
     </div>
-
-    <button
-      type="submit"
-      class="computer-apply-button"
-    >
-      Apply
-    </button>
-
-  </form>
-
-  <div class="computer-period-label">
-    <span>Showing data for</span>
-    <strong>{{ period_label }}</strong>
-  </div>
-
-</section>
-
-<section class="computer-stat-grid">
-
-  <article class="computer-stat-card">
-    <div class="computer-stat-head">
-      <span>Created</span>
-      <b>📦</b>
+    <div class="seller-card">
+      <span class="seller-avatar">{{ seller.name|slice:":1" }}</span>
+      <span><strong>{{ seller.name }}</strong><small>Seller account</small></span>
     </div>
+  </header>
 
-    <strong>{{ total_created }}</strong>
-    <small>Orders created</small>
-  </article>
-
-  <article class="computer-stat-card success">
-    <div class="computer-stat-head">
-      <span>Delivered</span>
-      <b>✓</b>
-    </div>
-
-    <strong>{{ total_delivered }}</strong>
-    <small>{{ delivery_rate }}% delivery rate</small>
-  </article>
-
-  <article class="computer-stat-card warning">
-    <div class="computer-stat-head">
-      <span>Pending</span>
-      <b>◷</b>
-    </div>
-
-    <strong>{{ total_pending }}</strong>
-    <small>Still processing</small>
-  </article>
-
-  <article class="computer-stat-card danger">
-    <div class="computer-stat-head">
-      <span>Returned</span>
-      <b>↩</b>
-    </div>
-
-    <strong>{{ total_returned }}</strong>
-    <small>{{ return_rate }}% return rate</small>
-  </article>
-
-</section>
-
-<section class="computer-split-grid">
-
-  <article class="computer-table-card">
-
-    <header class="computer-card-header">
-      <div>
-        <h2>Delivered Orders</h2>
-        <p>Orders completed during the selected period.</p>
+  <section class="filter-card">
+    <form method="get" class="filter-grid">
+      <div class="field">
+        <label>Delivery Date From (Done)</label>
+        <input type="datetime-local" name="delivery_date_from" value="{{ delivery_from_value }}">
       </div>
-
-      <div class="computer-table-tools">
-
-        <input
-          type="search"
-          data-table-search="deliveredTable"
-          placeholder="Search…"
-        >
-
-        <button
-          type="button"
-          data-csv-button="deliveredTable"
-          data-filename="delivery-report"
-        >
-          Download Excel
-        </button>
-
+      <div class="field">
+        <label>Delivery Date To (Done)</label>
+        <input type="datetime-local" name="delivery_date_to" value="{{ delivery_to_value }}">
       </div>
-    </header>
+      <div class="field">
+        <label>Pending Date From (Created)</label>
+        <input type="datetime-local" name="pending_date_from" value="{{ pending_from_value }}">
+      </div>
+      <div class="field">
+        <label>Pending Date To (Created)</label>
+        <input type="datetime-local" name="pending_date_to" value="{{ pending_to_value }}">
+      </div>
+      <div class="field field-search">
+        <label>Search</label>
+        <input type="text" name="search" value="{{ search_value }}" placeholder="Search tracking / phone / receiver / address...">
+      </div>
+      <div class="field">
+        <label>Status Filter</label>
+        <select name="status_filter">
+          <option value="ALL" {% if status_filter == 'ALL' or not status_filter %}selected{% endif %}>All Status</option>
+          <option value="DONE" {% if status_filter == 'DONE' %}selected{% endif %}>Done</option>
+          <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+          <option value="DONE_RETURN" {% if status_filter == 'DONE_RETURN' %}selected{% endif %}>Return Done</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button class="btn btn-show" name="action" value="show" type="submit">Show</button>
+        <button class="btn btn-excel" name="action" value="export" type="submit">Download Excel</button>
+        <button class="btn btn-print" type="button" onclick="window.print()">Print / PDF</button>
+      </div>
+    </form>
+  </section>
 
-    <div class="computer-table-scroll large">
-
-      <table
-        class="computer-report-table compact-table"
-        id="deliveredTable"
-        data-page-size="15"
-      >
-
-        <thead>
-          <tr>
-            <th data-type="date">Done Date</th>
-            <th>Tracking No.</th>
-            <th>Receiver</th>
-            <th>Phone</th>
-            <th data-type="number">COD</th>
-            <th data-type="number">Fee</th>
-          </tr>
-        </thead>
-
-        <tbody>
-
-          {% for order in completed_rows %}
-
-          <tr>
-            <td data-value="{{ order.done_at|date:'Y-m-d' }}">
-              {{ order.done_at|date:"d/m/Y" }}
-            </td>
-
-            <td>
-              <strong>{{ order.tracking_no }}</strong>
-            </td>
-
-            <td>
-              {{ order.receiver_name|default:"-" }}
-            </td>
-
-            <td>
-              {{ order.receiver_phone|default:"-" }}
-            </td>
-
-            <td data-value="{{ order.computer_cod }}">
-              ${{ order.computer_cod|floatformat:2 }}
-            </td>
-
-            <td data-value="{{ order.computer_fee }}">
-              ${{ order.computer_fee|floatformat:2 }}
-            </td>
-          </tr>
-
-          {% empty %}
-
-          <tr class="computer-empty-row">
-            <td colspan="6">No delivered orders.</td>
-          </tr>
-
-          {% endfor %}
-
-        </tbody>
-
-      </table>
-
+  <section class="range-box">
+    <div>
+      <div class="range-title">Selected Data Range</div>
+      <div class="range-line">Delivered: {{ delivery_from|date:"M. j, Y" }} → {{ delivery_to|date:"F j, Y" }}</div>
+      <div class="range-line">Pending: {{ pending_from|date:"M. j, Y" }} → {{ pending_to|date:"F j, Y" }}</div>
     </div>
+    <div class="range-line" style="text-align:right;">Showing data for<br><strong>{{ seller.name }}</strong></div>
+  </section>
 
-    <div
-      class="computer-pagination"
-      data-pagination-for="deliveredTable"
-    ></div>
+  {% if mode != "EMPTY" %}
+    <section class="summary-grid">
+      <div class="summary-card"><div class="summary-label">Total Sent</div><div class="summary-value">{{ top_summary.total_sent }}</div><div class="summary-note">Orders in report</div></div>
+      <div class="summary-card"><div class="summary-label">Total Done</div><div class="summary-value">{{ top_summary.total_done }}</div><div class="summary-note">Completed orders</div></div>
+      <div class="summary-card"><div class="summary-label">Total Returned</div><div class="summary-value">{{ top_summary.total_return }}</div><div class="summary-note">Return done</div></div>
+      <div class="summary-card"><div class="summary-label">Total Pending</div><div class="summary-value">{{ top_summary.total_pending }}</div><div class="summary-note">Not finished yet</div></div>
+    </section>
+  {% endif %}
 
-  </article>
+  <section class="report-wrapper" id="reportCapture">
+    {% if mode == "EMPTY" %}
+      <div class="empty-box">Select date / search filter, then click Show.</div>
+    {% else %}
+      {% for s in seller_summaries %}
+        <div class="report-toolbar">
+          <div></div>
+          <div class="report-title">
+            <h2>Delivery Report</h2>
+            <p>{{ s.seller_key }} · Delivered: {{ delivery_from|date:"M. j, Y" }} → {{ delivery_to|date:"F j, Y" }}</p>
+            <p>Done: <strong>{{ s.total_done }}</strong> &nbsp; Returned: <strong>{{ s.total_return }}</strong> &nbsp; Pending: <strong>{{ s.total_pending }}</strong></p>
+          </div>
+          <div class="tool-actions">
+            <input class="current-search" id="currentResultSearch" type="text" placeholder="Search current result...">
+          </div>
+        </div>
 
-  <article class="computer-table-card">
+        <div class="table-wrap">
+          <table class="rtable" id="deliveryReportTable">
+            <thead>
+              <tr>
+                <th style="width:18px;">No</th>
+                <th style="width:70px;">Code</th>
+                <th style="width:76px;">Shipment ID</th>
+                <th style="width:76px;">Seller</th>
+                <th style="width:44px;">Pickup Date</th>
+                <th style="width:44px;">Delivery Date</th>
+                <th style="width:110px;">Location</th>
+                <th style="width:72px;">Description</th>
+                <th style="width:34px;">Qty</th>
+                <th style="width:52px;">Phone Number</th>
+                <th style="width:50px;">Receiver Name</th>
+                <th style="width:32px;">Price</th>
+                <th style="width:32px;">Delivery Fee</th>
+                <th style="width:32px;">Addition Fee</th>
+                <th style="width:30px;">Total Fee</th>
+                <th style="width:30px;">COD</th>
+                <th style="width:54px;">Status</th>
+                <th style="width:50px;">Shipper</th>
+                <th style="width:72px;">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in s.rows %}
+                <tr class="{% if o.portal_report_status_key == 'DONE_RETURN' %}row-returned{% elif o.portal_report_status_key == 'PENDING' %}row-pending{% endif %}" data-search-row>
+                  <td class="center">{{ forloop.counter }}</td>
+                  <td>{{ o.seller_order_code|default_if_none:"" }}</td>
+                  <td>{{ o.tracking_no|default_if_none:"" }}</td>
+                  <td>{% if o.seller_name %}{{ o.seller_name }}{% else %}-{% endif %}</td>
+                  <td class="center">{{ o.created_at|date:"Y-m-d" }}</td>
+                  <td class="center">{{ o.done_at|date:"Y-m-d"|default:"-" }}</td>
+                  <td>{{ o.receiver_address|default_if_none:"" }}</td>
+                  <td>{{ o.portal_product_name|default:o.product_desc|default_if_none:"" }}</td>
+                  <td class="center">{{ o.quantity|default_if_none:"" }}</td>
+                  <td>{{ o.receiver_phone|default_if_none:"" }}</td>
+                  <td>{{ o.receiver_name|default_if_none:"" }}</td>
+                  <td class="num">{{ o.price|default_if_none:"" }}</td>
+                  <td class="num">{{ o.report_delivery_fee|floatformat:2 }}</td>
+                  <td class="num">{{ o.report_additional_fee|floatformat:2 }}</td>
+                  <td class="num">{{ o.report_total_fee|floatformat:2 }}</td>
+                  <td class="num">{{ o.report_cod|floatformat:2 }}</td>
+                  <td>
+                    {% if o.portal_report_status_key == 'DONE_RETURN' %}
+                      <span class="status-badge status-returned">Return Done</span>
+                    {% elif o.portal_report_status_key == 'DONE' %}
+                      <span class="status-badge status-done">Done</span>
+                    {% else %}
+                      <span class="status-badge status-pending">Pending</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ o.report_shipper_name|default:"-" }}</td>
+                  <td>{{ o.reason|default_if_none:"" }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="19" class="empty-box">No data</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
 
-    <header class="computer-card-header">
-      <div>
-        <h2>Returned Orders</h2>
-        <p>Orders returned during the selected period.</p>
-      </div>
+        <div class="totals-box">
+          <div class="totals-inner">
+            <div class="totals-row"><span><strong>COD :</strong></span><span>{{ s.total_cod|floatformat:2 }}</span></div>
+            <div class="totals-row"><span><strong>FEE :</strong></span><span>{{ s.total_fee|floatformat:2 }}</span></div>
+            <div class="totals-row"><span><strong>PAY :</strong></span><span>{{ s.pay|floatformat:2 }}</span></div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="empty-box">No data</div>
+      {% endfor %}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
 
-      <div class="computer-table-tools">
-
-        <input
-          type="search"
-          data-table-search="returnedTable"
-          placeholder="Search…"
-        >
-
-        <button
-          type="button"
-          data-csv-button="returnedTable"
-          data-filename="return-report"
-        >
-          Download Excel
-        </button>
-
-      </div>
-    </header>
-
-    <div class="computer-table-scroll large">
-
-      <table
-        class="computer-report-table compact-table"
-        id="returnedTable"
-        data-page-size="15"
-      >
-
-        <thead>
-          <tr>
-            <th data-type="date">Return Date</th>
-            <th>Tracking No.</th>
-            <th>Receiver</th>
-            <th>Phone</th>
-            <th>Reason</th>
-          </tr>
-        </thead>
-
-        <tbody>
-
-          {% for order in returned_rows %}
-
-          <tr>
-            <td data-value="{{ order.done_at|date:'Y-m-d' }}">
-              {{ order.done_at|date:"d/m/Y" }}
-            </td>
-
-            <td>
-              <strong>{{ order.tracking_no }}</strong>
-            </td>
-
-            <td>
-              {{ order.receiver_name|default:"-" }}
-            </td>
-
-            <td>
-              {{ order.receiver_phone|default:"-" }}
-            </td>
-
-            <td class="wide-cell">
-              {{ order.reason|default:order.remark|default:"-" }}
-            </td>
-          </tr>
-
-          {% empty %}
-
-          <tr class="computer-empty-row">
-            <td colspan="5">No returned orders.</td>
-          </tr>
-
-          {% endfor %}
-
-        </tbody>
-
-      </table>
-
-    </div>
-
-    <div
-      class="computer-pagination"
-      data-pagination-for="returnedTable"
-    ></div>
-
-  </article>
-
-</section>
-
+{% block extra_js %}
+<script>
+(function(){
+  const input = document.getElementById('currentResultSearch');
+  if (!input) return;
+  input.addEventListener('input', function(){
+    const q = this.value.trim().toLowerCase();
+    document.querySelectorAll('[data-search-row]').forEach(function(row){
+      row.style.display = !q || row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+})();
+</script>
 {% endblock %}

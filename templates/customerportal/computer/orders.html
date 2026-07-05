@@ -1,361 +1,572 @@
 {% extends "customerportal/computer/base.html" %}
 
-{% block title %}
-Orders | DS EXPRESS Computer Portal
-{% endblock %}
-
+{% block title %}Orders | DS EXPRESS{% endblock %}
 {% block nav_orders %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+  .orders-wrap{
+    max-width:1540px;
+    margin:0 auto;
+    display:grid;
+    gap:16px;
+  }
+
+  .orders-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+  }
+
+  .eyebrow{
+    margin:0 0 4px;
+    color:#0f7a45;
+    font-size:11px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  h1{
+    margin:0;
+    font-size:28px;
+    line-height:1.05;
+    color:#102033;
+    font-weight:950;
+  }
+
+  .muted{
+    margin-top:6px;
+    color:#64748b;
+    font-size:13px;
+    font-weight:750;
+  }
+
+  .seller-pill{
+    min-width:130px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:10px 13px;
+    border:1px solid #ccebd9;
+    border-radius:18px;
+    background:#eefaf3;
+    color:#0f7a45;
+    font-weight:950;
+  }
+
+  .seller-pill .avatar{
+    width:30px;
+    height:30px;
+    border-radius:12px;
+    display:grid;
+    place-items:center;
+    background:#fff;
+    color:#0f7a45;
+    box-shadow:0 5px 12px rgba(15,122,69,.12);
+  }
+
+  .seller-pill small{
+    display:block;
+    margin-top:2px;
+    color:#64748b;
+    font-size:10px;
+    font-weight:850;
+  }
+
+  .filter-card,
+  .summary-card,
+  .table-card{
+    border:1px solid #e2e8f0;
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 14px 35px rgba(15,23,42,.06);
+  }
+
+  .filter-card{
+    padding:14px;
+    display:grid;
+    grid-template-columns:150px minmax(230px,1fr) 160px 90px auto;
+    gap:10px;
+    align-items:end;
+  }
+
+  .field label{
+    display:block;
+    margin:0 0 5px;
+    color:#64748b;
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+  }
+
+  .field input,
+  .field select{
+    width:100%;
+    height:42px;
+    border:1px solid #cbd5e1;
+    border-radius:12px;
+    background:#fff;
+    padding:0 12px;
+    color:#102033;
+    font-size:12px;
+    font-weight:850;
+    outline:none;
+  }
+
+  .btn{
+    height:42px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    border:1px solid #ccebd9;
+    border-radius:12px;
+    background:#eefaf3;
+    color:#0f7a45;
+    padding:0 14px;
+    text-decoration:none;
+    font-size:12px;
+    font-weight:950;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+
+  .btn-main{
+    border-color:#0f7a45;
+    background:#0f7a45;
+    color:#fff;
+  }
+
+  .period-box{
+    justify-self:end;
+    min-width:190px;
+    border:1px solid #dbeee4;
+    border-radius:16px;
+    background:#eefaf3;
+    padding:10px 14px;
+    text-align:center;
+  }
+
+  .period-box span{
+    display:block;
+    color:#64748b;
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+  }
+
+  .period-box b{
+    display:block;
+    margin-top:4px;
+    color:#0f7a45;
+    font-size:12px;
+    font-weight:950;
+  }
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(150px,1fr));
+    gap:12px;
+  }
+
+  .summary-card{
+    min-height:86px;
+    padding:16px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .summary-card::after{
+    content:"";
+    position:absolute;
+    right:-22px;
+    top:-22px;
+    width:70px;
+    height:70px;
+    border-radius:24px;
+    background:#eefaf3;
+  }
+
+  .summary-card h3{
+    margin:0 0 15px;
+    color:#64748b;
+    font-size:11px;
+    font-weight:950;
+  }
+
+  .summary-card b{
+    display:block;
+    color:#102033;
+    font-size:26px;
+    line-height:1;
+    font-weight:950;
+  }
+
+  .summary-card p{
+    margin:8px 0 0;
+    color:#64748b;
+    font-size:11px;
+    font-weight:750;
+  }
+
+  .table-card{
+    padding:14px;
+  }
+
+  .table-head{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:flex-start;
+    margin-bottom:12px;
+  }
+
+  .table-head h2{
+    margin:0;
+    color:#102033;
+    font-size:18px;
+    font-weight:950;
+  }
+
+  .table-head p{
+    margin:4px 0 0;
+    color:#64748b;
+    font-size:11px;
+    font-weight:800;
+  }
+
+  .table-tools{
+    display:flex;
+    justify-content:flex-end;
+    gap:7px;
+    flex-wrap:wrap;
+  }
+
+  .quick-search{
+    width:230px;
+    height:36px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    padding:0 10px;
+    font-size:12px;
+    font-weight:800;
+  }
+
+  .table-wrap{
+    overflow:auto;
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+  }
+
+  table{
+    width:100%;
+    min-width:1380px;
+    border-collapse:collapse;
+    font-size:12px;
+    background:#fff;
+  }
+
+  th,td{
+    padding:10px 10px;
+    border-bottom:1px solid #edf2f7;
+    vertical-align:middle;
+    text-align:left;
+  }
+
+  th{
+    position:sticky;
+    top:0;
+    z-index:1;
+    background:#f8fafc;
+    color:#475569;
+    font-size:10px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    white-space:normal;
+    line-height:1.15;
+  }
+
+  td{
+    color:#102033;
+    font-weight:800;
+  }
+
+  .money{
+    font-weight:950;
+    text-align:right;
+    white-space:nowrap;
+  }
+
+  .qty{
+    text-align:center;
+    white-space:nowrap;
+  }
+
+  .code{
+    font-family:ui-monospace,Consolas,monospace;
+    font-size:11px;
+    font-weight:950;
+    white-space:nowrap;
+  }
+
+  .text-wrap{
+    max-width:250px;
+    white-space:normal;
+    word-break:break-word;
+    line-height:1.25;
+  }
+
+  .address{
+    max-width:320px;
+  }
+
+  .reason{
+    max-width:210px;
+    color:#b45309;
+  }
+
+  .status-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:25px;
+    padding:0 9px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:950;
+    white-space:nowrap;
+  }
+
+  .status-created{background:#f1f5f9;color:#475569;}
+  .status-delivering{background:#eff6ff;color:#1d4ed8;}
+  .status-pending{background:#fff7ed;color:#c2410c;}
+  .status-delivered{background:#ecfdf5;color:#047857;}
+  .status-returned{background:#fef2f2;color:#b91c1c;}
+  .status-returning{background:#fff7ed;color:#b45309;}
+  .status-province{background:#f0f9ff;color:#0369a1;}
+  .status-void{background:#f1f5f9;color:#475569;}
+
+  @media print{
+    .computer-sidebar,
+    .filter-card,
+    .table-tools{
+      display:none !important;
+    }
+
+    .computer-main{
+      margin:0 !important;
+      padding:0 !important;
+    }
+
+    .table-card,
+    .summary-card{
+      box-shadow:none;
+    }
+  }
+
+  @media(max-width:1000px){
+    .filter-card{
+      grid-template-columns:1fr;
+    }
+
+    .period-box{
+      justify-self:stretch;
+    }
+
+    .summary-grid{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .orders-head,
+    .table-head{
+      display:block;
+    }
+
+    .seller-pill,
+    .table-tools{
+      margin-top:12px;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-
-<header class="computer-topbar">
-  <div>
-    <p class="computer-eyebrow">Order management</p>
-    <h1>Orders</h1>
-
-    <p class="computer-subtitle">
-      View and search all orders for {{ seller.name }}.
-    </p>
-  </div>
-
-  <div class="computer-user-card">
-    <span class="computer-avatar">
-      {{ seller.name|slice:":1" }}
-    </span>
-
-    <span>
-      <strong>{{ seller.name }}</strong>
-      <small>Seller account</small>
-    </span>
-  </div>
-</header>
-
-<section class="computer-filter-card">
-
-  <form method="get" class="computer-filter-form">
-
-    <label class="computer-field">
-      <span>Period</span>
-
-      <select name="period" data-period-select>
-        <option
-          value="today"
-          {% if period == 'today' %}selected{% endif %}
-        >
-          Today
-        </option>
-
-        <option
-          value="yesterday"
-          {% if period == 'yesterday' %}selected{% endif %}
-        >
-          Yesterday
-        </option>
-
-        <option
-          value="last_7_days"
-          {% if period == 'last_7_days' %}selected{% endif %}
-        >
-          Last 7 days
-        </option>
-
-        <option
-          value="last_30_days"
-          {% if period == 'last_30_days' %}selected{% endif %}
-        >
-          Last 30 days
-        </option>
-
-        <option
-          value="this_month"
-          {% if period == 'this_month' %}selected{% endif %}
-        >
-          This month
-        </option>
-
-        <option
-          value="custom"
-          {% if period == 'custom' %}selected{% endif %}
-        >
-          Custom date
-        </option>
-      </select>
-    </label>
-
-    <div
-      class="computer-custom-dates {% if period == 'custom' %}show{% endif %}"
-      data-custom-dates
-    >
-
-      <label class="computer-field">
-        <span>From</span>
-
-        <input
-          type="date"
-          name="from"
-          value="{{ date_from }}"
-          max="{{ today_iso }}"
-        >
-      </label>
-
-      <label class="computer-field">
-        <span>To</span>
-
-        <input
-          type="date"
-          name="to"
-          value="{{ date_to }}"
-          max="{{ today_iso }}"
-        >
-      </label>
-
+<div class="orders-wrap">
+  <section class="orders-head">
+    <div>
+      <p class="eyebrow">Order Management</p>
+      <h1>Orders</h1>
+      <div class="muted">View and search all orders for {{ seller.name }}.</div>
     </div>
 
-    <label class="computer-field computer-search-field">
-      <span>Search</span>
+    <div class="seller-pill">
+      <span class="avatar">{{ seller.name|first|upper }}</span>
+      <span>{{ seller.name }}<small>Seller account</small></span>
+    </div>
+  </section>
 
-      <input
-        type="search"
-        name="q"
-        value="{{ q }}"
-        placeholder="Tracking, customer or phone"
-      >
-    </label>
-
-    <label class="computer-field">
-      <span>Status</span>
-
-      <select name="status">
-
-        <option
-          value="ALL"
-          {% if status_filter == 'ALL' %}selected{% endif %}
-        >
-          All statuses
-        </option>
-
-        <option
-          value="PENDING"
-          {% if status_filter == 'PENDING' %}selected{% endif %}
-        >
-          Pending
-        </option>
-
-        <option
-          value="DELIVERED"
-          {% if status_filter == 'DELIVERED' %}selected{% endif %}
-        >
-          Delivered
-        </option>
-
-        <option
-          value="RETURNED"
-          {% if status_filter == 'RETURNED' %}selected{% endif %}
-        >
-          Returned
-        </option>
-
-        <option
-          value="PROVINCE"
-          {% if status_filter == 'PROVINCE' %}selected{% endif %}
-        >
-          Province
-        </option>
-
-        <option
-          value="VOID"
-          {% if status_filter == 'VOID' %}selected{% endif %}
-        >
-          Void
-        </option>
-
+  <form class="filter-card" method="get">
+    <div class="field">
+      <label>Period</label>
+      <select name="period">
+        <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+        <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+        <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 days</option>
+        <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 days</option>
+        <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This month</option>
+        <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last month</option>
+        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom</option>
       </select>
-    </label>
+    </div>
 
-    <button
-      type="submit"
-      class="computer-apply-button"
-    >
-      Apply
-    </button>
+    <div class="field">
+      <label>Search</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Tracking, seller order, customer, phone, SKU or reason">
+    </div>
 
+    <div class="field">
+      <label>Status</label>
+      <select name="status">
+        <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All statuses</option>
+        <option value="CREATED" {% if status_filter == 'CREATED' %}selected{% endif %}>Created</option>
+        <option value="DELIVERING" {% if status_filter == 'DELIVERING' %}selected{% endif %}>Delivering</option>
+        <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+        <option value="DELIVERED" {% if status_filter == 'DELIVERED' %}selected{% endif %}>Delivered</option>
+        <option value="RETURNED" {% if status_filter == 'RETURNED' %}selected{% endif %}>Returned</option>
+        <option value="PROVINCE" {% if status_filter == 'PROVINCE' %}selected{% endif %}>Province COD</option>
+        <option value="RETURNING" {% if status_filter == 'RETURNING' %}selected{% endif %}>Returning</option>
+        <option value="VOID" {% if status_filter == 'VOID' %}selected{% endif %}>Void</option>
+      </select>
+    </div>
+
+    <button class="btn btn-main" type="submit">Apply</button>
+
+    <div class="period-box">
+      <span>Showing data for</span>
+      <b>{{ period_label }}</b>
+    </div>
   </form>
 
-  <div class="computer-period-label">
-    <span>Showing data for</span>
-    <strong>{{ period_label }}</strong>
-  </div>
-
-</section>
-
-<section class="computer-stat-grid four-cards">
-
-  <article class="computer-stat-card">
-    <div class="computer-stat-head">
-      <span>Total Orders</span>
-      <b>📦</b>
+  <section class="summary-grid">
+    <div class="summary-card">
+      <h3>Total Orders</h3>
+      <b>{{ summary_total }}</b>
+      <p>Created in selected period</p>
     </div>
 
-    <strong>{{ summary_total }}</strong>
-    <small>Created in selected period</small>
-  </article>
-
-  <article class="computer-stat-card success">
-    <div class="computer-stat-head">
-      <span>Delivered</span>
-      <b>✓</b>
+    <div class="summary-card">
+      <h3>Created</h3>
+      <b>{{ summary_created|default:0 }}</b>
+      <p>Before next 2:30 PM cutoff</p>
     </div>
 
-    <strong>{{ summary_delivered }}</strong>
-    <small>Completed orders</small>
-  </article>
-
-  <article class="computer-stat-card warning">
-    <div class="computer-stat-head">
-      <span>Pending</span>
-      <b>◷</b>
+    <div class="summary-card">
+      <h3>Delivering</h3>
+      <b>{{ summary_delivering|default:0 }}</b>
+      <p>Assigned or passed next 2:30 PM cutoff</p>
     </div>
 
-    <strong>{{ summary_pending }}</strong>
-    <small>Still processing</small>
-  </article>
-
-  <article class="computer-stat-card danger">
-    <div class="computer-stat-head">
-      <span>Returned</span>
-      <b>↩</b>
+    <div class="summary-card">
+      <h3>Pending</h3>
+      <b>{{ summary_pending }}</b>
+      <p>No assign/progress over 72h</p>
     </div>
 
-    <strong>{{ summary_returned }}</strong>
-    <small>Returned orders</small>
-  </article>
+    <div class="summary-card">
+      <h3>Returned</h3>
+      <b>{{ summary_returned }}</b>
+      <p>Returned orders</p>
+    </div>
+  </section>
 
-</section>
+  <section class="table-card">
+    <div class="table-head">
+      <div>
+        <h2>Order List</h2>
+        <p>Created orders stay Created until the next 2:30 PM cutoff. If assigned, they show Delivering immediately. If still no assign/progress after 72h, they show Pending.</p>
+      </div>
 
-<section class="computer-table-card computer-full-card">
-
-  <header class="computer-card-header">
-    <div>
-      <h2>Order List</h2>
-      <p>Search, sort, download or print.</p>
+      <div class="table-tools">
+        <input id="ordersQuickSearch" class="quick-search" type="search" placeholder="Search current result...">
+        <button class="btn" type="button" onclick="window.print()">Print / PDF</button>
+      </div>
     </div>
 
-    <div class="computer-table-tools">
-
-      <input
-        type="search"
-        data-table-search="ordersTable"
-        placeholder="Search current result…"
-      >
-
-      <button
-        type="button"
-        data-csv-button="ordersTable"
-        data-filename="ds-orders"
-      >
-        Download Excel
-      </button>
-
-      <button
-        type="button"
-        data-print-button
-      >
-        Print / PDF
-      </button>
-
+    <div class="table-wrap">
+      <table id="ordersTable">
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>Tracking</th>
+            <th>Seller Name</th>
+            <th>Seller Order Code</th>
+            <th>Receiver</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Product SKU</th>
+            <th>Product Name</th>
+            <th>Qty</th>
+            <th>COD</th>
+            <th>Status</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+          <tr>
+            <td class="code">{{ order.created_at|date:"d/m/Y H:i" }}</td>
+            <td class="code">{{ order.computer_tracking_no }}</td>
+            <td class="text-wrap">{{ order.computer_seller_name }}</td>
+            <td class="code">{{ order.seller_order_code|default:"-" }}</td>
+            <td class="text-wrap">{{ order.computer_receiver_name }}</td>
+            <td class="code">{{ order.computer_receiver_phone }}</td>
+            <td class="text-wrap address">{{ order.receiver_address|default:"-" }}</td>
+            <td class="code">{{ order.computer_product_sku }}</td>
+            <td class="text-wrap">{{ order.computer_product_name }}</td>
+            <td class="qty">{{ order.quantity }}</td>
+            <td class="money">${{ order.computer_cod|floatformat:2 }}</td>
+            <td>
+              <span class="status-badge status-{{ order.computer_status_key }}">
+                {{ order.computer_status_label }}
+              </span>
+            </td>
+            <td class="text-wrap reason">{{ order.computer_reason }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="13" style="text-align:center;color:#64748b;padding:28px;font-weight:900;">
+              No orders found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  </header>
+  </section>
+</div>
+{% endblock %}
 
-  <div class="computer-table-scroll large">
+{% block extra_js %}
+<script>
+  (function(){
+    const input = document.getElementById('ordersQuickSearch');
+    const table = document.getElementById('ordersTable');
 
-    <table
-      class="computer-report-table orders-table"
-      id="ordersTable"
-      data-page-size="20"
-    >
+    if(!input || !table){ return; }
 
-      <thead>
-        <tr>
-          <th data-type="date">Created</th>
-          <th>Tracking No.</th>
-          <th>Seller Order</th>
-          <th>Receiver</th>
-          <th>Phone</th>
-          <th>Address</th>
-          <th>Product</th>
-          <th data-type="number">Qty</th>
-          <th data-type="number">COD</th>
-          <th>Status</th>
-        </tr>
-      </thead>
+    input.addEventListener('input', function(){
+      const q = this.value.trim().toLowerCase();
+      const rows = table.querySelectorAll('tbody tr');
 
-      <tbody>
-
-        {% for order in orders %}
-
-        <tr>
-          <td data-value="{{ order.created_at|date:'Y-m-d H:i' }}">
-            {{ order.created_at|date:"d/m/Y H:i" }}
-          </td>
-
-          <td>
-            <strong>{{ order.tracking_no }}</strong>
-          </td>
-
-          <td>
-            {{ order.seller_order_code|default:"-" }}
-          </td>
-
-          <td>
-            {{ order.receiver_name|default:"-" }}
-          </td>
-
-          <td>
-            {{ order.receiver_phone|default:"-" }}
-          </td>
-
-          <td class="wide-cell">
-            {{ order.receiver_address|default:"-" }}
-          </td>
-
-          <td class="wide-cell">
-            {{ order.product_desc|default:"-" }}
-          </td>
-
-          <td data-value="{{ order.quantity }}">
-            {{ order.quantity }}
-          </td>
-
-          <td data-value="{{ order.computer_cod }}">
-            ${{ order.computer_cod|floatformat:2 }}
-          </td>
-
-          <td>
-            <span class="computer-status {{ order.computer_status_key }}">
-              {{ order.computer_status_label }}
-            </span>
-          </td>
-        </tr>
-
-        {% empty %}
-
-        <tr class="computer-empty-row">
-          <td colspan="10">No orders found.</td>
-        </tr>
-
-        {% endfor %}
-
-      </tbody>
-
-    </table>
-
-  </div>
-
-  <div
-    class="computer-pagination"
-    data-pagination-for="ordersTable"
-  ></div>
-
-</section>
-
+      rows.forEach(function(row){
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  })();
+</script>
 {% endblock %}

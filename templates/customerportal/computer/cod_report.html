@@ -44,7 +44,7 @@
 
   .pc-table-shell{padding:10px 12px 12px;background:#f8fafc}
   .pc-table-wrap{overflow:auto;border:1px solid #cbd9e7;border-radius:14px;background:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
-  .pc-table{width:100%;min-width:1760px;border-collapse:collapse;border-spacing:0;table-layout:fixed;background:#fff}
+  .pc-table{width:100%;min-width:1440px;border-collapse:collapse;border-spacing:0;table-layout:fixed;background:#fff}
   .pc-table th{position:sticky;top:0;z-index:3;background:#0f5f9c;color:#fff;border:1px solid #0b4775;padding:0;text-align:center;vertical-align:middle}
   .pc-table th a{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;min-height:34px;box-sizing:border-box;padding:8px 7px;color:#fff;text-decoration:none;font-size:9.5px;font-weight:950;letter-spacing:.025em;text-transform:uppercase;line-height:1.12;white-space:normal;text-align:center}
   .pc-table th.no-sort{height:34px;box-sizing:border-box;padding:8px 7px;color:#fff;font-size:9.5px;font-weight:950;letter-spacing:.025em;text-transform:uppercase;line-height:1.12;white-space:normal;text-align:center}
@@ -88,7 +88,7 @@
   .pc-summary-badge{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 12px;border-radius:999px;background:#ecfdf5;color:#0f8a4b;border:1px solid #bbf7d0;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.03em}
   .pc-summary-shell{padding:10px 12px 12px;background:#f8fafc}
   .pc-summary-wrap{overflow:auto;border:1px solid #dbe6ef;border-radius:14px;background:#fff}
-  .pc-summary-table{width:100%;min-width:980px;border-collapse:collapse;table-layout:fixed;background:#fff}
+  .pc-summary-table{width:100%;min-width:780px;border-collapse:collapse;table-layout:fixed;background:#fff}
   .pc-summary-table th{background:#0f5f9c;color:#fff;border:1px solid #0b4775;padding:9px 8px;text-align:center;font-size:10px;font-weight:950;text-transform:uppercase;line-height:1.15;white-space:normal}
   .pc-summary-table td{border:1px solid #e5edf5;padding:9px 8px;text-align:center;font-size:12px;font-weight:850;color:#0f172a;background:#fff}
   .pc-summary-table tbody tr:nth-child(even) td{background:#fbfdff}
@@ -212,9 +212,7 @@
               <th>Received<br>Orders</th>
               <th>Received<br>COD</th>
               <th>Settled<br>Orders</th>
-              <th>Settled<br>COD</th>
               <th>Returned<br>Orders</th>
-              <th>Returned<br>COD</th>
               <th>Done<br>Rate</th>
             </tr>
           </thead>
@@ -227,14 +225,12 @@
                 <td>{{ row.received_orders }}</td>
                 <td class="money">${{ row.received_cod|floatformat:2 }}</td>
                 <td>{{ row.settled_orders }}</td>
-                <td class="money">${{ row.settled_cod|floatformat:2 }}</td>
                 <td>{{ row.returned_orders }}</td>
-                <td class="return-money">${{ row.returned_cod|floatformat:2 }}</td>
                 <td class="rate">{{ row.done_rate|floatformat:1 }}%</td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="10" class="pc-empty">No COD summary data.</td>
+                <td colspan="8" class="pc-empty">No COD summary data.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -276,16 +272,13 @@
               <th style="width:115px"><a href="{{ sort_urls.carrier }}">Carrier <span class="sort-mark">{% if sort == "carrier" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:120px"><a href="{{ sort_urls.receiver }}">Receiver <span class="sort-mark">{% if sort == "receiver" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:100px"><a href="{{ sort_urls.phone }}">Phone <span class="sort-mark">{% if sort == "phone" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-              <th style="width:185px" class="no-sort">Address</th>
+              <th style="width:230px" class="no-sort">Address</th>
               <th style="width:95px"><a href="{{ sort_urls.original_cod }}">Original COD <span class="sort-mark">{% if sort == "original_cod" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:90px"><a href="{{ sort_urls.province_fee }}">Province Fee <span class="sort-mark">{% if sort == "province_fee" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:95px"><a href="{{ sort_urls.status }}">Status <span class="sort-mark">{% if sort == "status" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-              <th style="width:90px"><a href="{{ sort_urls.carrier_fee }}">Carrier Fee <span class="sort-mark">{% if sort == "carrier_fee" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:90px"><a href="{{ sort_urls.net_cod }}">Net COD <span class="sort-mark">{% if sort == "net_cod" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-              <th style="width:120px"><a href="{{ sort_urls.reference }}">Reference <span class="sort-mark">{% if sort == "reference" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:85px"><a href="{{ sort_urls.settled }}">Settled <span class="sort-mark">{% if sort == "settled" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-              <th style="width:118px"><a href="{{ sort_urls.updated }}">Updated <span class="sort-mark">{% if sort == "updated" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-              <th style="width:170px" class="no-sort">Reason / Note</th>
+              <th style="width:190px" class="no-sort">Reason / Note</th>
             </tr>
           </thead>
 
@@ -307,14 +300,7 @@
                 <td class="right"><span class="pc-money">${{ item.original_cod|floatformat:2 }}</span></td>
                 <td class="right"><span class="pc-money">${{ item.province_fee|floatformat:2 }}</span></td>
                 <td class="center"><span class="pc-pill {{ item.display_status|lower }}">{{ item.display_status }}</span></td>
-                <td class="right">
-                  <span class="pc-money">${{ item.carrier_fee|floatformat:2 }}</span>
-                  {% if item.cod_status != "PAID" %}
-                    <span class="pc-small">Auto: ${{ item.suggested_fee_display|floatformat:2 }}</span>
-                  {% endif %}
-                </td>
                 <td class="right"><span class="pc-net">${{ item.net_cod|floatformat:2 }}</span></td>
-                <td class="pc-ref">{{ item.carrier_reference|default:"-" }}</td>
                 <td class="center">
                   {% if item.seller_settled %}
                     <span class="pc-pill paid">YES</span>
@@ -323,7 +309,6 @@
                     <span class="pc-pill pending">NO</span>
                   {% endif %}
                 </td>
-                <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
                 <td class="pc-address">
                   {% if item.return_reason %}
                     {{ item.return_reason }}
@@ -338,7 +323,7 @@
               </tr>
             {% empty %}
               <tr>
-                <td colspan="18" class="pc-empty">
+                <td colspan="15" class="pc-empty">
                   <div class="pc-empty-box">
                     <div class="pc-empty-icon">$</div>
                     <div class="pc-empty-title">No Province COD orders found</div>

@@ -263,8 +263,10 @@
 
   table{
     width:100%;
-    min-width:1380px;
+    min-width:1540px;
     border-collapse:collapse;
+    border-spacing:0;
+    table-layout:fixed;
     font-size:12px;
     background:#fff;
   }
@@ -314,19 +316,47 @@
   }
 
   .text-wrap{
-    max-width:250px;
     white-space:normal;
     word-break:break-word;
-    line-height:1.25;
+    overflow-wrap:anywhere;
+    line-height:1.28;
+  }
+
+  .receiver{
+    font-weight:900;
+  }
+
+  .phone{
+    font-size:11px;
+    white-space:nowrap;
   }
 
   .address{
-    max-width:320px;
+    color:#0f172a;
+  }
+
+  .product-sku{
+    font-size:10px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+
+  .product-name{
+    font-weight:950;
   }
 
   .reason{
-    max-width:210px;
     color:#b45309;
+  }
+
+  .search-empty{
+    border:1px dashed #cbd5e1;
+    border-radius:16px;
+    padding:26px;
+    text-align:center;
+    color:#64748b;
+    font-weight:900;
+    background:#f8fafc;
   }
 
   .status-badge{
@@ -400,7 +430,7 @@
     <div>
       <p class="eyebrow">Order Management</p>
       <h1>Orders</h1>
-      <div class="muted">View and search all orders for {{ seller.name }}.</div>
+      <div class="muted">Default search period is last 3 days. Click Search to show the order list for {{ seller.name }}.</div>
     </div>
 
     <div class="seller-pill">
@@ -415,6 +445,7 @@
       <select name="period">
         <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
         <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+        <option value="last_3_days" {% if period == 'last_3_days' %}selected{% endif %}>Last 3 days</option>
         <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 days</option>
         <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 days</option>
         <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This month</option>
@@ -443,7 +474,7 @@
       </select>
     </div>
 
-    <button class="btn btn-main" type="submit">Apply</button>
+    <button class="btn btn-main" type="submit">Search</button>
 
     <div class="period-box">
       <span>Showing data for</span>
@@ -496,56 +527,77 @@
       </div>
     </div>
 
-    <div class="table-wrap">
-      <table id="ordersTable">
-        <thead>
-          <tr>
-            <th>Created</th>
-            <th>Tracking</th>
-            <th>Seller Name</th>
-            <th>Seller Order Code</th>
-            <th>Receiver</th>
-            <th>Phone</th>
-            <th>Address</th>
-            <th>Product SKU</th>
-            <th>Product Name</th>
-            <th>Qty</th>
-            <th>COD</th>
-            <th>Status</th>
-            <th>Reason</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for order in orders %}
-          <tr>
-            <td class="code">{{ order.created_at|date:"d/m/Y H:i" }}</td>
-            <td class="code">{{ order.computer_tracking_no }}</td>
-            <td class="text-wrap">{{ order.computer_seller_name }}</td>
-            <td class="code">{{ order.seller_order_code|default:"-" }}</td>
-            <td class="text-wrap">{{ order.computer_receiver_name }}</td>
-            <td class="code">{{ order.computer_receiver_phone }}</td>
-            <td class="text-wrap address">{{ order.receiver_address|default:"-" }}</td>
-            <td class="code">{{ order.computer_product_sku }}</td>
-            <td class="text-wrap">{{ order.computer_product_name }}</td>
-            <td class="qty">{{ order.quantity }}</td>
-            <td class="money">${{ order.computer_cod|floatformat:2 }}</td>
-            <td>
-              <span class="status-badge status-{{ order.computer_status_key }}">
-                {{ order.computer_status_label }}
-              </span>
-            </td>
-            <td class="text-wrap reason">{{ order.computer_reason }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="13" style="text-align:center;color:#64748b;padding:28px;font-weight:900;">
-              No orders found.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    {% if show_order_results %}
+      <div class="table-wrap">
+        <table id="ordersTable">
+          <colgroup>
+            <col style="width:110px;">
+            <col style="width:130px;">
+            <col style="width:90px;">
+            <col style="width:105px;">
+            <col style="width:165px;">
+            <col style="width:90px;">
+            <col style="width:330px;">
+            <col style="width:95px;">
+            <col style="width:190px;">
+            <col style="width:45px;">
+            <col style="width:70px;">
+            <col style="width:95px;">
+            <col style="width:125px;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Created</th>
+              <th>Tracking</th>
+              <th>Seller<br>Name</th>
+              <th>Seller Order<br>Code</th>
+              <th>Receiver</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>Product<br>SKU</th>
+              <th>Product Name</th>
+              <th>Qty</th>
+              <th>COD</th>
+              <th>Status</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+            <tr>
+              <td class="code">{{ order.created_at|date:"d/m/Y H:i" }}</td>
+              <td class="code">{{ order.computer_tracking_no }}</td>
+              <td class="text-wrap">{{ order.computer_seller_name }}</td>
+              <td class="code">{{ order.seller_order_code|default:"-" }}</td>
+              <td class="text-wrap receiver">{{ order.computer_receiver_name }}</td>
+              <td class="code phone">{{ order.computer_receiver_phone }}</td>
+              <td class="text-wrap address">{{ order.receiver_address|default:"-" }}</td>
+              <td class="code product-sku">{{ order.computer_product_sku }}</td>
+              <td class="text-wrap product-name">{{ order.computer_product_name }}</td>
+              <td class="qty">{{ order.quantity }}</td>
+              <td class="money">${{ order.computer_cod|floatformat:2 }}</td>
+              <td>
+                <span class="status-badge status-{{ order.computer_status_key }}">
+                  {{ order.computer_status_label }}
+                </span>
+              </td>
+              <td class="text-wrap reason">{{ order.computer_reason }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="13" style="text-align:center;color:#64748b;padding:28px;font-weight:900;">
+                No orders found.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="search-empty">
+        Order list is hidden by default. Click Search to show the last 3 days orders.
+      </div>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

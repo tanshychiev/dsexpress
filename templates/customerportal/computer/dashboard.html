@@ -342,7 +342,7 @@
     <div class="section-head">
       <div>
         <h2 class="section-title">Daily Order Summary</h2>
-        <p class="section-sub">This report is grouped by created date. Delivered, pending, returned, province COD, COD and fee are counted from orders created in that same row date. The last row shows average counts and overall totals.</p>
+        <p class="section-sub">This report is grouped by created date. Delivered, pending, returned, and province COD are counted from orders created in that same row date. The last row shows average counts and overall province COD total.</p>
         {% if uses_830_order_day %}
           <p class="section-sub" style="margin-top:4px;">For Starek only: each order day runs from previous day 8:30 PM to selected date 8:29 PM.</p>
         {% endif %}
@@ -362,9 +362,6 @@
             <th class="money money-head">Province<br>COD</th>
             <th class="num small-head">Delivered<br>%</th>
             <th class="num small-head">Returned<br>%</th>
-            <th class="money money-head">COD</th>
-            <th class="money money-head">Delivery<br>Fee</th>
-            <th class="money money-head">Net<br>Balance</th>
           </tr>
         </thead>
         <tbody>
@@ -378,9 +375,6 @@
               <td class="money">${{ row.province_cod|floatformat:2 }}</td>
               <td class="num rate-good">{{ row.delivery_rate|floatformat:1 }}%</td>
               <td class="num rate-bad">{{ row.return_rate|floatformat:1 }}%</td>
-              <td class="money">${{ row.cod|floatformat:2 }}</td>
-              <td class="money">${{ row.fees|floatformat:2 }}</td>
-              <td class="money">${{ row.net|floatformat:2 }}</td>
             </tr>
           {% endfor %}
 
@@ -394,13 +388,10 @@
               <td class="money">${{ daily_average_row.province_cod|floatformat:2 }}</td>
               <td class="num rate-good">{{ daily_average_row.delivery_rate|floatformat:1 }}%</td>
               <td class="num rate-bad">{{ daily_average_row.return_rate|floatformat:1 }}%</td>
-              <td class="money">${{ daily_average_row.cod|floatformat:2 }}</td>
-              <td class="money">${{ daily_average_row.fees|floatformat:2 }}</td>
-              <td class="money">${{ daily_average_row.net|floatformat:2 }}</td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="11" style="text-align:center;color:#64748b;padding:24px;font-weight:800;">No order data found.</td>
+              <td colspan="8" style="text-align:center;color:#64748b;padding:24px;font-weight:800;">No order data found.</td>
             </tr>
           {% endif %}
         </tbody>

@@ -9,9 +9,28 @@
     content="width=device-width, initial-scale=1, maximum-scale=1"
   >
 
-  <title>{% block title %}DS Express{% endblock %}</title>
+  {% static 'img/ds-internal-icon-180.png' as ds_internal_180 %}
+  {% static 'img/ds-internal-icon-192.png' as ds_internal_192 %}
+  {% static 'img/ds-internal-icon-512.png' as ds_internal_512 %}
+  {% static 'img/manifest/ds-internal.webmanifest' as ds_internal_manifest %}
 
-  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  <title>{% block title %}DS Internal{% endblock %}</title>
+
+  <link rel="icon" type="image/png" href="{{ ds_internal_192 }}?v=20260712internal1">
+  <link rel="shortcut icon" type="image/png" href="{{ ds_internal_192 }}?v=20260712internal1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ ds_internal_180 }}?v=20260712internal1">
+  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ ds_internal_180 }}?v=20260712internal1">
+
+  <link rel="manifest" href="{{ ds_internal_manifest }}?v=20260712internal1">
+
+  <meta name="application-name" content="DS Internal">
+  <meta name="apple-mobile-web-app-title" content="DS Internal">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#0f7a45">
+  <meta name="description" content="DS Express Internal Management System">
 
 
   <style>
@@ -767,11 +786,11 @@
       <a class="brand" href="/orders/">
         <img
           class="brand-logo"
-          src="{% static 'img/ds-app-icon-192.png' %}"
-          alt="DS Express"
+          src="{{ ds_internal_192 }}?v=20260712internal1"
+          alt="DS Internal"
         >
         <span class="brand-text">
-          <strong class="brand-name">DS EXPRESS</strong>
+          <strong class="brand-name">DS INTERNAL</strong>
           <small class="brand-sub">Management System</small>
         </span>
       </a>

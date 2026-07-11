@@ -1,555 +1,1288 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  .wrap{
-    width:100%;
-    padding:18px 22px;
+  :root{
+    --od-primary:#087a50;
+    --od-primary-dark:#055d3c;
+    --od-primary-bright:#10b981;
+    --od-accent:#84cc16;
+    --od-primary-soft:#ecfdf5;
+    --od-blue:#2563eb;
+    --od-blue-soft:#eff6ff;
+    --od-orange:#f59e0b;
+    --od-orange-soft:#fffbeb;
+    --od-red:#ef4444;
+    --od-red-soft:#fef2f2;
+    --od-green:#16a34a;
+    --od-green-soft:#f0fdf4;
+    --od-ink:#101828;
+    --od-text:#344054;
+    --od-muted:#667085;
+    --od-line:#e4ebe7;
+    --od-panel:#ffffff;
+    --od-bg:#f5f8f6;
+    --od-shadow:0 22px 60px rgba(16,24,40,.08);
   }
 
-  .card{
+  *{box-sizing:border-box;}
+
+  /* Real page loading state — not a shipment status */
+  .od-page-loader{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:grid;
+    place-items:center;
+    padding:24px;
+    background:rgba(245,248,246,.90);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    transition:opacity .28s ease,visibility .28s ease;
+  }
+
+  .od-page-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none;}
+
+  .od-loader-box{
+    min-width:210px;
+    padding:20px 24px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    border:1px solid rgba(8,122,80,.14);
+    border-radius:20px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 24px 70px rgba(16,24,40,.14);
+  }
+
+  .od-loader-mark{
+    position:relative;
+    width:44px;
+    height:44px;
+    flex:0 0 auto;
+    border-radius:15px;
+    background:linear-gradient(145deg,var(--od-primary-dark),var(--od-primary-bright));
+    box-shadow:0 10px 24px rgba(8,122,80,.22);
+  }
+
+  .od-loader-mark::before{
+    content:"";
+    position:absolute;
+    inset:9px;
+    border:3px solid rgba(255,255,255,.35);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:odLoaderSpin .72s linear infinite;
+  }
+
+  .od-loader-title{color:var(--od-ink);font-size:14px;font-weight:900;}
+  .od-loader-subtitle{margin-top:3px;color:var(--od-muted);font-size:11px;font-weight:700;}
+
+  @keyframes odLoaderSpin{to{transform:rotate(360deg);}}
+
+  .od-wrap{
     width:100%;
+    padding:22px;
+  }
+
+  .od-page{
+    width:100%;
+    background:var(--od-panel);
+    border:1px solid var(--od-line);
+    border-radius:24px;
+    box-shadow:var(--od-shadow);
+    overflow:hidden;
+  }
+
+  .od-hero{
+    padding:22px 24px 18px;
+    background:
+      radial-gradient(circle at 96% 0%, rgba(132,204,22,.14), transparent 28%),
+      radial-gradient(circle at 76% 110%, rgba(16,185,129,.10), transparent 34%),
+      linear-gradient(135deg,#ffffff 0%,#f5fbf7 100%);
+    border-bottom:1px solid var(--od-line);
+  }
+
+  .od-topbar{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+
+  .od-title-wrap{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    min-width:0;
+  }
+
+  .od-title-icon{
+    width:46px;
+    height:46px;
+    border-radius:15px;
+    display:grid;
+    place-items:center;
+    color:#fff;
+    background:linear-gradient(135deg,var(--od-primary-dark),var(--od-primary-bright));
+    box-shadow:0 12px 28px rgba(8,122,80,.24);
+    flex:0 0 auto;
+  }
+
+  .od-title-icon svg{width:24px;height:24px;}
+
+  .od-title{
+    margin:0;
+    color:var(--od-ink);
+    font-size:24px;
+    line-height:1.2;
+    font-weight:900;
+    letter-spacing:-.4px;
+  }
+
+  .od-subtitle{
+    margin:5px 0 0;
+    color:var(--od-muted);
+    font-size:13px;
+    font-weight:700;
+  }
+
+  .od-top-actions,
+  .od-action-left,
+  .od-action-right{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    flex-wrap:wrap;
+  }
+
+  .od-btn{
+    min-height:40px;
+    padding:9px 14px;
+    border-radius:11px;
+    border:1px solid #cbd5e1;
     background:#fff;
-    border:1px solid #e5e7eb;
-    border-radius:16px;
-    padding:18px;
-    box-shadow:0 10px 28px rgba(15,23,42,.06);
+    color:var(--od-ink);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:850;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    transition:.18s ease;
+    box-shadow:0 2px 5px rgba(15,23,42,.03);
   }
 
-  .top{
+  .od-btn svg{width:17px;height:17px;}
+  .od-btn:hover{transform:translateY(-1px);background:#f8fafc;border-color:#94a3b8;}
+
+  .od-btn-primary{
+    background:linear-gradient(135deg,var(--od-primary-dark),var(--od-primary-bright));
+    border-color:var(--od-primary);
+    color:#fff;
+    box-shadow:0 9px 22px rgba(8,122,80,.20);
+  }
+  .od-btn-primary:hover{background:linear-gradient(135deg,#044d32,var(--od-primary));border-color:var(--od-primary-dark);}
+
+  .od-btn-danger{
+    background:#fff;
+    border-color:#fecaca;
+    color:#dc2626;
+  }
+  .od-btn-danger:hover{background:#fef2f2;border-color:#fca5a5;}
+
+  .od-summary{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin-top:20px;
+  }
+
+  .od-summary-card{
+    position:relative;
+    min-height:94px;
+    padding:15px 16px;
+    border:1px solid var(--od-line);
+    border-radius:16px;
+    background:rgba(255,255,255,.88);
+    overflow:hidden;
+  }
+
+  .od-summary-card::after{
+    content:"";
+    position:absolute;
+    right:-22px;
+    bottom:-26px;
+    width:80px;
+    height:80px;
+    border-radius:50%;
+    background:rgba(15,118,110,.06);
+  }
+
+  .od-summary-label{
+    margin-bottom:7px;
+    color:var(--od-muted);
+    font-size:11px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.7px;
+  }
+
+  .od-summary-value{
+    position:relative;
+    z-index:1;
+    color:var(--od-ink);
+    font-size:18px;
+    font-weight:900;
+    line-height:1.35;
+    word-break:break-word;
+  }
+
+  .od-summary-value.od-mono{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  }
+
+  .od-summary-value.od-money{color:var(--od-primary);}
+
+  .od-status-badge,
+  .od-mini-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    border-radius:999px;
+    font-weight:900;
+    line-height:1;
+  }
+
+  .od-status-badge{
+    padding:8px 11px;
+    font-size:12px;
+    color:var(--od-primary-dark);
+    background:linear-gradient(180deg,#f0fdf4,#ecfdf5);
+    border:1px solid #a7f3d0;
+  }
+
+  .od-status-dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--od-primary-bright);
+    box-shadow:0 0 0 4px rgba(16,185,129,.12);
+  }
+
+  .od-content{padding:20px 24px 24px;}
+
+  /* DELIVERY PATH */
+  .od-progress-card{
+    border:1px solid var(--od-line);
+    border-radius:20px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(132,204,22,.07), transparent 28%),
+      linear-gradient(180deg,#ffffff,#fbfefc);
+    overflow:hidden;
+    margin-bottom:18px;
+  }
+
+  .od-progress-head{
+    padding:16px 18px 12px;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:12px;
     flex-wrap:wrap;
-    margin-bottom:16px;
   }
 
-  .title{
+  .od-section-title{
     margin:0;
-    font-size:22px;
+    color:var(--od-ink);
+    font-size:15px;
     font-weight:900;
-    color:#0f172a;
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:9px;
   }
 
-  .tick{
-    width:18px;
-    height:18px;
-    border-radius:4px;
-    background:#22c55e;
-    display:inline-block;
-  }
+  .od-section-title svg{width:19px;height:19px;color:var(--od-primary);}
 
-  .top-actions{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-
-  .summary{
-    display:grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap:12px;
-    margin-bottom:16px;
-  }
-
-  @media (max-width: 1100px){
-    .summary{grid-template-columns: repeat(2, minmax(0, 1fr));}
-  }
-
-  @media (max-width: 700px){
-    .summary{grid-template-columns: 1fr;}
-  }
-
-  .summary-box{
-    border:1px solid #e5e7eb;
-    border-radius:14px;
-    padding:14px;
-    background:#f8fafc;
-  }
-
-  .summary-label{
+  .od-current-caption{
+    color:var(--od-muted);
     font-size:12px;
-    font-weight:900;
+    font-weight:750;
+  }
+
+  .od-progress-scroll{
+    overflow-x:auto;
+    padding:5px 16px 20px;
+    scrollbar-width:thin;
+    scrollbar-color:#cbd5e1 transparent;
+  }
+
+  .od-progress-track{
+    min-width:760px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    padding:10px 8px 2px;
+  }
+
+  .od-step{
+    position:relative;
+    flex:1 1 0;
+    min-width:142px;
+    text-align:center;
+    padding:0 6px;
+    z-index:1;
+  }
+
+  .od-step:not(:first-child)::before{
+    content:"";
+    position:absolute;
+    top:29px;
+    right:50%;
+    width:100%;
+    height:3px;
+    background:#dfe8e3;
+    transform:translateY(-50%);
+    z-index:-2;
+    border-radius:999px;
+  }
+
+  .od-step:not(:first-child)::after{
+    content:"";
+    position:absolute;
+    top:29px;
+    right:50%;
+    width:0;
+    height:3px;
+    background:linear-gradient(90deg,var(--od-primary),var(--od-accent));
+    transform:translateY(-50%);
+    z-index:-1;
+    border-radius:999px;
+    transition:width .55s ease;
+  }
+
+  .od-step.is-complete:not(:first-child)::after,
+  .od-step.is-current:not(:first-child)::after{width:100%;}
+
+  .od-step-circle{
+    position:relative;
+    width:58px;
+    height:58px;
+    margin:0 auto 12px;
+    border-radius:18px;
+    display:grid;
+    place-items:center;
+    color:#98a2b3;
+    background:linear-gradient(180deg,#f8faf9,#eef4f1);
+    border:1px solid #dce6e1;
+    box-shadow:0 9px 20px rgba(16,24,40,.06);
+    transition:.25s ease;
+  }
+
+  .od-step-circle svg{width:26px;height:26px;}
+
+  .od-step.is-complete .od-step-circle{
+    color:#fff;
+    border-color:var(--od-primary);
+    background:linear-gradient(145deg,var(--od-primary-dark),var(--od-primary-bright));
+    box-shadow:0 10px 24px rgba(8,122,80,.22);
+  }
+
+  .od-step.is-current .od-step-circle{
+    color:#fff;
+    border-color:var(--od-primary);
+    background:linear-gradient(145deg,var(--od-primary),var(--od-accent));
+    box-shadow:0 0 0 7px rgba(16,185,129,.10),0 14px 30px rgba(8,122,80,.26);
+    transform:translateY(-2px) scale(1.06);
+  }
+
+  .od-step.is-current .od-step-circle::before{
+    content:"";
+    position:absolute;
+    inset:-7px;
+    border-radius:23px;
+    border:2px solid rgba(16,185,129,.34);
+    animation:odPulseRing 1.8s ease-out infinite;
+  }
+
+  .od-step.is-complete .od-step-circle::after{
+    content:"✓";
+    position:absolute;
+    right:-5px;
+    top:-6px;
+    width:21px;
+    height:21px;
+    border-radius:50%;
+    display:grid;
+    place-items:center;
+    color:#fff;
+    background:#16a34a;
+    border:3px solid #fff;
+    font-size:10px;
+    font-weight:1000;
+    box-shadow:0 4px 10px rgba(22,163,74,.28);
+  }
+
+  @keyframes odPulseRing{
+    0%{opacity:.9;transform:scale(.92)}
+    75%,100%{opacity:0;transform:scale(1.15)}
+  }
+
+  .od-step-name{
     color:#64748b;
-    margin-bottom:6px;
-    text-transform:uppercase;
-    letter-spacing:.3px;
-  }
-
-  .summary-value{
-    font-size:18px;
+    font-size:13px;
     font-weight:900;
-    color:#0f172a;
-    word-break:break-word;
+    line-height:1.25;
   }
 
-  .summary-value.mono{
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  .od-step.is-current .od-step-name,
+  .od-step.is-complete .od-step-name{color:var(--od-ink);}
+
+  .od-step-time{
+    min-height:30px;
+    margin-top:5px;
+    color:#94a3b8;
+    font-size:10.5px;
+    line-height:1.35;
+    font-weight:700;
   }
 
-  .summary-value.green{
-    color:#0f766e;
+  .od-step.is-current .od-step-time{color:var(--od-primary);}
+
+  .od-current-pill{
+    display:none;
+    margin:7px auto 0;
+    width:max-content;
+    padding:5px 8px;
+    border-radius:999px;
+    color:var(--od-primary-dark);
+    background:#dcfce7;
+    font-size:9px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.6px;
   }
 
-  .grid{
+  .od-step.is-current .od-current-pill{display:block;}
+
+  .od-exception-banner{
+    display:none;
+    margin:0 18px 17px;
+    padding:12px 14px;
+    border-radius:13px;
+    gap:10px;
+    align-items:center;
+    font-size:12px;
+    font-weight:850;
+  }
+
+  .od-exception-banner.is-visible{display:flex;}
+  .od-exception-banner.returned{color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;}
+  .od-exception-banner.void{color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;}
+  .od-exception-banner svg{width:19px;height:19px;flex:0 0 auto;}
+
+  /* INFO CARDS */
+  .od-grid{
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:16px;
   }
 
-  @media (max-width: 900px){
-    .grid{grid-template-columns:1fr;}
-  }
-
-  .section{
-    border:1px solid #e5e7eb;
-    border-radius:14px;
+  .od-section{
+    border:1px solid var(--od-line);
+    border-radius:18px;
     background:#fff;
     overflow:hidden;
   }
 
-  .section-head{
-    padding:12px 14px;
+  .od-section-head{
+    min-height:49px;
+    padding:13px 16px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:var(--od-ink);
     background:#f8fafc;
-    border-bottom:1px solid #e5e7eb;
+    border-bottom:1px solid var(--od-line);
     font-size:14px;
     font-weight:900;
-    color:#0f172a;
   }
 
-  .section-body{
-    padding:12px 14px;
-  }
+  .od-section-head svg{width:18px;height:18px;color:var(--od-primary);}
+  .od-section-body{padding:15px 16px;}
 
-  .info-table{
+  .od-info-list{
     display:grid;
-    grid-template-columns: 150px 1fr;
-    gap:10px 12px;
+    grid-template-columns:145px 1fr;
+    column-gap:14px;
   }
 
-  @media (max-width: 640px){
-    .info-table{
-      grid-template-columns: 1fr;
-      gap:6px;
-    }
+  .od-info-row{display:contents;}
+
+  .od-key,
+  .od-value{
+    padding:9px 0;
+    border-bottom:1px dashed #e8edf3;
   }
 
-  .k{
-    font-weight:800;
-    color:#334155;
-  }
+  .od-info-row:last-child .od-key,
+  .od-info-row:last-child .od-value{border-bottom:0;}
 
-  .v{
-    color:#111827;
-    word-break:break-word;
-  }
+  .od-key{color:var(--od-muted);font-size:12.5px;font-weight:850;}
+  .od-value{color:var(--od-ink);font-size:13px;font-weight:720;word-break:break-word;}
+  .od-value.od-strong{font-weight:900;}
 
-  .badge{
-    display:inline-block;
-    padding:5px 10px;
-    border-radius:999px;
-    border:1px solid #e5e7eb;
+  .od-mini-badge{padding:6px 9px;font-size:11px;border:1px solid #e2e8f0;background:#f8fafc;color:#334155;}
+  .od-mini-badge.green{background:#f0fdf4;border-color:#bbf7d0;color:#166534;}
+  .od-mini-badge.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
+  .od-mini-badge.orange{background:#fff7ed;border-color:#fed7aa;color:#c2410c;}
+  .od-mini-badge.red{background:#fef2f2;border-color:#fecaca;color:#b91c1c;}
+
+  .od-notes-grid{margin-top:16px;}
+
+  .od-note-box{
+    min-height:94px;
+    padding:13px 14px;
+    color:var(--od-text);
     background:#f8fafc;
-    font-size:12px;
-    font-weight:900;
-    color:#0f172a;
-  }
-
-  .badge-green{
-    background:#f0fdf4;
-    border-color:#bbf7d0;
-    color:#166534;
-  }
-
-  .badge-blue{
-    background:#eff6ff;
-    border-color:#bfdbfe;
-    color:#1d4ed8;
-  }
-
-  .badge-orange{
-    background:#fff7ed;
-    border-color:#fed7aa;
-    color:#c2410c;
-  }
-
-  .badge-red{
-    background:#fef2f2;
-    border-color:#fecaca;
-    color:#b91c1c;
-  }
-
-  .text-block{
-    width:100%;
-    min-height:90px;
-    border:1px solid #d1d5db;
-    border-radius:12px;
-    padding:10px 12px;
-    background:#f8fafc;
-    color:#111827;
+    border:1px solid #e2e8f0;
+    border-radius:13px;
+    font-size:13px;
+    line-height:1.55;
     white-space:pre-wrap;
     word-break:break-word;
   }
 
-  .btn-row{
+  .od-action-bar{
+    margin-top:18px;
+    padding:14px;
     display:flex;
-    gap:10px;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
     flex-wrap:wrap;
-    margin-top:16px;
-  }
-
-  .btn{
-    padding:10px 14px;
-    border-radius:10px;
-    border:1px solid #d1d5db;
-    background:#fff;
-    text-decoration:none;
-    font-weight:800;
-    font-size:13px;
-    color:#0f172a;
-    display:inline-block;
-  }
-
-  .btn:hover{
+    border:1px solid var(--od-line);
+    border-radius:16px;
     background:#f8fafc;
   }
 
-  .btn-primary{
-    background:#0f766e;
-    border-color:#0f766e;
-    color:#fff;
-  }
-
-  .btn-primary:hover{
-    background:#115e59;
-  }
-
-  .btn-danger{
-    background:#ef4444;
-    border-color:#ef4444;
-    color:#fff;
-  }
-
-  .btn-danger:hover{
-    background:#dc2626;
-  }
-
-  .log-card{
-    margin-top:16px;
-    border:1px solid #e5e7eb;
-    border-radius:14px;
+  /* ACTIVITY PATH */
+  .od-history-card{
+    margin-top:18px;
+    border:1px solid var(--od-line);
+    border-radius:20px;
+    background:#fff;
     overflow:hidden;
-    background:#fff;
   }
 
-  .log-head{
-    padding:12px 14px;
+  .od-history-head{
+    padding:15px 17px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border-bottom:1px solid var(--od-line);
     background:#f8fafc;
-    border-bottom:1px solid #e5e7eb;
-    font-size:14px;
+  }
+
+  .od-history-count{
+    padding:5px 9px;
+    border-radius:999px;
+    color:#475569;
+    background:#e2e8f0;
+    font-size:10px;
     font-weight:900;
-    color:#0f172a;
   }
 
-  .log-table-wrap{
-    overflow:auto;
+  .od-timeline{padding:18px 18px 4px;}
+
+  .od-event{
+    position:relative;
+    display:grid;
+    grid-template-columns:48px minmax(0,1fr);
+    gap:13px;
+    padding-bottom:18px;
   }
 
-  table{
-    width:100%;
-    border-collapse:collapse;
-    min-width:850px;
+  .od-event:not(:last-child)::before{
+    content:"";
+    position:absolute;
+    left:23px;
+    top:44px;
+    bottom:0;
+    width:2px;
+    background:linear-gradient(#cbd5e1,#e2e8f0);
   }
 
-  th, td{
-    padding:10px 12px;
-    border-bottom:1px solid #eef2f7;
-    text-align:left;
-    vertical-align:top;
-    font-size:13px;
+  .od-event-icon{
+    position:relative;
+    z-index:1;
+    width:46px;
+    height:46px;
+    border-radius:15px;
+    display:grid;
+    place-items:center;
+    border:1px solid #dbe3ec;
+    background:#f8fafc;
+    color:#64748b;
+    box-shadow:0 6px 14px rgba(15,23,42,.06);
   }
 
-  th{
+  .od-event-icon svg{width:21px;height:21px;}
+  .od-event-icon.green{color:#15803d;background:#f0fdf4;border-color:#bbf7d0;}
+  .od-event-icon.blue{color:#1d4ed8;background:#eff6ff;border-color:#bfdbfe;}
+  .od-event-icon.orange{color:#c2410c;background:#fff7ed;border-color:#fed7aa;}
+  .od-event-icon.red{color:#b91c1c;background:#fef2f2;border-color:#fecaca;}
+  .od-event-icon.teal{color:#0f766e;background:#ecfdf5;border-color:#99f6e4;}
+
+  .od-event-body{
+    min-width:0;
+    padding:13px 14px;
+    border:1px solid #e5eaf0;
+    border-radius:15px;
     background:#fff;
-    color:#0f172a;
-    font-weight:900;
+    transition:.18s ease;
   }
 
-  .muted{
-    color:#64748b;
+  .od-event-body:hover{border-color:#cbd5e1;box-shadow:0 8px 18px rgba(15,23,42,.05);}
+
+  .od-event-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
   }
 
-  .empty{
-    text-align:center;
-    color:#64748b;
-    padding:20px 12px;
+  .od-event-action{
+    color:var(--od-ink);
+    font-size:13px;
+    font-weight:950;
+    text-transform:capitalize;
+  }
+
+  .od-event-time{
+    color:#94a3b8;
+    font-size:11px;
+    font-weight:750;
+    white-space:nowrap;
+  }
+
+  .od-event-meta{
+    margin-top:7px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex-wrap:wrap;
+    color:var(--od-muted);
+    font-size:11.5px;
     font-weight:700;
   }
+
+  .od-meta-sep{color:#cbd5e1;}
+
+  .od-status-change{
+    margin-top:9px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex-wrap:wrap;
+  }
+
+  .od-status-chip{
+    padding:5px 8px;
+    border-radius:8px;
+    background:#f1f5f9;
+    color:#475569;
+    border:1px solid #e2e8f0;
+    font-size:10px;
+    font-weight:900;
+  }
+
+  .od-status-chip.new{color:#0f766e;background:#ecfdf5;border-color:#99f6e4;}
+  .od-arrow{color:#94a3b8;font-weight:900;}
+
+  .od-event-note{
+    margin-top:9px;
+    padding-top:9px;
+    border-top:1px dashed #e2e8f0;
+    color:#475569;
+    font-size:12px;
+    line-height:1.5;
+  }
+
+  .od-empty{
+    padding:28px 16px;
+    text-align:center;
+    color:var(--od-muted);
+    font-size:13px;
+    font-weight:800;
+  }
+
+  /* AUDIT */
+  .od-audit{
+    margin-top:18px;
+    border:1px solid var(--od-line);
+    border-radius:18px;
+    background:#fff;
+    overflow:hidden;
+  }
+
+  .od-audit summary{
+    list-style:none;
+    cursor:pointer;
+    padding:15px 17px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    color:var(--od-ink);
+    background:#f8fafc;
+    font-size:14px;
+    font-weight:900;
+  }
+
+  .od-audit summary::-webkit-details-marker{display:none;}
+  .od-audit-title{display:flex;align-items:center;gap:9px;}
+  .od-audit-title svg{width:18px;height:18px;color:var(--od-primary);}
+  .od-audit-chevron{width:18px;height:18px;color:#64748b;transition:.2s ease;}
+  .od-audit[open] .od-audit-chevron{transform:rotate(180deg);}
+
+  .od-audit-body{border-top:1px solid var(--od-line);overflow-x:auto;}
+  .od-audit-table{width:100%;border-collapse:collapse;min-width:760px;}
+  .od-audit-table th,
+  .od-audit-table td{padding:11px 14px;border-bottom:1px solid #eef2f7;text-align:left;vertical-align:top;font-size:12px;}
+  .od-audit-table th{color:#475569;background:#fff;font-weight:900;}
+  .od-audit-table td{color:#334155;}
+  .od-audit-table tr:last-child td{border-bottom:0;}
+
+  @media (max-width:1100px){
+    .od-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+
+  @media (max-width:900px){
+    .od-grid{grid-template-columns:1fr;}
+  }
+
+  @media (max-width:640px){
+    .od-wrap{padding:10px;}
+    .od-page{border-radius:18px;}
+    .od-hero,.od-content{padding-left:14px;padding-right:14px;}
+    .od-title{font-size:20px;}
+    .od-title-icon{width:42px;height:42px;border-radius:13px;}
+    .od-summary{grid-template-columns:1fr 1fr;gap:9px;}
+    .od-summary-card{min-height:86px;padding:12px;}
+    .od-summary-value{font-size:15px;}
+    .od-info-list{grid-template-columns:1fr;}
+    .od-key{padding:9px 0 2px;border-bottom:0;}
+    .od-value{padding:0 0 9px;}
+    .od-info-row:last-child .od-value{padding-bottom:0;}
+    .od-action-bar{align-items:stretch;}
+    .od-action-left,.od-action-right{width:100%;}
+    .od-action-left .od-btn{flex:1 1 auto;}
+    .od-action-right .od-btn{width:100%;}
+    .od-event{grid-template-columns:40px minmax(0,1fr);gap:9px;}
+    .od-event-icon{width:40px;height:40px;border-radius:13px;}
+    .od-event:not(:last-child)::before{left:19px;top:38px;}
+    .od-timeline{padding-left:12px;padding-right:12px;}
+  }
+
+  @media (max-width:430px){
+    .od-summary{grid-template-columns:1fr;}
+    .od-top-actions{width:100%;}
+    .od-top-actions .od-btn{flex:1;}
+  }
+
+  .od-summary-card,
+  .od-section,
+  .od-progress-card,
+  .od-history-card{
+    transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+  }
+
+  .od-summary-card:hover,
+  .od-section:hover{
+    transform:translateY(-2px);
+    border-color:#cfe0d7;
+    box-shadow:0 14px 34px rgba(16,24,40,.07);
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
+  }
+
 </style>
 
-<div class="wrap">
-  <div class="card">
-
-    <div class="top">
-      <h2 class="title">
-        <span class="tick"></span>
-        Order Created
-      </h2>
-
-      <div class="top-actions">
-        <a class="btn" href="{% url 'order_list' %}">Back to Orders</a>
-        <a class="btn" href="{% url 'audit_log_list' %}">Audit Logs</a>
-      </div>
+<div class="od-page-loader" id="odPageLoader" aria-live="polite" aria-label="Loading order details">
+  <div class="od-loader-box">
+    <div class="od-loader-mark" aria-hidden="true"></div>
+    <div>
+      <div class="od-loader-title">Loading order</div>
+      <div class="od-loader-subtitle">Preparing shipment details...</div>
     </div>
+  </div>
+</div>
 
-    <!-- TOP SUMMARY -->
-    <div class="summary">
-      <div class="summary-box">
-        <div class="summary-label">Tracking</div>
-        <div class="summary-value mono">{{ order.tracking_no }}</div>
-      </div>
+<div class="od-wrap">
+  <div class="od-page">
 
-      <div class="summary-box">
-        <div class="summary-label">Status</div>
-        <div class="summary-value">
-          <span class="badge">{{ order.get_status_display }}</span>
-        </div>
-      </div>
-
-      <div class="summary-box">
-        <div class="summary-label">COD</div>
-        <div class="summary-value green">${{ order.cod }}</div>
-      </div>
-
-      <div class="summary-box">
-        <div class="summary-label">Shop</div>
-        <div class="summary-value">{{ order.seller.name }}</div>
-      </div>
-    </div>
-
-    <!-- MAIN INFO -->
-    <div class="grid">
-      <div class="section">
-        <div class="section-head">Order Information</div>
-        <div class="section-body">
-          <div class="info-table">
-            <div class="k">Order Code</div>
-            <div class="v">{{ order.seller_order_code|default:"-" }}</div>
-
-            <div class="k">Seller Name</div>
-            <div class="v">{{ order.seller_name|default:"-" }}</div>
-
-            <div class="k">Product</div>
-            <div class="v">{{ order.product_desc|default:"-" }}</div>
-
-            <div class="k">Qty</div>
-            <div class="v">{{ order.quantity }}</div>
-
-            <div class="k">Price</div>
-            <div class="v">${{ order.price }}</div>
-
-            <div class="k">Delivery Fee</div>
-            <div class="v">${{ order.delivery_fee }}</div>
-
-            <div class="k">Additional Fee</div>
-            <div class="v">${{ order.additional_fee }}</div>
-
-            <div class="k">Province Fee</div>
-            <div class="v">${{ order.province_fee }}</div>
+    <header class="od-hero">
+      <div class="od-topbar">
+        <div class="od-title-wrap">
+          <div class="od-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="od-title">Order Details</h1>
+            <p class="od-subtitle">Shipment status, customer information, and complete order history.</p>
           </div>
         </div>
+
+        <div class="od-top-actions">
+          <a class="od-btn" href="{% url 'order_list' %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+            Back to Orders
+          </a>
+          <a class="od-btn" href="{% url 'audit_log_list' %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11h6"></path><path d="M9 15h6"></path><path d="M9 7h6"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg>
+            Audit Logs
+          </a>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-head">Receiver Information</div>
-        <div class="section-body">
-          <div class="info-table">
-            <div class="k">Name</div>
-            <div class="v">{{ order.receiver_name|default:"-" }}</div>
+      <div class="od-summary">
+        <div class="od-summary-card">
+          <div class="od-summary-label">Tracking Number</div>
+          <div class="od-summary-value od-mono">{{ order.tracking_no|default:"-" }}</div>
+        </div>
 
-            <div class="k">Phone</div>
-            <div class="v">{{ order.receiver_phone|default:"-" }}</div>
+        <div class="od-summary-card">
+          <div class="od-summary-label">Current Status</div>
+          <div class="od-summary-value">
+            <span class="od-status-badge">
+              <span class="od-status-dot"></span>
+              {{ order.get_status_display|default:"Created" }}
+            </span>
+          </div>
+        </div>
 
-            <div class="k">Address</div>
-            <div class="v">{{ order.receiver_address|default:"-" }}</div>
+        <div class="od-summary-card">
+          <div class="od-summary-label">COD Amount</div>
+          <div class="od-summary-value od-money">${{ order.cod|default:"0.00" }}</div>
+        </div>
 
-            <div class="k">Printed</div>
-            <div class="v">{{ order.print_count|default:0 }}</div>
+        <div class="od-summary-card">
+          <div class="od-summary-label">Shop</div>
+          <div class="od-summary-value">{{ order.seller.name|default:"-" }}</div>
+        </div>
+      </div>
+    </header>
 
-            <div class="k">Created At</div>
-            <div class="v">
-              {% if order.created_at %}{{ order.created_at|date:"Y-m-d h:i A" }}{% else %}-{% endif %}
+    <main class="od-content">
+
+      <!-- MODERN SHIPMENT PATH -->
+      <section class="od-progress-card" id="shipmentProgress" data-current-status="{{ order.status|default:'CREATED'|escapejs }}">
+        <div class="od-progress-head">
+          <h2 class="od-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"></path><path d="m16 5 7 7-7 7"></path><circle cx="5" cy="12" r="2"></circle></svg>
+            Shipment Progress
+          </h2>
+          <div class="od-current-caption">Current: <strong id="currentStatusText">{{ order.get_status_display|default:"Created" }}</strong></div>
+        </div>
+
+        <div class="od-progress-scroll">
+          <div class="od-progress-track">
+
+            <div class="od-step" data-index="0" data-statuses="CREATED">
+              <div class="od-step-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 5h6"></path><path d="M9 9h6"></path><path d="M9 13h3"></path><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="m14 17 2 2 4-4"></path>
+                </svg>
+              </div>
+              <div class="od-step-name">Created</div>
+              <div class="od-step-time">Waiting</div>
+              <div class="od-current-pill">Current</div>
             </div>
 
-            <div class="k">Updated At</div>
-            <div class="v">
-              {% if order.updated_at %}{{ order.updated_at|date:"Y-m-d h:i A" }}{% else %}-{% endif %}
+            <div class="od-step" data-index="1" data-statuses="INBOUND,PICKED_UP,PICKUP">
+              <div class="od-step-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16.5 9.4-9-5.19"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path>
+                </svg>
+              </div>
+              <div class="od-step-name">Picked Up</div>
+              <div class="od-step-time">Waiting</div>
+              <div class="od-current-pill">Current</div>
             </div>
 
-            <div class="k">Deleted</div>
-            <div class="v">
-              {% if order.is_deleted %}
-                <span class="badge badge-red">Yes</span>
-              {% else %}
-                <span class="badge badge-green">No</span>
+            <div class="od-step" data-index="2" data-statuses="PROCESSING,PROVINCE_ASSIGNED">
+              <div class="od-step-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.35.71.6 1 .3.3.7.46 1.1.46H21a2 2 0 1 1 0 4h-.09c-.4 0-.8.15-1.1.44-.25.3-.46.63-.6 1.1z"></path>
+                </svg>
+              </div>
+              <div class="od-step-name">Processing</div>
+              <div class="od-step-time">Waiting</div>
+              <div class="od-current-pill">Current</div>
+            </div>
+
+            <div class="od-step" data-index="3" data-statuses="OUT_FOR_DELIVERY,ON_DELIVERY,DELIVERY">
+              <div class="od-step-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 17h4V5H2v12h3"></path><path d="M14 9h4l4 4v4h-3"></path><circle cx="7.5" cy="17.5" r="2.5"></circle><circle cx="16.5" cy="17.5" r="2.5"></circle>
+                </svg>
+              </div>
+              <div class="od-step-name">On Delivery</div>
+              <div class="od-step-time">Waiting</div>
+              <div class="od-current-pill">Current</div>
+            </div>
+
+            <div class="od-step" data-index="4" data-statuses="DELIVERED">
+              <div class="od-step-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6 9 17l-5-5"></path><circle cx="12" cy="12" r="10"></circle>
+                </svg>
+              </div>
+              <div class="od-step-name" id="lastStepName">Delivered</div>
+              <div class="od-step-time">Waiting</div>
+              <div class="od-current-pill">Current</div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="od-exception-banner" id="exceptionBanner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+          <span id="exceptionText"></span>
+        </div>
+      </section>
+
+      <!-- ORDER + RECEIVER INFORMATION -->
+      <div class="od-grid">
+        <section class="od-section">
+          <div class="od-section-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"></path><path d="M14 2v6h6"></path><path d="M9 13h6"></path><path d="M9 17h6"></path></svg>
+            Order Information
+          </div>
+          <div class="od-section-body">
+            <div class="od-info-list">
+              <div class="od-info-row"><div class="od-key">Order Code</div><div class="od-value od-strong">{{ order.seller_order_code|default:"-" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Seller Name</div><div class="od-value">{{ order.seller_name|default:"-" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Product</div><div class="od-value">{{ order.product_desc|default:"-" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Quantity</div><div class="od-value">{{ order.quantity|default:"0" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Price</div><div class="od-value od-strong">${{ order.price|default:"0.00" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Delivery Fee</div><div class="od-value">${{ order.delivery_fee|default:"0.00" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Additional Fee</div><div class="od-value">${{ order.additional_fee|default:"0.00" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Province Fee</div><div class="od-value">${{ order.province_fee|default:"0.00" }}</div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="od-section">
+          <div class="od-section-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Receiver Information
+          </div>
+          <div class="od-section-body">
+            <div class="od-info-list">
+              <div class="od-info-row"><div class="od-key">Name</div><div class="od-value od-strong">{{ order.receiver_name|default:"-" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Phone</div><div class="od-value">{{ order.receiver_phone|default:"-" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Address</div><div class="od-value">{{ order.receiver_address|default:"-" }}</div></div>
+              <div class="od-info-row"><div class="od-key">Printed</div><div class="od-value"><span class="od-mini-badge blue">{{ order.print_count|default:0 }} time{{ order.print_count|pluralize }}</span></div></div>
+              <div class="od-info-row"><div class="od-key">Created At</div><div class="od-value">{% if order.created_at %}{{ order.created_at|date:"Y-m-d h:i A" }}{% else %}-{% endif %}</div></div>
+              <div class="od-info-row"><div class="od-key">Updated At</div><div class="od-value">{% if order.updated_at %}{{ order.updated_at|date:"Y-m-d h:i A" }}{% else %}-{% endif %}</div></div>
+              <div class="od-info-row"><div class="od-key">Deleted</div><div class="od-value">{% if order.is_deleted %}<span class="od-mini-badge red">Yes</span>{% else %}<span class="od-mini-badge green">No</span>{% endif %}</div></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- REMARK + REASON -->
+      <div class="od-grid od-notes-grid">
+        <section class="od-section">
+          <div class="od-section-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path></svg>
+            Remark
+          </div>
+          <div class="od-section-body"><div class="od-note-box">{{ order.remark|default_if_none:""|default:"No remark." }}</div></div>
+        </section>
+
+        <section class="od-section">
+          <div class="od-section-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+            Reason
+          </div>
+          <div class="od-section-body"><div class="od-note-box">{{ order.reason|default_if_none:""|default:"No reason." }}</div></div>
+        </section>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="od-action-bar">
+        <div class="od-action-left">
+          <a class="od-btn od-btn-primary" href="{% url 'order_label' order.id %}" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            Print Label
+          </a>
+          <a class="od-btn" href="{% url 'order_edit' order.id %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"></path></svg>
+            Edit Order
+          </a>
+          <a class="od-btn" href="{% url 'create_order' %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+            Create New Shipment
+          </a>
+        </div>
+
+        <div class="od-action-right">
+          <a class="od-btn od-btn-danger" href="{% url 'order_delete' order.id %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="m19 6-1 15H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
+            Delete Order
+          </a>
+        </div>
+      </div>
+
+      <!-- MODERN VERTICAL ACTIVITY PATH -->
+      <section class="od-history-card">
+        <div class="od-history-head">
+          <h2 class="od-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg>
+            Order Activity Timeline
+          </h2>
+          <span class="od-history-count">{{ activities|length }} event{{ activities|length|pluralize }}</span>
+        </div>
+
+        <div class="od-timeline">
+          {% for a in activities %}
+          <article class="od-event">
+            {% if a.action == "create" %}
+              <div class="od-event-icon green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+              </div>
+            {% elif a.action == "edit" %}
+              <div class="od-event-icon blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"></path></svg>
+              </div>
+            {% elif a.action == "assign" %}
+              <div class="od-event-icon orange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a7 7 0 0 1 13 0"></path><path d="m17 11 2 2 4-4"></path></svg>
+              </div>
+            {% elif a.action == "print" %}
+              <div class="od-event-icon teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              </div>
+            {% elif a.action == "delivered" %}
+              <div class="od-event-icon green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path><circle cx="12" cy="12" r="10"></circle></svg>
+              </div>
+            {% elif a.action == "inbound" %}
+              <div class="od-event-icon blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16.5 9.4-9-5.19"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path></svg>
+              </div>
+            {% elif a.action == "processing" %}
+              <div class="od-event-icon teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4"></path><path d="M9 4.6a1.7 1.7 0 0 0-1.88-.34l-.06.06a2 2 0 1 1-2.83-2.83"></path></svg>
+              </div>
+            {% elif a.action == "out_for_delivery" %}
+              <div class="od-event-icon orange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17h4V5H2v12h3"></path><path d="M14 9h4l4 4v4h-3"></path><circle cx="7.5" cy="17.5" r="2.5"></circle><circle cx="16.5" cy="17.5" r="2.5"></circle></svg>
+              </div>
+            {% elif a.action == "void" or a.action == "delete" %}
+              <div class="od-event-icon red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
+              </div>
+            {% else %}
+              <div class="od-event-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4"></path><path d="M9 4.6a1.7 1.7 0 0 0-1.88-.34l-.06.06a2 2 0 1 1-2.83-2.83"></path></svg>
+              </div>
+            {% endif %}
+
+            <div class="od-event-body">
+              <div class="od-event-top">
+                <div class="od-event-action">{{ a.action|default:"Activity"|title }}</div>
+                <time class="od-event-time">{{ a.created_at|date:"Y-m-d h:i A" }}</time>
+              </div>
+
+              <div class="od-event-meta">
+                <span>
+                  {% if a.actor %}
+                    {{ a.actor.get_full_name|default:a.actor.username }}
+                  {% else %}
+                    System
+                  {% endif %}
+                </span>
+                {% if a.shipper %}
+                  <span class="od-meta-sep">•</span>
+                  <span>Shipper: {{ a.shipper.name }}</span>
+                {% endif %}
+              </div>
+
+              {% if a.old_status or a.new_status %}
+              <div class="od-status-change">
+                <span class="od-status-chip">{{ a.old_status|default:"-" }}</span>
+                <span class="od-arrow">→</span>
+                <span class="od-status-chip new">{{ a.new_status|default:"-" }}</span>
+              </div>
+              {% endif %}
+
+              {% if a.note %}
+                <div class="od-event-note">{{ a.note }}</div>
               {% endif %}
             </div>
-          </div>
+          </article>
+          {% empty %}
+            <div class="od-empty">No activity history yet.</div>
+          {% endfor %}
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- REMARK / REASON -->
-    <div class="grid" style="margin-top:16px;">
-      <div class="section">
-        <div class="section-head">Remark</div>
-        <div class="section-body">
-          <div class="text-block">{{ order.remark|default_if_none:"" }}</div>
+      <!-- COLLAPSIBLE AUDIT LOGS -->
+      <details class="od-audit">
+        <summary>
+          <span class="od-audit-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11h6"></path><path d="M9 15h6"></path><path d="M9 7h6"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg>
+            Technical Audit Logs ({{ logs|length }})
+          </span>
+          <svg class="od-audit-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </summary>
+
+        <div class="od-audit-body">
+          <table class="od-audit-table">
+            <thead>
+              <tr>
+                <th style="width:180px;">Time</th>
+                <th style="width:150px;">User</th>
+                <th style="width:130px;">Action</th>
+                <th style="width:130px;">Field</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in logs %}
+              <tr>
+                <td>{{ log.created_at|date:"Y-m-d h:i A" }}</td>
+                <td>{% if log.created_by %}{{ log.created_by.get_full_name|default:log.created_by.username }}{% else %}System{% endif %}</td>
+                <td>{{ log.action|default:"-" }}</td>
+                <td>{{ log.field_name|default:"-" }}</td>
+                <td>{{ log.note|default:"-" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="od-empty">No audit logs yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </details>
 
-      <div class="section">
-        <div class="section-head">Reason</div>
-        <div class="section-body">
-          <div class="text-block">{{ order.reason|default_if_none:"" }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BUTTONS -->
-    <div class="btn-row" style="justify-content:space-between;">
-  
-  <!-- LEFT SIDE -->
-  <div style="display:flex; gap:10px;">
-    <a class="btn btn-primary"
-       href="{% url 'order_label' order.id %}"
-       target="_blank"
-       rel="noopener">
-       Print Label
-    </a>
-
-    <a class="btn" href="{% url 'order_edit' order.id %}">Edit Order</a>
-    <a class="btn" href="{% url 'create_order' %}">Create New Shipment</a>
-  </div>
-
-  <!-- RIGHT SIDE -->
-  <div>
-    <a class="btn btn-danger" href="{% url 'order_delete' order.id %}">
-      Delete Order
-    </a>
-  </div>
-
-</div>
-
-    <!-- ACTIVITY TIMELINE -->
-    <div class="log-card">
-      <div class="log-head">Order Activity Timeline</div>
-      <div class="log-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:170px;">Time</th>
-              <th style="width:140px;">User</th>
-              <th style="width:130px;">Action</th>
-              <th style="width:140px;">Shipper</th>
-              <th style="width:120px;">Old Status</th>
-              <th style="width:120px;">New Status</th>
-              <th>Reason / Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for a in activities %}
-            <tr>
-              <td>{{ a.created_at|date:"Y-m-d h:i A" }}</td>
-              <td>
-                {% if a.actor %}
-                  {{ a.actor.get_full_name|default:a.actor.username }}
-                {% else %}
-                  <span class="muted">System</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if a.action == "create" %}
-                  <span class="badge badge-green">Create</span>
-                {% elif a.action == "edit" %}
-                  <span class="badge badge-blue">Edit</span>
-                {% elif a.action == "assign" %}
-                  <span class="badge badge-orange">Assign</span>
-                {% elif a.action == "delivered" %}
-                  <span class="badge badge-green">Delivered</span>
-                {% elif a.action == "inbound" %}
-                  <span class="badge badge-blue">Inbound</span>
-                {% elif a.action == "out_for_delivery" %}
-                  <span class="badge badge-orange">Out For Delivery</span>
-                {% elif a.action == "void" %}
-                  <span class="badge badge-red">Void</span>
-                {% else %}
-                  <span class="badge">{{ a.action }}</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if a.shipper %}
-                  {{ a.shipper.name }}
-                {% else %}
-                  <span class="muted">-</span>
-                {% endif %}
-              </td>
-              <td>{{ a.old_status|default:"-" }}</td>
-              <td>{{ a.new_status|default:"-" }}</td>
-              <td>{{ a.note|default:"-" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="7" class="empty">No activity history yet.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- AUDIT LOGS -->
-    <div class="log-card">
-      <div class="log-head">Audit Logs</div>
-      <div class="log-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:170px;">Time</th>
-              <th style="width:140px;">User</th>
-              <th style="width:120px;">Action</th>
-              <th style="width:120px;">Field</th>
-              <th>Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in logs %}
-            <tr>
-              <td>{{ log.created_at|date:"Y-m-d h:i A" }}</td>
-              <td>
-                {% if log.created_by %}
-                  {{ log.created_by.get_full_name|default:log.created_by.username }}
-                {% else %}
-                  <span class="muted">System</span>
-                {% endif %}
-              </td>
-              <td>{{ log.action }}</td>
-              <td>{{ log.field_name|default:"-" }}</td>
-              <td>{{ log.note|default:"-" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="5" class="empty">No audit logs yet.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
+    </main>
   </div>
 </div>
+
+<script>
+  (function () {
+    const loader = document.getElementById("odPageLoader");
+    if (!loader) return;
+
+    const hideLoader = () => window.setTimeout(() => loader.classList.add("is-hidden"), 120);
+    if (document.readyState === "complete") hideLoader();
+    else window.addEventListener("load", hideLoader, { once:true });
+
+    document.addEventListener("click", function (event) {
+      const link = event.target.closest("a.od-btn");
+      if (!link || link.target === "_blank" || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      loader.classList.remove("is-hidden");
+    });
+  })();
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const progress = document.getElementById("shipmentProgress");
+    if (!progress) return;
+
+    const normalize = (value) => String(value || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, "_");
+
+    const rawStatus = progress.dataset.currentStatus || "CREATED";
+    const currentStatus = normalize(rawStatus);
+    const steps = Array.from(progress.querySelectorAll(".od-step"));
+
+    const statusToIndex = {
+      CREATED: 0,
+      INBOUND: 1,
+      PICKED_UP: 1,
+      PICKUP: 1,
+      PROCESSING: 2,
+      PROVINCE_ASSIGNED: 2,
+      OUT_FOR_DELIVERY: 3,
+      ON_DELIVERY: 3,
+      DELIVERY: 3,
+      DELIVERED: 4,
+      RETURN_ASSIGNED: 3,
+      RETURNED: 4
+    };
+
+    let currentIndex = Object.prototype.hasOwnProperty.call(statusToIndex, currentStatus)
+      ? statusToIndex[currentStatus]
+      : 0;
+
+    const statusTimes = {};
+    {% for a in activities %}
+      (function () {
+        const key = normalize("{{ a.new_status|default:''|escapejs }}");
+        if (key && !statusTimes[key]) {
+          statusTimes[key] = "{{ a.created_at|date:'d M Y, h:i A'|escapejs }}";
+        }
+      })();
+    {% endfor %}
+
+    const preferredTimeKeys = [
+      ["CREATED"],
+      ["INBOUND", "PICKED_UP", "PICKUP"],
+      ["PROCESSING", "PROVINCE_ASSIGNED"],
+      ["OUT_FOR_DELIVERY", "ON_DELIVERY", "DELIVERY", "RETURN_ASSIGNED"],
+      ["DELIVERED", "RETURNED"]
+    ];
+
+    steps.forEach((step, index) => {
+      step.classList.remove("is-complete", "is-current", "is-upcoming");
+
+      if (index < currentIndex) step.classList.add("is-complete");
+      else if (index === currentIndex) step.classList.add("is-current");
+      else step.classList.add("is-upcoming");
+
+      const timeNode = step.querySelector(".od-step-time");
+      const possibleKeys = preferredTimeKeys[index] || [];
+      const foundKey = possibleKeys.find((key) => statusTimes[key]);
+
+      if (foundKey) {
+        timeNode.textContent = statusTimes[foundKey];
+      } else if (index < currentIndex) {
+        timeNode.textContent = "Completed";
+      } else if (index === currentIndex) {
+        timeNode.textContent = "In progress";
+      } else {
+        timeNode.textContent = "Waiting";
+      }
+    });
+
+    const exceptionBanner = document.getElementById("exceptionBanner");
+    const exceptionText = document.getElementById("exceptionText");
+    const lastStepName = document.getElementById("lastStepName");
+
+    if (["RETURN_ASSIGNED", "RETURNED"].includes(currentStatus)) {
+      exceptionBanner.classList.add("is-visible", "returned");
+      exceptionText.textContent = currentStatus === "RETURNED"
+        ? "This shipment has been returned to the seller."
+        : "Return is assigned and the shipment is on its way back to the seller.";
+      if (currentStatus === "RETURNED") lastStepName.textContent = "Returned";
+    } else if (["VOID", "CANCELLED", "DELETED"].includes(currentStatus)) {
+      exceptionBanner.classList.add("is-visible", "void");
+      exceptionText.textContent = "This order is void, cancelled, or deleted. The normal delivery path is stopped.";
+    }
+  });
+</script>
 {% endblock %}

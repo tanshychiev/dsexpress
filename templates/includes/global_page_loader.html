@@ -1,0 +1,195 @@
+{# Global loading overlay. Include once in base.html immediately before </body>. #}
+<style>
+  #dsGlobalLoader{
+    position:fixed;
+    inset:0;
+    z-index:2147483647;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:rgba(248,250,252,.78);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .18s ease, visibility .18s ease;
+  }
+
+  #dsGlobalLoader.is-visible{
+    opacity:1;
+    visibility:visible;
+    pointer-events:all;
+  }
+
+  .ds-loader-card{
+    min-width:190px;
+    max-width:calc(100vw - 40px);
+    padding:22px 24px;
+    border:1px solid rgba(15,118,110,.13);
+    border-radius:24px;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 24px 65px rgba(15,23,42,.18);
+    text-align:center;
+  }
+
+  .ds-loader-icon{
+    position:relative;
+    width:72px;
+    height:72px;
+    margin:0 auto 14px;
+    display:grid;
+    place-items:center;
+  }
+
+  .ds-loader-ring{
+    position:absolute;
+    inset:0;
+    border:5px solid #dbeafe;
+    border-top-color:#0f766e;
+    border-right-color:#22c55e;
+    border-radius:50%;
+    animation:dsLoaderSpin .8s linear infinite;
+  }
+
+  .ds-loader-logo{
+    position:relative;
+    width:48px;
+    height:48px;
+    display:grid;
+    place-items:center;
+    border-radius:15px;
+    background:linear-gradient(135deg,#0f766e,#16a34a);
+    color:#fff;
+    font:950 17px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+    letter-spacing:-.04em;
+    box-shadow:0 9px 22px rgba(15,118,110,.28);
+  }
+
+  .ds-loader-title{
+    color:#0f172a;
+    font:900 16px/1.25 system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+
+  .ds-loader-note{
+    margin-top:5px;
+    color:#64748b;
+    font:700 12px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+
+  @keyframes dsLoaderSpin{
+    to{ transform:rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .ds-loader-ring{ animation-duration:1.8s; }
+  }
+</style>
+
+<div id="dsGlobalLoader" aria-hidden="true" aria-live="polite">
+  <div class="ds-loader-card" role="status">
+    <div class="ds-loader-icon" aria-hidden="true">
+      <div class="ds-loader-ring"></div>
+      <div class="ds-loader-logo">DS</div>
+    </div>
+    <div class="ds-loader-title">Loading</div>
+    <div class="ds-loader-note">Please wait a moment...</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const loader = document.getElementById("dsGlobalLoader");
+  if (!loader) return;
+
+  let showTimer = null;
+  let safetyTimer = null;
+
+  function showLoader(delay){
+    window.clearTimeout(showTimer);
+    window.clearTimeout(safetyTimer);
+
+    showTimer = window.setTimeout(function(){
+      loader.classList.add("is-visible");
+      loader.setAttribute("aria-hidden", "false");
+
+      // Prevent a download or cancelled navigation from leaving the screen blocked.
+      safetyTimer = window.setTimeout(hideLoader, 15000);
+    }, typeof delay === "number" ? delay : 120);
+  }
+
+  function hideLoader(){
+    window.clearTimeout(showTimer);
+    window.clearTimeout(safetyTimer);
+    loader.classList.remove("is-visible");
+    loader.setAttribute("aria-hidden", "true");
+  }
+
+  // Allow page-specific JavaScript to use the same loader.
+  window.dsShowLoading = showLoader;
+  window.dsHideLoading = hideLoader;
+
+  document.addEventListener("click", function(event){
+    if (event.defaultPrevented) return;
+    if (event.button !== 0) return;
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
+    const link = event.target.closest("a[href]");
+    if (!link) return;
+    if (link.hasAttribute("download")) return;
+    if (link.hasAttribute("data-no-loading")) return;
+    if ((link.getAttribute("target") || "").toLowerCase() === "_blank") return;
+
+    const rawHref = (link.getAttribute("href") || "").trim();
+    if (!rawHref) return;
+    if (rawHref.startsWith("#")) return;
+    if (rawHref.startsWith("javascript:")) return;
+    if (rawHref.startsWith("mailto:")) return;
+    if (rawHref.startsWith("tel:")) return;
+
+    let url;
+    try{
+      url = new URL(link.href, window.location.href);
+    }catch(error){
+      return;
+    }
+
+    if (url.origin !== window.location.origin) return;
+
+    // Do not show for a link that only changes the current-page anchor.
+    if (
+      url.pathname === window.location.pathname &&
+      url.search === window.location.search &&
+      url.hash
+    ){
+      return;
+    }
+
+    showLoader(120);
+  }, true);
+
+  document.addEventListener("submit", function(event){
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.hasAttribute("data-no-loading")) return;
+    if ((form.getAttribute("target") || "").toLowerCase() === "_blank") return;
+
+    showLoader(80);
+  }, true);
+
+  window.addEventListener("beforeunload", function(){
+    showLoader(0);
+  });
+
+  // Required for normal loading and browser back/forward cache.
+  window.addEventListener("load", hideLoader);
+  window.addEventListener("pageshow", hideLoader);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    window.setTimeout(hideLoader, 0);
+  });
+})();
+</script>

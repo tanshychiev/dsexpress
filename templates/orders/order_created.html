@@ -895,64 +895,7 @@
         </div>
 
         <div class="od-progress-scroll">
-          <div class="od-progress-track">
-
-            <div class="od-step" data-index="0" data-statuses="CREATED">
-              <div class="od-step-circle">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 5h6"></path><path d="M9 9h6"></path><path d="M9 13h3"></path><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="m14 17 2 2 4-4"></path>
-                </svg>
-              </div>
-              <div class="od-step-name">Created</div>
-              <div class="od-step-time">Waiting</div>
-              <div class="od-current-pill">Current</div>
-            </div>
-
-            <div class="od-step" data-index="1" data-statuses="INBOUND,PICKED_UP,PICKUP">
-              <div class="od-step-circle">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m16.5 9.4-9-5.19"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path>
-                </svg>
-              </div>
-              <div class="od-step-name">Picked Up</div>
-              <div class="od-step-time">Waiting</div>
-              <div class="od-current-pill">Current</div>
-            </div>
-
-            <div class="od-step" data-index="2" data-statuses="PROCESSING,PROVINCE_ASSIGNED">
-              <div class="od-step-circle">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.35.71.6 1 .3.3.7.46 1.1.46H21a2 2 0 1 1 0 4h-.09c-.4 0-.8.15-1.1.44-.25.3-.46.63-.6 1.1z"></path>
-                </svg>
-              </div>
-              <div class="od-step-name">Processing</div>
-              <div class="od-step-time">Waiting</div>
-              <div class="od-current-pill">Current</div>
-            </div>
-
-            <div class="od-step" data-index="3" data-statuses="OUT_FOR_DELIVERY,ON_DELIVERY,DELIVERY">
-              <div class="od-step-circle">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M10 17h4V5H2v12h3"></path><path d="M14 9h4l4 4v4h-3"></path><circle cx="7.5" cy="17.5" r="2.5"></circle><circle cx="16.5" cy="17.5" r="2.5"></circle>
-                </svg>
-              </div>
-              <div class="od-step-name">On Delivery</div>
-              <div class="od-step-time">Waiting</div>
-              <div class="od-current-pill">Current</div>
-            </div>
-
-            <div class="od-step" data-index="4" data-statuses="DELIVERED">
-              <div class="od-step-circle">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 6 9 17l-5-5"></path><circle cx="12" cy="12" r="10"></circle>
-                </svg>
-              </div>
-              <div class="od-step-name" id="lastStepName">Delivered</div>
-              <div class="od-step-time">Waiting</div>
-              <div class="od-current-pill">Current</div>
-            </div>
-
-          </div>
+          <div class="od-progress-track" id="dynamicProgressTrack" aria-label="Shipment progress"></div>
         </div>
 
         <div class="od-exception-banner" id="exceptionBanner">
@@ -1199,89 +1142,207 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     const progress = document.getElementById("shipmentProgress");
-    if (!progress) return;
+    const track = document.getElementById("dynamicProgressTrack");
+    if (!progress || !track) return;
 
     const normalize = (value) => String(value || "")
       .trim()
       .toUpperCase()
       .replace(/[\s-]+/g, "_");
 
-    const rawStatus = progress.dataset.currentStatus || "CREATED";
-    const currentStatus = normalize(rawStatus);
-    const steps = Array.from(progress.querySelectorAll(".od-step"));
-
-    const statusToIndex = {
-      CREATED: 0,
-      INBOUND: 1,
-      PICKED_UP: 1,
-      PICKUP: 1,
-      PROCESSING: 2,
-      PROVINCE_ASSIGNED: 2,
-      OUT_FOR_DELIVERY: 3,
-      ON_DELIVERY: 3,
-      DELIVERY: 3,
-      DELIVERED: 4,
-      RETURN_ASSIGNED: 3,
-      RETURNED: 4
-    };
-
-    let currentIndex = Object.prototype.hasOwnProperty.call(statusToIndex, currentStatus)
-      ? statusToIndex[currentStatus]
-      : 0;
-
-    const statusTimes = {};
-    {% for a in activities %}
-      (function () {
-        const key = normalize("{{ a.new_status|default:''|escapejs }}");
-        if (key && !statusTimes[key]) {
-          statusTimes[key] = "{{ a.created_at|date:'d M Y, h:i A'|escapejs }}";
-        }
-      })();
-    {% endfor %}
-
-    const preferredTimeKeys = [
-      ["CREATED"],
-      ["INBOUND", "PICKED_UP", "PICKUP"],
-      ["PROCESSING", "PROVINCE_ASSIGNED"],
-      ["OUT_FOR_DELIVERY", "ON_DELIVERY", "DELIVERY", "RETURN_ASSIGNED"],
-      ["DELIVERED", "RETURNED"]
-    ];
-
-    steps.forEach((step, index) => {
-      step.classList.remove("is-complete", "is-current", "is-upcoming");
-
-      if (index < currentIndex) step.classList.add("is-complete");
-      else if (index === currentIndex) step.classList.add("is-current");
-      else step.classList.add("is-upcoming");
-
-      const timeNode = step.querySelector(".od-step-time");
-      const possibleKeys = preferredTimeKeys[index] || [];
-      const foundKey = possibleKeys.find((key) => statusTimes[key]);
-
-      if (foundKey) {
-        timeNode.textContent = statusTimes[foundKey];
-      } else if (index < currentIndex) {
-        timeNode.textContent = "Completed";
-      } else if (index === currentIndex) {
-        timeNode.textContent = "In progress";
-      } else {
-        timeNode.textContent = "Waiting";
-      }
-    });
-
+    const currentStatus = normalize(progress.dataset.currentStatus || "CREATED");
+    const currentStatusText = document.getElementById("currentStatusText");
     const exceptionBanner = document.getElementById("exceptionBanner");
     const exceptionText = document.getElementById("exceptionText");
-    const lastStepName = document.getElementById("lastStepName");
 
-    if (["RETURN_ASSIGNED", "RETURNED"].includes(currentStatus)) {
+    /* Newest activities come from Django first. Reverse them for real journey order. */
+    const activityHistory = [
+      {% for a in activities %}
+      {
+        action: normalize("{{ a.action|default:''|escapejs }}"),
+        oldStatus: normalize("{{ a.old_status|default:''|escapejs }}"),
+        newStatus: normalize("{{ a.new_status|default:''|escapejs }}"),
+        time: "{{ a.created_at|date:'d M Y, h:i A'|escapejs }}"
+      },
+      {% endfor %}
+    ].reverse();
+
+    const allStatuses = new Set([currentStatus]);
+    const allActions = new Set();
+
+    activityHistory.forEach((item) => {
+      if (item.oldStatus) allStatuses.add(item.oldStatus);
+      if (item.newStatus) allStatuses.add(item.newStatus);
+      if (item.action) allActions.add(item.action);
+    });
+
+    const hasAnyStatus = (...statuses) => statuses.some((status) => allStatuses.has(normalize(status)));
+    const hasAnyAction = (...actions) => actions.some((action) => allActions.has(normalize(action)));
+    const actionContains = (word) => Array.from(allActions).some((action) => action.includes(word));
+
+    const provinceActivities = activityHistory.filter((item) =>
+      item.action.includes("PROVINCE") ||
+      ["DONE", "PROVINCE_ASSIGNED"].includes(item.newStatus)
+    );
+
+    const latestProvinceAction = provinceActivities.length
+      ? provinceActivities[provinceActivities.length - 1].action
+      : "";
+
+    const provinceFlowStopped = [
+      "CANCEL_PROVINCE_BATCH",
+      "REMOVE_FROM_PROVINCE_BATCH"
+    ].includes(latestProvinceAction);
+
+    const isProvinceFlow =
+      currentStatus === "DONE" ||
+      currentStatus === "PROVINCE_ASSIGNED" ||
+      (actionContains("PROVINCE") && !provinceFlowStopped);
+
+    const hasDelivered =
+      hasAnyStatus("DELIVERED") ||
+      hasAnyAction("DELIVERED", "COMPLETE_DELIVERY") ||
+      actionContains("DELIVERED");
+
+    const isReturnFlow =
+      hasAnyStatus("RETURNING", "RETURN_ASSIGNED", "RETURNED") ||
+      actionContains("RETURN");
+
+    const icons = {
+      created: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h6"></path><path d="M9 9h6"></path><path d="M9 13h3"></path><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="m14 17 2 2 4-4"></path></svg>`,
+      pickup: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16.5 9.4-9-5.19"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path></svg>`,
+      processing: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.35.71.6 1 .3.3.7.46 1.1.46H21a2 2 0 1 1 0 4h-.09c-.4 0-.8.15-1.1.44-.25.3-.46.63-.6 1.1z"></path></svg>`,
+      delivery: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17h4V5H2v12h3"></path><path d="M14 9h4l4 4v4h-3"></path><circle cx="7.5" cy="17.5" r="2.5"></circle><circle cx="16.5" cy="17.5" r="2.5"></circle></svg>`,
+      delivered: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path><circle cx="12" cy="12" r="10"></circle></svg>`,
+      province: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 9h1"></path><path d="M14 9h1"></path><path d="M9 13h1"></path><path d="M14 13h1"></path><path d="M10 21v-4h4v4"></path></svg>`,
+      done: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"></path><path d="M21 12a9 9 0 1 1-3.2-6.9"></path></svg>`,
+      returning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 6 6v5"></path></svg>`,
+      returned: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 4-4 4 4"></path><path d="M7 6v8a4 4 0 0 0 4 4h10"></path><path d="M16 14l5 4-5 4"></path></svg>`
+    };
+
+    const baseSteps = [
+      { id: "created", label: "Created", icon: icons.created, statuses: ["CREATED"], actions: ["CREATE"] },
+      { id: "pickup", label: "Picked Up", icon: icons.pickup, statuses: ["INBOUND", "PICKED_UP", "PICKUP"], actions: ["INBOUND", "PICKUP", "PICKED_UP"] }
+    ];
+
+    let steps;
+
+    if (isProvinceFlow) {
+      steps = [
+        ...baseSteps,
+        { id: "province_processing", label: "To Province", icon: icons.province, statuses: ["PROCESSING", "PROVINCE_ASSIGNED"], actions: ["ASSIGN_PROVINCE", "ADD_TO_PROVINCE_BATCH"] },
+        { id: "done", label: "Done", icon: icons.done, statuses: ["DONE"], actions: ["COMPLETE_PROVINCE"] }
+      ];
+    } else {
+      steps = [
+        ...baseSteps,
+        { id: "processing", label: "Processing", icon: icons.processing, statuses: ["PROCESSING"], actions: ["PROCESSING", "ASSIGN"] },
+        { id: "delivery", label: "On Delivery", icon: icons.delivery, statuses: ["OUT_FOR_DELIVERY", "ON_DELIVERY", "DELIVERY"], actions: ["OUT_FOR_DELIVERY", "DELIVERY"] }
+      ];
+
+      if (hasDelivered) {
+        steps.push({ id: "delivered", label: "Delivered", icon: icons.delivered, statuses: ["DELIVERED"], actions: ["DELIVERED"] });
+      }
+
+      if (isReturnFlow) {
+        steps.push({ id: "returning", label: "Return", icon: icons.returning, statuses: ["RETURNING", "RETURN_ASSIGNED"], actions: ["RETURN_ASSIGNED", "RETURNING"] });
+
+        if (currentStatus === "RETURNED" || hasAnyStatus("RETURNED") || hasAnyAction("RETURNED")) {
+          steps.push({ id: "returned", label: "Returned", icon: icons.returned, statuses: ["RETURNED"], actions: ["RETURNED"] });
+        }
+      } else {
+        steps.push({ id: "delivered", label: "Delivered", icon: icons.delivered, statuses: ["DELIVERED"], actions: ["DELIVERED"] });
+      }
+    }
+
+    const activityMatchesStep = (activity, step) => {
+      const statusMatch = step.statuses.some((status) => activity.newStatus === normalize(status));
+      const actionMatch = step.actions.some((action) => {
+        const normalizedAction = normalize(action);
+        return activity.action === normalizedAction || activity.action.includes(normalizedAction);
+      });
+      return statusMatch || actionMatch;
+    };
+
+    const findStepTime = (step) => {
+      const found = activityHistory.find((activity) => activityMatchesStep(activity, step));
+      if (found) return found.time;
+      if (step.id === "created") return "{{ order.created_at|date:'d M Y, h:i A'|escapejs }}";
+      return "";
+    };
+
+    const statusStepMap = {
+      CREATED: "created",
+      INBOUND: "pickup",
+      PICKED_UP: "pickup",
+      PICKUP: "pickup",
+      PROCESSING: isProvinceFlow ? "province_processing" : "processing",
+      PROVINCE_ASSIGNED: "province_processing",
+      OUT_FOR_DELIVERY: "delivery",
+      ON_DELIVERY: "delivery",
+      DELIVERY: "delivery",
+      DELIVERED: "delivered",
+      RETURNING: "returning",
+      RETURN_ASSIGNED: "returning",
+      RETURNED: "returned",
+      DONE: "done"
+    };
+
+    let currentStepId = statusStepMap[currentStatus] || "";
+    let currentIndex = steps.findIndex((step) => step.id === currentStepId);
+
+    if (currentIndex < 0) {
+      /* Unknown status: use the latest real history point instead of returning to Created. */
+      for (let index = steps.length - 1; index >= 0; index -= 1) {
+        if (activityHistory.some((activity) => activityMatchesStep(activity, steps[index]))) {
+          currentIndex = index;
+          currentStepId = steps[index].id;
+          break;
+        }
+      }
+    }
+
+    if (currentIndex < 0) currentIndex = 0;
+
+    track.style.minWidth = `${Math.max(620, steps.length * 154)}px`;
+    track.innerHTML = steps.map((step, index) => {
+      const stateClass = index < currentIndex ? "is-complete" : index === currentIndex ? "is-current" : "is-upcoming";
+      const stepTime = findStepTime(step);
+      let timeText = stepTime;
+
+      if (!timeText) {
+        if (index < currentIndex) timeText = "Completed";
+        else if (index === currentIndex) timeText = "In progress";
+        else timeText = "Waiting";
+      }
+
+      return `
+        <div class="od-step ${stateClass}" data-step="${step.id}">
+          <div class="od-step-circle">${step.icon}</div>
+          <div class="od-step-name">${step.label}</div>
+          <div class="od-step-time">${timeText}</div>
+          <div class="od-current-pill">Current</div>
+        </div>
+      `;
+    }).join("");
+
+    if (currentStatusText) {
+      currentStatusText.textContent = currentStatus.replaceAll("_", " ");
+    }
+
+    if (["VOID", "CANCELLED", "DELETED"].includes(currentStatus)) {
+      exceptionBanner.classList.add("is-visible", "void");
+      exceptionText.textContent = "This order is void, cancelled, or deleted. The shipment path has stopped.";
+    } else if (isReturnFlow) {
       exceptionBanner.classList.add("is-visible", "returned");
       exceptionText.textContent = currentStatus === "RETURNED"
         ? "This shipment has been returned to the seller."
-        : "Return is assigned and the shipment is on its way back to the seller.";
-      if (currentStatus === "RETURNED") lastStepName.textContent = "Returned";
-    } else if (["VOID", "CANCELLED", "DELETED"].includes(currentStatus)) {
-      exceptionBanner.classList.add("is-visible", "void");
-      exceptionText.textContent = "This order is void, cancelled, or deleted. The normal delivery path is stopped.";
+        : hasDelivered
+          ? "The delivery was completed, then a return was started."
+          : "The shipment was not delivered and is now returning to the seller.";
+    } else if (isProvinceFlow && currentStatus === "DONE") {
+      exceptionBanner.classList.add("is-visible", "returned");
+      exceptionText.textContent = "Province delivery is completed.";
     }
   });
 </script>

@@ -1,392 +1,667 @@
 {% extends "base.html" %}
 
-{% block title %}Operations Dashboard{% endblock %}
-{% block page_title %}Operations Dashboard{% endblock %}
-{% block page_subtitle %}Customer send report, shipper done report, province send report, goods create, goods done, and shipper summary{% endblock %}
+{% block title %}Business Dashboard{% endblock %}
+{% block page_title %}Business Dashboard{% endblock %}
+{% block page_subtitle %}Live operations, delivery performance, COD, revenue, customers, shippers, and province activity{% endblock %}
 
 {% block content %}
-<div class="dashboard-shell">
 
-  <div class="hero-card">
-    <div>
-      <div class="hero-eyebrow">DS EXPRESS CONTROL PANEL</div>
-      <div class="hero-title">Operations Dashboard</div>
-      <div class="hero-subtitle">
-        Customer send report, shipper done report, province report, shipper summary, 30-day goods create trend, and 30-day goods done trend.
+<!-- Full-page loading screen. It is visible immediately and hidden after the page finishes loading. -->
+<div id="dashboardLoader" class="dashboard-loader" aria-live="polite" aria-label="Loading dashboard">
+  <div class="loader-panel">
+    <div class="loader-logo-wrap" aria-hidden="true">
+      <div class="loader-ring"></div>
+      <div class="loader-logo">DS</div>
+    </div>
+    <div class="loader-title">Loading dashboard</div>
+    <div class="loader-subtitle">Preparing your latest business report…</div>
+    <div class="loader-progress"><span></span></div>
+  </div>
+</div>
+
+<div class="dashboard-shell" id="dashboardTop">
+
+  <!-- HERO / FILTER -->
+  <section class="dashboard-hero">
+    <div class="hero-glow hero-glow-one"></div>
+    <div class="hero-glow hero-glow-two"></div>
+
+    <div class="hero-copy">
+      <div class="hero-badge">
+        <span class="live-dot"></span>
+        DS EXPRESS · BUSINESS CONTROL CENTER
+      </div>
+
+      <h1>Everything important,<br><span>in one dashboard.</span></h1>
+
+      <p>
+        Check today’s operation, delivery performance, COD collection, revenue,
+        customer activity, shipper results, and province delivery data.
+      </p>
+
+      <div class="hero-date-caption">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 2v3M17 2v3M3.5 9h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>
+        </svg>
+        Showing {{ date_from|default:"selected date" }} to {{ date_to|default:"selected date" }}
       </div>
     </div>
 
-    <form method="get" class="filter-form">
+    <form method="get" class="dashboard-filter" id="dashboardFilterForm">
       <input type="hidden" name="search" value="1">
 
-      <div class="field">
-        <label>Date From</label>
-        <input type="date" name="date_from" value="{{ date_from }}">
-      </div>
-
-      <div class="field">
-        <label>Date To</label>
-        <input type="date" name="date_to" value="{{ date_to }}">
-      </div>
-
-      <button type="submit" class="btn-main">Show Dashboard</button>
-    </form>
-  </div>
-
-  <div class="kpi-grid">
-    <div class="kpi-card blue">
-      <div class="kpi-label">Created Today</div>
-      <div class="kpi-value">{{ dashboard.today_cards.created }}</div>
-    </div>
-
-    <div class="kpi-card orange">
-      <div class="kpi-label">Sent PP</div>
-      <div class="kpi-value">{{ dashboard.today_cards.sent_pp }}</div>
-    </div>
-
-    <div class="kpi-card amber">
-      <div class="kpi-label">Sent Province</div>
-      <div class="kpi-value">{{ dashboard.today_cards.sent_province }}</div>
-    </div>
-
-    <div class="kpi-card green">
-      <div class="kpi-label">Done PP</div>
-      <div class="kpi-value">{{ dashboard.today_cards.done_pp }}</div>
-    </div>
-
-    <div class="kpi-card mint">
-      <div class="kpi-label">Done Province</div>
-      <div class="kpi-value">{{ dashboard.today_cards.done_province }}</div>
-    </div>
-
-    <div class="kpi-card purple">
-      <div class="kpi-label">COD Total</div>
-      <div class="kpi-value">${{ dashboard.today_cards.cod_total|floatformat:2 }}</div>
-    </div>
-
-    <div class="kpi-card teal">
-      <div class="kpi-label">Money Received</div>
-      <div class="kpi-value">${{ dashboard.today_cards.money_received|floatformat:2 }}</div>
-    </div>
-
-    <div class="kpi-card dark">
-      <div class="kpi-label">Revenue</div>
-      <div class="kpi-value">${{ dashboard.today_cards.revenue_total|floatformat:2 }}</div>
-    </div>
-  </div>
-
-  <div class="mini-grid">
-    <div class="mini-card">
-      <div class="mini-title">PP Done %</div>
-      <div class="mini-big">{{ dashboard.today_cards.pp_done_percent }}%</div>
-      <div class="mini-sub">{{ dashboard.today_cards.done_pp }} / {{ dashboard.today_cards.sent_pp }}</div>
-    </div>
-
-    <div class="mini-card">
-      <div class="mini-title">Province Done %</div>
-      <div class="mini-big">{{ dashboard.today_cards.province_done_percent }}%</div>
-      <div class="mini-sub">{{ dashboard.today_cards.done_province }} / {{ dashboard.today_cards.sent_province }}</div>
-    </div>
-
-    <div class="mini-card">
-      <div class="mini-title">Overall Done %</div>
-      <div class="mini-big">{{ dashboard.today_cards.overall_done_percent }}%</div>
-      <div class="mini-sub">{{ dashboard.today_cards.total_done }} / {{ dashboard.today_cards.total_sent }}</div>
-    </div>
-
-    <div class="mini-card">
-      <div class="mini-title">Pending Total</div>
-      <div class="mini-big">{{ dashboard.today_cards.pending_pp|add:dashboard.today_cards.pending_province }}</div>
-      <div class="mini-sub">PP {{ dashboard.today_cards.pending_pp }} • Province {{ dashboard.today_cards.pending_province }}</div>
-    </div>
-  </div>
-
-  <div class="chart-grid one-col">
-    <div class="chart-card customer-send-card">
-      <div class="chart-head customer-send-head">
+      <div class="filter-heading">
+        <div class="filter-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5h16M7 12h10M10 19h4"/>
+          </svg>
+        </div>
         <div>
-          <div class="chart-title">Customer Send Report</div>
-          <div class="chart-note">
-            Send today, done today, today pending, and all pending grouped by customer/shop.
-          </div>
-        </div>
-
-        <div class="customer-summary-pills">
-          <div class="customer-send-pill">
-            Send Today
-            <strong>{{ dashboard.customer_send_report.total_send|default:0 }}</strong>
-          </div>
-
-          <div class="customer-done-pill">
-            Done Today
-            <strong>{{ dashboard.customer_send_report.total_done_today|default:0 }}</strong>
-          </div>
-
-          <div class="customer-pending-pill">
-            Pending Today
-            <strong>{{ dashboard.customer_send_report.total_pending_today|default:0 }}</strong>
-          </div>
-
-          <div class="customer-all-pending-pill">
-            All Pending
-            <strong>{{ dashboard.customer_send_report.total_all_pending|default:0 }}</strong>
-          </div>
+          <strong>Report period</strong>
+          <span>Select dates and refresh</span>
         </div>
       </div>
 
+      <div class="filter-fields">
+        <label class="filter-field">
+          <span>Date from</span>
+          <input type="date" name="date_from" value="{{ date_from }}" required>
+        </label>
+
+        <label class="filter-field">
+          <span>Date to</span>
+          <input type="date" name="date_to" value="{{ date_to }}" required>
+        </label>
+      </div>
+
+      <button type="submit" class="filter-submit">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"/>
+        </svg>
+        <span>Refresh dashboard</span>
+      </button>
+    </form>
+  </section>
+
+  <!-- MOBILE SECTION SHORTCUTS -->
+  <nav class="section-shortcuts" aria-label="Dashboard sections">
+    <a href="#todayOverview">Overview</a>
+    <a href="#customerReport">Customers</a>
+    <a href="#shipperReport">Shippers</a>
+    <a href="#provinceReport">Province</a>
+    <a href="#trendReport">Trends</a>
+  </nav>
+
+  <!-- TODAY KPI -->
+  <section id="todayOverview" class="dashboard-section">
+    <div class="section-heading">
+      <div>
+        <div class="section-kicker">TODAY</div>
+        <h2>Business overview</h2>
+        <p>Fast view of today’s orders, delivery, COD, and revenue.</p>
+      </div>
+      <div class="section-status">
+        <span class="status-pulse"></span>
+        Updated with current dashboard data
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <article class="kpi-card kpi-blue">
+        <div class="kpi-top">
+          <div class="kpi-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v18M3 12h18"/>
+            </svg>
+          </div>
+          <span class="kpi-tag">New</span>
+        </div>
+        <div class="kpi-label">Created today</div>
+        <div class="kpi-value">{{ dashboard.today_cards.created|default:0 }}</div>
+        <div class="kpi-foot">New parcels entered</div>
+      </article>
+
+      <article class="kpi-card kpi-orange">
+        <div class="kpi-top">
+          <div class="kpi-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 7h11v10H3zM14 10h4l3 3v4h-7zM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
+            </svg>
+          </div>
+          <span class="kpi-tag">PP</span>
+        </div>
+        <div class="kpi-label">Sent Phnom Penh</div>
+        <div class="kpi-value">{{ dashboard.today_cards.sent_pp|default:0 }}</div>
+        <div class="kpi-foot">Assigned for city delivery</div>
+      </article>
+
+      <article class="kpi-card kpi-amber">
+        <div class="kpi-top">
+          <div class="kpi-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"/>
+              <circle cx="12" cy="9" r="2.5"/>
+            </svg>
+          </div>
+          <span class="kpi-tag">PV</span>
+        </div>
+        <div class="kpi-label">Sent province</div>
+        <div class="kpi-value">{{ dashboard.today_cards.sent_province|default:0 }}</div>
+        <div class="kpi-foot">Assigned for province delivery</div>
+      </article>
+
+      <article class="kpi-card kpi-green">
+        <div class="kpi-top">
+          <div class="kpi-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m5 12 4 4L19 6"/>
+            </svg>
+          </div>
+          <span class="kpi-tag">Done</span>
+        </div>
+        <div class="kpi-label">Done Phnom Penh</div>
+        <div class="kpi-value">{{ dashboard.today_cards.done_pp|default:0 }}</div>
+        <div class="kpi-foot">City orders completed</div>
+      </article>
+
+      <article class="kpi-card kpi-mint">
+        <div class="kpi-top">
+          <div class="kpi-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 12.5 9 17l11-11"/>
+              <path d="M4 5h7"/>
+            </svg>
+          </div>
+          <span class="kpi-tag">Done</span>
+        </div>
+        <div class="kpi-label">Done province</div>
+        <div class="kpi-value">{{ dashboard.today_cards.done_province|default:0 }}</div>
+        <div class="kpi-foot">Province orders completed</div>
+      </article>
+
+      <article class="kpi-card kpi-purple">
+        <div class="kpi-top">
+          <div class="kpi-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M15.5 8.5c-.8-.7-1.8-1-3-1-1.7 0-3 .9-3 2.2 0 3.5 6 1.7 6 5 0 1.4-1.3 2.3-3.2 2.3-1.3 0-2.5-.4-3.4-1.3M12 5.5v13"/>
+            </svg>
+          </div>
+          <span class="kpi-tag">COD</span>
+        </div>
+        <div class="kpi-label">COD total</div>
+        <div class="kpi-value money">${{ dashboard.today_cards.cod_total|default:0|floatformat:2 }}</div>
+        <div class="kpi-foot">Total collect-on-delivery value</div>
+      </article>
+
+      <article class="kpi-card kpi-cyan">
+        <div class="kpi-top">
+          <div class="kpi-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 7h18v11H3zM7 7V5h10v2M7 13h4"/>
+              <circle cx="17" cy="13" r="2"/>
+            </svg>
+          </div>
+          <span class="kpi-tag">Cash</span>
+        </div>
+        <div class="kpi-label">Money received</div>
+        <div class="kpi-value money">${{ dashboard.today_cards.money_received|default:0|floatformat:2 }}</div>
+        <div class="kpi-foot">COD received from shippers</div>
+      </article>
+
+      <article class="kpi-card kpi-dark">
+        <div class="kpi-top">
+          <div class="kpi-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>
+            </svg>
+          </div>
+          <span class="kpi-tag">Income</span>
+        </div>
+        <div class="kpi-label">Revenue</div>
+        <div class="kpi-value money">${{ dashboard.today_cards.revenue_total|default:0|floatformat:2 }}</div>
+        <div class="kpi-foot">Calculated operating revenue</div>
+      </article>
+    </div>
+
+    <div class="performance-grid">
+      <article class="performance-card">
+        <div class="performance-icon perf-green">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+        </div>
+        <div class="performance-content">
+          <span>PP completion</span>
+          <strong>{{ dashboard.today_cards.pp_done_percent|default:0 }}%</strong>
+          <small>{{ dashboard.today_cards.done_pp|default:0 }} done from {{ dashboard.today_cards.sent_pp|default:0 }} sent</small>
+        </div>
+        <div class="progress-track"><span style="--progress: {{ dashboard.today_cards.pp_done_percent|default:0 }}%;"></span></div>
+      </article>
+
+      <article class="performance-card">
+        <div class="performance-icon perf-amber">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </div>
+        <div class="performance-content">
+          <span>Province completion</span>
+          <strong>{{ dashboard.today_cards.province_done_percent|default:0 }}%</strong>
+          <small>{{ dashboard.today_cards.done_province|default:0 }} done from {{ dashboard.today_cards.sent_province|default:0 }} sent</small>
+        </div>
+        <div class="progress-track"><span style="--progress: {{ dashboard.today_cards.province_done_percent|default:0 }}%;"></span></div>
+      </article>
+
+      <article class="performance-card">
+        <div class="performance-icon perf-blue">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M4 4v8h8"/></svg>
+        </div>
+        <div class="performance-content">
+          <span>Overall completion</span>
+          <strong>{{ dashboard.today_cards.overall_done_percent|default:0 }}%</strong>
+          <small>{{ dashboard.today_cards.total_done|default:0 }} done from {{ dashboard.today_cards.total_sent|default:0 }} sent</small>
+        </div>
+        <div class="progress-track"><span style="--progress: {{ dashboard.today_cards.overall_done_percent|default:0 }}%;"></span></div>
+      </article>
+
+      <article class="performance-card pending-card">
+        <div class="performance-icon perf-red">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+        <div class="performance-content">
+          <span>Pending total</span>
+          <strong>{{ dashboard.today_cards.pending_pp|default:0|add:dashboard.today_cards.pending_province|default:0 }}</strong>
+          <small>PP {{ dashboard.today_cards.pending_pp|default:0 }} · Province {{ dashboard.today_cards.pending_province|default:0 }}</small>
+        </div>
+        <div class="pending-bar"><span></span></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- CUSTOMER REPORT -->
+  <section id="customerReport" class="report-card accent-blue dashboard-section">
+    <div class="report-header">
+      <div class="report-title-wrap">
+        <div class="report-icon icon-blue">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9" cy="8" r="3"/>
+            <path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4.6V20"/>
+          </svg>
+        </div>
+        <div>
+          <div class="section-kicker">CUSTOMERS</div>
+          <h2>Customer send report</h2>
+          <p>Today’s send, completed, pending, and total pending grouped by customer or shop.</p>
+        </div>
+      </div>
+
+      <div class="summary-chip-grid four-chips">
+        <div class="summary-chip chip-blue">
+          <span>Send today</span>
+          <strong>{{ dashboard.customer_send_report.total_send|default:0 }}</strong>
+        </div>
+        <div class="summary-chip chip-green">
+          <span>Done today</span>
+          <strong>{{ dashboard.customer_send_report.total_done_today|default:0 }}</strong>
+        </div>
+        <div class="summary-chip chip-orange">
+          <span>Pending today</span>
+          <strong>{{ dashboard.customer_send_report.total_pending_today|default:0 }}</strong>
+        </div>
+        <div class="summary-chip chip-red">
+          <span>All pending</span>
+          <strong>{{ dashboard.customer_send_report.total_all_pending|default:0 }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-shell">
+      <div class="table-scroll-hint">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M3 12h18"/></svg>
+        Swipe table left or right on phone
+      </div>
       <div class="table-wrap">
-        <table class="cool-table customer-send-table">
+        <table class="modern-table mobile-card-table customer-send-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th class="index-col">#</th>
               <th>Customer / Shop</th>
-              <th>Send Today</th>
-              <th>Done Today</th>
-              <th>Pending Today</th>
-              <th>All Pending</th>
+              <th class="number-col">Send today</th>
+              <th class="number-col">Done today</th>
+              <th class="number-col">Pending today</th>
+              <th class="number-col">All pending</th>
             </tr>
           </thead>
           <tbody>
             {% for r in dashboard.customer_send_report.rows %}
               <tr>
-                <td>{{ forloop.counter }}</td>
-                <td><strong>{{ r.shop_name }}</strong></td>
-                <td class="num"><strong>{{ r.send_today }}</strong></td>
-                <td class="num">{{ r.done_today }}</td>
-                <td class="num">{{ r.pending_today }}</td>
-                <td class="num"><strong>{{ r.all_pending }}</strong></td>
+                <td data-label="#" class="row-number">{{ forloop.counter }}</td>
+                <td data-label="Customer / Shop" class="primary-cell">
+                  <span class="name-avatar">{{ r.shop_name|slice:":1"|upper }}</span>
+                  <strong>{{ r.shop_name }}</strong>
+                </td>
+                <td data-label="Send today" class="num"><span class="table-badge badge-blue">{{ r.send_today }}</span></td>
+                <td data-label="Done today" class="num"><span class="table-badge badge-green">{{ r.done_today }}</span></td>
+                <td data-label="Pending today" class="num"><span class="table-badge badge-orange">{{ r.pending_today }}</span></td>
+                <td data-label="All pending" class="num"><span class="table-badge badge-red">{{ r.all_pending }}</span></td>
               </tr>
             {% empty %}
-              <tr>
-                <td colspan="6" class="empty-row">No customer send data.</td>
+              <tr class="empty-table-row">
+                <td colspan="6">
+                  <div class="empty-state">
+                    <div class="empty-icon">—</div>
+                    <strong>No customer send data</strong>
+                    <span>There is no customer activity in this period.</span>
+                  </div>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="chart-grid one-col">
-    <div class="chart-card shipper-done-card">
-      <div class="chart-head shipper-done-head">
-        <div>
-          <div class="chart-title">Shipper Done Today Report</div>
-          <div class="chart-note">
-            PP and Province shipments completed today by shipper.
-          </div>
+  <!-- SHIPPER DONE -->
+  <section id="shipperReport" class="report-card accent-purple dashboard-section">
+    <div class="report-header">
+      <div class="report-title-wrap">
+        <div class="report-icon icon-purple">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 7h11v10H3zM14 10h4l3 3v4h-7zM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
+          </svg>
         </div>
-
-        <div class="shipper-done-pills">
-          <div class="shipper-pp-pill">
-            Done PP
-            <strong>{{ dashboard.shipper_done_today_report.total_done_pp|default:0 }}</strong>
-          </div>
-
-          <div class="shipper-pv-pill">
-            Done PV
-            <strong>{{ dashboard.shipper_done_today_report.total_done_pv|default:0 }}</strong>
-          </div>
-
-          <div class="shipper-total-pill">
-            Total Done
-            <strong>{{ dashboard.shipper_done_today_report.total_done|default:0 }}</strong>
-          </div>
+        <div>
+          <div class="section-kicker">SHIPPERS</div>
+          <h2>Shipper done today</h2>
+          <p>Phnom Penh and province shipments completed today by each shipper.</p>
         </div>
       </div>
 
+      <div class="summary-chip-grid three-chips">
+        <div class="summary-chip chip-green">
+          <span>Done PP</span>
+          <strong>{{ dashboard.shipper_done_today_report.total_done_pp|default:0 }}</strong>
+        </div>
+        <div class="summary-chip chip-amber">
+          <span>Done province</span>
+          <strong>{{ dashboard.shipper_done_today_report.total_done_pv|default:0 }}</strong>
+        </div>
+        <div class="summary-chip chip-purple">
+          <span>Total done</span>
+          <strong>{{ dashboard.shipper_done_today_report.total_done|default:0 }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-shell">
+      <div class="table-scroll-hint">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M3 12h18"/></svg>
+        Swipe table left or right on phone
+      </div>
       <div class="table-wrap">
-        <table class="cool-table shipper-done-table">
+        <table class="modern-table mobile-card-table shipper-done-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th class="index-col">#</th>
               <th>Shipper</th>
-              <th>Done Today PP</th>
-              <th>Done Today PV</th>
-              <th>Total Done Today</th>
+              <th class="number-col">Done PP</th>
+              <th class="number-col">Done province</th>
+              <th class="number-col">Total done</th>
             </tr>
           </thead>
           <tbody>
             {% for r in dashboard.shipper_done_today_report.rows %}
               <tr>
-                <td>{{ forloop.counter }}</td>
-                <td><strong>{{ r.shipper_name }}</strong></td>
-                <td class="num">{{ r.done_pp }}</td>
-                <td class="num">{{ r.done_pv }}</td>
-                <td class="num"><strong>{{ r.total_done }}</strong></td>
+                <td data-label="#" class="row-number">{{ forloop.counter }}</td>
+                <td data-label="Shipper" class="primary-cell">
+                  <span class="name-avatar purple-avatar">{{ r.shipper_name|slice:":1"|upper }}</span>
+                  <strong>{{ r.shipper_name }}</strong>
+                </td>
+                <td data-label="Done PP" class="num"><span class="table-badge badge-green">{{ r.done_pp }}</span></td>
+                <td data-label="Done province" class="num"><span class="table-badge badge-amber">{{ r.done_pv }}</span></td>
+                <td data-label="Total done" class="num"><span class="table-badge badge-purple">{{ r.total_done }}</span></td>
               </tr>
             {% empty %}
-              <tr>
-                <td colspan="5" class="empty-row">No shipper done today data.</td>
+              <tr class="empty-table-row">
+                <td colspan="5">
+                  <div class="empty-state">
+                    <div class="empty-icon">—</div>
+                    <strong>No shipper completion data</strong>
+                    <span>No completed delivery was found for today.</span>
+                  </div>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="chart-grid one-col">
-    <div class="chart-card province-report-card">
-      <div class="chart-head province-head">
-        <div>
-          <div class="chart-title">Province Send Report</div>
-          <div class="chart-note">
-            Total send to province by shipper and by shop for selected date range.
-          </div>
+  <!-- PROVINCE REPORT -->
+  <section id="provinceReport" class="report-card accent-green dashboard-section">
+    <div class="report-header">
+      <div class="report-title-wrap">
+        <div class="report-icon icon-green">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"/>
+            <circle cx="12" cy="9" r="2.5"/>
+          </svg>
         </div>
-
-        <div class="province-total-pill">
-          Total Send To Province
-          <strong>{{ dashboard.province_send_report.total_send }}</strong>
+        <div>
+          <div class="section-kicker">PROVINCE</div>
+          <h2>Province send report</h2>
+          <p>Total province parcels by shipper and shop for the selected date period.</p>
         </div>
       </div>
 
-      <div class="province-grid">
-        <div class="province-panel">
-          <div class="sub-title">Total Send By Shipper</div>
+      <div class="province-total-card">
+        <span>Total sent to province</span>
+        <strong>{{ dashboard.province_send_report.total_send|default:0 }}</strong>
+      </div>
+    </div>
 
-          <div class="chart-box province-chart-box">
-            <canvas id="provinceShipperChart"></canvas>
+    <div class="province-grid">
+      <article class="inner-panel">
+        <div class="inner-panel-head">
+          <div>
+            <span class="panel-kicker">BY SHIPPER</span>
+            <h3>Total sent by shipper</h3>
           </div>
+          <div class="panel-mini-icon icon-green">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+          </div>
+        </div>
 
+        <div class="chart-box province-chart-box">
+          <canvas id="provinceShipperChart"></canvas>
+          <div class="chart-empty" data-chart-empty="provinceShipperChart">No chart data</div>
+        </div>
+
+        <div class="table-shell compact-shell">
           <div class="table-wrap">
-            <table class="cool-table">
+            <table class="modern-table compact-table mobile-card-table">
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th class="index-col">#</th>
                   <th>Shipper</th>
-                  <th>Total Send</th>
+                  <th class="number-col">Total sent</th>
                 </tr>
               </thead>
               <tbody>
                 {% for r in dashboard.province_send_report.shipper_rows %}
                   <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ r.shipper_name }}</td>
-                    <td class="num">{{ r.total }}</td>
+                    <td data-label="#" class="row-number">{{ forloop.counter }}</td>
+                    <td data-label="Shipper" class="primary-cell">
+                      <span class="name-avatar green-avatar">{{ r.shipper_name|slice:":1"|upper }}</span>
+                      <strong>{{ r.shipper_name }}</strong>
+                    </td>
+                    <td data-label="Total sent" class="num"><span class="table-badge badge-green">{{ r.total }}</span></td>
                   </tr>
                 {% empty %}
-                  <tr>
-                    <td colspan="3" class="empty-row">No province send data.</td>
+                  <tr class="empty-table-row">
+                    <td colspan="3"><div class="empty-state small-empty"><strong>No province shipper data</strong></div></td>
                   </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
         </div>
+      </article>
 
-        <div class="province-panel">
-          <div class="sub-title">Shop Send By Shipper</div>
-
-          <div class="chart-box province-chart-box">
-            <canvas id="provinceShopShipperChart"></canvas>
+      <article class="inner-panel wide-panel">
+        <div class="inner-panel-head">
+          <div>
+            <span class="panel-kicker">BY SHOP + SHIPPER</span>
+            <h3>Shop province activity</h3>
           </div>
+          <div class="panel-mini-icon icon-amber">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          </div>
+        </div>
 
-          <div class="table-wrap">
-            <table class="cool-table">
+        <div class="chart-box province-chart-box">
+          <canvas id="provinceShopShipperChart"></canvas>
+          <div class="chart-empty" data-chart-empty="provinceShopShipperChart">No chart data</div>
+        </div>
+
+        <div class="table-shell compact-shell">
+          <div class="table-scroll-hint always-hint">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M3 12h18"/></svg>
+            Swipe to see each shipper column
+          </div>
+          <div class="table-wrap province-matrix-wrap">
+            <table class="modern-table compact-table province-matrix-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Shop</th>
-                  <th>Total</th>
+                  <th class="sticky-index">#</th>
+                  <th class="sticky-name">Shop</th>
+                  <th class="number-col">Total</th>
                   {% for shipper_name in dashboard.province_send_report.shipper_columns %}
-                    <th>{{ shipper_name }}</th>
+                    <th class="number-col">{{ shipper_name }}</th>
                   {% endfor %}
                 </tr>
               </thead>
               <tbody>
                 {% for r in dashboard.province_send_report.shop_rows %}
                   <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ r.shop_name }}</td>
-                    <td class="num">{{ r.total }}</td>
+                    <td class="sticky-index row-number">{{ forloop.counter }}</td>
+                    <td class="sticky-name"><strong>{{ r.shop_name }}</strong></td>
+                    <td class="num"><span class="table-badge badge-green">{{ r.total }}</span></td>
                     {% for count in r.shipper_counts %}
                       <td class="num">{{ count }}</td>
                     {% endfor %}
                   </tr>
                 {% empty %}
-                  <tr>
-                    <td colspan="10" class="empty-row">No shop province data.</td>
+                  <tr class="empty-table-row">
+                    <td colspan="20"><div class="empty-state small-empty"><strong>No shop province data</strong></div></td>
                   </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
-
         </div>
-      </div>
+      </article>
     </div>
-  </div>
+  </section>
 
-  <div class="chart-grid two-col">
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
-          <div class="chart-title">30 Days Trend (Goods Create)</div>
-          <div class="chart-note">Created, shipment fee, expense, and revenue</div>
-        </div>
-      </div>
-      <div class="chart-box">
-        <canvas id="trend30Chart"></canvas>
+  <!-- TRENDS + SHIPPER SUMMARY -->
+  <section id="trendReport" class="dashboard-section">
+    <div class="section-heading">
+      <div>
+        <div class="section-kicker">ANALYTICS</div>
+        <h2>30-day performance</h2>
+        <p>Review order creation, operating value, delivery completion, and shipper COD balance.</p>
       </div>
     </div>
 
-    <div class="chart-card">
-      <div class="chart-head">
-        <div>
-          <div class="chart-title">Shipper Summary</div>
-          <div class="chart-note">Normal done orders and COD summary by shipper</div>
+    <div class="analytics-grid">
+      <article class="report-card chart-report-card accent-indigo">
+        <div class="mini-report-head">
+          <div>
+            <div class="section-kicker">GOODS CREATED</div>
+            <h3>Created orders and value</h3>
+            <p>Created, shipment fee, expense, and revenue during the last 30 days.</p>
+          </div>
+          <div class="panel-mini-icon icon-indigo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/></svg>
+          </div>
         </div>
-      </div>
+        <div class="chart-box trend-chart-box">
+          <canvas id="trend30Chart"></canvas>
+          <div class="chart-empty" data-chart-empty="trend30Chart">No trend data</div>
+        </div>
+      </article>
 
-      <div class="table-wrap">
-        <table class="cool-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Shipper</th>
-              <th>Done Orders</th>
-              <th>COD Total</th>
-              <th>Received</th>
-              <th>Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in dashboard.shipper_rows %}
-              <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{{ r.shipper_name }}</td>
-                <td class="num">{{ r.done_orders }}</td>
-                <td class="num">${{ r.cod_total|floatformat:2 }}</td>
-                <td class="num">${{ r.received|floatformat:2 }}</td>
-                <td class="num {% if r.balance < 0 %}neg{% endif %}">${{ r.balance|floatformat:2 }}</td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="6" class="empty-row">No data.</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <article class="report-card accent-slate">
+        <div class="mini-report-head">
+          <div>
+            <div class="section-kicker">COD CONTROL</div>
+            <h3>Shipper summary</h3>
+            <p>Done orders, COD total, received amount, and remaining balance.</p>
+          </div>
+          <div class="panel-mini-icon icon-slate">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v11H3zM7 7V5h10v2M7 13h4"/><circle cx="17" cy="13" r="2"/></svg>
+          </div>
+        </div>
+
+        <div class="table-shell compact-shell shipper-summary-shell">
+          <div class="table-wrap">
+            <table class="modern-table compact-table mobile-card-table shipper-summary-table">
+              <thead>
+                <tr>
+                  <th class="index-col">#</th>
+                  <th>Shipper</th>
+                  <th class="number-col">Done</th>
+                  <th class="number-col">COD total</th>
+                  <th class="number-col">Received</th>
+                  <th class="number-col">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in dashboard.shipper_rows %}
+                  <tr>
+                    <td data-label="#" class="row-number">{{ forloop.counter }}</td>
+                    <td data-label="Shipper" class="primary-cell">
+                      <span class="name-avatar slate-avatar">{{ r.shipper_name|slice:":1"|upper }}</span>
+                      <strong>{{ r.shipper_name }}</strong>
+                    </td>
+                    <td data-label="Done orders" class="num">{{ r.done_orders }}</td>
+                    <td data-label="COD total" class="num">${{ r.cod_total|floatformat:2 }}</td>
+                    <td data-label="Received" class="num"><span class="money-positive">${{ r.received|floatformat:2 }}</span></td>
+                    <td data-label="Balance" class="num {% if r.balance < 0 %}negative-value{% endif %}">${{ r.balance|floatformat:2 }}</td>
+                  </tr>
+                {% empty %}
+                  <tr class="empty-table-row">
+                    <td colspan="6"><div class="empty-state"><strong>No shipper summary data</strong></div></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
     </div>
-  </div>
 
-  <div class="chart-grid one-col">
-    <div class="chart-card">
-      <div class="chart-head">
+    <article class="report-card chart-report-card accent-green done-trend-card">
+      <div class="mini-report-head">
         <div>
-          <div class="chart-title">30 Days Trend (Goods Done)</div>
-          <div class="chart-note">Show Done PP, Done Province, and Total on each stacked bar</div>
+          <div class="section-kicker">GOODS COMPLETED</div>
+          <h3>30-day delivery completion</h3>
+          <p>Stacked daily view of completed Phnom Penh, province, and total orders.</p>
+        </div>
+        <div class="panel-mini-icon icon-green">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="9"/></svg>
         </div>
       </div>
-      <div class="chart-box chart-box-xl">
+      <div class="chart-box done-chart-box">
         <canvas id="done30Chart"></canvas>
+        <div class="chart-empty" data-chart-empty="done30Chart">No completed-order data</div>
       </div>
-    </div>
-  </div>
+    </article>
+  </section>
 
+  <a href="#dashboardTop" class="back-to-top" aria-label="Back to top">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>
+  </a>
 </div>
 
 {{ dashboard.trend_30_days|json_script:"trend30-data" }}
@@ -395,801 +670,2190 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
-  Chart.register(ChartDataLabels);
+(function () {
+  "use strict";
 
-  const trend30 = JSON.parse(document.getElementById("trend30-data").textContent);
-  const provinceSend = JSON.parse(document.getElementById("province-send-data").textContent);
+  const loader = document.getElementById("dashboardLoader");
+  const filterForm = document.getElementById("dashboardFilterForm");
 
-  const trendLabels = trend30.map(x => x.date);
+  function showLoader(message) {
+    if (!loader) return;
+    const subtitle = loader.querySelector(".loader-subtitle");
+    if (subtitle && message) subtitle.textContent = message;
+    loader.classList.remove("is-hidden");
+    document.body.classList.add("dashboard-is-loading");
+  }
+
+  function hideLoader() {
+    if (!loader) return;
+    loader.classList.add("is-hidden");
+    document.body.classList.remove("dashboard-is-loading");
+  }
+
+  window.addEventListener("load", function () {
+    window.setTimeout(hideLoader, 180);
+  });
+
+  window.addEventListener("pageshow", function () {
+    window.setTimeout(hideLoader, 80);
+  });
+
+  if (filterForm) {
+    filterForm.addEventListener("submit", function () {
+      showLoader("Refreshing your selected report period…");
+    });
+  }
+
+  document.addEventListener("click", function (event) {
+    const link = event.target.closest("a");
+    if (!link) return;
+
+    const href = link.getAttribute("href") || "";
+    const isHashLink = href.startsWith("#");
+    const isNewTab = link.target === "_blank";
+    const isDownload = link.hasAttribute("download");
+    const isJavascript = href.toLowerCase().startsWith("javascript:");
+
+    if (!isHashLink && !isNewTab && !isDownload && !isJavascript) {
+      showLoader("Opening page…");
+    }
+  });
+
+  const trendDataElement = document.getElementById("trend30-data");
+  const provinceDataElement = document.getElementById("province-send-data");
+
+  let trend30 = [];
+  let provinceSend = {};
+
+  try {
+    trend30 = trendDataElement ? JSON.parse(trendDataElement.textContent) : [];
+  } catch (error) {
+    console.error("Could not read trend dashboard data:", error);
+  }
+
+  try {
+    provinceSend = provinceDataElement ? JSON.parse(provinceDataElement.textContent) : {};
+  } catch (error) {
+    console.error("Could not read province dashboard data:", error);
+  }
+
+  if (typeof Chart === "undefined") {
+    document.querySelectorAll(".chart-empty").forEach(function (element) {
+      element.classList.add("is-visible");
+      element.textContent = "Chart library could not load";
+    });
+    return;
+  }
+
+  if (typeof ChartDataLabels !== "undefined") {
+    Chart.register(ChartDataLabels);
+  }
+
+  const mobileQuery = window.matchMedia("(max-width: 680px)");
+  const isMobile = function () { return mobileQuery.matches; };
+
+  function numberFormatter(value) {
+    const number = Number(value || 0);
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(number);
+  }
+
+  function moneyFormatter(value) {
+    const number = Number(value || 0);
+    return "$" + new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(number);
+  }
+
+  function showEmptyChart(canvasId, shouldShow) {
+    const empty = document.querySelector('[data-chart-empty="' + canvasId + '"]');
+    if (empty) empty.classList.toggle("is-visible", Boolean(shouldShow));
+  }
 
   const commonLegend = {
     position: "bottom",
     labels: {
       usePointStyle: true,
-      boxWidth: 10,
-      padding: 16,
+      pointStyle: "circle",
+      boxWidth: 8,
+      boxHeight: 8,
+      padding: isMobile() ? 12 : 18,
+      color: "#475569",
       font: {
-        size: 11,
+        size: isMobile() ? 10 : 11,
         weight: "700"
       }
     }
   };
 
-  const commonDatalabels = {
-    color: "#111827",
-    clamp: true,
-    clip: false,
-    font: {
-      weight: "700",
-      size: 10
-    }
-  };
+  const gridColor = "rgba(148, 163, 184, .16)";
+  const tickColor = "#64748b";
 
-  new Chart(document.getElementById("provinceShipperChart"), {
-    type: "bar",
-    data: {
-      labels: provinceSend.shipper_chart_labels || [],
-      datasets: [
-        {
-          label: "Total Send",
-          data: provinceSend.shipper_chart_data || [],
-          backgroundColor: "#16a34a",
-          borderRadius: 8,
-          maxBarThickness: 52,
+  function baseTooltip() {
+    return {
+      backgroundColor: "rgba(15, 23, 42, .95)",
+      titleColor: "#ffffff",
+      bodyColor: "#e2e8f0",
+      padding: 12,
+      cornerRadius: 12,
+      displayColors: true,
+      titleFont: { weight: "800" },
+      bodyFont: { weight: "600" }
+    };
+  }
+
+  function buildProvinceShipperChart() {
+    const canvas = document.getElementById("provinceShipperChart");
+    if (!canvas) return;
+
+    const labels = provinceSend.shipper_chart_labels || [];
+    const values = provinceSend.shipper_chart_data || [];
+    showEmptyChart("provinceShipperChart", labels.length === 0);
+    if (!labels.length) return;
+
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Total sent",
+          data: values,
+          backgroundColor: "rgba(16, 185, 129, .82)",
+          borderColor: "#059669",
+          borderWidth: 1,
+          borderRadius: 10,
+          borderSkipped: false,
+          maxBarThickness: isMobile() ? 34 : 48
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 22, left: 4, right: 8, bottom: 0 } },
+        plugins: {
+          legend: { display: false },
           datalabels: {
+            color: "#0f172a",
             anchor: "end",
             align: "top",
-            formatter: function(value) {
-              return value ? value : "";
+            clamp: true,
+            font: { weight: "800", size: isMobile() ? 9 : 11 },
+            formatter: function (value) { return value ? numberFormatter(value) : ""; }
+          },
+          tooltip: Object.assign(baseTooltip(), {
+            callbacks: {
+              label: function (context) { return " Total sent: " + numberFormatter(context.raw); }
             }
-          }
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels,
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return "Total Send: " + (context.raw || 0);
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            maxRotation: 0,
-            autoSkip: false
-          }
+          })
         },
-        y: {
-          beginAtZero: true,
-          ticks: { precision: 0 },
-          title: {
-            display: true,
-            text: "Parcels"
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: tickColor,
+              font: { size: isMobile() ? 9 : 11, weight: "700" },
+              maxRotation: isMobile() ? 40 : 0,
+              minRotation: 0,
+              autoSkip: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: gridColor },
+            ticks: { color: tickColor, precision: 0, font: { size: 10, weight: "600" } }
           }
         }
       }
-    }
-  });
+    });
+  }
 
-  new Chart(document.getElementById("provinceShopShipperChart"), {
-    type: "bar",
-    data: {
-      labels: provinceSend.shop_shipper_chart_labels || [],
-      datasets: [
-        {
-          label: "Shop / Shipper Send",
-          data: provinceSend.shop_shipper_chart_data || [],
-          backgroundColor: "#f59e0b",
-          borderRadius: 8,
-          maxBarThickness: 42,
+  function buildProvinceShopChart() {
+    const canvas = document.getElementById("provinceShopShipperChart");
+    if (!canvas) return;
+
+    const labels = provinceSend.shop_shipper_chart_labels || [];
+    const values = provinceSend.shop_shipper_chart_data || [];
+    showEmptyChart("provinceShopShipperChart", labels.length === 0);
+    if (!labels.length) return;
+
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Shop / shipper sent",
+          data: values,
+          backgroundColor: "rgba(245, 158, 11, .82)",
+          borderColor: "#d97706",
+          borderWidth: 1,
+          borderRadius: 10,
+          borderSkipped: false,
+          maxBarThickness: isMobile() ? 28 : 40
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 22, left: 4, right: 8, bottom: 0 } },
+        plugins: {
+          legend: { display: false },
           datalabels: {
+            color: "#0f172a",
             anchor: "end",
             align: "top",
-            formatter: function(value) {
-              return value ? value : "";
+            clamp: true,
+            font: { weight: "800", size: isMobile() ? 8 : 10 },
+            formatter: function (value) { return value ? numberFormatter(value) : ""; }
+          },
+          tooltip: Object.assign(baseTooltip(), {
+            callbacks: {
+              label: function (context) { return " Total sent: " + numberFormatter(context.raw); }
             }
-          }
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels,
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return "Total Send: " + (context.raw || 0);
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            maxRotation: 45,
-            minRotation: 0,
-            autoSkip: false
-          }
+          })
         },
-        y: {
-          beginAtZero: true,
-          ticks: { precision: 0 },
-          title: {
-            display: true,
-            text: "Parcels"
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: tickColor,
+              font: { size: isMobile() ? 8 : 10, weight: "700" },
+              maxRotation: isMobile() ? 55 : 40,
+              minRotation: isMobile() ? 25 : 0,
+              autoSkip: isMobile(),
+              maxTicksLimit: isMobile() ? 8 : 16
+            }
+          },
+          y: {
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: gridColor },
+            ticks: { color: tickColor, precision: 0, font: { size: 10, weight: "600" } }
           }
         }
       }
-    }
-  });
+    });
+  }
 
-  new Chart(document.getElementById("trend30Chart"), {
-    type: "line",
-    data: {
-      labels: trendLabels,
-      datasets: [
-        {
-          label: "Created",
-          data: trend30.map(x => x.created || 0),
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59, 130, 246, 0.12)",
-          tension: 0.35,
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: false,
-          datalabels: {
-            align: "top",
-            anchor: "end",
-            formatter: (v) => v ? v : ""
-          }
-        },
-        {
-          label: "Shipment Fee",
-          data: trend30.map(x => x.shipment_fee || 0),
-          borderColor: "#8b5cf6",
-          backgroundColor: "rgba(139, 92, 246, 0.12)",
-          tension: 0.35,
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: false,
-          datalabels: {
-            display: false
-          }
-        },
-        {
-          label: "Expense",
-          data: trend30.map(x => x.expense || 0),
-          borderColor: "#f59e0b",
-          backgroundColor: "rgba(245, 158, 11, 0.12)",
-          tension: 0.35,
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: false,
-          datalabels: {
-            display: false
-          }
-        },
-        {
-          label: "Revenue",
-          data: trend30.map(x => x.revenue || 0),
-          borderColor: "#10b981",
-          backgroundColor: "rgba(16, 185, 129, 0.12)",
-          tension: 0.35,
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: false,
-          datalabels: {
-            align: "top",
-            anchor: "end",
-            formatter: (v) => v ? v : ""
-          }
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      plugins: {
-        legend: commonLegend,
-        datalabels: commonDatalabels
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { maxRotation: 0, autoSkip: true }
-        },
-        y: {
-          beginAtZero: true,
-          ticks: { precision: 0 }
-        }
-      }
-    }
-  });
+  function buildTrendChart() {
+    const canvas = document.getElementById("trend30Chart");
+    if (!canvas) return;
 
-  new Chart(document.getElementById("done30Chart"), {
-    type: "bar",
-    data: {
-      labels: trendLabels,
-      datasets: [
-        {
-          label: "Done PP",
-          data: trend30.map(x => x.done_pp || 0),
-          backgroundColor: "#22c55e",
-          borderRadius: 6,
-          maxBarThickness: 34,
-          stack: "done",
-          datalabels: {
-            color: "#111827",
-            anchor: "center",
-            align: "center",
-            font: {
-              weight: "700",
-              size: 10
-            },
-            formatter: function(value) {
-              return value ? value : "";
-            }
+    const labels = trend30.map(function (item) { return item.date; });
+    showEmptyChart("trend30Chart", labels.length === 0);
+    if (!labels.length) return;
+
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Created",
+            data: trend30.map(function (item) { return item.created || 0; }),
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37, 99, 235, .10)",
+            pointBackgroundColor: "#ffffff",
+            pointBorderColor: "#2563eb",
+            pointBorderWidth: 2,
+            pointRadius: isMobile() ? 2 : 3,
+            pointHoverRadius: 5,
+            borderWidth: 3,
+            tension: .36,
+            fill: true,
+            yAxisID: "yOrders"
+          },
+          {
+            label: "Shipment fee",
+            data: trend30.map(function (item) { return item.shipment_fee || 0; }),
+            borderColor: "#7c3aed",
+            backgroundColor: "rgba(124, 58, 237, .08)",
+            pointRadius: isMobile() ? 1 : 2,
+            borderWidth: 2,
+            tension: .36,
+            fill: false,
+            yAxisID: "yMoney"
+          },
+          {
+            label: "Expense",
+            data: trend30.map(function (item) { return item.expense || 0; }),
+            borderColor: "#f59e0b",
+            backgroundColor: "rgba(245, 158, 11, .08)",
+            pointRadius: isMobile() ? 1 : 2,
+            borderWidth: 2,
+            tension: .36,
+            fill: false,
+            yAxisID: "yMoney"
+          },
+          {
+            label: "Revenue",
+            data: trend30.map(function (item) { return item.revenue || 0; }),
+            borderColor: "#10b981",
+            backgroundColor: "rgba(16, 185, 129, .08)",
+            pointRadius: isMobile() ? 1 : 2,
+            borderWidth: 3,
+            tension: .36,
+            fill: false,
+            yAxisID: "yMoney"
           }
-        },
-        {
-          label: "Done Province",
-          data: trend30.map(x => x.done_province || 0),
-          backgroundColor: "#f59e0b",
-          borderRadius: 6,
-          maxBarThickness: 34,
-          stack: "done",
-          datalabels: {
-            labels: {
-              province: {
-                color: "#111827",
-                anchor: "center",
-                align: "center",
-                font: {
-                  weight: "700",
-                  size: 10
-                },
-                formatter: function(value) {
-                  return value ? value : "";
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 12, right: 4 } },
+        plugins: {
+          legend: commonLegend,
+          datalabels: { display: false },
+          tooltip: Object.assign(baseTooltip(), {
+            callbacks: {
+              label: function (context) {
+                const value = context.raw || 0;
+                if (context.dataset.yAxisID === "yMoney") {
+                  return " " + context.dataset.label + ": " + moneyFormatter(value);
                 }
-              },
-              total: {
-                color: "#111827",
-                anchor: "end",
-                align: "top",
-                offset: 4,
-                font: {
-                  weight: "800",
-                  size: 11
+                return " " + context.dataset.label + ": " + numberFormatter(value);
+              }
+            }
+          })
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: tickColor,
+              font: { size: isMobile() ? 8 : 10, weight: "600" },
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: isMobile() ? 7 : 12
+            }
+          },
+          yOrders: {
+            type: "linear",
+            position: "left",
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: gridColor },
+            ticks: { color: tickColor, precision: 0, font: { size: 9, weight: "600" } },
+            title: { display: !isMobile(), text: "Orders", color: tickColor, font: { weight: "700" } }
+          },
+          yMoney: {
+            type: "linear",
+            position: "right",
+            beginAtZero: true,
+            border: { display: false },
+            grid: { drawOnChartArea: false },
+            ticks: {
+              color: tickColor,
+              font: { size: 9, weight: "600" },
+              callback: function (value) { return "$" + numberFormatter(value); }
+            },
+            title: { display: !isMobile(), text: "USD", color: tickColor, font: { weight: "700" } }
+          }
+        }
+      }
+    });
+  }
+
+  function buildDoneChart() {
+    const canvas = document.getElementById("done30Chart");
+    if (!canvas) return;
+
+    const labels = trend30.map(function (item) { return item.date; });
+    showEmptyChart("done30Chart", labels.length === 0);
+    if (!labels.length) return;
+
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Done PP",
+            data: trend30.map(function (item) { return item.done_pp || 0; }),
+            backgroundColor: "rgba(34, 197, 94, .86)",
+            borderColor: "#16a34a",
+            borderWidth: 1,
+            borderRadius: 7,
+            borderSkipped: false,
+            maxBarThickness: isMobile() ? 20 : 30,
+            stack: "done",
+            datalabels: {
+              color: "#064e3b",
+              anchor: "center",
+              align: "center",
+              font: { weight: "900", size: isMobile() ? 7 : 9 },
+              formatter: function (value) { return value ? value : ""; }
+            }
+          },
+          {
+            label: "Done province",
+            data: trend30.map(function (item) { return item.done_province || 0; }),
+            backgroundColor: "rgba(245, 158, 11, .86)",
+            borderColor: "#d97706",
+            borderWidth: 1,
+            borderRadius: 7,
+            borderSkipped: false,
+            maxBarThickness: isMobile() ? 20 : 30,
+            stack: "done",
+            datalabels: {
+              labels: {
+                province: {
+                  color: "#78350f",
+                  anchor: "center",
+                  align: "center",
+                  font: { weight: "900", size: isMobile() ? 7 : 9 },
+                  formatter: function (value) { return value ? value : ""; }
                 },
-                formatter: function(value, context) {
-                  const index = context.dataIndex;
-                  const total = trend30[index].total_done || 0;
-                  return total ? total : "";
+                total: {
+                  color: "#0f172a",
+                  anchor: "end",
+                  align: "top",
+                  offset: 2,
+                  font: { weight: "900", size: isMobile() ? 8 : 10 },
+                  formatter: function (value, context) {
+                    const row = trend30[context.dataIndex] || {};
+                    return row.total_done || "";
+                  }
                 }
               }
             }
           }
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
+        ]
       },
-      plugins: {
-        legend: commonLegend,
-        datalabels: {
-          clamp: true,
-          clip: false
-        },
-        tooltip: {
-          callbacks: {
-            footer: function(items) {
-              const index = items[0].dataIndex;
-              const row = trend30[index] || {};
-              const total = row.total_done || 0;
-              const pp = row.done_pp || 0;
-              const province = row.done_province || 0;
-              return [
-                "Done PP: " + pp,
-                "Done Province: " + province,
-                "Total Done: " + total
-              ];
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 24, left: 2, right: 2 } },
+        plugins: {
+          legend: commonLegend,
+          datalabels: { clamp: true, clip: false },
+          tooltip: Object.assign(baseTooltip(), {
+            callbacks: {
+              footer: function (items) {
+                if (!items || !items.length) return "";
+                const row = trend30[items[0].dataIndex] || {};
+                return "Total done: " + numberFormatter(row.total_done || 0);
+              }
             }
-          }
-        }
-      },
-      scales: {
-        x: {
-          stacked: true,
-          grid: { display: false },
-          ticks: { maxRotation: 0, autoSkip: true }
+          })
         },
-        y: {
-          stacked: true,
-          beginAtZero: true,
-          ticks: { precision: 0 },
-          title: {
-            display: true,
-            text: "Orders"
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: tickColor,
+              font: { size: isMobile() ? 8 : 10, weight: "600" },
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: isMobile() ? 7 : 15
+            }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: gridColor },
+            ticks: { color: tickColor, precision: 0, font: { size: 9, weight: "600" } },
+            title: { display: !isMobile(), text: "Orders", color: tickColor, font: { weight: "700" } }
           }
         }
       }
-    }
-  });
+    });
+  }
+
+  buildProvinceShipperChart();
+  buildProvinceShopChart();
+  buildTrendChart();
+  buildDoneChart();
+})();
 </script>
 
 <style>
-  .dashboard-shell{
-    display:flex;
-    flex-direction:column;
-    gap:16px;
+  :root {
+    --ds-green: #0f9f61;
+    --ds-green-dark: #087446;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e7edf4;
+    --page: #f3f7fb;
+    --card: #ffffff;
+    --shadow-sm: 0 8px 24px rgba(15, 23, 42, .06);
+    --shadow-md: 0 16px 42px rgba(15, 23, 42, .09);
+    --radius-xl: 28px;
+    --radius-lg: 22px;
+    --radius-md: 16px;
   }
 
-  .hero-card{
-    display:flex;
-    justify-content:space-between;
-    gap:18px;
-    flex-wrap:wrap;
-    padding:24px;
-    border-radius:28px;
-    background:linear-gradient(135deg, #0f172a 0%, #1e293b 52%, #334155 100%);
-    color:#fff;
-    box-shadow:0 22px 44px rgba(15, 23, 42, .18);
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 86px;
   }
 
-  .hero-eyebrow{
-    font-size:12px;
-    letter-spacing:.14em;
-    opacity:.72;
-    margin-bottom:8px;
-    font-weight:900;
+  body.dashboard-is-loading {
+    overflow: hidden;
   }
 
-  .hero-title{
-    font-size:36px;
-    font-weight:900;
-    line-height:1.08;
-    margin-bottom:8px;
+  .dashboard-shell,
+  .dashboard-shell * {
+    box-sizing: border-box;
   }
 
-  .hero-subtitle{
-    font-size:14px;
-    opacity:.84;
-    max-width:760px;
+  .dashboard-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    color: var(--ink);
   }
 
-  .filter-form{
-    display:flex;
-    gap:12px;
-    align-items:end;
-    flex-wrap:wrap;
+  .dashboard-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(244, 248, 251, .92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .24s ease, visibility .24s ease;
   }
 
-  .field label{
-    display:block;
-    font-size:12px;
-    opacity:.86;
-    margin-bottom:6px;
-    font-weight:800;
+  .dashboard-loader.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 
-  .field input{
-    height:44px;
-    min-width:170px;
-    border:1px solid rgba(255,255,255,.18);
-    background:rgba(255,255,255,.12);
-    color:#fff;
-    border-radius:14px;
-    padding:8px 12px;
-    outline:none;
+  .loader-panel {
+    width: min(360px, 100%);
+    padding: 30px 26px 26px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, .78);
+    border-radius: 30px;
+    background: rgba(255, 255, 255, .88);
+    box-shadow: 0 24px 80px rgba(15, 23, 42, .16);
   }
 
-  .field input::-webkit-calendar-picker-indicator{
-    filter:invert(1);
+  .loader-logo-wrap {
+    position: relative;
+    width: 82px;
+    height: 82px;
+    margin: 0 auto 18px;
+    display: grid;
+    place-items: center;
   }
 
-  .btn-main{
-    height:44px;
-    border:none;
-    border-radius:14px;
-    padding:0 18px;
-    background:#22c55e;
-    color:#062510;
-    font-weight:900;
-    cursor:pointer;
+  .loader-logo {
+    position: relative;
+    z-index: 2;
+    width: 62px;
+    height: 62px;
+    display: grid;
+    place-items: center;
+    border-radius: 20px;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 950;
+    letter-spacing: -.04em;
+    background: linear-gradient(145deg, #11ad6b, #087446);
+    box-shadow: 0 12px 30px rgba(15, 159, 97, .28);
   }
 
-  .btn-main:hover{
-    background:#4ade80;
+  .loader-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid rgba(15, 159, 97, .14);
+    border-top-color: var(--ds-green);
+    border-right-color: #22c55e;
+    animation: dashboardSpin .85s linear infinite;
   }
 
-  .kpi-grid{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
-    gap:14px;
+  .loader-title {
+    font-size: 19px;
+    font-weight: 900;
+    color: var(--ink);
   }
 
-  .kpi-card{
-    padding:18px 18px 16px;
-    border-radius:24px;
-    color:#fff;
-    box-shadow:0 14px 28px rgba(15, 23, 42, .08);
+  .loader-subtitle {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 650;
   }
 
-  .kpi-label{
-    font-size:13px;
-    font-weight:800;
-    opacity:.92;
-    margin-bottom:10px;
+  .loader-progress {
+    height: 5px;
+    margin-top: 20px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e8eef4;
   }
 
-  .kpi-value{
-    font-size:30px;
-    font-weight:900;
-    line-height:1;
+  .loader-progress span {
+    display: block;
+    width: 45%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #0f9f61, #44d38d);
+    animation: dashboardProgress 1.15s ease-in-out infinite;
   }
 
-  .blue{ background:linear-gradient(135deg, #2563eb, #1d4ed8); }
-  .orange{ background:linear-gradient(135deg, #f97316, #ea580c); }
-  .amber{ background:linear-gradient(135deg, #f59e0b, #d97706); }
-  .green{ background:linear-gradient(135deg, #22c55e, #16a34a); }
-  .mint{ background:linear-gradient(135deg, #14b8a6, #0f766e); }
-  .purple{ background:linear-gradient(135deg, #8b5cf6, #7c3aed); }
-  .teal{ background:linear-gradient(135deg, #06b6d4, #0891b2); }
-  .dark{ background:linear-gradient(135deg, #334155, #1f2937); }
-
-  .mini-grid{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
-    gap:14px;
+  @keyframes dashboardSpin {
+    to { transform: rotate(360deg); }
   }
 
-  .mini-card{
-    background:#fff;
-    border-radius:24px;
-    padding:18px;
-    box-shadow:0 12px 24px rgba(15, 23, 42, .06);
+  @keyframes dashboardProgress {
+    0% { transform: translateX(-115%); }
+    100% { transform: translateX(255%); }
   }
 
-  .mini-title{
-    font-size:13px;
-    font-weight:800;
-    color:#64748b;
-    margin-bottom:8px;
+  .dashboard-hero {
+    position: relative;
+    isolation: isolate;
+    min-height: 290px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(330px, .72fr);
+    gap: 28px;
+    align-items: center;
+    overflow: hidden;
+    padding: 34px;
+    border-radius: 34px;
+    color: #ffffff;
+    background:
+      linear-gradient(120deg, rgba(6, 44, 31, .98), rgba(7, 93, 56, .96) 52%, rgba(16, 159, 97, .92)),
+      #073b28;
+    box-shadow: 0 24px 60px rgba(5, 79, 47, .22);
   }
 
-  .mini-big{
-    font-size:32px;
-    font-weight:900;
-    color:#0f172a;
-    line-height:1.05;
+  .dashboard-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: .22;
+    background-image:
+      linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
+    background-size: 38px 38px;
+    mask-image: linear-gradient(to right, #000, transparent 80%);
   }
 
-  .mini-sub{
-    margin-top:8px;
-    font-size:13px;
-    color:#64748b;
-    font-weight:700;
+  .hero-glow {
+    position: absolute;
+    z-index: -1;
+    border-radius: 50%;
+    filter: blur(2px);
+    pointer-events: none;
   }
 
-  .chart-grid{
-    display:grid;
-    gap:16px;
+  .hero-glow-one {
+    width: 330px;
+    height: 330px;
+    right: -100px;
+    top: -170px;
+    background: rgba(95, 255, 183, .20);
   }
 
-  .chart-grid.two-col{
-    grid-template-columns:1.25fr .95fr;
+  .hero-glow-two {
+    width: 230px;
+    height: 230px;
+    left: 38%;
+    bottom: -165px;
+    background: rgba(255, 255, 255, .09);
   }
 
-  .chart-grid.one-col{
-    grid-template-columns:1fr;
+  .hero-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 790px;
   }
 
-  .chart-card{
-    background:#fff;
-    border-radius:30px;
-    padding:18px 18px 16px;
-    box-shadow:0 14px 28px rgba(15, 23, 42, .06);
+  .hero-badge {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .10);
+    color: rgba(255, 255, 255, .88);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .09em;
   }
 
-  .chart-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:12px;
+  .live-dot,
+  .status-pulse {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    border-radius: 50%;
+    background: #62f6ab;
+    box-shadow: 0 0 0 5px rgba(98, 246, 171, .13);
+    animation: livePulse 1.8s ease-in-out infinite;
   }
 
-  .chart-title{
-    font-size:18px;
-    font-weight:900;
-    color:#0f172a;
+  @keyframes livePulse {
+    50% { box-shadow: 0 0 0 8px rgba(98, 246, 171, 0); }
   }
 
-  .chart-note{
-    margin-top:4px;
-    color:#64748b;
-    font-size:12px;
-    font-weight:700;
+  .hero-copy h1 {
+    margin: 18px 0 12px;
+    max-width: 760px;
+    font-size: clamp(38px, 4.5vw, 62px);
+    line-height: .98;
+    letter-spacing: -.05em;
+    font-weight: 950;
   }
 
-  .chart-box{
-    position:relative;
-    height:320px;
+  .hero-copy h1 span {
+    color: #8df4bd;
   }
 
-  .chart-box-xl{
-    height:500px;
+  .hero-copy p {
+    max-width: 720px;
+    margin: 0;
+    color: rgba(255, 255, 255, .76);
+    font-size: 14px;
+    line-height: 1.65;
+    font-weight: 600;
   }
 
-  .customer-send-card{
-    border:2px solid #dbeafe;
-    background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  .hero-date-caption {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    color: rgba(255, 255, 255, .84);
+    font-size: 12px;
+    font-weight: 750;
   }
 
-  .customer-send-head{
-    align-items:flex-start;
+  .hero-date-caption svg,
+  .filter-heading svg,
+  .filter-submit svg,
+  .table-scroll-hint svg,
+  .back-to-top svg,
+  .kpi-icon svg,
+  .performance-icon svg,
+  .report-icon svg,
+  .panel-mini-icon svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
-  .customer-summary-pills,
-  .shipper-done-pills{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    justify-content:flex-end;
+  .hero-date-caption svg {
+    width: 17px;
+    height: 17px;
   }
 
-  .customer-send-pill,
-  .customer-done-pill,
-  .customer-pending-pill,
-  .customer-all-pending-pill,
-  .shipper-pp-pill,
-  .shipper-pv-pill,
-  .shipper-total-pill{
-    padding:12px 16px;
-    border-radius:999px;
-    font-size:14px;
-    font-weight:900;
-    white-space:nowrap;
-    box-shadow:0 8px 18px rgba(15, 23, 42, .08);
+  .dashboard-filter {
+    position: relative;
+    z-index: 2;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, .11);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
   }
 
-  .customer-send-pill{
-    background:#dbeafe;
-    color:#1e3a8a;
+  .filter-heading {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 16px;
   }
 
-  .customer-done-pill,
-  .shipper-pp-pill{
-    background:#dcfce7;
-    color:#14532d;
+  .filter-icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .13);
   }
 
-  .customer-pending-pill{
-    background:#ffedd5;
-    color:#9a3412;
+  .filter-icon svg {
+    width: 19px;
+    height: 19px;
   }
 
-  .customer-all-pending-pill{
-    background:#fee2e2;
-    color:#991b1b;
+  .filter-heading strong,
+  .filter-heading span {
+    display: block;
   }
 
-  .customer-send-pill strong,
-  .customer-done-pill strong,
-  .customer-pending-pill strong,
-  .customer-all-pending-pill strong,
-  .shipper-pp-pill strong,
-  .shipper-pv-pill strong,
-  .shipper-total-pill strong{
-    font-size:24px;
-    margin-left:8px;
+  .filter-heading strong {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 900;
   }
 
-  .shipper-done-card{
-    border:2px solid #ede9fe;
-    background:linear-gradient(180deg, #ffffff 0%, #fbfaff 100%);
+  .filter-heading span {
+    margin-top: 2px;
+    color: rgba(255, 255, 255, .62);
+    font-size: 11px;
+    font-weight: 650;
   }
 
-  .shipper-done-head{
-    align-items:flex-start;
+  .filter-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
-  .shipper-pv-pill{
-    background:#fef3c7;
-    color:#92400e;
+  .filter-field span {
+    display: block;
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, .76);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .045em;
   }
 
-  .shipper-total-pill{
-    background:#ede9fe;
-    color:#5b21b6;
+  .filter-field input {
+    width: 100%;
+    height: 47px;
+    min-width: 0;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 14px;
+    outline: none;
+    color: #ffffff;
+    background: rgba(3, 31, 21, .34);
+    font-size: 13px;
+    font-weight: 750;
+    color-scheme: dark;
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
   }
 
-  .province-report-card{
-    border:2px solid #dcfce7;
-    background:linear-gradient(180deg, #ffffff 0%, #f8fffb 100%);
+  .filter-field input:focus {
+    border-color: rgba(141, 244, 189, .78);
+    background: rgba(3, 31, 21, .54);
   }
 
-  .province-head{
-    align-items:flex-start;
+  .filter-submit {
+    width: 100%;
+    min-height: 49px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin-top: 12px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 15px;
+    color: #064529;
+    background: linear-gradient(135deg, #8df4bd, #5ee89e);
+    box-shadow: 0 12px 28px rgba(74, 222, 128, .18);
+    font-size: 13px;
+    font-weight: 950;
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
   }
 
-  .province-total-pill{
-    background:#dcfce7;
-    color:#14532d;
-    padding:12px 16px;
-    border-radius:999px;
-    font-size:14px;
-    font-weight:900;
-    white-space:nowrap;
-    box-shadow:0 8px 18px rgba(34, 197, 94, .14);
+  .filter-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(74, 222, 128, .24);
+    filter: brightness(1.03);
   }
 
-  .province-total-pill strong{
-    font-size:24px;
-    margin-left:8px;
+  .filter-submit:active {
+    transform: translateY(0);
   }
 
-  .province-grid{
-    display:grid;
-    grid-template-columns:1fr 1.35fr;
-    gap:18px;
+  .filter-submit svg {
+    width: 18px;
+    height: 18px;
   }
 
-  .province-panel{
-    min-width:0;
+  .section-shortcuts {
+    position: sticky;
+    top: 8px;
+    z-index: 30;
+    display: none;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px;
+    border: 1px solid rgba(226, 232, 240, .86);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-sm);
+    scrollbar-width: none;
   }
 
-  .sub-title{
-    font-size:15px;
-    font-weight:900;
-    color:#0f172a;
-    margin-bottom:10px;
+  .section-shortcuts::-webkit-scrollbar { display: none; }
+
+  .section-shortcuts a {
+    flex: 0 0 auto;
+    padding: 9px 13px;
+    border-radius: 12px;
+    color: #475569;
+    background: #f4f7fa;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 850;
   }
 
-  .province-chart-box{
-    height:280px;
-    margin-bottom:14px;
-    padding:8px;
-    border-radius:22px;
-    background:#ffffff;
-    border:1px solid #e5e7eb;
+  .section-shortcuts a:active {
+    color: #ffffff;
+    background: var(--ds-green);
   }
 
-  .table-wrap{
-    overflow:auto;
+  .dashboard-section {
+    scroll-margin-top: 82px;
   }
 
-  .cool-table{
-    width:100%;
-    border-collapse:collapse;
+  .section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    padding: 8px 2px 0;
   }
 
-  .cool-table th,
-  .cool-table td{
-    padding:12px 14px;
-    border-bottom:1px solid #e5e7eb;
-    white-space:nowrap;
+  .section-kicker,
+  .panel-kicker {
+    color: var(--ds-green-dark);
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: .13em;
   }
 
-  .cool-table th{
-    text-align:left;
-    font-size:12px;
-    letter-spacing:.02em;
-    color:#64748b;
-    font-weight:900;
-    background:#f8fafc;
+  .section-heading h2,
+  .report-title-wrap h2 {
+    margin: 4px 0 0;
+    color: var(--ink);
+    font-size: 25px;
+    line-height: 1.12;
+    letter-spacing: -.025em;
+    font-weight: 950;
   }
 
-  .cool-table td{
-    font-size:14px;
-    color:#0f172a;
-    font-weight:700;
+  .section-heading p,
+  .report-title-wrap p,
+  .mini-report-head p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+    font-weight: 650;
   }
 
-  .cool-table td.num{
-    text-align:right;
+  .section-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 12px;
+    border: 1px solid #dcefe5;
+    border-radius: 999px;
+    color: #18734c;
+    background: #f2fbf6;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
   }
 
-  .empty-row{
-    text-align:center;
-    color:#94a3b8 !important;
+  .section-status .status-pulse {
+    width: 7px;
+    height: 7px;
+    flex-basis: 7px;
+    background: var(--ds-green);
+    box-shadow: 0 0 0 4px rgba(15, 159, 97, .12);
   }
 
-  .neg{
-    color:#dc2626 !important;
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 13px;
+    margin-top: 14px;
   }
 
-  @media (max-width: 1200px){
+  .kpi-card {
+    position: relative;
+    isolation: isolate;
+    min-height: 174px;
+    overflow: hidden;
+    padding: 17px;
+    border: 1px solid rgba(255, 255, 255, .30);
+    border-radius: 24px;
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+
+  .kpi-card::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 120px;
+    height: 120px;
+    right: -43px;
+    top: -43px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .13);
+  }
+
+  .kpi-card::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 88px;
+    height: 88px;
+    right: -30px;
+    bottom: -45px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .08);
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .kpi-blue { background: linear-gradient(145deg, #2563eb, #1d4ed8); }
+  .kpi-orange { background: linear-gradient(145deg, #f97316, #ea580c); }
+  .kpi-amber { background: linear-gradient(145deg, #f59e0b, #d97706); }
+  .kpi-green { background: linear-gradient(145deg, #22c55e, #15803d); }
+  .kpi-mint { background: linear-gradient(145deg, #14b8a6, #0f766e); }
+  .kpi-purple { background: linear-gradient(145deg, #8b5cf6, #6d28d9); }
+  .kpi-cyan { background: linear-gradient(145deg, #06b6d4, #0e7490); }
+  .kpi-dark { background: linear-gradient(145deg, #334155, #111827); }
+
+  .kpi-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .kpi-icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .16);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15);
+  }
+
+  .kpi-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .kpi-tag {
+    padding: 5px 8px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, .88);
+    background: rgba(255, 255, 255, .13);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .kpi-label {
+    margin-top: 16px;
+    color: rgba(255, 255, 255, .79);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  .kpi-value {
+    margin-top: 3px;
+    font-size: clamp(28px, 2.6vw, 38px);
+    line-height: 1;
+    letter-spacing: -.04em;
+    font-weight: 950;
+  }
+
+  .kpi-value.money {
+    font-size: clamp(24px, 2.25vw, 33px);
+  }
+
+  .kpi-foot {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, .64);
+    font-size: 10px;
+    font-weight: 650;
+  }
+
+  .performance-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 13px;
+    margin-top: 13px;
+  }
+
+  .performance-card {
+    position: relative;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 21px;
+    background: var(--card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .performance-icon {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 35px;
+    height: 35px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+  }
+
+  .performance-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .perf-green { color: #15803d; background: #dcfce7; }
+  .perf-amber { color: #b45309; background: #fef3c7; }
+  .perf-blue { color: #1d4ed8; background: #dbeafe; }
+  .perf-red { color: #b91c1c; background: #fee2e2; }
+
+  .performance-content {
+    padding-right: 46px;
+  }
+
+  .performance-content span,
+  .performance-content strong,
+  .performance-content small {
+    display: block;
+  }
+
+  .performance-content span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .performance-content strong {
+    margin-top: 5px;
+    color: var(--ink);
+    font-size: 28px;
+    line-height: 1;
+    letter-spacing: -.04em;
+    font-weight: 950;
+  }
+
+  .performance-content small {
+    min-height: 30px;
+    margin-top: 7px;
+    color: #8996a8;
+    font-size: 10px;
+    line-height: 1.45;
+    font-weight: 650;
+  }
+
+  .progress-track,
+  .pending-bar {
+    height: 6px;
+    margin-top: 12px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf1f5;
+  }
+
+  .progress-track span {
+    display: block;
+    width: min(var(--progress), 100%);
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #10b981, #4ade80);
+  }
+
+  .pending-bar span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    background: repeating-linear-gradient(135deg, #fca5a5 0 7px, #fecaca 7px 14px);
+  }
+
+  .report-card {
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .report-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--accent, var(--ds-green));
+  }
+
+  .accent-blue { --accent: #3b82f6; }
+  .accent-purple { --accent: #8b5cf6; }
+  .accent-green { --accent: #10b981; }
+  .accent-indigo { --accent: #6366f1; }
+  .accent-slate { --accent: #475569; }
+
+  .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .report-title-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    min-width: 0;
+  }
+
+  .report-icon {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 15px;
+  }
+
+  .report-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .icon-blue { color: #2563eb; background: #eaf2ff; }
+  .icon-purple { color: #7c3aed; background: #f1ebff; }
+  .icon-green { color: #059669; background: #e5f9ef; }
+  .icon-amber { color: #d97706; background: #fff4d9; }
+  .icon-indigo { color: #4f46e5; background: #ececff; }
+  .icon-slate { color: #334155; background: #e9eef3; }
+
+  .summary-chip-grid {
+    display: grid;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  .four-chips { grid-template-columns: repeat(4, minmax(90px, 1fr)); }
+  .three-chips { grid-template-columns: repeat(3, minmax(100px, 1fr)); }
+
+  .summary-chip {
+    min-width: 100px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+  }
+
+  .summary-chip span,
+  .summary-chip strong {
+    display: block;
+  }
+
+  .summary-chip span {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+  }
+
+  .summary-chip strong {
+    margin-top: 3px;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: -.04em;
+    font-weight: 950;
+  }
+
+  .chip-blue { color: #1e40af; border-color: #dbeafe; background: #eff6ff; }
+  .chip-green { color: #166534; border-color: #dcfce7; background: #f0fdf4; }
+  .chip-orange { color: #9a3412; border-color: #ffedd5; background: #fff7ed; }
+  .chip-red { color: #991b1b; border-color: #fee2e2; background: #fff1f2; }
+  .chip-amber { color: #92400e; border-color: #fef3c7; background: #fffbeb; }
+  .chip-purple { color: #5b21b6; border-color: #ede9fe; background: #f5f3ff; }
+
+  .table-shell {
+    margin-top: 17px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: #ffffff;
+  }
+
+  .compact-shell {
+    margin-top: 14px;
+    border-radius: 17px;
+  }
+
+  .table-scroll-hint {
+    display: none;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    color: #718096;
+    background: #f8fafc;
+    font-size: 10px;
+    font-weight: 750;
+  }
+
+  .table-scroll-hint svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .always-hint {
+    display: flex;
+  }
+
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modern-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .compact-table {
+    min-width: 500px;
+  }
+
+  .modern-table th,
+  .modern-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #edf1f5;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  .modern-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    text-align: left;
+    color: #64748b;
+    background: #f7f9fc;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: .055em;
+    text-transform: uppercase;
+  }
+
+  .modern-table td {
+    color: #334155;
+    background: #ffffff;
+    font-size: 12px;
+    font-weight: 650;
+    transition: background .16s ease;
+  }
+
+  .modern-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .modern-table tbody tr:not(.empty-table-row):hover td {
+    background: #fbfcfe;
+  }
+
+  .modern-table .index-col,
+  .modern-table .row-number {
+    width: 52px;
+    color: #94a3b8;
+    text-align: center;
+  }
+
+  .modern-table .number-col,
+  .modern-table .num {
+    text-align: right;
+  }
+
+  .primary-cell {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .primary-cell strong {
+    color: var(--ink);
+    font-weight: 850;
+  }
+
+  .name-avatar {
+    width: 31px;
+    height: 31px;
+    flex: 0 0 31px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    color: #1d4ed8;
+    background: #dbeafe;
+    font-size: 11px;
+    font-weight: 950;
+  }
+
+  .purple-avatar { color: #6d28d9; background: #ede9fe; }
+  .green-avatar { color: #047857; background: #d1fae5; }
+  .slate-avatar { color: #334155; background: #e2e8f0; }
+
+  .table-badge {
+    display: inline-flex;
+    min-width: 32px;
+    min-height: 25px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .badge-blue { color: #1d4ed8; background: #eaf2ff; }
+  .badge-green { color: #15803d; background: #e9f9ef; }
+  .badge-orange { color: #c2410c; background: #fff1e8; }
+  .badge-red { color: #b91c1c; background: #feecec; }
+  .badge-amber { color: #b45309; background: #fff4da; }
+  .badge-purple { color: #6d28d9; background: #f0eaff; }
+
+  .money-positive { color: #047857; font-weight: 850; }
+  .negative-value { color: #dc2626 !important; font-weight: 900 !important; }
+
+  .empty-state {
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    color: #94a3b8;
+    text-align: center;
+  }
+
+  .empty-state strong {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 850;
+  }
+
+  .empty-state span {
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .empty-icon {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 5px;
+    border-radius: 12px;
+    color: #94a3b8;
+    background: #f1f5f9;
+    font-weight: 900;
+  }
+
+  .small-empty { min-height: 90px; }
+
+  .province-total-card {
+    min-width: 175px;
+    padding: 12px 15px;
+    border: 1px solid #d8f2e5;
+    border-radius: 17px;
+    color: #0f7047;
+    background: linear-gradient(145deg, #effcf5, #e5f8ee);
+  }
+
+  .province-total-card span,
+  .province-total-card strong {
+    display: block;
+  }
+
+  .province-total-card span {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .province-total-card strong {
+    margin-top: 4px;
+    font-size: 28px;
+    line-height: 1;
+    letter-spacing: -.04em;
+    font-weight: 950;
+  }
+
+  .province-grid {
+    display: grid;
+    grid-template-columns: minmax(300px, .78fr) minmax(0, 1.22fr);
+    gap: 15px;
+    margin-top: 18px;
+  }
+
+  .inner-panel {
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 21px;
+    background: linear-gradient(180deg, #ffffff, #fbfcfd);
+  }
+
+  .inner-panel-head,
+  .mini-report-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .inner-panel-head h3,
+  .mini-report-head h3 {
+    margin: 4px 0 0;
+    color: var(--ink);
+    font-size: 17px;
+    line-height: 1.2;
+    letter-spacing: -.018em;
+    font-weight: 900;
+  }
+
+  .panel-mini-icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+  }
+
+  .panel-mini-icon svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .chart-box {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    min-width: 0;
+  }
+
+  .province-chart-box {
+    height: 270px;
+    margin-top: 10px;
+    padding: 8px 4px 0;
+    border: 1px solid #edf1f5;
+    border-radius: 17px;
+    background: #ffffff;
+  }
+
+  .chart-empty {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .chart-empty.is-visible { display: flex; }
+
+  .province-matrix-wrap {
+    max-height: 420px;
+    overflow: auto;
+  }
+
+  .province-matrix-table {
+    min-width: 760px;
+  }
+
+  .province-matrix-table .sticky-index,
+  .province-matrix-table .sticky-name {
+    position: sticky;
+    z-index: 4;
+  }
+
+  .province-matrix-table .sticky-index {
+    left: 0;
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
+    text-align: center;
+  }
+
+  .province-matrix-table .sticky-name {
+    left: 50px;
+    min-width: 145px;
+    max-width: 180px;
+  }
+
+  .province-matrix-table thead .sticky-index,
+  .province-matrix-table thead .sticky-name {
+    z-index: 6;
+    background: #f7f9fc;
+  }
+
+  .province-matrix-table tbody .sticky-index,
+  .province-matrix-table tbody .sticky-name {
+    background: #ffffff;
+    box-shadow: 1px 0 0 #edf1f5;
+  }
+
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(380px, .75fr);
+    gap: 15px;
+    margin-top: 14px;
+  }
+
+  .chart-report-card,
+  .analytics-grid > .report-card {
+    min-width: 0;
+  }
+
+  .trend-chart-box {
+    height: 390px;
+    margin-top: 10px;
+  }
+
+  .shipper-summary-shell {
+    max-height: 416px;
+    overflow: auto;
+  }
+
+  .shipper-summary-table {
+    min-width: 670px;
+  }
+
+  .done-trend-card {
+    margin-top: 15px;
+  }
+
+  .done-chart-box {
+    height: 480px;
+    margin-top: 10px;
+  }
+
+  .back-to-top {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 20;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .5);
+    border-radius: 15px;
+    color: #ffffff;
+    background: rgba(8, 116, 70, .92);
+    box-shadow: 0 12px 28px rgba(8, 116, 70, .24);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .back-to-top svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  @media (max-width: 1250px) {
+    .dashboard-hero {
+      grid-template-columns: minmax(0, 1fr) minmax(310px, .65fr);
+      padding: 29px;
+    }
+
     .kpi-grid,
-    .mini-grid,
-    .chart-grid.two-col{
-      grid-template-columns:1fr 1fr;
+    .performance-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .province-grid{
-      grid-template-columns:1fr;
+    .four-chips {
+      grid-template-columns: repeat(2, minmax(110px, 1fr));
+    }
+
+    .province-grid,
+    .analytics-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .shipper-summary-shell {
+      max-height: none;
     }
   }
 
-  @media (max-width: 768px){
-    .kpi-grid,
-    .mini-grid,
-    .chart-grid.two-col{
-      grid-template-columns:1fr;
+  @media (max-width: 920px) {
+    .dashboard-hero {
+      grid-template-columns: 1fr;
+      min-height: auto;
     }
 
-    .hero-title{
-      font-size:28px;
+    .dashboard-filter {
+      max-width: 620px;
     }
 
-    .chart-head,
-    .province-head,
-    .customer-send-head,
-    .shipper-done-head{
-      flex-direction:column;
-      align-items:flex-start;
+    .report-header {
+      flex-direction: column;
     }
 
-    .customer-summary-pills,
-    .shipper-done-pills{
-      width:100%;
-      flex-direction:column;
+    .summary-chip-grid {
+      width: 100%;
     }
 
-    .province-total-pill,
-    .customer-send-pill,
-    .customer-done-pill,
-    .customer-pending-pill,
-    .customer-all-pending-pill,
-    .shipper-pp-pill,
-    .shipper-pv-pill,
-    .shipper-total-pill{
-      width:100%;
-      white-space:normal;
-      border-radius:18px;
+    .four-chips {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    .chart-box,
-    .chart-box-xl{
-      height:340px;
+    .three-chips {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .province-chart-box{
-      height:320px;
+    .province-total-card {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 680px) {
+    :root {
+      --radius-xl: 22px;
+      --radius-lg: 18px;
+    }
+
+    html {
+      scroll-padding-top: 78px;
+    }
+
+    .dashboard-shell {
+      gap: 13px;
+    }
+
+    .dashboard-hero {
+      gap: 22px;
+      padding: 23px 17px 18px;
+      border-radius: 25px;
+      box-shadow: 0 18px 42px rgba(5, 79, 47, .18);
+    }
+
+    .dashboard-hero::before {
+      background-size: 30px 30px;
+    }
+
+    .hero-badge {
+      max-width: 100%;
+      padding: 7px 10px;
+      font-size: 9px;
+      letter-spacing: .065em;
+    }
+
+    .hero-copy h1 {
+      margin-top: 15px;
+      font-size: clamp(35px, 11vw, 48px);
+      line-height: 1.01;
+    }
+
+    .hero-copy p {
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .hero-date-caption {
+      margin-top: 17px;
+      font-size: 10px;
+    }
+
+    .dashboard-filter {
+      padding: 15px;
+      border-radius: 20px;
+    }
+
+    .filter-heading {
+      margin-bottom: 13px;
+    }
+
+    .filter-fields {
+      grid-template-columns: 1fr;
+      gap: 9px;
+    }
+
+    .filter-field input {
+      height: 49px;
+      font-size: 14px;
+    }
+
+    .filter-submit {
+      min-height: 51px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    .section-shortcuts {
+      display: flex;
+    }
+
+    .section-heading {
+      align-items: flex-start;
+    }
+
+    .section-heading h2,
+    .report-title-wrap h2 {
+      font-size: 21px;
+    }
+
+    .section-heading p,
+    .report-title-wrap p,
+    .mini-report-head p {
+      font-size: 11px;
+    }
+
+    .section-status {
+      display: none;
+    }
+
+    .kpi-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 11px;
+    }
+
+    .kpi-card {
+      min-height: 148px;
+      padding: 13px;
+      border-radius: 19px;
+    }
+
+    .kpi-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+    }
+
+    .kpi-icon svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .kpi-tag {
+      padding: 4px 6px;
+      font-size: 8px;
+    }
+
+    .kpi-label {
+      margin-top: 13px;
+      font-size: 9px;
+      line-height: 1.25;
+    }
+
+    .kpi-value,
+    .kpi-value.money {
+      margin-top: 5px;
+      font-size: clamp(22px, 7vw, 29px);
+    }
+
+    .kpi-foot {
+      display: none;
+    }
+
+    .performance-grid {
+      grid-template-columns: 1fr;
+      gap: 9px;
+      margin-top: 9px;
+    }
+
+    .performance-card {
+      min-height: 108px;
+      padding: 14px;
+      border-radius: 18px;
+    }
+
+    .performance-content strong {
+      font-size: 25px;
+    }
+
+    .performance-content small {
+      min-height: auto;
+    }
+
+    .report-card {
+      padding: 16px 12px 13px;
+      border-radius: 22px;
+    }
+
+    .report-header,
+    .report-title-wrap {
+      gap: 12px;
+    }
+
+    .report-icon {
+      width: 41px;
+      height: 41px;
+      flex-basis: 41px;
+      border-radius: 13px;
+    }
+
+    .report-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .summary-chip-grid {
+      gap: 7px;
+    }
+
+    .four-chips,
+    .three-chips {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .summary-chip {
+      min-width: 0;
+      padding: 9px 10px;
+      border-radius: 14px;
+    }
+
+    .summary-chip span {
+      font-size: 8px;
+    }
+
+    .summary-chip strong {
+      font-size: 22px;
+    }
+
+    .table-shell {
+      margin-top: 13px;
+      border-radius: 17px;
+    }
+
+    .table-scroll-hint {
+      display: flex;
+    }
+
+    .mobile-card-table {
+      min-width: 0;
+      border-collapse: separate;
+      border-spacing: 0 9px;
+      padding: 0 9px 9px;
+      background: #f7f9fc;
+    }
+
+    .mobile-card-table thead {
+      display: none;
+    }
+
+    .mobile-card-table tbody,
+    .mobile-card-table tr,
+    .mobile-card-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .mobile-card-table tbody tr:not(.empty-table-row) {
+      overflow: hidden;
+      border: 1px solid #e7edf4;
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 5px 15px rgba(15, 23, 42, .045);
+    }
+
+    .mobile-card-table td {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px dashed #edf1f5;
+      white-space: normal;
+      text-align: right !important;
+      font-size: 12px;
+      background: #ffffff !important;
+    }
+
+    .mobile-card-table td:last-child {
+      border-bottom: 0;
+    }
+
+    .mobile-card-table td::before {
+      content: attr(data-label);
+      flex: 0 0 auto;
+      color: #8290a3;
+      text-align: left;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .045em;
+      text-transform: uppercase;
+    }
+
+    .mobile-card-table td.row-number {
+      display: none;
+    }
+
+    .mobile-card-table td.primary-cell {
+      min-height: 55px;
+      justify-content: flex-start;
+      text-align: left !important;
+      background: #fbfcfe !important;
+    }
+
+    .mobile-card-table td.primary-cell::before {
+      display: none;
+    }
+
+    .mobile-card-table .name-avatar {
+      width: 35px;
+      height: 35px;
+      flex-basis: 35px;
+    }
+
+    .mobile-card-table .empty-table-row {
+      border-spacing: 0;
+    }
+
+    .mobile-card-table .empty-table-row td {
+      display: block;
+      padding: 0;
+      border: 0;
+    }
+
+    .mobile-card-table .empty-table-row td::before {
+      display: none;
+    }
+
+    .empty-state {
+      min-height: 130px;
+    }
+
+    .province-grid {
+      gap: 11px;
+      margin-top: 14px;
+    }
+
+    .inner-panel {
+      padding: 12px;
+      border-radius: 18px;
+    }
+
+    .inner-panel-head h3,
+    .mini-report-head h3 {
+      font-size: 16px;
+    }
+
+    .province-chart-box {
+      height: 260px;
+      border-radius: 15px;
+    }
+
+    .province-matrix-wrap {
+      max-height: 380px;
+    }
+
+    .province-matrix-table {
+      min-width: 700px;
+    }
+
+    .province-matrix-table .sticky-index {
+      width: 42px;
+      min-width: 42px;
+      max-width: 42px;
+    }
+
+    .province-matrix-table .sticky-name {
+      left: 42px;
+      min-width: 125px;
+      max-width: 140px;
+    }
+
+    .analytics-grid {
+      gap: 11px;
+      margin-top: 11px;
+    }
+
+    .trend-chart-box {
+      height: 340px;
+    }
+
+    .done-trend-card {
+      margin-top: 11px;
+    }
+
+    .done-chart-box {
+      height: 390px;
+    }
+
+    .back-to-top {
+      right: 13px;
+      bottom: 13px;
+      width: 41px;
+      height: 41px;
+      border-radius: 14px;
+    }
+
+    .loader-panel {
+      padding: 26px 20px 22px;
+      border-radius: 25px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .kpi-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .kpi-card {
+      min-height: 142px;
+    }
+
+    .four-chips,
+    .three-chips {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
     }
   }
 </style>

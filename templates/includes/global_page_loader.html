@@ -1,44 +1,75 @@
-{# Global loading overlay. Include once in base.html immediately before </body>. #}
+{# Global DS loader: internal + phone portal + computer portal. #}
 <style>
+  :root{
+    --ds-loader-green:#0f7a45;
+    --ds-loader-green-dark:#075c34;
+  }
+
+  html.ds-loading,
+  body.ds-loading{
+    overflow:hidden !important;
+    overscroll-behavior:none;
+  }
+
   #dsGlobalLoader{
     position:fixed;
     inset:0;
     z-index:2147483647;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:24px;
-    background:rgba(248,250,252,.78);
-    backdrop-filter:blur(8px);
-    -webkit-backdrop-filter:blur(8px);
+
+    width:100%;
+    height:100vh;
+    height:100dvh;
+
+    display:grid;
+    place-items:center;
+
+    padding:
+      max(20px, env(safe-area-inset-top))
+      max(18px, env(safe-area-inset-right))
+      max(20px, env(safe-area-inset-bottom))
+      max(18px, env(safe-area-inset-left));
+
+    background:rgba(246,250,248,.92);
     opacity:0;
     visibility:hidden;
     pointer-events:none;
-    transition:opacity .18s ease, visibility .18s ease;
+
+    touch-action:none;
+    overscroll-behavior:contain;
+
+    transition:opacity .12s ease, visibility .12s ease;
+  }
+
+  @supports ((-webkit-backdrop-filter:blur(8px)) or (backdrop-filter:blur(8px))){
+    #dsGlobalLoader{
+      background:rgba(246,250,248,.80);
+      -webkit-backdrop-filter:blur(8px);
+      backdrop-filter:blur(8px);
+    }
   }
 
   #dsGlobalLoader.is-visible{
     opacity:1;
     visibility:visible;
-    pointer-events:all;
+    pointer-events:auto;
   }
 
   .ds-loader-card{
-    min-width:190px;
-    max-width:calc(100vw - 40px);
-    padding:22px 24px;
-    border:1px solid rgba(15,118,110,.13);
-    border-radius:24px;
-    background:rgba(255,255,255,.96);
-    box-shadow:0 24px 65px rgba(15,23,42,.18);
+    width:min(230px, calc(100vw - 36px));
+    padding:24px 22px 22px;
+    border:1px solid rgba(15,122,69,.14);
+    border-radius:26px;
+    background:#fff;
+    box-shadow:0 24px 65px rgba(15,23,42,.20);
     text-align:center;
+    transform:translateZ(0);
   }
 
   .ds-loader-icon{
     position:relative;
-    width:72px;
-    height:72px;
-    margin:0 auto 14px;
+    width:76px;
+    height:76px;
+    margin:0 auto 15px;
     display:grid;
     place-items:center;
   }
@@ -46,53 +77,90 @@
   .ds-loader-ring{
     position:absolute;
     inset:0;
-    border:5px solid #dbeafe;
-    border-top-color:#0f766e;
-    border-right-color:#22c55e;
+    border:5px solid #dcefe4;
+    border-top-color:var(--ds-loader-green);
+    border-right-color:#20b66d;
     border-radius:50%;
-    animation:dsLoaderSpin .8s linear infinite;
+    animation:dsLoaderSpin .72s linear infinite;
+    will-change:transform;
   }
 
   .ds-loader-logo{
     position:relative;
-    width:48px;
-    height:48px;
+    width:50px;
+    height:50px;
     display:grid;
     place-items:center;
-    border-radius:15px;
-    background:linear-gradient(135deg,#0f766e,#16a34a);
+    border-radius:16px;
+    background:linear-gradient(135deg,var(--ds-loader-green-dark),#16a866);
     color:#fff;
-    font:950 17px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+    font:950 18px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     letter-spacing:-.04em;
-    box-shadow:0 9px 22px rgba(15,118,110,.28);
+    box-shadow:0 10px 24px rgba(15,122,69,.28);
   }
 
   .ds-loader-title{
     color:#0f172a;
-    font:900 16px/1.25 system-ui,-apple-system,"Segoe UI",sans-serif;
+    font:950 17px/1.25 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   }
 
   .ds-loader-note{
-    margin-top:5px;
+    margin-top:6px;
     color:#64748b;
-    font:700 12px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
+    font:750 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   }
 
   @keyframes dsLoaderSpin{
     to{ transform:rotate(360deg); }
   }
 
-  @media (prefers-reduced-motion:reduce){
-    .ds-loader-ring{ animation-duration:1.8s; }
+  @media(max-width:600px){
+    .ds-loader-card{
+      width:min(210px, calc(100vw - 32px));
+      padding:22px 18px 20px;
+      border-radius:24px;
+    }
+
+    .ds-loader-icon{
+      width:70px;
+      height:70px;
+    }
+
+    .ds-loader-logo{
+      width:46px;
+      height:46px;
+      border-radius:15px;
+      font-size:17px;
+    }
+
+    .ds-loader-title{
+      font-size:16px;
+    }
+  }
+
+  @media(prefers-reduced-motion:reduce){
+    .ds-loader-ring{
+      animation-duration:1.5s;
+    }
+
+    #dsGlobalLoader{
+      transition:none;
+    }
   }
 </style>
 
-<div id="dsGlobalLoader" aria-hidden="true" aria-live="polite">
+<div
+  id="dsGlobalLoader"
+  aria-hidden="true"
+  aria-live="polite"
+  aria-label="Page is loading"
+>
   <div class="ds-loader-card" role="status">
     <div class="ds-loader-icon" aria-hidden="true">
       <div class="ds-loader-ring"></div>
       <div class="ds-loader-logo">DS</div>
     </div>
+
     <div class="ds-loader-title">Loading</div>
     <div class="ds-loader-note">Please wait a moment...</div>
   </div>
@@ -103,90 +171,205 @@
   "use strict";
 
   const loader = document.getElementById("dsGlobalLoader");
-  if (!loader) return;
+
+  if (!loader || loader.dataset.ready === "1"){
+    return;
+  }
+
+  loader.dataset.ready = "1";
 
   let showTimer = null;
   let safetyTimer = null;
+  let mobileLinkMoving = false;
 
-  function showLoader(delay){
+  const coarsePointer = window.matchMedia
+    ? window.matchMedia("(pointer: coarse)").matches
+    : false;
+
+  const touchDevice =
+    coarsePointer ||
+    navigator.maxTouchPoints > 0 ||
+    "ontouchstart" in window;
+
+  function paintLoaderNow(){
     window.clearTimeout(showTimer);
     window.clearTimeout(safetyTimer);
 
-    showTimer = window.setTimeout(function(){
-      loader.classList.add("is-visible");
-      loader.setAttribute("aria-hidden", "false");
+    document.documentElement.classList.add("ds-loading");
+    document.body.classList.add("ds-loading");
 
-      // Prevent a download or cancelled navigation from leaving the screen blocked.
-      safetyTimer = window.setTimeout(hideLoader, 15000);
-    }, typeof delay === "number" ? delay : 120);
+    loader.classList.add("is-visible");
+    loader.setAttribute("aria-hidden", "false");
+
+    /*
+      Reading offsetHeight forces the phone browser to apply the visible
+      loader before navigation starts.
+    */
+    void loader.offsetHeight;
+
+    safetyTimer = window.setTimeout(hideLoader, 30000);
+  }
+
+  function showLoader(delay){
+    window.clearTimeout(showTimer);
+
+    const wait = Number(delay || 0);
+
+    if (wait <= 0){
+      paintLoaderNow();
+      return;
+    }
+
+    showTimer = window.setTimeout(paintLoaderNow, wait);
   }
 
   function hideLoader(){
     window.clearTimeout(showTimer);
     window.clearTimeout(safetyTimer);
+
+    mobileLinkMoving = false;
+
     loader.classList.remove("is-visible");
     loader.setAttribute("aria-hidden", "true");
+
+    document.documentElement.classList.remove("ds-loading");
+    document.body.classList.remove("ds-loading");
   }
 
-  // Allow page-specific JavaScript to use the same loader.
   window.dsShowLoading = showLoader;
   window.dsHideLoading = hideLoader;
 
-  document.addEventListener("click", function(event){
-    if (event.defaultPrevented) return;
-    if (event.button !== 0) return;
-    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-
-    const link = event.target.closest("a[href]");
-    if (!link) return;
-    if (link.hasAttribute("download")) return;
-    if (link.hasAttribute("data-no-loading")) return;
-    if ((link.getAttribute("target") || "").toLowerCase() === "_blank") return;
+  function validNavigationLink(link){
+    if (!link) return null;
+    if (link.hasAttribute("download")) return null;
+    if (link.hasAttribute("data-no-loading")) return null;
+    if ((link.getAttribute("target") || "").toLowerCase() === "_blank") return null;
 
     const rawHref = (link.getAttribute("href") || "").trim();
-    if (!rawHref) return;
-    if (rawHref.startsWith("#")) return;
-    if (rawHref.startsWith("javascript:")) return;
-    if (rawHref.startsWith("mailto:")) return;
-    if (rawHref.startsWith("tel:")) return;
+
+    if (!rawHref) return null;
+    if (rawHref.startsWith("#")) return null;
+    if (rawHref.startsWith("javascript:")) return null;
+    if (rawHref.startsWith("mailto:")) return null;
+    if (rawHref.startsWith("tel:")) return null;
 
     let url;
+
     try{
       url = new URL(link.href, window.location.href);
     }catch(error){
-      return;
+      return null;
     }
 
-    if (url.origin !== window.location.origin) return;
+    if (url.origin !== window.location.origin) return null;
 
-    // Do not show for a link that only changes the current-page anchor.
     if (
       url.pathname === window.location.pathname &&
       url.search === window.location.search &&
       url.hash
     ){
+      return null;
+    }
+
+    return url;
+  }
+
+  /*
+    Mobile Safari/Chrome may begin navigation before a delayed loader can
+    render. On touch devices, wait for two animation frames before moving.
+  */
+  document.addEventListener("click", function(event){
+    if (event.defaultPrevented) return;
+    if (event.button !== undefined && event.button !== 0) return;
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
+    const link = event.target.closest("a[href]");
+    const url = validNavigationLink(link);
+
+    if (!url) return;
+
+    if (!touchDevice){
+      paintLoaderNow();
       return;
     }
 
-    showLoader(120);
-  }, true);
+    event.preventDefault();
 
+    if (mobileLinkMoving) return;
+    mobileLinkMoving = true;
+
+    paintLoaderNow();
+
+    window.requestAnimationFrame(function(){
+      window.requestAnimationFrame(function(){
+        window.setTimeout(function(){
+          window.location.assign(url.href);
+        }, 20);
+      });
+    });
+  }, false);
+
+  /*
+    Submit events happen only after normal browser validation succeeds.
+    On a phone, submit again after the loader has had time to paint.
+  */
   document.addEventListener("submit", function(event){
     const form = event.target;
+
     if (!(form instanceof HTMLFormElement)) return;
     if (form.hasAttribute("data-no-loading")) return;
     if ((form.getAttribute("target") || "").toLowerCase() === "_blank") return;
 
-    showLoader(80);
-  }, true);
+    if (form.dataset.dsLoaderSubmitting === "1"){
+      delete form.dataset.dsLoaderSubmitting;
+      paintLoaderNow();
+      return;
+    }
 
-  window.addEventListener("beforeunload", function(){
-    showLoader(0);
+    if (!touchDevice){
+      paintLoaderNow();
+      return;
+    }
+
+    event.preventDefault();
+    paintLoaderNow();
+
+    form.dataset.dsLoaderSubmitting = "1";
+    const submitter = event.submitter || undefined;
+
+    window.requestAnimationFrame(function(){
+      window.requestAnimationFrame(function(){
+        window.setTimeout(function(){
+          if (typeof form.requestSubmit === "function"){
+            form.requestSubmit(submitter);
+          }else{
+            form.submit();
+          }
+        }, 20);
+      });
+    });
+  }, false);
+
+  window.addEventListener("beforeunload", paintLoaderNow);
+
+  window.addEventListener("pagehide", function(){
+    /*
+      pagehide is more reliable than beforeunload on iPhone/PWA.
+      The click/submit handlers already made the loader visible.
+    */
+    if (mobileLinkMoving){
+      paintLoaderNow();
+    }
   });
 
-  // Required for normal loading and browser back/forward cache.
   window.addEventListener("load", hideLoader);
   window.addEventListener("pageshow", hideLoader);
+
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "visible"){
+      window.setTimeout(hideLoader, 0);
+    }
+  });
 
   document.addEventListener("DOMContentLoaded", function(){
     window.setTimeout(hideLoader, 0);

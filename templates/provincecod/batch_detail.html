@@ -207,6 +207,7 @@
           <th class="th-center" style="width:180px;">SELLER</th>
           <th class="th-center" style="width:170px;">RECEIVER</th>
           <th class="th-center" style="width:135px;">PHONE</th>
+          <th class="th-center address-column" style="width:260px;">ADDRESS</th>
           <th class="th-center" style="width:120px;">ORIGINAL COD</th>
           <th class="th-center" style="width:115px;">PROVINCE FEE</th>
           <th class="th-center" style="width:125px;">COD STATUS</th>
@@ -242,6 +243,10 @@
 
             <td class="td-center">
               {{ item.order.receiver_phone|default:"-" }}
+            </td>
+
+            <td class="td-center address-cell">
+              {{ item.order.receiver_address|default:"-" }}
             </td>
 
             <td class="td-center">
@@ -418,7 +423,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="13" class="empty-row">
+            <td colspan="14" class="empty-row">
               No orders in this batch.
             </td>
           </tr>
@@ -627,7 +632,7 @@
 
   table.wide{
     width:100%;
-    min-width:1580px;
+    min-width:1840px;
   }
 
   .th-center,
@@ -664,6 +669,19 @@
 
   .ds-table tbody tr:hover td{
     background:rgba(255,255,255,.45);
+  }
+
+  .address-column{
+    min-width:260px;
+  }
+
+  .address-cell{
+    min-width:260px;
+    max-width:320px;
+    text-align:left;
+    white-space:normal;
+    line-height:1.45;
+    word-break:break-word;
   }
 
   .seller-cell{

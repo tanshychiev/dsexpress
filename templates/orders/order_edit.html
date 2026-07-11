@@ -363,7 +363,7 @@
 </style>
 
 <div class="wrap">
-  <div class="page-title">Edit Order</div>
+  <div class="page-title">{% if receiver_only_edit %}Edit Receiver Phone &amp; Address{% else %}Edit Order{% endif %}</div>
 
   <div class="card">
     {% if errors %}
@@ -376,7 +376,11 @@
       </div>
     {% endif %}
 
-    {% if is_done_or_delivered %}
+    {% if receiver_only_edit %}
+      <div class="warn">
+        This province shipment is pending after Undo Complete. Only the receiver phone and address can be changed.
+      </div>
+    {% elif is_done_or_delivered %}
       <div class="warn">
         This order is already Delivered / Done. You can still edit normal fields, but COD can only be changed by admin or with override password.
       </div>
@@ -387,6 +391,7 @@
       <input type="hidden" name="override_password" id="override_password_hidden">
       <input type="hidden" name="stock_items_json" id="stockItemsJson">
 
+      {% if not receiver_only_edit %}
       <div class="section">
         <div class="section-head">Basic Information</div>
         <div class="section-body">
@@ -491,6 +496,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
 
       <div class="section">
         <div class="section-head">Receiver Information</div>
@@ -498,7 +504,7 @@
           <div class="grid2">
             <div class="field field-full">
               <label>Receiver Name</label>
-              <input name="receiver_name" value="{{ order.receiver_name|default:'' }}">
+              <input name="receiver_name" value="{{ order.receiver_name|default:'' }}" {% if receiver_only_edit %}readonly{% endif %}>
             </div>
 
             <div class="field">
@@ -514,6 +520,7 @@
         </div>
       </div>
 
+      {% if not receiver_only_edit %}
       <div class="section">
         <div class="section-head">Remark / Reason</div>
         <div class="section-body">
@@ -531,9 +538,11 @@
         </div>
       </div>
 
+      {% endif %}
+
       <div class="btns">
         <a class="btn" href="{% url 'order_created' order.id %}">Cancel</a>
-        <button class="btn btn-primary" type="submit" id="saveBtn">Save</button>
+        <button class="btn btn-primary" type="submit" id="saveBtn">{% if receiver_only_edit %}Save Receiver Info{% else %}Save{% endif %}</button>
       </div>
     </form>
   </div>

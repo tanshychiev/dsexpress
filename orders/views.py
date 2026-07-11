@@ -1709,9 +1709,26 @@ def order_edit(request: HttpRequest, pk: int):
     sellers = Seller.objects.filter(is_active=True).order_by("name")
     errors: list[str] = []
 
+    # Province orders stay locked to protect COD, fees, goods and status.
+    # After "Undo Complete", the batch becomes PENDING again. In that case,
+    # staff may edit only the receiver phone and address.
+    province_pending = False
     if order.is_locked:
-        messages.error(request, "This order is locked and cannot be edited.")
-        return redirect("order_detail", pk=order.id)
+        try:
+            from provinceops.models import ProvinceBatch, ProvinceBatchItem
+
+            province_pending = ProvinceBatchItem.objects.filter(
+                order=order,
+                batch__status=ProvinceBatch.STATUS_PENDING,
+            ).exists()
+        except Exception:
+            province_pending = False
+
+        if not province_pending:
+            messages.error(request, "This order is locked and cannot be edited.")
+            return redirect("order_detail", pk=order.id)
+
+    receiver_only_edit = bool(order.is_locked and province_pending)
 
     is_admin = (
         request.user.is_superuser
@@ -1744,6 +1761,78 @@ def order_edit(request: HttpRequest, pk: int):
         "remark": order.remark,
         "reason": order.reason,
     }
+
+    # Locked province order after Undo Complete:
+    # allow only receiver phone and address to be corrected.
+    if request.method == "POST" and receiver_only_edit:
+        new_phone = (request.POST.get("receiver_phone") or "").strip()
+        new_address = (request.POST.get("receiver_address") or "").strip()
+
+        if not new_phone:
+            errors.append("Receiver phone is required.")
+
+        if not new_address:
+            errors.append("Receiver address is required.")
+
+        if not errors:
+            old_receiver_data = {
+                "receiver_phone": order.receiver_phone or "",
+                "receiver_address": order.receiver_address or "",
+            }
+
+            order.receiver_phone = new_phone
+            order.receiver_address = new_address
+            order.updated_at = timezone.now()
+            order.updated_by = request.user
+
+            # Do not trigger inventory auto-link logic for contact-only edits.
+            order._skip_stock_signal = True
+            order.save(
+                update_fields=[
+                    "receiver_phone",
+                    "receiver_address",
+                    "updated_at",
+                    "updated_by",
+                ]
+            )
+
+            new_receiver_data = {
+                "receiver_phone": order.receiver_phone or "",
+                "receiver_address": order.receiver_address or "",
+            }
+
+            if old_receiver_data != new_receiver_data:
+                add_audit_log(
+                    module=AuditLog.MODULE_ORDER,
+                    obj=order,
+                    action=AuditLog.ACTION_UPDATE,
+                    user=request.user,
+                    old_value=json.dumps(old_receiver_data, ensure_ascii=False),
+                    new_value=json.dumps(new_receiver_data, ensure_ascii=False),
+                    note="Updated receiver phone/address for pending province shipment",
+                )
+
+                note_parts = []
+                if old_receiver_data["receiver_phone"] != new_receiver_data["receiver_phone"]:
+                    note_parts.append(
+                        f"Receiver phone: {old_receiver_data['receiver_phone'] or '-'} "
+                        f"-> {new_receiver_data['receiver_phone'] or '-'}"
+                    )
+                if old_receiver_data["receiver_address"] != new_receiver_data["receiver_address"]:
+                    note_parts.append("Receiver address updated")
+
+                add_order_activity(
+                    order=order,
+                    action=OrderActivity.ACTION_EDIT,
+                    user=request.user,
+                    shipper=order.delivery_shipper,
+                    old_status=order.status,
+                    new_status=order.status,
+                    note=" | ".join(note_parts) or "Receiver information updated",
+                )
+
+            messages.success(request, "✅ Receiver phone and address updated.")
+            return redirect("order_created", pk=order.id)
 
     if request.method == "POST":
         seller_id = (request.POST.get("seller") or "").strip()
@@ -2053,6 +2142,7 @@ def order_edit(request: HttpRequest, pk: int):
             "sellers": sellers,
             "is_done_or_delivered": is_done_or_delivered,
             "is_admin_user": is_admin,
+            "receiver_only_edit": receiver_only_edit,
         },
     )
 

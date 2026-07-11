@@ -74,6 +74,27 @@ def _clear_delivery_shipper(order: Order):
         order.save(update_fields=["delivery_shipper"])
 
 
+def _unlock_order(order: Order):
+    """Unlock an order only when it leaves province operations."""
+    if hasattr(order, "unlock"):
+        order.unlock()
+        return
+
+    if hasattr(order, "is_locked"):
+        order.is_locked = False
+        fields = ["is_locked"]
+
+        if hasattr(order, "locked_at"):
+            order.locked_at = None
+            fields.append("locked_at")
+
+        if hasattr(order, "locked_by"):
+            order.locked_by = None
+            fields.append("locked_by")
+
+        order.save(update_fields=fields)
+
+
 def _set_order_status(order: Order, status: str):
     update_fields = []
 
@@ -590,6 +611,7 @@ def province_detail(request, pk):
                         restore_status = getattr(it, "status_before", "") or "INBOUND"
                         _set_order_status(it.order, restore_status)
                         _clear_delivery_shipper(it.order)
+                        _unlock_order(it.order)
 
                         _log_order_change(
                             order=it.order,
@@ -652,6 +674,7 @@ def province_detail(request, pk):
                     restore_status = getattr(it, "status_before", "") or "INBOUND"
                     _set_order_status(o, restore_status)
                     _clear_delivery_shipper(o)
+                    _unlock_order(o)
                     it.delete()
 
                     _log_order_change(

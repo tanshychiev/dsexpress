@@ -363,7 +363,7 @@
 </style>
 
 <div class="wrap">
-  <div class="page-title">{% if receiver_only_edit %}Edit Receiver Phone &amp; Address{% else %}Edit Order{% endif %}</div>
+  <div class="page-title">Edit Order</div>
 
   <div class="card">
     {% if errors %}
@@ -376,13 +376,9 @@
       </div>
     {% endif %}
 
-    {% if receiver_only_edit %}
+    {% if cod_is_protected %}
       <div class="warn">
-        This province shipment is pending after Undo Complete. Only the receiver phone and address can be changed.
-      </div>
-    {% elif is_done_or_delivered %}
-      <div class="warn">
-        This order is already Delivered / Done. You can still edit normal fields, but COD can only be changed by admin or with override password.
+        You can edit all order information. COD is locked and can only be changed by admin or with the override password.
       </div>
     {% endif %}
 
@@ -391,7 +387,6 @@
       <input type="hidden" name="override_password" id="override_password_hidden">
       <input type="hidden" name="stock_items_json" id="stockItemsJson">
 
-      {% if not receiver_only_edit %}
       <div class="section">
         <div class="section-head">Basic Information</div>
         <div class="section-body">
@@ -467,7 +462,7 @@
                 id="cod_input"
                 value="{{ order.cod }}"
                 data-old-cod="{{ order.cod }}"
-                {% if is_done_or_delivered %}data-protected="1"{% endif %}
+                {% if cod_is_protected and not is_admin_user %}data-protected="1"{% endif %}
               >
               <div id="cod-change-note" class="small-note red" style="display:none;">
                 COD changed. Password confirmation will be required.
@@ -496,7 +491,6 @@
           </div>
         </div>
       </div>
-      {% endif %}
 
       <div class="section">
         <div class="section-head">Receiver Information</div>
@@ -504,7 +498,7 @@
           <div class="grid2">
             <div class="field field-full">
               <label>Receiver Name</label>
-              <input name="receiver_name" value="{{ order.receiver_name|default:'' }}" {% if receiver_only_edit %}readonly{% endif %}>
+              <input name="receiver_name" value="{{ order.receiver_name|default:'' }}">
             </div>
 
             <div class="field">
@@ -520,7 +514,6 @@
         </div>
       </div>
 
-      {% if not receiver_only_edit %}
       <div class="section">
         <div class="section-head">Remark / Reason</div>
         <div class="section-body">
@@ -538,11 +531,10 @@
         </div>
       </div>
 
-      {% endif %}
 
       <div class="btns">
         <a class="btn" href="{% url 'order_created' order.id %}">Cancel</a>
-        <button class="btn btn-primary" type="submit" id="saveBtn">{% if receiver_only_edit %}Save Receiver Info{% else %}Save{% endif %}</button>
+        <button class="btn btn-primary" type="submit" id="saveBtn">Save</button>
       </div>
     </form>
   </div>
@@ -593,7 +585,7 @@
     </h3>
 
     <div style="color:#64748b; font-size:13px; margin-bottom:14px;">
-      This order is already Delivered / Done. Enter password to confirm COD change.
+      COD is locked for this order. Enter the override password to confirm the COD change.
     </div>
 
     <input

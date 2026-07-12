@@ -1709,9 +1709,18 @@ def order_edit(request: HttpRequest, pk: int):
     sellers = Seller.objects.filter(is_active=True).order_by("name")
     errors: list[str] = []
 
-    # Province orders stay locked to protect COD, fees, goods and status.
-    # After "Undo Complete", the batch becomes PENDING again. In that case,
-    # staff may edit only the receiver phone and address.
+    # PP completed orders use STATUS_DELIVERED. Province completed orders can
+    # remain locked but have done_at set. Both must be editable through the
+    # same normal edit form.
+    is_done_or_delivered = (
+        order.status == Order.STATUS_DELIVERED
+        or bool(order.done_at)
+    )
+
+    # Province orders are normally locked to protect COD, fees, goods and
+    # status. There are two exceptions:
+    # 1. Completed province order: allow the full edit form, the same as PP.
+    # 2. After Undo Complete (batch PENDING): allow only phone and address.
     province_pending = False
     if order.is_locked:
         try:
@@ -1724,20 +1733,19 @@ def order_edit(request: HttpRequest, pk: int):
         except Exception:
             province_pending = False
 
-        if not province_pending:
+        if not province_pending and not is_done_or_delivered:
             messages.error(request, "This order is locked and cannot be edited.")
-            return redirect("order_detail", pk=order.id)
+            return redirect("order_created", pk=order.id)
 
-    receiver_only_edit = bool(order.is_locked and province_pending)
+    receiver_only_edit = bool(
+        order.is_locked
+        and province_pending
+        and not is_done_or_delivered
+    )
 
     is_admin = (
         request.user.is_superuser
         or request.user.groups.filter(name__in=["Admin", "Super Admin"]).exists()
-    )
-
-    is_done_or_delivered = (
-        order.status == Order.STATUS_DELIVERED
-        or bool(order.done_at)
     )
 
     old_status = order.status
@@ -2148,8 +2156,10 @@ def order_edit(request: HttpRequest, pk: int):
 
 @login_required
 def order_detail(request: HttpRequest, pk: int):
-    order = get_object_or_404(Order, pk=pk, is_deleted=False)
-    return render(request, "orders/order_detail.html", {"order": order})
+    # Legacy route protection: order_detail.html does not exist.
+    # Send old/detail links to the current working order-created detail page.
+    get_object_or_404(Order, pk=pk, is_deleted=False)
+    return redirect("order_created", pk=pk)
 
 
 @login_required

@@ -1709,43 +1709,24 @@ def order_edit(request: HttpRequest, pk: int):
     sellers = Seller.objects.filter(is_active=True).order_by("name")
     errors: list[str] = []
 
-    # PP completed orders use STATUS_DELIVERED. Province completed orders can
-    # remain locked but have done_at set. Both must be editable through the
-    # same normal edit form.
-    is_done_or_delivered = (
-        order.status == Order.STATUS_DELIVERED
-        or bool(order.done_at)
-    )
-
-    # Province orders are normally locked to protect COD, fees, goods and
-    # status. There are two exceptions:
-    # 1. Completed province order: allow the full edit form, the same as PP.
-    # 2. After Undo Complete (batch PENDING): allow only phone and address.
-    province_pending = False
-    if order.is_locked:
-        try:
-            from provinceops.models import ProvinceBatch, ProvinceBatchItem
-
-            province_pending = ProvinceBatchItem.objects.filter(
-                order=order,
-                batch__status=ProvinceBatch.STATUS_PENDING,
-            ).exists()
-        except Exception:
-            province_pending = False
-
-        if not province_pending and not is_done_or_delivered:
-            messages.error(request, "This order is locked and cannot be edited.")
-            return redirect("order_created", pk=order.id)
-
-    receiver_only_edit = bool(
-        order.is_locked
-        and province_pending
-        and not is_done_or_delivered
-    )
+    # Allow every order field to be edited, even when the order is locked.
+    # The lock now protects COD only.
+    receiver_only_edit = False
 
     is_admin = (
         request.user.is_superuser
         or request.user.groups.filter(name__in=["Admin", "Super Admin"]).exists()
+    )
+
+    normalized_status = str(order.status or "").strip().upper()
+    delivered_status = str(Order.STATUS_DELIVERED or "").strip().upper()
+
+    # This flag is also used by order_edit.html to protect the COD field.
+    # PP completed orders use DELIVERED; Province completed orders use DONE.
+    is_done_or_delivered = (
+        bool(order.is_locked)
+        or normalized_status in {delivered_status, "DONE"}
+        or bool(order.done_at)
     )
 
     old_status = order.status
@@ -2156,8 +2137,8 @@ def order_edit(request: HttpRequest, pk: int):
 
 @login_required
 def order_detail(request: HttpRequest, pk: int):
-    # Legacy route protection: order_detail.html does not exist.
-    # Send old/detail links to the current working order-created detail page.
+    # Keep old /orders/detail/<id>/ links working.
+    # The active order detail page is order_created.html.
     get_object_or_404(Order, pk=pk, is_deleted=False)
     return redirect("order_created", pk=pk)
 

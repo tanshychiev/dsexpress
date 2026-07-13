@@ -30,6 +30,72 @@ from .services import (
 
 ZERO = Decimal("0.00")
 
+CALL_REASON_CHOICES = [
+    ("NO_PICKUP", "No pickup / no answer"),
+    ("BUSY", "Phone busy"),
+    ("PHONE_OFF", "Phone switched off"),
+    ("WRONG_NUMBER", "Wrong phone number"),
+    ("CALL_BACK", "Asked to call back later"),
+    ("OTHER", "Other"),
+]
+
+CALL_REASON_LABELS = dict(CALL_REASON_CHOICES)
+
+
+def _record_call_note(
+    item,
+    user,
+    *,
+    call_reason="",
+    note="",
+):
+    """
+    Record a call attempt without changing the Province COD status.
+
+    The newest call record is placed first in the existing note field,
+    so previous call history and notes are preserved without a migration.
+    """
+    call_reason = (call_reason or "").strip().upper()
+
+    if call_reason not in CALL_REASON_LABELS:
+        raise ValueError("Please select a valid call reason.")
+
+    reason_label = CALL_REASON_LABELS[call_reason]
+    detail = (note or "").strip()
+
+    actor_name = (
+        user.get_full_name().strip()
+        or user.get_username()
+        or "User"
+    )
+
+    timestamp = timezone.localtime().strftime(
+        "%Y-%m-%d %H:%M"
+    )
+
+    call_entry = (
+        f"[CALL {timestamp} | {actor_name}] "
+        f"{reason_label}"
+    )
+
+    if detail:
+        call_entry += f" — {detail}"
+
+    old_note = (item.note or "").strip()
+
+    if old_note:
+        item.note = f"{call_entry}\n{old_note}"
+    else:
+        item.note = call_entry
+
+    item.save(
+        update_fields=[
+            "note",
+            "updated_at",
+        ]
+    )
+
+
 
 def _payment_received_datetime(raw_value):
     """Return an aware payment-received datetime from a YYYY-MM-DD value."""
@@ -895,6 +961,20 @@ def province_cod_report(request):
                             note=request.POST.get("note", ""),
                         )
 
+                    elif action == "record_call":
+                        _record_call_note(
+                            item,
+                            request.user,
+                            call_reason=request.POST.get(
+                                "call_reason",
+                                "",
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
                     elif action == "settle_seller":
                         mark_item_seller_settled(
                             item,
@@ -1209,6 +1289,7 @@ def province_cod_report(request):
             "sellers": sellers,
             "shippers": _active_carriers(),
             "today": timezone.localdate().isoformat(),
+            "call_reason_choices": CALL_REASON_CHOICES,
             "confirmation_methods": (
                 ProvinceCODItem
                 .CONFIRMATION_METHOD_CHOICES

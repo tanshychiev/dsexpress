@@ -255,6 +255,7 @@
           <th><a href="{{ sort_urls.paid_date }}">PAYMENT DATE <span class="sort-mark">{% if sort == "paid_date" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.reference }}">REFERENCE <span class="sort-mark">{% if sort == "reference" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.settled }}">SETTLED <span class="sort-mark">{% if sort == "settled" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
+          <th class="no-sort">LAST NOTE</th>
           <th><a href="{{ sort_urls.updated }}">UPDATED <span class="sort-mark">{% if sort == "updated" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th class="no-sort">ACTION</th>
         </tr>
@@ -313,6 +314,14 @@
               {% endif %}
             </td>
 
+            <td style="max-width:220px">
+              {% if item.note %}
+                <div class="pc-note" title="{{ item.note }}">{{ item.note|truncatechars:110 }}</div>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
             <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
 
             <td>
@@ -353,7 +362,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="17" class="pc-empty">No Province COD orders found.</td></tr>
+          <tr><td colspan="18" class="pc-empty">No Province COD orders found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -364,7 +373,7 @@
   <div class="pc-modal" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
     <div class="pc-modal-head">
       <div>
-        <div class="pc-modal-title" id="statusModalTitle">Update COD Status</div>
+        <div class="pc-modal-title" id="statusModalTitle">Update COD Status / Call</div>
         <div class="pc-note" id="statusModalTracking"></div>
       </div>
       <button type="button" class="pc-modal-close" id="statusModalClose" aria-label="Close">×</button>
@@ -379,13 +388,26 @@
       <div>
         <label class="pc-note">Status</label>
         <select class="pc-input" id="modalStatus">
+          <option value="CALL">Call / Follow-up</option>
           <option value="RECEIVED">Received</option>
           <option value="PAID">Paid</option>
           <option value="RETURNED">Returned</option>
         </select>
       </div>
 
-      <div class="pc-modal-section" id="receivedFields">
+      <div class="pc-modal-section" id="callFields">
+        <div>
+          <label class="pc-note">Call reason</label>
+          <select class="pc-input" name="call_reason">
+            {% for value, label in call_reason_choices %}
+              <option value="{{ value }}" {% if value == "NO_PICKUP" %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <div class="pc-note">This records the call without changing the current COD status.</div>
+        </div>
+      </div>
+
+      <div class="pc-modal-section is-hidden" id="receivedFields">
         <div class="pc-modal-grid">
           <div>
             <label class="pc-note">Received by</label>
@@ -429,8 +451,8 @@
       </div>
 
       <div style="margin-top:12px">
-        <label class="pc-note">Note</label>
-        <textarea class="pc-textarea" name="note" placeholder="Optional note"></textarea>
+        <label class="pc-note" id="modalNoteLabel">Note</label>
+        <textarea class="pc-textarea" name="note" id="modalNote" placeholder="Optional note"></textarea>
       </div>
 
       <div class="pc-modal-actions">
@@ -494,30 +516,46 @@
     const modalPaidAmount = document.getElementById("modalPaidAmount");
     const modalPaidDate = document.getElementById("modalPaidDate");
     const modalReference = document.getElementById("modalReference");
+    const callFields = document.getElementById("callFields");
     const receivedFields = document.getElementById("receivedFields");
     const paidFields = document.getElementById("paidFields");
     const returnedFields = document.getElementById("returnedFields");
+    const modalNoteLabel = document.getElementById("modalNoteLabel");
+    const modalNote = document.getElementById("modalNote");
     const modalSubmit = document.getElementById("statusModalSubmit");
 
     function refreshModalFields() {
       const status = modalStatus.value;
 
+      callFields.classList.toggle("is-hidden", status !== "CALL");
       receivedFields.classList.toggle("is-hidden", status !== "RECEIVED");
       paidFields.classList.toggle("is-hidden", status !== "PAID");
       returnedFields.classList.toggle("is-hidden", status !== "RETURNED");
 
-      if (status === "PAID") {
+      if (status === "CALL") {
+        modalAction.value = "record_call";
+        modalSubmit.textContent = "Save Call Note";
+        modalSubmit.className = "pc-btn pc-dark";
+        modalNoteLabel.textContent = "Call detail";
+        modalNote.placeholder = "Optional detail about the call";
+      } else if (status === "PAID") {
         modalAction.value = "mark_paid";
         modalSubmit.textContent = "Save as Paid";
         modalSubmit.className = "pc-btn pc-primary";
+        modalNoteLabel.textContent = "Note";
+        modalNote.placeholder = "Optional note";
       } else if (status === "RETURNED") {
         modalAction.value = "mark_returned";
         modalSubmit.textContent = "Save as Returned";
         modalSubmit.className = "pc-btn pc-red";
+        modalNoteLabel.textContent = "Note";
+        modalNote.placeholder = "Optional note";
       } else {
         modalAction.value = "mark_received";
         modalSubmit.textContent = "Save as Received";
         modalSubmit.className = "pc-btn pc-blue";
+        modalNoteLabel.textContent = "Note";
+        modalNote.placeholder = "Optional note";
       }
     }
 
@@ -526,7 +564,7 @@
 
       modalItemId.value = button.dataset.itemId || "";
       modalTracking.textContent = "Tracking: " + (button.dataset.tracking || "-");
-      modalStatus.value = button.dataset.currentStatus === "RECEIVED" ? "PAID" : "RECEIVED";
+      modalStatus.value = "CALL";
       modalPaidAmount.value = button.dataset.paidAmount || button.dataset.originalCod || "";
       modalPaidDate.value = button.dataset.paidDate || "{{ today }}";
       modalReference.value = button.dataset.reference || "";

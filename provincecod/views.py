@@ -1,8 +1,3 @@
-Library
-/
-views_full_updated_with_call_answered.py
-
-
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 

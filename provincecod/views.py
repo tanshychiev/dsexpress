@@ -1,3 +1,8 @@
+Library
+/
+views_full_updated_with_call_answered.py
+
+
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 
@@ -32,6 +37,7 @@ ZERO = Decimal("0.00")
 
 CALL_REASON_CHOICES = [
     ("NO_PICKUP", "No pickup / no answer"),
+    ("ANSWERED", "Answered / picked up"),
     ("BUSY", "Phone busy"),
     ("PHONE_OFF", "Phone switched off"),
     ("WRONG_NUMBER", "Wrong phone number"),

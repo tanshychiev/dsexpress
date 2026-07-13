@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
@@ -29,6 +29,105 @@ from .services import (
 
 
 ZERO = Decimal("0.00")
+
+
+def _payment_received_datetime(raw_value):
+    """Return an aware payment-received datetime from a YYYY-MM-DD value."""
+    raw_value = (raw_value or "").strip()
+
+    if not raw_value:
+        return timezone.now()
+
+    try:
+        payment_date = datetime.strptime(
+            raw_value,
+            "%Y-%m-%d",
+        ).date()
+    except ValueError as exc:
+        raise ValueError(
+            "Payment received date must be a valid date."
+        ) from exc
+
+    current_local = timezone.localtime()
+    naive_value = datetime.combine(
+        payment_date,
+        time(
+            hour=current_local.hour,
+            minute=current_local.minute,
+            second=current_local.second,
+        ),
+    )
+
+    return timezone.make_aware(
+        naive_value,
+        timezone.get_current_timezone(),
+    )
+
+
+def _mark_paid_from_report(
+    item,
+    user,
+    *,
+    paid_amount_raw="",
+    payment_received_date="",
+    carrier_reference="",
+    note="",
+):
+    """
+    Mark one report item as paid while allowing the actual received amount
+    and carrier payment date to be corrected.
+
+    The existing database fields are reused:
+    - net_cod stores the actual amount received.
+    - paid_at stores the carrier payment-received date.
+    - carrier_fee stores original COD minus actual received amount.
+    """
+    raw_value = str(paid_amount_raw or "").strip()
+
+    if raw_value:
+        try:
+            paid_amount = money(raw_value)
+        except Exception as exc:
+            raise ValueError(
+                "Paid amount must be a valid number."
+            ) from exc
+    else:
+        paid_amount = money(item.original_cod)
+
+    if paid_amount < ZERO:
+        raise ValueError("Paid amount cannot be negative.")
+
+    difference = money(
+        money(item.original_cod) - paid_amount
+    )
+
+    # Use a non-negative value when calling the existing service so its
+    # current validation and status transitions remain unchanged.
+    service_fee = difference if difference >= ZERO else ZERO
+
+    mark_item_paid(
+        item,
+        user,
+        carrier_fee=service_fee,
+        carrier_reference=carrier_reference,
+        note=note,
+    )
+
+    item.refresh_from_db()
+    item.carrier_fee = difference
+    item.paid_at = _payment_received_datetime(
+        payment_received_date
+    )
+
+    # ProvinceCODItem.save() recalculates net_cod for PAID records.
+    item.save(
+        update_fields=[
+            "carrier_fee",
+            "net_cod",
+            "paid_at",
+            "updated_at",
+        ]
+    )
 
 
 def _scan_session_key():
@@ -713,6 +812,7 @@ def province_cod_report(request):
 
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
+
         selected_ids = [
             int(value)
             for value in request.POST.getlist("selected_ids")
@@ -720,17 +820,28 @@ def province_cod_report(request):
         ]
 
         item_id = (request.POST.get("item_id") or "").strip()
+
         if item_id.isdigit() and int(item_id) not in selected_ids:
             selected_ids.append(int(item_id))
 
         if not selected_ids:
-            messages.error(request, "Please select at least one order.")
+            messages.error(
+                request,
+                "Please select at least one order.",
+            )
+
         else:
             items = list(
                 ProvinceCODItem.objects
-                .select_related("batch", "order", "order__seller")
+                .select_related(
+                    "batch",
+                    "order",
+                    "order__seller",
+                )
                 .filter(pk__in=selected_ids)
-                .exclude(batch__status=ProvinceCODBatch.STATUS_CANCELLED)
+                .exclude(
+                    batch__status=ProvinceCODBatch.STATUS_CANCELLED
+                )
                 .order_by("id")
             )
 
@@ -755,10 +866,17 @@ def province_cod_report(request):
                         )
 
                     elif action == "mark_paid":
-                        mark_item_paid(
+                        _mark_paid_from_report(
                             item,
                             request.user,
-                            carrier_fee=request.POST.get("carrier_fee", ""),
+                            paid_amount_raw=request.POST.get(
+                                "paid_amount",
+                                "",
+                            ),
+                            payment_received_date=request.POST.get(
+                                "payment_received_date",
+                                "",
+                            ),
                             carrier_reference=request.POST.get(
                                 "carrier_reference",
                                 "",
@@ -778,13 +896,18 @@ def province_cod_report(request):
                         )
 
                     elif action == "settle_seller":
-                        mark_item_seller_settled(item, request.user)
+                        mark_item_seller_settled(
+                            item,
+                            request.user,
+                        )
 
                     elif action == "undo_settlement":
                         undo_seller_settlement(item)
 
                     else:
-                        raise ValueError("Unknown Province COD action.")
+                        raise ValueError(
+                            "Unknown Province COD action."
+                        )
 
                     updated += 1
 
@@ -802,26 +925,67 @@ def province_cod_report(request):
             if skipped:
                 preview = "; ".join(skipped[:5])
                 remaining = len(skipped) - 5
+
                 if remaining > 0:
                     preview += f"; and {remaining} more"
-                messages.warning(request, f"Skipped: {preview}")
 
-        next_query = (request.POST.get("next_query") or "").strip()
+                messages.warning(
+                    request,
+                    f"Skipped: {preview}",
+                )
+
+        next_query = (
+            request.POST.get("next_query") or ""
+        ).strip()
+
         target = reverse("provincecod:report")
+
         if next_query:
             target = f"{target}?{next_query}"
+
         return redirect(target)
 
-    date_from = (request.GET.get("date_from") or "").strip()
-    date_to = (request.GET.get("date_to") or "").strip()
-    status = (request.GET.get("status") or "").strip().upper()
-    settlement = (request.GET.get("settlement") or "").strip().upper()
-    seller_id = (request.GET.get("seller") or "").strip()
-    shipper_id = (request.GET.get("shipper") or "").strip()
-    q = (request.GET.get("q") or "").strip()
+    date_from = (
+        request.GET.get("date_from") or ""
+    ).strip()
 
-    sort = (request.GET.get("sort") or "sent_date").strip().lower()
-    direction = (request.GET.get("direction") or "desc").strip().lower()
+    date_to = (
+        request.GET.get("date_to") or ""
+    ).strip()
+
+    status = (
+        request.GET.get("status") or ""
+    ).strip().upper()
+
+    # Opening /province-cod/report/ defaults to Unsettled.
+    # An explicit blank value (?settlement=) means Show All.
+    settlement_value = request.GET.get("settlement")
+
+    if settlement_value is None:
+        settlement = "UNSETTLED"
+    else:
+        settlement = settlement_value.strip().upper()
+
+    seller_id = (
+        request.GET.get("seller") or ""
+    ).strip()
+
+    shipper_id = (
+        request.GET.get("shipper") or ""
+    ).strip()
+
+    q = (
+        request.GET.get("q") or ""
+    ).strip()
+
+    sort = (
+        request.GET.get("sort") or "sent_date"
+    ).strip().lower()
+
+    direction = (
+        request.GET.get("direction") or "desc"
+    ).strip().lower()
+
     if direction not in {"asc", "desc"}:
         direction = "desc"
 
@@ -835,10 +999,9 @@ def province_cod_report(request):
         "receiver": "order__receiver_name",
         "phone": "order__receiver_phone",
         "original_cod": "original_cod",
-        "province_fee": "province_fee",
         "status": "cod_status",
-        "carrier_fee": "carrier_fee",
         "net_cod": "net_cod",
+        "paid_date": "paid_at",
         "reference": "carrier_reference",
         "settled": "seller_settled",
         "updated": "updated_at",
@@ -859,33 +1022,48 @@ def province_cod_report(request):
             "returned_confirmed_by",
             "seller_settled_by",
         )
-        .exclude(batch__status=ProvinceCODBatch.STATUS_CANCELLED)
+        .exclude(
+            batch__status=ProvinceCODBatch.STATUS_CANCELLED
+        )
         .annotate(
-            activity_date=Coalesce("sent_at", "batch__created_at"),
+            activity_date=Coalesce(
+                "sent_at",
+                "batch__created_at",
+            ),
         )
     )
 
     if date_from:
-        rows = rows.filter(activity_date__date__gte=date_from)
+        rows = rows.filter(
+            activity_date__date__gte=date_from
+        )
 
     if date_to:
-        rows = rows.filter(activity_date__date__lte=date_to)
+        rows = rows.filter(
+            activity_date__date__lte=date_to
+        )
 
     if status == "PENDING":
         rows = rows.filter(cod_status="")
+
     elif status:
         rows = rows.filter(cod_status=status)
 
     if settlement == "SETTLED":
         rows = rows.filter(seller_settled=True)
+
     elif settlement == "UNSETTLED":
         rows = rows.filter(seller_settled=False)
 
     if seller_id.isdigit():
-        rows = rows.filter(order__seller_id=int(seller_id))
+        rows = rows.filter(
+            order__seller_id=int(seller_id)
+        )
 
     if shipper_id.isdigit():
-        rows = rows.filter(batch__shipper_id=int(shipper_id))
+        rows = rows.filter(
+            batch__shipper_id=int(shipper_id)
+        )
 
     if q:
         rows = rows.filter(
@@ -901,58 +1079,115 @@ def province_cod_report(request):
         )
 
     order_field = sort_map[sort]
+
     if direction == "desc":
         order_field = f"-{order_field}"
 
-    rows = list(rows.order_by(order_field, "-id"))
+    rows = list(
+        rows.order_by(
+            order_field,
+            "-id",
+        )
+    )
 
     for item in rows:
-        item.suggested_fee_display = item.suggested_carrier_fee()
-        item.display_status = item.cod_status or "PENDING"
+        item.display_status = (
+            item.cod_status or "PENDING"
+        )
 
     summary = {
         "count": len(rows),
         "original_cod": sum(
-            (money(item.original_cod) for item in rows),
-            ZERO,
-        ),
-        "carrier_fee": sum(
-            (money(item.carrier_fee) for item in rows),
+            (
+                money(item.original_cod)
+                for item in rows
+            ),
             ZERO,
         ),
         "net_cod": sum(
-            (money(item.net_cod) for item in rows),
+            (
+                money(item.net_cod)
+                for item in rows
+                if item.cod_status
+                == ProvinceCODItem.STATUS_PAID
+            ),
             ZERO,
         ),
-        "pending": sum(1 for item in rows if not item.cod_status),
+        "pending": sum(
+            1
+            for item in rows
+            if not item.cod_status
+        ),
         "sent": sum(
-            1 for item in rows
-            if item.cod_status == ProvinceCODItem.STATUS_SENT
+            1
+            for item in rows
+            if item.cod_status
+            == ProvinceCODItem.STATUS_SENT
         ),
         "received": sum(
-            1 for item in rows
-            if item.cod_status == ProvinceCODItem.STATUS_RECEIVED
+            1
+            for item in rows
+            if item.cod_status
+            == ProvinceCODItem.STATUS_RECEIVED
         ),
         "paid": sum(
-            1 for item in rows
-            if item.cod_status == ProvinceCODItem.STATUS_PAID
+            1
+            for item in rows
+            if item.cod_status
+            == ProvinceCODItem.STATUS_PAID
         ),
         "returned": sum(
-            1 for item in rows
-            if item.cod_status == ProvinceCODItem.STATUS_RETURNED
+            1
+            for item in rows
+            if item.cod_status
+            == ProvinceCODItem.STATUS_RETURNED
         ),
-        "settled": sum(1 for item in rows if item.seller_settled),
+        "settled": sum(
+            1
+            for item in rows
+            if item.seller_settled
+        ),
     }
 
+    # Preserve the effective default in sort links, Excel, POST redirect,
+    # and refreshes even when the original URL had no query string.
+    current_params = request.GET.copy()
+
+    if "settlement" not in current_params:
+        current_params["settlement"] = "UNSETTLED"
+
     sort_urls = {}
+
     for key in sort_map:
-        params = request.GET.copy()
+        params = current_params.copy()
         next_direction = "asc"
+
         if sort == key and direction == "asc":
             next_direction = "desc"
+
         params["sort"] = key
         params["direction"] = next_direction
         sort_urls[key] = f"?{params.urlencode()}"
+
+    # Only sellers that really have a non-cancelled Province COD item.
+    seller_ids = (
+        ProvinceCODItem.objects
+        .exclude(
+            batch__status=ProvinceCODBatch.STATUS_CANCELLED
+        )
+        .exclude(order__seller_id__isnull=True)
+        .values_list(
+            "order__seller_id",
+            flat=True,
+        )
+        .distinct()
+    )
+
+    sellers = (
+        Seller.objects
+        .filter(pk__in=seller_ids)
+        .order_by("name")
+    )
 
     return render(
         request,
@@ -970,13 +1205,13 @@ def province_cod_report(request):
             "sort": sort,
             "direction": direction,
             "sort_urls": sort_urls,
-            "current_query": request.GET.urlencode(),
-            "sellers": Seller.objects.filter(
-                is_active=True,
-            ).order_by("name"),
+            "current_query": current_params.urlencode(),
+            "sellers": sellers,
             "shippers": _active_carriers(),
+            "today": timezone.localdate().isoformat(),
             "confirmation_methods": (
-                ProvinceCODItem.CONFIRMATION_METHOD_CHOICES
+                ProvinceCODItem
+                .CONFIRMATION_METHOD_CHOICES
             ),
         },
     )

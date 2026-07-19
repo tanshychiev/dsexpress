@@ -196,7 +196,7 @@
     <div class="pc-summary-head">
       <div>
         <h2>COD List Summary</h2>
-        <p>Grouped by COD action date: sent, received, settled and returned. Not by order created date.</p>
+        <p>Grouped by original sent date. Later received, settled and returned results stay on the same sent-date row.</p>
       </div>
       <div class="pc-summary-badge">{{ date_from }} → {{ date_to }}</div>
     </div>
@@ -210,7 +210,6 @@
               <th>Sent<br>Orders</th>
               <th>Sent<br>COD</th>
               <th>Received<br>Orders</th>
-              <th>Received<br>COD</th>
               <th>Settled<br>Orders</th>
               <th>Returned<br>Orders</th>
               <th>Done<br>Rate</th>
@@ -223,14 +222,13 @@
                 <td>{{ row.sent_orders }}</td>
                 <td class="money">${{ row.sent_cod|floatformat:2 }}</td>
                 <td>{{ row.received_orders }}</td>
-                <td class="money">${{ row.received_cod|floatformat:2 }}</td>
                 <td>{{ row.settled_orders }}</td>
                 <td>{{ row.returned_orders }}</td>
                 <td class="rate">{{ row.done_rate|floatformat:1 }}%</td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="8" class="pc-empty">No COD summary data.</td>
+                <td colspan="7" class="pc-empty">No COD summary data.</td>
               </tr>
             {% endfor %}
           </tbody>

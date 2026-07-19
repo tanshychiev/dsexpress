@@ -1361,21 +1361,19 @@ def _pc_empty_daily_summary_row(row_date):
         "sent_orders": 0,
         "sent_cod": ZERO,
         "received_orders": 0,
-        "received_cod": ZERO,
         "settled_orders": 0,
-        "settled_cod": ZERO,
         "returned_orders": 0,
-        "returned_cod": ZERO,
+        "done_orders": 0,
         "done_rate": 0,
     }
 
 
 def _build_province_cod_daily_rows(items, start_date, end_date):
-    """Build Province COD summary by COD action dates, not order created date.
+    """Build a sent-date cohort summary.
 
-    Sent COD uses the item sent/activity date. Received, settled and returned
-    use their own action dates, so one order may appear under different dates
-    for different columns.
+    Every item stays on the date it was originally sent. Its current COD
+    result is counted on that same sent-date row, even when it was received,
+    paid, settled, or returned on a later date.
     """
     if not start_date or not end_date:
         return []
@@ -1395,7 +1393,6 @@ def _build_province_cod_daily_rows(items, start_date, end_date):
 
     for item in items:
         original_cod = money(getattr(item, "original_cod", ZERO))
-        net_cod = money(getattr(item, "net_cod", ZERO))
 
         sent_source = (
             getattr(item, "activity_date", None)
@@ -1404,47 +1401,55 @@ def _build_province_cod_daily_rows(items, start_date, end_date):
             or getattr(getattr(item, "batch", None), "assigned_at", None)
             or getattr(getattr(item, "batch", None), "created_at", None)
         )
-        sent_date = _pc_date_in_range(sent_source, start_date, end_date)
-        if sent_date in rows_by_date:
-            row = rows_by_date[sent_date]
-            row["sent_orders"] += 1
-            row["sent_cod"] += original_cod
-
-        received_date = _pc_date_in_range(
-            getattr(item, "received_at", None),
+        sent_date = _pc_date_in_range(
+            sent_source,
             start_date,
             end_date,
         )
-        if received_date in rows_by_date:
-            row = rows_by_date[received_date]
+
+        if sent_date not in rows_by_date:
+            continue
+
+        row = rows_by_date[sent_date]
+        row["sent_orders"] += 1
+        row["sent_cod"] += original_cod
+
+        cod_status = (
+            getattr(item, "cod_status", "") or ""
+        ).strip().upper()
+
+        # PAID has already passed RECEIVED, so it is included in received.
+        if cod_status in {
+            ProvinceCODItem.STATUS_RECEIVED,
+            ProvinceCODItem.STATUS_PAID,
+        }:
             row["received_orders"] += 1
-            row["received_cod"] += original_cod
 
-        settled_date = _pc_date_in_range(
-            getattr(item, "seller_settled_at", None),
-            start_date,
-            end_date,
-        )
-        if getattr(item, "seller_settled", False) and settled_date in rows_by_date:
-            row = rows_by_date[settled_date]
+        if getattr(item, "seller_settled", False):
             row["settled_orders"] += 1
-            row["settled_cod"] += net_cod
 
-        returned_date = _pc_date_in_range(
-            getattr(item, "returned_at", None),
-            start_date,
-            end_date,
-        )
-        if returned_date in rows_by_date:
-            row = rows_by_date[returned_date]
+        if cod_status == ProvinceCODItem.STATUS_RETURNED:
             row["returned_orders"] += 1
-            row["returned_cod"] += original_cod
+
+        # Count each item once only.
+        if cod_status in {
+            ProvinceCODItem.STATUS_RECEIVED,
+            ProvinceCODItem.STATUS_PAID,
+            ProvinceCODItem.STATUS_RETURNED,
+        }:
+            row["done_orders"] += 1
 
     for row in rows_by_date.values():
-        total_finished_cod = row["settled_cod"] + row["returned_cod"]
-        row["done_rate"] = _safe_rate(total_finished_cod, row["sent_cod"])
+        row["done_rate"] = _safe_rate(
+            row["done_orders"],
+            row["sent_orders"],
+        )
 
-    return [rows_by_date[d] for d in sorted(rows_by_date.keys(), reverse=True)]
+    return [
+        rows_by_date[row_date]
+        for row_date in sorted(rows_by_date.keys(), reverse=True)
+    ]
+
 
 def _computer_province_cod_export_xlsx(rows, seller):
     wb = Workbook()
@@ -1622,8 +1627,8 @@ def computer_cod_report(request):
     summary_start_date = _parse_date(date_from) or today
     summary_end_date = _parse_date(date_to) or today
 
-    # The COD summary is by action dates: sent / received / settled / returned.
-    # Do not group by order created date.
+    # The COD summary is grouped by each item's original sent date.
+    # Later received, paid, settled, or returned results stay on that row.
     summary_items = list(base_rows.order_by("activity_date", "id"))
 
     rows = base_rows

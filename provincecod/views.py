@@ -976,6 +976,29 @@ def province_cod_report(request):
                             ),
                         )
 
+                    elif action == "update_tracking_number":
+                        tracking_number = (
+                            request.POST.get("tracking_number") or ""
+                        ).strip()
+
+                        if not tracking_number:
+                            raise ValueError(
+                                "Please enter the carrier tracking number."
+                            )
+
+                        if len(tracking_number) > 255:
+                            raise ValueError(
+                                "Tracking number cannot exceed 255 characters."
+                            )
+
+                        item.tracking_number = tracking_number
+                        item.save(
+                            update_fields=[
+                                "tracking_number",
+                                "updated_at",
+                            ]
+                        )
+
                     elif action == "settle_seller":
                         mark_item_seller_settled(
                             item,
@@ -1075,10 +1098,12 @@ def province_cod_report(request):
         "sent_date": "activity_date",
         "batch": "batch_id",
         "tracking": "order__tracking_no",
+        "carrier_tracking": "tracking_number",
         "seller": "order__seller__name",
         "carrier": "batch__shipper__name",
         "receiver": "order__receiver_name",
         "phone": "order__receiver_phone",
+        "location": "order__receiver_address",
         "original_cod": "original_cod",
         "status": "cod_status",
         "net_cod": "net_cod",
@@ -1149,8 +1174,10 @@ def province_cod_report(request):
     if q:
         rows = rows.filter(
             Q(order__tracking_no__icontains=q)
+            | Q(tracking_number__icontains=q)
             | Q(order__receiver_name__icontains=q)
             | Q(order__receiver_phone__icontains=q)
+            | Q(order__receiver_address__icontains=q)
             | Q(order__seller__name__icontains=q)
             | Q(batch__shipper__name__icontains=q)
             | Q(carrier_reference__icontains=q)

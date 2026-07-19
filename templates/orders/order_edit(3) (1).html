@@ -1,0 +1,893 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .wrap{
+    width:100%;
+    padding:18px 22px;
+  }
+
+  .page-title{
+    margin:0 0 14px 0;
+    font-size:24px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:18px;
+    max-width:1050px;
+    box-shadow:0 10px 28px rgba(15,23,42,.06);
+  }
+
+  .err{
+    background:#fff1f2;
+    border:1px solid #fecdd3;
+    color:#9f1239;
+    padding:12px 14px;
+    border-radius:12px;
+    margin-bottom:14px;
+  }
+
+  .warn{
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+    padding:12px 14px;
+    border-radius:12px;
+    margin-bottom:14px;
+    font-weight:800;
+  }
+
+  .section{
+    border:1px solid #eef2f7;
+    border-radius:14px;
+    overflow:hidden;
+    margin-bottom:16px;
+    background:#fff;
+  }
+
+  .section-head{
+    background:#f8fafc;
+    border-bottom:1px solid #eef2f7;
+    padding:12px 14px;
+    font-size:14px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .section-body{
+    padding:14px;
+  }
+
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+
+  @media(max-width:900px){
+    .grid2{grid-template-columns:1fr;}
+  }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .field-full{
+    grid-column:1 / -1;
+  }
+
+  label{
+    display:block;
+    font-weight:800;
+    font-size:13px;
+    color:#334155;
+  }
+
+  input,
+  select,
+  textarea{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    outline:none;
+    font-size:14px;
+    background:#fff;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus{
+    border-color:#0f766e;
+    box-shadow:0 0 0 3px rgba(15,118,110,.12);
+  }
+
+  textarea{
+    min-height:100px;
+    resize:vertical;
+  }
+
+  .small-note{
+    font-size:12px;
+    color:#64748b;
+    margin-top:2px;
+  }
+
+  .small-note.red{
+    color:#b91c1c;
+    font-weight:800;
+  }
+
+  .btns{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:10px;
+    padding-top:14px;
+    border-top:1px solid #f1f5f9;
+    flex-wrap:wrap;
+  }
+
+  .btn{
+    padding:10px 14px;
+    border-radius:10px;
+    border:1px solid #d1d5db;
+    background:#fff;
+    font-weight:800;
+    font-size:13px;
+    text-decoration:none;
+    cursor:pointer;
+    color:#0f172a;
+  }
+
+  .btn:hover{
+    background:#f8fafc;
+  }
+
+  .btn-primary{
+    background:#0f766e;
+    color:#fff;
+    border-color:#0f766e;
+  }
+
+  .btn-primary:hover{
+    background:#115e59;
+  }
+
+  .product-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+  }
+
+  @media(max-width:640px){
+    .product-row{grid-template-columns:1fr;}
+  }
+
+  .muted{
+    font-size:12px;
+    color:#64748b;
+  }
+
+  .selected-goods-box{
+    margin-top:10px;
+    padding:12px;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    background:#f9fafb;
+  }
+
+  .selected-title{
+    font-size:13px;
+    font-weight:950;
+    color:#064e3b;
+    margin-bottom:8px;
+  }
+
+  .selected-good-row{
+    display:grid;
+    grid-template-columns:1fr 90px 40px;
+    gap:8px;
+    align-items:center;
+    padding:8px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    margin-bottom:8px;
+  }
+
+  .selected-good-row input{
+    height:36px;
+    text-align:center;
+    font-weight:900;
+  }
+
+  .selected-good-row button{
+    width:36px;
+    height:36px;
+    border:0;
+    border-radius:999px;
+    background:#ef4444;
+    color:#fff;
+    font-size:22px;
+    font-weight:950;
+    cursor:pointer;
+  }
+
+  .goods-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:9999;
+  }
+
+  .goods-modal.show{
+    display:block;
+  }
+
+  .goods-backdrop{
+    position:absolute;
+    inset:0;
+    background:rgba(15,23,42,.55);
+  }
+
+  .goods-card{
+    position:relative;
+    z-index:2;
+    width:min(980px,94vw);
+    max-height:86vh;
+    overflow:auto;
+    margin:7vh auto 0;
+    background:#fff;
+    border-radius:24px;
+    box-shadow:0 24px 80px rgba(0,0,0,.30);
+    padding:18px;
+  }
+
+  .goods-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .goods-title{
+    font-size:22px;
+    font-weight:950;
+    color:#064e3b;
+  }
+
+  .goods-sub{
+    color:#6b7280;
+    font-size:13px;
+    font-weight:750;
+    margin-top:2px;
+  }
+
+  .goods-close{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:999px;
+    background:#ef4444;
+    color:#fff;
+    font-size:26px;
+    font-weight:950;
+    cursor:pointer;
+  }
+
+  .goods-search-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+    margin-bottom:14px;
+  }
+
+  @media(max-width:640px){
+    .goods-search-row{grid-template-columns:1fr;}
+  }
+
+  .goods-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+    gap:12px;
+  }
+
+  .goods-item{
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    background:#fff;
+    padding:10px;
+    transition:.15s ease;
+  }
+
+  .goods-item:hover{
+    border-color:#0f766e;
+    box-shadow:0 10px 24px rgba(15,118,110,.14);
+    transform:translateY(-1px);
+  }
+
+  .goods-photo{
+    width:100%;
+    height:130px;
+    border-radius:14px;
+    object-fit:cover;
+    background:#f3f4f6;
+    display:grid;
+    place-items:center;
+    color:#9ca3af;
+    font-size:12px;
+    font-weight:900;
+  }
+
+  .goods-name{
+    margin-top:8px;
+    font-size:14px;
+    font-weight:950;
+    color:#111827;
+  }
+
+  .goods-meta{
+    color:#6b7280;
+    font-size:12px;
+    font-weight:750;
+    margin-top:2px;
+  }
+
+  .goods-stock{
+    margin-top:8px;
+    display:inline-flex;
+    min-height:26px;
+    padding:0 10px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#166534;
+    align-items:center;
+    font-size:12px;
+    font-weight:950;
+  }
+
+  .goods-loading{
+    padding:18px;
+    text-align:center;
+    color:#64748b;
+    font-weight:850;
+  }
+</style>
+
+<div class="wrap">
+  <div class="page-title">Edit Order</div>
+
+  <div class="card">
+    {% if errors %}
+      <div class="err">
+        <ul style="margin:0;padding-left:18px;">
+          {% for e in errors %}
+            <li>{{ e }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if cod_is_protected %}
+      <div class="warn">
+        You can edit all order information. COD is locked and can only be changed by admin or with the override password.
+      </div>
+    {% endif %}
+
+    <form method="post" id="editOrderForm">
+      {% csrf_token %}
+      <input type="hidden" name="override_password" id="override_password_hidden">
+      <input type="hidden" name="stock_items_json" id="stockItemsJson">
+
+      <div class="section">
+        <div class="section-head">Basic Information</div>
+        <div class="section-body">
+          <div class="grid2">
+            <div class="field field-full">
+              <label>Tracking / SN</label>
+              <input
+                type="text"
+                name="tracking_no"
+                value="{{ order.tracking_no }}"
+                required
+              >
+            </div>
+
+            <div class="field">
+              <label>Shop</label>
+              <select name="seller" id="seller_id">
+                <option value="">Select shop</option>
+                {% for s in sellers %}
+                  <option value="{{ s.id }}" {% if order.seller_id == s.id %}selected{% endif %}>
+                    {{ s.name }}{% if s.code %} ({{ s.code }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Seller Name</label>
+              <input name="seller_name" value="{{ order.seller_name|default:'' }}">
+            </div>
+
+            <div class="field">
+              <label>Order Code</label>
+              <input name="seller_order_code" value="{{ order.seller_order_code|default:'' }}">
+            </div>
+
+            <div class="field field-full">
+              <label>Product / Goods</label>
+              <div class="product-row">
+                <input
+                  id="id_product_desc"
+                  name="product_desc"
+                  value="{{ order.product_desc|default:'' }}"
+                  placeholder="Choose goods or type manually"
+                >
+                <button type="button" class="btn btn-primary" id="openGoodsPopup">
+                  Choose Goods
+                </button>
+              </div>
+
+              <div class="small-note">
+                Can choose many goods. Example: Serum x1 + Cream x2.
+              </div>
+
+              <div class="selected-goods-box">
+                <div class="selected-title">Selected Goods</div>
+                <div id="selectedGoodsList">
+                  <div class="muted">No goods selected yet.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Quantity</label>
+              <input id="id_quantity" name="quantity" value="{{ order.quantity }}">
+            </div>
+
+            <div class="field">
+              <label>COD ($)</label>
+              <input
+                type="text"
+                name="cod"
+                id="cod_input"
+                value="{{ order.cod }}"
+                data-old-cod="{{ order.cod }}"
+                {% if cod_is_protected and not is_admin_user %}data-protected="1"{% endif %}
+              >
+              <div id="cod-change-note" class="small-note red" style="display:none;">
+                COD changed. Password confirmation will be required.
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Price ($)</label>
+              <input name="price" value="{{ order.price }}">
+            </div>
+
+            <div class="field">
+              <label>Delivery Fee ($)</label>
+              <input name="delivery_fee" value="{{ order.delivery_fee }}">
+            </div>
+
+            <div class="field">
+              <label>Additional Fee ($)</label>
+              <input name="additional_fee" value="{{ order.additional_fee }}">
+            </div>
+
+            <div class="field">
+              <label>Province Fee ($)</label>
+              <input name="province_fee" value="{{ order.province_fee }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">Receiver Information</div>
+        <div class="section-body">
+          <div class="grid2">
+            <div class="field field-full">
+              <label>Receiver Name</label>
+              <input name="receiver_name" value="{{ order.receiver_name|default:'' }}">
+            </div>
+
+            <div class="field">
+              <label>Phone</label>
+              <input name="receiver_phone" value="{{ order.receiver_phone|default:'' }}">
+            </div>
+
+            <div class="field">
+              <label>Address</label>
+              <input name="receiver_address" value="{{ order.receiver_address|default:'' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">Remark / Reason</div>
+        <div class="section-body">
+          <div class="grid2">
+            <div class="field">
+              <label>Remark</label>
+              <textarea name="remark">{{ order.remark|default:'' }}</textarea>
+            </div>
+
+            <div class="field">
+              <label>Reason</label>
+              <textarea name="reason">{{ order.reason|default:'' }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="btns">
+        <a class="btn" href="{% url 'order_created' order.id %}">Cancel</a>
+        <button class="btn btn-primary" type="submit" id="saveBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="goodsModal" class="goods-modal">
+  <div class="goods-backdrop" id="goodsBackdrop"></div>
+
+  <div class="goods-card">
+    <div class="goods-head">
+      <div>
+        <div class="goods-title">Choose Goods</div>
+        <div class="goods-sub">Select one or many products from this seller inventory.</div>
+      </div>
+
+      <button type="button" class="goods-close" id="closeGoodsPopup">×</button>
+    </div>
+
+    <div class="goods-search-row">
+      <input id="goodsSearch" type="text" placeholder="Search product / SKU / type">
+      <button type="button" class="btn btn-primary" id="searchGoodsBtn">Search</button>
+    </div>
+
+    <div id="goodsLoading" class="goods-loading" style="display:none;">Loading goods...</div>
+    <div id="goodsGrid" class="goods-grid"></div>
+  </div>
+</div>
+
+<div id="cod-password-modal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.45);
+  z-index:99999;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    width:100%;
+    max-width:420px;
+    background:#fff;
+    border-radius:16px;
+    padding:18px;
+    box-shadow:0 20px 60px rgba(15,23,42,.25);
+  ">
+    <h3 style="margin:0 0 10px 0; font-size:18px; font-weight:900; color:#0f172a;">
+      COD Override Password
+    </h3>
+
+    <div style="color:#64748b; font-size:13px; margin-bottom:14px;">
+      COD is locked for this order. Enter the override password to confirm the COD change.
+    </div>
+
+    <input
+      type="password"
+      id="override_password_input"
+      placeholder="Enter override password"
+      style="
+        width:100%;
+        padding:12px;
+        border:1px solid #d1d5db;
+        border-radius:10px;
+        outline:none;
+        margin-bottom:14px;
+      "
+    >
+
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" id="cod-modal-cancel" class="btn">Cancel</button>
+      <button type="button" id="cod-modal-confirm" class="btn btn-primary">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("editOrderForm");
+  const saveBtn = document.getElementById("saveBtn");
+  const codInput = document.getElementById("cod_input");
+  const codChangeNote = document.getElementById("cod-change-note");
+  const modal = document.getElementById("cod-password-modal");
+  const modalInput = document.getElementById("override_password_input");
+  const modalConfirm = document.getElementById("cod-modal-confirm");
+  const modalCancel = document.getElementById("cod-modal-cancel");
+  const hiddenPassword = document.getElementById("override_password_hidden");
+
+  if (!form || !saveBtn) return;
+
+  function normalize(v) {
+    return String(v || "").trim();
+  }
+
+  function codChanged() {
+    if (!codInput) return false;
+    return normalize(codInput.value) !== normalize(codInput.dataset.oldCod || "");
+  }
+
+  function refreshCodUI() {
+    if (!codInput) return;
+
+    if (codChanged()) {
+      codInput.style.borderColor = "#ef4444";
+      codInput.style.background = "#fef2f2";
+      if (codChangeNote) codChangeNote.style.display = "block";
+    } else {
+      codInput.style.borderColor = "";
+      codInput.style.background = "";
+      if (codChangeNote) codChangeNote.style.display = "none";
+      if (hiddenPassword) hiddenPassword.value = "";
+    }
+  }
+
+  if (codInput) {
+    codInput.addEventListener("input", refreshCodUI);
+    refreshCodUI();
+  }
+
+  form.addEventListener("submit", function (e) {
+    const protectedCod = codInput && codInput.dataset.protected === "1";
+
+    if (protectedCod && codChanged() && !hiddenPassword.value) {
+      e.preventDefault();
+      modal.style.display = "flex";
+      modalInput.value = "";
+      modalInput.focus();
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.innerText = "Saving...";
+  });
+
+  if (modalConfirm) {
+    modalConfirm.addEventListener("click", function () {
+      hiddenPassword.value = modalInput.value.trim();
+      modal.style.display = "none";
+      form.submit();
+    });
+  }
+
+  if (modalCancel) {
+    modalCancel.addEventListener("click", function () {
+      modal.style.display = "none";
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
+    });
+  }
+});
+
+(function(){
+  let selectedGoods = [];
+  let lastGoodsResults = [];
+
+  {% for item in order.stock_items.all %}
+    selectedGoods.push({
+      product_id: {{ item.product_id }},
+      name: "{{ item.product.name|escapejs }}",
+      qty: {{ item.quantity }}
+    });
+  {% endfor %}
+
+  const modal = document.getElementById("goodsModal");
+  const openBtn = document.getElementById("openGoodsPopup");
+  const closeBtn = document.getElementById("closeGoodsPopup");
+  const backdrop = document.getElementById("goodsBackdrop");
+  const grid = document.getElementById("goodsGrid");
+  const search = document.getElementById("goodsSearch");
+  const searchBtn = document.getElementById("searchGoodsBtn");
+  const loading = document.getElementById("goodsLoading");
+  const productInput = document.getElementById("id_product_desc");
+  const qtyInput = document.getElementById("id_quantity");
+  const hiddenItems = document.getElementById("stockItemsJson");
+  const selectedBox = document.getElementById("selectedGoodsList");
+
+  if (!modal || !openBtn || !productInput || !hiddenItems || !selectedBox) return;
+
+  function getSellerId(){
+    const sellerField = document.getElementById("seller_id");
+    return sellerField ? sellerField.value : "";
+  }
+
+  function escapeHtml(text){
+    return String(text || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function renderSelectedGoods(){
+    if (!selectedGoods.length){
+      selectedBox.innerHTML = `<div class="muted">No goods selected yet.</div>`;
+      hiddenItems.value = "";
+      return;
+    }
+
+    selectedBox.innerHTML = selectedGoods.map(item => `
+      <div class="selected-good-row">
+        <div><strong>${escapeHtml(item.name)}</strong></div>
+        <input
+          type="number"
+          min="1"
+          value="${item.qty}"
+          onchange="changeGoodsQty(${item.product_id}, this.value)"
+        >
+        <button type="button" onclick="removeGoods(${item.product_id})">×</button>
+      </div>
+    `).join("");
+
+    hiddenItems.value = JSON.stringify(selectedGoods);
+
+    productInput.value = selectedGoods
+      .map(item => `${item.name} x${item.qty}`)
+      .join(" + ");
+
+    if (qtyInput) {
+      qtyInput.value = selectedGoods.reduce((sum, item) => sum + parseInt(item.qty || 0), 0);
+    }
+  }
+
+  window.removeGoods = function(productId){
+    selectedGoods = selectedGoods.filter(x => parseInt(x.product_id) !== parseInt(productId));
+    renderSelectedGoods();
+  };
+
+  window.changeGoodsQty = function(productId, qty){
+    qty = parseInt(qty || "1", 10);
+    if (qty <= 0) qty = 1;
+
+    const item = selectedGoods.find(x => parseInt(x.product_id) === parseInt(productId));
+
+    if (item) {
+      item.qty = qty;
+    }
+
+    renderSelectedGoods();
+  };
+
+  function addGoods(item){
+    const existing = selectedGoods.find(x => parseInt(x.product_id) === parseInt(item.id));
+
+    if (existing){
+      existing.qty += 1;
+    } else {
+      selectedGoods.push({
+        product_id: item.id,
+        name: item.name,
+        qty: 1
+      });
+    }
+
+    renderSelectedGoods();
+  }
+
+  function goodsCardHtml(item){
+    const photo = item.photo_url
+      ? `<img class="goods-photo" src="${item.photo_url}" alt="${escapeHtml(item.name)}">`
+      : `<div class="goods-photo">NO PHOTO</div>`;
+
+    return `
+      <div class="goods-item">
+        ${photo}
+        <div class="goods-name">${escapeHtml(item.name)}</div>
+        <div class="goods-meta">${escapeHtml(item.sku || "-")}</div>
+        <div class="goods-meta">${escapeHtml(item.product_type || "-")}</div>
+        <div class="goods-stock">Available: ${item.available_qty}</div>
+        <button
+          type="button"
+          class="btn btn-primary add-goods-btn"
+          data-id="${item.id}"
+          style="width:100%;margin-top:10px;"
+        >
+          Add
+        </button>
+      </div>
+    `;
+  }
+
+  function openModal(){
+    const sellerId = getSellerId();
+
+    if (!sellerId){
+      alert("Please select seller first.");
+      return;
+    }
+
+    modal.classList.add("show");
+    loadGoods();
+  }
+
+  function closeModal(){
+    modal.classList.remove("show");
+  }
+
+  function loadGoods(){
+    const sellerId = getSellerId();
+    const q = search ? (search.value || "") : "";
+
+    loading.style.display = "block";
+    grid.innerHTML = "";
+
+    const url = `{% url 'inventory:stock_products_api' %}?seller_id=${encodeURIComponent(sellerId)}&q=${encodeURIComponent(q)}`;
+
+    fetch(url)
+      .then(resp => resp.json())
+      .then(data => {
+        loading.style.display = "none";
+        lastGoodsResults = data.results || [];
+
+        if (!lastGoodsResults.length){
+          grid.innerHTML = `<div class="goods-loading">No goods found for this seller.</div>`;
+          return;
+        }
+
+        grid.innerHTML = lastGoodsResults.map(goodsCardHtml).join("");
+
+        grid.querySelectorAll(".add-goods-btn").forEach(btn => {
+          btn.addEventListener("click", function(){
+            const id = parseInt(btn.getAttribute("data-id"), 10);
+            const item = lastGoodsResults.find(x => parseInt(x.id) === id);
+
+            if (item) {
+              addGoods(item);
+            }
+          });
+        });
+      })
+      .catch(() => {
+        loading.style.display = "none";
+        grid.innerHTML = `<div class="goods-loading">Cannot load goods.</div>`;
+      });
+  }
+
+  openBtn.addEventListener("click", openModal);
+  closeBtn.addEventListener("click", closeModal);
+  backdrop.addEventListener("click", closeModal);
+  searchBtn.addEventListener("click", loadGoods);
+
+  search.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){
+      e.preventDefault();
+      loadGoods();
+    }
+  });
+
+  renderSelectedGoods();
+})();
+</script>
+{% endblock %}

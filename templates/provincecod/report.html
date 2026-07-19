@@ -28,7 +28,7 @@
   .pc-input:focus{border-color:#119a62;box-shadow:0 0 0 3px rgba(17,154,98,.12)}
   .pc-textarea{width:100%;min-height:72px;border:1px solid #cbd5e1;border-radius:11px;padding:9px;resize:vertical;outline:none}
   .pc-table-wrap{overflow:auto;padding:0}
-  .pc-table{width:100%;min-width:1650px;border-collapse:separate;border-spacing:0}
+  .pc-table{width:100%;min-width:1780px;border-collapse:separate;border-spacing:0}
   .pc-table th{position:sticky;top:0;z-index:3;background:#f8fafc;padding:0;border-bottom:1px solid #dbe3ec;white-space:nowrap;text-align:left}
   .pc-table th a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 10px;color:#334155;text-decoration:none;font-size:10px;font-weight:950;letter-spacing:.02em}
   .pc-table th a:hover{background:#eefbf4;color:#087847}
@@ -154,7 +154,7 @@
 
       <div class="pc-field" style="min-width:220px">
         <label>Search</label>
-        <input class="pc-input" name="q" value="{{ q }}" placeholder="Tracking, phone, seller, reference...">
+        <input class="pc-input" name="q" value="{{ q }}" placeholder="Order tracking, carrier tracking, phone, seller...">
       </div>
 
       <input type="hidden" name="sort" value="{{ sort }}">
@@ -244,11 +244,13 @@
           <th><a href="{{ sort_urls.id }}">ID <span class="sort-mark">{% if sort == "id" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.sent_date }}">DATE <span class="sort-mark">{% if sort == "sent_date" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.batch }}">BATCH <span class="sort-mark">{% if sort == "batch" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.tracking }}">TRACKING <span class="sort-mark">{% if sort == "tracking" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
+          <th><a href="{{ sort_urls.tracking }}">ORDER TRACKING <span class="sort-mark">{% if sort == "tracking" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
+          <th><a href="{{ sort_urls.carrier_tracking }}">CARRIER TRACKING <span class="sort-mark">{% if sort == "carrier_tracking" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.seller }}">SELLER <span class="sort-mark">{% if sort == "seller" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.carrier }}">CARRIER <span class="sort-mark">{% if sort == "carrier" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.receiver }}">RECEIVER <span class="sort-mark">{% if sort == "receiver" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.phone }}">PHONE <span class="sort-mark">{% if sort == "phone" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
+          <th><a href="{{ sort_urls.location }}">LOCATION <span class="sort-mark">{% if sort == "location" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.original_cod }}">ORIGINAL COD <span class="sort-mark">{% if sort == "original_cod" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.status }}">STATUS <span class="sort-mark">{% if sort == "status" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.net_cod }}">PAID AMOUNT <span class="sort-mark">{% if sort == "net_cod" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
@@ -277,10 +279,19 @@
 
             <td><a class="pc-link" href="{% url 'provincecod:batch_detail' item.batch_id %}">PVCOD-{{ item.batch_id }}</a></td>
             <td><a class="pc-link" href="/orders/created/{{ item.order_id }}/">{{ item.order.tracking_no }}</a></td>
+            <td>
+              {% if item.tracking_number %}
+                <b>{{ item.tracking_number }}</b>
+                <button type="button" class="pc-btn pc-soft pc-mini js-open-tracking" data-item-id="{{ item.id }}" data-order-tracking="{{ item.order.tracking_no }}" data-carrier-tracking="{{ item.tracking_number }}" style="margin-top:5px">Edit</button>
+              {% else %}
+                <button type="button" class="pc-btn pc-blue pc-mini js-open-tracking" data-item-id="{{ item.id }}" data-order-tracking="{{ item.order.tracking_no }}" data-carrier-tracking="">Add Tracking</button>
+              {% endif %}
+            </td>
             <td>{{ item.order.seller.name|default:"-" }}</td>
             <td>{{ item.batch.shipper.name|default:"-" }}</td>
             <td>{{ item.order.receiver_name|default:"-" }}</td>
             <td>{{ item.order.receiver_phone|default:"-" }}</td>
+            <td style="min-width:190px;max-width:260px;white-space:normal;line-height:1.35">{{ item.order.receiver_address|default:"-" }}</td>
             <td class="right"><b>${{ item.original_cod|floatformat:2 }}</b></td>
 
             <td class="center">
@@ -362,7 +373,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="18" class="pc-empty">No Province COD orders found.</td></tr>
+          <tr><td colspan="20" class="pc-empty">No Province COD orders found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -458,6 +469,35 @@
       <div class="pc-modal-actions">
         <button type="button" class="pc-btn pc-soft" id="statusModalCancel">Cancel</button>
         <button type="submit" class="pc-btn pc-primary" id="statusModalSubmit">Save Status</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="pc-modal-backdrop" id="trackingModal" aria-hidden="true">
+  <div class="pc-modal" role="dialog" aria-modal="true" aria-labelledby="trackingModalTitle">
+    <div class="pc-modal-head">
+      <div>
+        <div class="pc-modal-title" id="trackingModalTitle">Carrier Tracking Number</div>
+        <div class="pc-note" id="trackingModalOrder"></div>
+      </div>
+      <button type="button" class="pc-modal-close" id="trackingModalClose" aria-label="Close">×</button>
+    </div>
+
+    <form method="post" id="trackingModalForm">
+      {% csrf_token %}
+      <input type="hidden" name="item_id" id="trackingModalItemId">
+      <input type="hidden" name="next_query" value="{{ current_query }}">
+      <input type="hidden" name="action" value="update_tracking_number">
+
+      <div>
+        <label class="pc-note">Tracking number from carrier</label>
+        <input class="pc-input" name="tracking_number" id="trackingNumberInput" maxlength="255" required placeholder="Example: JT123456789KH">
+      </div>
+
+      <div class="pc-modal-actions">
+        <button type="button" class="pc-btn pc-soft" id="trackingModalCancel">Cancel</button>
+        <button type="submit" class="pc-btn pc-primary">Save Tracking Number</button>
       </div>
     </form>
   </div>
@@ -597,9 +637,48 @@
       }
     });
 
+    const trackingModal = document.getElementById("trackingModal");
+    const trackingModalItemId = document.getElementById("trackingModalItemId");
+    const trackingModalOrder = document.getElementById("trackingModalOrder");
+    const trackingNumberInput = document.getElementById("trackingNumberInput");
+
+    function openTrackingModal(button) {
+      trackingModalItemId.value = button.dataset.itemId || "";
+      trackingModalOrder.textContent = "Order tracking: " + (button.dataset.orderTracking || "-");
+      trackingNumberInput.value = button.dataset.carrierTracking || "";
+      trackingModal.classList.add("open");
+      trackingModal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+      setTimeout(() => trackingNumberInput.focus(), 50);
+    }
+
+    function closeTrackingModal() {
+      trackingModal.classList.remove("open");
+      trackingModal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
+
+    document.querySelectorAll(".js-open-tracking").forEach((button) => {
+      button.addEventListener("click", function () {
+        openTrackingModal(button);
+      });
+    });
+
+    document.getElementById("trackingModalClose")?.addEventListener("click", closeTrackingModal);
+    document.getElementById("trackingModalCancel")?.addEventListener("click", closeTrackingModal);
+
+    trackingModal?.addEventListener("click", function (event) {
+      if (event.target === trackingModal) {
+        closeTrackingModal();
+      }
+    });
+
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && modal.classList.contains("open")) {
         closeModal();
+      }
+      if (event.key === "Escape" && trackingModal.classList.contains("open")) {
+        closeTrackingModal();
       }
     });
   })();

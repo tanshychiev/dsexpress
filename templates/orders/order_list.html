@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load phone_filters %}
 
 {% block page_title %}Orders{% endblock %}
 {% block page_subtitle %}Search, manage, print, and update orders{% endblock %}
@@ -1130,7 +1131,9 @@
 
                   <td data-label="Phone">
                     {% if o.receiver_phone %}
-                      <a class="orders-link" href="tel:{{ o.receiver_phone }}">{{ o.receiver_phone }}</a>
+                      <a class="orders-link" href="tel:{{ o.receiver_phone|kh_phone_tel }}">
+                        {{ o.receiver_phone|kh_phone }}
+                      </a>
                     {% else %}
                       -
                     {% endif %}

@@ -880,6 +880,57 @@ def province_cod_report(request):
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
 
+        # Save one carrier tracking number directly.
+        # Handle this before bulk-selection logic so it never depends on
+        # selected checkboxes.
+        if action == "update_tracking_number":
+            item_id = (request.POST.get("item_id") or "").strip()
+            tracking_number = (
+                request.POST.get("tracking_number") or ""
+            ).strip()
+
+            if not item_id.isdigit():
+                messages.error(request, "Invalid Province COD item.")
+
+            elif not tracking_number:
+                messages.error(
+                    request,
+                    "Please enter the carrier tracking number.",
+                )
+
+            elif len(tracking_number) > 255:
+                messages.error(
+                    request,
+                    "Tracking number cannot exceed 255 characters.",
+                )
+
+            else:
+                item = get_object_or_404(
+                    ProvinceCODItem.objects.exclude(
+                        batch__status=ProvinceCODBatch.STATUS_CANCELLED
+                    ),
+                    pk=int(item_id),
+                )
+
+                item.tracking_number = tracking_number
+                item.save()
+
+                messages.success(
+                    request,
+                    f"Carrier tracking saved: {tracking_number}",
+                )
+
+            next_query = (
+                request.POST.get("next_query") or ""
+            ).strip()
+
+            target = reverse("provincecod:report")
+
+            if next_query:
+                target = f"{target}?{next_query}"
+
+            return redirect(target)
+
         selected_ids = [
             int(value)
             for value in request.POST.getlist("selected_ids")
@@ -974,29 +1025,6 @@ def province_cod_report(request):
                                 "note",
                                 "",
                             ),
-                        )
-
-                    elif action == "update_tracking_number":
-                        tracking_number = (
-                            request.POST.get("tracking_number") or ""
-                        ).strip()
-
-                        if not tracking_number:
-                            raise ValueError(
-                                "Please enter the carrier tracking number."
-                            )
-
-                        if len(tracking_number) > 255:
-                            raise ValueError(
-                                "Tracking number cannot exceed 255 characters."
-                            )
-
-                        item.tracking_number = tracking_number
-                        item.save(
-                            update_fields=[
-                                "tracking_number",
-                                "updated_at",
-                            ]
                         )
 
                     elif action == "settle_seller":

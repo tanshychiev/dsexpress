@@ -264,12 +264,10 @@
             <tr>
               <th style="width:58px"><a href="{{ sort_urls.id }}">ID <span class="sort-mark">{% if sort == "id" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:100px"><a href="{{ sort_urls.sent_date }}">Date <span class="sort-mark">{% if sort == "sent_date" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-              <th style="width:95px"><a href="{{ sort_urls.batch }}">Batch <span class="sort-mark">{% if sort == "batch" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-              <th style="width:138px"><a href="{{ sort_urls.tracking }}">Tracking <span class="sort-mark">{% if sort == "tracking" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
+                            <th style="width:138px"><a href="{{ sort_urls.tracking }}">Tracking <span class="sort-mark">{% if sort == "tracking" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:135px" class="no-sort">Order Code</th>
               <th style="width:110px" class="no-sort">Seller Name</th>
-              <th style="width:115px"><a href="{{ sort_urls.carrier }}">Carrier <span class="sort-mark">{% if sort == "carrier" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-              <th style="width:120px"><a href="{{ sort_urls.receiver }}">Receiver <span class="sort-mark">{% if sort == "receiver" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
+                            <th style="width:120px"><a href="{{ sort_urls.receiver }}">Receiver <span class="sort-mark">{% if sort == "receiver" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:100px"><a href="{{ sort_urls.phone }}">Phone <span class="sort-mark">{% if sort == "phone" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
               <th style="width:230px" class="no-sort">Address</th>
               <th style="width:95px"><a href="{{ sort_urls.original_cod }}">Original COD <span class="sort-mark">{% if sort == "original_cod" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
@@ -289,12 +287,10 @@
                   <b>{{ item.activity_date|date:"Y-m-d" }}</b>
                   <span class="pc-small">{{ item.activity_date|date:"H:i" }}</span>
                 </td>
-                <td class="pc-mono">PVCOD-{{ item.batch_id }}</td>
-                <td><strong class="pc-mono">{{ item.order.tracking_no }}</strong></td>
+                                <td><strong class="pc-mono">{{ item.order.tracking_no }}</strong></td>
                 <td class="pc-mono">{{ item.order.seller_order_code|default:"-" }}</td>
                 <td>{{ item.order.seller_name|default:"-" }}</td>
-                <td>{{ item.batch.shipper.name|default:"-" }}</td>
-                <td>{{ item.order.receiver_name|default:"-" }}</td>
+                                <td>{{ item.order.receiver_name|default:"-" }}</td>
                 <td>{{ item.order.receiver_phone|default:"-" }}</td>
                 <td class="pc-address">{{ item.order.receiver_address|default:"-" }}</td>
                 <td class="right"><span class="pc-money">${{ item.original_cod|floatformat:2 }}</span></td>
@@ -323,7 +319,7 @@
               </tr>
             {% empty %}
               <tr>
-                <td colspan="16" class="pc-empty">
+                <td colspan="14" class="pc-empty">
                   <div class="pc-empty-box">
                     <div class="pc-empty-icon">$</div>
                     <div class="pc-empty-title">No Province COD orders found</div>

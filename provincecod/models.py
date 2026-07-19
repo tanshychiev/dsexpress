@@ -40,7 +40,6 @@ class ProvinceCODBatch(models.Model):
         auto_now=True,
     )
 
-
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -244,6 +243,13 @@ class ProvinceCODItem(models.Model):
         blank=True,
     )
 
+    tracking_number = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        db_index=True,
+    )
+
     carrier_reference = models.CharField(
         max_length=255,
         blank=True,
@@ -317,7 +323,11 @@ class ProvinceCODItem(models.Model):
         ]
 
     def __str__(self):
-        tracking_no = getattr(self.order, "tracking_no", self.order_id)
+        tracking_no = getattr(
+            self.order,
+            "tracking_no",
+            self.order_id,
+        )
         status = self.cod_status or "NOT SENT"
         return f"{self.batch_id} - {tracking_no} - {status}"
 
@@ -333,15 +343,21 @@ class ProvinceCODItem(models.Model):
         percentage_fee = money(
             self.original_cod * self.carrier_percent_rate
         )
-        return money(self.carrier_fixed_fee + percentage_fee)
+        return money(
+            self.carrier_fixed_fee + percentage_fee
+        )
 
     def calculate_net_cod(self):
-        return money(self.original_cod - self.carrier_fee)
+        return money(
+            self.original_cod - self.carrier_fee
+        )
 
     def save(self, *args, **kwargs):
         self.original_cod = money(self.original_cod)
         self.province_fee = money(self.province_fee)
-        self.carrier_fixed_fee = money(self.carrier_fixed_fee)
+        self.carrier_fixed_fee = money(
+            self.carrier_fixed_fee
+        )
         self.carrier_fee = money(self.carrier_fee)
 
         if self.cod_status == self.STATUS_PAID:

@@ -29,6 +29,7 @@
   .pc-input:focus{border-color:#119a62;box-shadow:0 0 0 3px rgba(17,154,98,.12)}
 
   .pc-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  .pc-grid.pc-grid-four{grid-template-columns:repeat(4,minmax(0,1fr))}
   .pc-stat{position:relative;overflow:hidden;padding:15px;border-radius:17px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 10px 22px rgba(15,23,42,.045)}
   .pc-stat:after{content:"";position:absolute;right:-18px;top:-22px;width:72px;height:72px;border-radius:50%;background:#ecfdf5}
   .pc-stat span{position:relative;display:block;font-size:10px;color:#64748b;font-weight:950;text-transform:uppercase;letter-spacing:.04em;z-index:1}
@@ -97,8 +98,8 @@
   .pc-summary-table .rate{font-weight:950;color:#0f8a4b}
   .pc-summary-table .return-money{font-weight:950;color:#b91c1c;white-space:nowrap;text-align:right}
 
-  @media(max-width:1100px){.pc-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-table{min-width:1500px}}
-  @media(max-width:700px){.pc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-field{min-width:100%}.pc-title{font-size:23px}.pc-report-head{align-items:flex-start}.pc-top-actions{width:100%}.pc-top-actions .pc-btn{flex:1}}
+  @media(max-width:1100px){.pc-grid,.pc-grid.pc-grid-four{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-table{min-width:1500px}}
+  @media(max-width:700px){.pc-grid,.pc-grid.pc-grid-four{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-field{min-width:100%}.pc-title{font-size:23px}.pc-report-head{align-items:flex-start}.pc-top-actions{width:100%}.pc-top-actions .pc-btn{flex:1}}
   @media print{
     .computer-sidebar,.pc-filter-card,.pc-top-actions,.computer-message-stack,.pc-head,.pc-grid{display:none!important}
     .computer-main{margin:0!important;padding:0!important}
@@ -183,13 +184,11 @@
     </form>
   </div>
 
-  <div class="pc-grid">
+  <div class="pc-grid pc-grid-four">
     <div class="pc-stat"><span>Total Orders</span><strong>{{ summary.count }}</strong></div>
-    <div class="pc-stat"><span>Pending</span><strong>{{ summary.pending }}</strong></div>
-    <div class="pc-stat"><span>Sent / Received</span><strong>{{ summary.sent }} / {{ summary.received }}</strong></div>
+    <div class="pc-stat"><span>Received</span><strong>{{ summary.received }}</strong></div>
     <div class="pc-stat"><span>Returned</span><strong>{{ summary.returned }}</strong></div>
-    <div class="pc-stat"><span>Done Rate</span><strong>{{ summary.done_rate|floatformat:1 }}%</strong></div>
-    <div class="pc-stat"><span>Done COD</span><strong>${{ summary.done_net_cod|floatformat:2 }}</strong></div>
+    <div class="pc-stat"><span>Average Done Rate</span><strong>{{ summary.done_rate|floatformat:1 }}%</strong></div>
   </div>
 
   <div class="pc-summary-card">

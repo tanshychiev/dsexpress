@@ -1659,6 +1659,26 @@ def computer_cod_report(request):
         summary_end_date,
     )
 
+    # Average daily Done Rate.
+    # Only dates with at least one sent order are counted.
+    active_sent_days = [
+        row
+        for row in cod_daily_rows
+        if row.get("sent_orders", 0) > 0
+    ]
+
+    average_done_rate = (
+        round(
+            sum(
+                float(row.get("done_rate", 0) or 0)
+                for row in active_sent_days
+            ) / len(active_sent_days),
+            2,
+        )
+        if active_sent_days
+        else 0
+    )
+
     paid_rows = [
         item
         for item in rows
@@ -1673,7 +1693,6 @@ def computer_cod_report(request):
     summary_count = len(rows)
     summary_paid = len(paid_rows)
     summary_settled = len(settled_rows)
-    done_rate = round((summary_settled * 100.0) / summary_count, 2) if summary_count else 0
 
     summary = {
         "count": summary_count,
@@ -1683,7 +1702,7 @@ def computer_cod_report(request):
         "net_cod": sum((money(item.net_cod) for item in rows), ZERO),
         "done_cod": sum((money(item.original_cod) for item in settled_rows), ZERO),
         "done_net_cod": sum((money(item.net_cod) for item in settled_rows), ZERO),
-        "done_rate": done_rate,
+        "done_rate": average_done_rate,
         "pending": sum(1 for item in rows if not item.cod_status),
         "sent": sum(1 for item in rows if item.cod_status == ProvinceCODItem.STATUS_SENT),
         "received": sum(1 for item in rows if item.cod_status == ProvinceCODItem.STATUS_RECEIVED),

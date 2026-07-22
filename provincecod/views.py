@@ -25,7 +25,6 @@ from .services import (
     mark_item_received,
     mark_item_return_received,
     mark_item_returning,
-    mark_item_returned,
     mark_item_seller_settled,
     money,
     prepare_item_pricing,
@@ -1097,7 +1096,7 @@ def batch_detail(request, pk):
                     "Item marked as DELIVERY ISSUE.",
                 )
 
-            elif action == "mark_returning":
+            elif action in {"mark_returning", "mark_returned"}:
                 item = get_object_or_404(
                     ProvinceCODItem,
                     pk=request.POST.get("item_id"),
@@ -1206,37 +1205,6 @@ def batch_detail(request, pk):
                 messages.success(
                     request,
                     "Item marked as PAID.",
-                )
-
-            elif action == "mark_returned":
-                item = get_object_or_404(
-                    ProvinceCODItem,
-                    pk=request.POST.get(
-                        "item_id"
-                    ),
-                    batch=batch,
-                )
-
-                mark_item_returned(
-                    item,
-                    request.user,
-                    return_reason=(
-                        request.POST.get(
-                            "return_reason",
-                            "",
-                        )
-                    ),
-                    note=request.POST.get(
-                        "note",
-                        "",
-                    ),
-                )
-                messages.success(
-                    request,
-                    (
-                        "Item marked as "
-                        "RETURNED."
-                    ),
                 )
 
             elif action == "settle_seller":
@@ -1608,7 +1576,7 @@ def province_cod_report(request):
                             ),
                         )
 
-                    elif action == "mark_returning":
+                    elif action in {"mark_returning", "mark_returned"}:
                         mark_item_returning(
                             item,
                             request.user,
@@ -1689,22 +1657,6 @@ def province_cod_report(request):
                                         "carrier_"
                                         "reference"
                                     ),
-                                    "",
-                                )
-                            ),
-                            note=request.POST.get(
-                                "note",
-                                "",
-                            ),
-                        )
-
-                    elif action == "mark_returned":
-                        mark_item_returned(
-                            item,
-                            request.user,
-                            return_reason=(
-                                request.POST.get(
-                                    "return_reason",
                                     "",
                                 )
                             ),

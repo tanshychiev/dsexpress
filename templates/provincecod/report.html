@@ -39,8 +39,13 @@
   .center{text-align:center}.right{text-align:right}
   .pc-pill{display:inline-flex;min-width:80px;justify-content:center;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:950}
   .sent{background:#dbeafe;color:#1d4ed8}
+  .at_station{background:#e0f2fe;color:#0369a1}
+  .out_for_delivery{background:#ede9fe;color:#6d28d9}
+  .delivery_issue{background:#ffedd5;color:#c2410c}
   .received{background:#fef3c7;color:#92400e}
   .paid{background:#dcfce7;color:#166534}
+  .returning{background:#fce7f3;color:#be185d}
+  .return_received{background:#fee2e2;color:#991b1b}
   .returned{background:#fee2e2;color:#b91c1c}
   .pending{background:#f1f5f9;color:#475569}
   .pc-note{font-size:11px;color:#64748b;margin-top:3px;line-height:1.35}
@@ -112,14 +117,18 @@
       </div>
 
       <div class="pc-field">
-        <label>Settled from Carrier</label>
+        <label>COD Status</label>
         <select class="pc-input" name="status">
           <option value="">All</option>
           <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending / Not Sent</option>
           <option value="SENT" {% if status == "SENT" %}selected{% endif %}>Sent</option>
+          <option value="AT_STATION" {% if status == "AT_STATION" %}selected{% endif %}>At Station</option>
+          <option value="OUT_FOR_DELIVERY" {% if status == "OUT_FOR_DELIVERY" %}selected{% endif %}>Out for Delivery</option>
+          <option value="DELIVERY_ISSUE" {% if status == "DELIVERY_ISSUE" %}selected{% endif %}>Delivery Issue</option>
           <option value="RECEIVED" {% if status == "RECEIVED" %}selected{% endif %}>Received</option>
           <option value="PAID" {% if status == "PAID" %}selected{% endif %}>Settled from Carrier</option>
-          <option value="RETURNED" {% if status == "RETURNED" %}selected{% endif %}>Returned</option>
+          <option value="RETURNING" {% if status == "RETURNING" %}selected{% endif %}>Returning</option>
+          <option value="RETURN_RECEIVED" {% if status == "RETURN_RECEIVED" %}selected{% endif %}>Return Received</option>
         </select>
       </div>
 
@@ -127,8 +136,8 @@
         <label>Customer Settlement</label>
         <select class="pc-input" name="settlement">
           <option value="">All</option>
-          <option value="UNSETTLED" {% if settlement == "UNSETTLED" %}selected{% endif %}>Not Settled to Customer</option>
-          <option value="SETTLED" {% if settlement == "SETTLED" %}selected{% endif %}>Settled to Customer</option>
+          <option value="UNSETTLED" {% if settlement == "UNSETTLED" %}selected{% endif %}>Unsettled</option>
+          <option value="SETTLED" {% if settlement == "SETTLED" %}selected{% endif %}>Settled</option>
         </select>
       </div>
 
@@ -168,7 +177,9 @@
   <div class="pc-grid">
     <div class="pc-stat"><span>Total Orders</span><strong>{{ summary.count }}</strong></div>
     <div class="pc-stat"><span>Pending</span><strong>{{ summary.pending }}</strong></div>
-    <div class="pc-stat"><span>Sent / Received</span><strong>{{ summary.sent }} / {{ summary.received }}</strong></div>
+    <div class="pc-stat"><span>At Station / Out for Delivery</span><strong>{{ summary.at_station }} / {{ summary.out_for_delivery }}</strong></div>
+    <div class="pc-stat"><span>Delivery Issue / Returning</span><strong>{{ summary.delivery_issue }} / {{ summary.returning }}</strong></div>
+    <div class="pc-stat"><span>Received / Return Received</span><strong>{{ summary.received }} / {{ summary.return_received }}</strong></div>
     <div class="pc-stat"><span>Carrier Settled / Customer Settled</span><strong>{{ summary.paid }} / {{ summary.settled }}</strong></div>
     <div class="pc-stat"><span>Original COD</span><strong>${{ summary.original_cod|floatformat:2 }}</strong></div>
     <div class="pc-stat"><span>Received from Carrier</span><strong>${{ summary.net_cod|floatformat:2 }}</strong></div>
@@ -217,8 +228,13 @@
       </div>
 
       <div>
+        <label class="pc-note">Issue reason</label>
+        <input class="pc-input" name="issue_reason" placeholder="Required for delivery issue">
+      </div>
+
+      <div>
         <label class="pc-note">Return reason</label>
-        <input class="pc-input" name="return_reason" placeholder="Required for return">
+        <input class="pc-input" name="return_reason" placeholder="Required for returning">
       </div>
 
       <div>
@@ -228,9 +244,13 @@
     </div>
 
     <div class="pc-bulk-actions">
-      <button class="pc-btn pc-blue pc-mini js-bulk-submit" type="submit" name="action" value="mark_received">Mark Received</button>
-      <button class="pc-btn pc-primary pc-mini js-bulk-submit" type="submit" name="action" value="mark_paid">Mark Settled from Carrier</button>
-      <button class="pc-btn pc-red pc-mini js-bulk-submit" type="submit" name="action" value="mark_returned">Mark Returned</button>
+      <button class="pc-btn pc-soft pc-mini js-bulk-submit" type="submit" name="action" value="mark_at_station">At Station</button>
+      <button class="pc-btn pc-blue pc-mini js-bulk-submit" type="submit" name="action" value="mark_out_for_delivery">Out for Delivery</button>
+      <button class="pc-btn pc-red pc-mini js-bulk-submit" type="submit" name="action" value="mark_delivery_issue">Delivery Issue</button>
+      <button class="pc-btn pc-blue pc-mini js-bulk-submit" type="submit" name="action" value="mark_received">Received</button>
+      <button class="pc-btn pc-primary pc-mini js-bulk-submit" type="submit" name="action" value="mark_paid">Settled from Carrier</button>
+      <button class="pc-btn pc-red pc-mini js-bulk-submit" type="submit" name="action" value="mark_returning">Returning</button>
+      <button class="pc-btn pc-soft pc-mini js-bulk-submit" type="submit" name="action" value="mark_return_received">Return Received</button>
       <button class="pc-btn pc-dark pc-mini js-bulk-submit" type="submit" name="action" value="settle_seller">Settled to Customer</button>
       <button class="pc-btn pc-soft pc-mini js-bulk-submit" type="submit" name="action" value="undo_settlement">Undo Customer Settlement</button>
     </div>
@@ -295,11 +315,7 @@
             <td class="right"><b>${{ item.original_cod|floatformat:2 }}</b></td>
 
             <td class="center">
-              {% if item.cod_status == "PAID" %}
-                <span class="pc-pill paid">SETTLED FROM CARRIER</span>
-              {% else %}
-                <span class="pc-pill {{ item.display_status|lower }}">{{ item.display_status }}</span>
-              {% endif %}
+              <span class="pc-pill {{ item.display_status|lower }}">{{ item.display_status }}</span>
             </td>
 
             <td class="right">
@@ -343,7 +359,7 @@
               {% if not item.cod_status %}
                 <a class="pc-btn pc-orange pc-mini" href="{% url 'provincecod:batch_detail' item.batch_id %}">Complete Batch First</a>
 
-              {% elif item.cod_status == "SENT" or item.cod_status == "RECEIVED" %}
+              {% elif item.cod_status != "PAID" and item.cod_status != "RETURN_RECEIVED" and item.cod_status != "RETURNED" %}
                 <button
                   type="button"
                   class="pc-btn pc-soft pc-mini js-open-status"
@@ -388,7 +404,7 @@
   <div class="pc-modal" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
     <div class="pc-modal-head">
       <div>
-        <div class="pc-modal-title" id="statusModalTitle">Update Settled from Carrier / Call</div>
+        <div class="pc-modal-title" id="statusModalTitle">Update Province COD Status / Call</div>
         <div class="pc-note" id="statusModalTracking"></div>
       </div>
       <button type="button" class="pc-modal-close" id="statusModalClose" aria-label="Close">×</button>
@@ -404,9 +420,13 @@
         <label class="pc-note">Status</label>
         <select class="pc-input" id="modalStatus">
           <option value="CALL">Call / Follow-up</option>
+          <option value="AT_STATION">At Station</option>
+          <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
+          <option value="DELIVERY_ISSUE">Delivery Issue</option>
           <option value="RECEIVED">Received</option>
           <option value="PAID">Settled from Carrier</option>
-          <option value="RETURNED">Returned</option>
+          <option value="RETURNING">Returning</option>
+          <option value="RETURN_RECEIVED">Return Received</option>
         </select>
       </div>
 
@@ -460,9 +480,14 @@
         </div>
       </div>
 
+      <div class="pc-modal-section is-hidden" id="issueFields">
+        <label class="pc-note">Issue reason</label>
+        <input class="pc-input" name="issue_reason" placeholder="Required for delivery issue">
+      </div>
+
       <div class="pc-modal-section is-hidden" id="returnedFields">
         <label class="pc-note">Return reason</label>
-        <input class="pc-input" name="return_reason" placeholder="Required for returned order">
+        <input class="pc-input" name="return_reason" placeholder="Required when returning">
       </div>
 
       <div style="margin-top:12px">
@@ -563,6 +588,7 @@
     const callFields = document.getElementById("callFields");
     const receivedFields = document.getElementById("receivedFields");
     const paidFields = document.getElementById("paidFields");
+    const issueFields = document.getElementById("issueFields");
     const returnedFields = document.getElementById("returnedFields");
     const modalNoteLabel = document.getElementById("modalNoteLabel");
     const modalNote = document.getElementById("modalNote");
@@ -574,7 +600,8 @@
       callFields.classList.toggle("is-hidden", status !== "CALL");
       receivedFields.classList.toggle("is-hidden", status !== "RECEIVED");
       paidFields.classList.toggle("is-hidden", status !== "PAID");
-      returnedFields.classList.toggle("is-hidden", status !== "RETURNED");
+      issueFields?.classList.toggle("is-hidden", status !== "DELIVERY_ISSUE");
+      returnedFields.classList.toggle("is-hidden", status !== "RETURNING");
 
       if (status === "CALL") {
         modalAction.value = "record_call";
@@ -582,15 +609,27 @@
         modalSubmit.className = "pc-btn pc-dark";
         modalNoteLabel.textContent = "Call detail";
         modalNote.placeholder = "Optional detail about the call";
+      } else if (status === "AT_STATION") {
+        modalAction.value = "mark_at_station";
+        modalSubmit.textContent = "Save as At Station";
+      } else if (status === "OUT_FOR_DELIVERY") {
+        modalAction.value = "mark_out_for_delivery";
+        modalSubmit.textContent = "Save as Out for Delivery";
+      } else if (status === "DELIVERY_ISSUE") {
+        modalAction.value = "mark_delivery_issue";
+        modalSubmit.textContent = "Save Delivery Issue";
       } else if (status === "PAID") {
         modalAction.value = "mark_paid";
         modalSubmit.textContent = "Save as Settled from Carrier";
         modalSubmit.className = "pc-btn pc-primary";
         modalNoteLabel.textContent = "Note";
         modalNote.placeholder = "Optional note";
-      } else if (status === "RETURNED") {
-        modalAction.value = "mark_returned";
-        modalSubmit.textContent = "Save as Returned";
+      } else if (status === "RETURNING") {
+        modalAction.value = "mark_returning";
+        modalSubmit.textContent = "Save as Returning";
+      } else if (status === "RETURN_RECEIVED") {
+        modalAction.value = "mark_return_received";
+        modalSubmit.textContent = "Save as Return Received";
         modalSubmit.className = "pc-btn pc-red";
         modalNoteLabel.textContent = "Note";
         modalNote.placeholder = "Optional note";
@@ -608,10 +647,34 @@
 
       modalItemId.value = button.dataset.itemId || "";
       modalTracking.textContent = "Tracking: " + (button.dataset.tracking || "-");
-      modalStatus.value = "CALL";
-      modalPaidAmount.value = button.dataset.paidAmount || button.dataset.originalCod || "";
-      modalPaidDate.value = button.dataset.paidDate || "{{ today }}";
-      modalReference.value = button.dataset.reference || "";
+
+      const currentStatus = button.dataset.currentStatus || "CALL";
+      const supportedStatuses = [
+        "AT_STATION",
+        "OUT_FOR_DELIVERY",
+        "DELIVERY_ISSUE",
+        "RECEIVED",
+        "PAID",
+        "RETURNING",
+        "RETURN_RECEIVED"
+      ];
+
+      modalStatus.value = supportedStatuses.includes(currentStatus)
+        ? currentStatus
+        : "CALL";
+
+      modalPaidAmount.value =
+        button.dataset.paidAmount ||
+        button.dataset.originalCod ||
+        "";
+
+      modalPaidDate.value =
+        button.dataset.paidDate ||
+        "{{ today }}";
+
+      modalReference.value =
+        button.dataset.reference ||
+        "";
 
       refreshModalFields();
       modal.classList.add("open");

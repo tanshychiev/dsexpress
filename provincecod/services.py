@@ -397,47 +397,89 @@ def mark_item_paid(item, user, carrier_fee=None, carrier_reference="", note=""):
 
 
 @transaction.atomic
-def mark_item_returning(item, user, return_reason="", note=""):
-    reason = (return_reason or "").strip()
+def mark_item_returning(
+    item,
+    user,
+    return_reason="",
+    note="",
+):
+    """
+    Start the return workflow.
 
-    if not reason:
-        raise ValueError("Please enter the return reason.")
-
+    This action is allowed from every active, non-paid delivery status.
+    It saves RETURNING directly on the locked Province COD item and then
+    updates the linked Order to RETURN_ASSIGNED.
+    """
     item = (
         ProvinceCODItem.objects
         .select_for_update()
-        .select_related("order", "batch", "batch__shipper")
+        .select_related(
+            "order",
+            "batch",
+            "batch__shipper",
+        )
         .get(pk=item.pk)
     )
 
-    old_order_status = str(item.order.status or "").upper()
+    allowed_statuses = {
+        ProvinceCODItem.STATUS_SENT,
+        ProvinceCODItem.STATUS_AT_STATION,
+        ProvinceCODItem.STATUS_OUT_FOR_DELIVERY,
+        ProvinceCODItem.STATUS_DELIVERY_ISSUE,
+        ProvinceCODItem.STATUS_RECEIVED,
+    }
 
-    item = _transition_item(
-        item,
-        {
-            ProvinceCODItem.STATUS_SENT,
-            ProvinceCODItem.STATUS_AT_STATION,
-            ProvinceCODItem.STATUS_OUT_FOR_DELIVERY,
-            ProvinceCODItem.STATUS_DELIVERY_ISSUE,
-            ProvinceCODItem.STATUS_RECEIVED,
-        },
-        ProvinceCODItem.STATUS_RETURNING,
-        "returning_at",
-        user=user,
-        note=note,
-        extra_fields={
-            "return_reason": reason,
-            "carrier_fee": ZERO,
-            "net_cod": ZERO,
-            "seller_settled": False,
-            "seller_settled_at": None,
-            "seller_settled_by": None,
-        },
+    if item.cod_status not in allowed_statuses:
+        raise ValueError(
+            "This item cannot be marked as returning from "
+            f"{item.cod_status or 'EMPTY'}."
+        )
+
+    reason = (
+        return_reason
+        or note
+        or item.return_reason
+        or "Return requested"
+    ).strip()
+
+    old_order_status = str(
+        item.order.status or ""
+    ).upper()
+
+    now = timezone.now()
+
+    item.cod_status = ProvinceCODItem.STATUS_RETURNING
+    item.returning_at = now
+    item.return_reason = reason
+    item.carrier_fee = ZERO
+    item.net_cod = ZERO
+    item.seller_settled = False
+    item.seller_settled_at = None
+    item.seller_settled_by = None
+
+    if note:
+        item.note = note.strip()
+
+    item.save(
+        update_fields=[
+            "cod_status",
+            "returning_at",
+            "return_reason",
+            "carrier_fee",
+            "net_cod",
+            "seller_settled",
+            "seller_settled_at",
+            "seller_settled_by",
+            "note",
+            "updated_at",
+        ]
     )
 
-    Order.objects.filter(pk=item.order_id).update(
+    Order.objects.filter(
+        pk=item.order_id
+    ).update(
         status="RETURN_ASSIGNED",
-        updated_at=timezone.now(),
+        updated_at=now,
         updated_by=user,
     )
 
@@ -539,7 +581,8 @@ def mark_item_returned(item, user, return_reason="", note=""):
         return item
 
     raise ValueError(
-        "This item cannot enter the return workflow from its current status."
+        "This item cannot enter the return workflow from "
+        f"{item.cod_status or 'EMPTY'}."
     )
 
 

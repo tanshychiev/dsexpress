@@ -29,37 +29,21 @@
     <form method="get" class="filter-row">
       <div class="field-box">
         <label>Date From</label>
-        <input
-          type="date"
-          name="date_from"
-          value="{{ date_from }}"
-          class="input"
-        >
+        <input type="date" name="date_from" value="{{ date_from }}" class="input">
       </div>
 
       <div class="field-box">
         <label>Date To</label>
-        <input
-          type="date"
-          name="date_to"
-          value="{{ date_to }}"
-          class="input"
-        >
+        <input type="date" name="date_to" value="{{ date_to }}" class="input">
       </div>
 
       <div class="field-box">
         <label>Status</label>
         <select name="status" class="input">
           <option value="">-- All --</option>
-          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>
-            Pending
-          </option>
-          <option value="SENT" {% if status == "SENT" %}selected{% endif %}>
-            Sent
-          </option>
-          <option value="CANCELLED" {% if status == "CANCELLED" %}selected{% endif %}>
-            Cancelled
-          </option>
+          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+          <option value="SENT" {% if status == "SENT" %}selected{% endif %}>Sent</option>
+          <option value="CANCELLED" {% if status == "CANCELLED" %}selected{% endif %}>Cancelled</option>
         </select>
       </div>
 
@@ -68,10 +52,8 @@
         <select name="shipper" class="input">
           <option value="">-- All --</option>
           {% for s in shippers %}
-            <option
-              value="{{ s.id }}"
-              {% if shipper_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}
-            >
+            <option value="{{ s.id }}"
+              {% if shipper_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
               {{ s.name }}
             </option>
           {% endfor %}
@@ -80,9 +62,7 @@
 
       <div class="field-actions">
         <button type="submit" class="btn btn-search-black">Search</button>
-        <a href="{% url 'provincecod:batch_list' %}" class="btn btn-reset-link">
-          Reset
-        </a>
+        <a href="{% url 'provincecod:batch_list' %}" class="btn btn-reset-link">Reset</a>
       </div>
     </form>
   </div>
@@ -124,271 +104,126 @@
                   {{ r.status }}
                 </span>
               </td>
+
               <td>
-                <a
-                  href="{% url 'provincecod:batch_detail' r.id %}"
-                  class="action-link"
-                >
-                  Open
-                </a>
+                <div class="row-actions">
+                  <a href="{% url 'provincecod:batch_detail' r.id %}" class="action-link">
+                    Open
+                  </a>
+
+                  {% if r.status != "CANCELLED" %}
+                    <details class="manage-menu">
+                      <summary>Edit</summary>
+                      <div class="manage-panel">
+
+                        <form method="post" action="{% url 'provincecod:batch_detail' r.id %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="change_shipper">
+
+                          <label>Carrier</label>
+                          <select name="shipper_id" class="manage-input" required>
+                            {% for s in shippers %}
+                              <option value="{{ s.id }}"
+                                {% if r.shipper_id == s.id %}selected{% endif %}>
+                                {{ s.name }}
+                              </option>
+                            {% endfor %}
+                          </select>
+
+                          <button type="submit" class="manage-btn manage-blue">
+                            Save Carrier
+                          </button>
+                        </form>
+
+                        {% if r.status == "SENT" %}
+                          <form method="post"
+                                action="{% url 'provincecod:batch_detail' r.id %}"
+                                onsubmit="return confirm('Undo this batch? All orders will return to their original status and COD.');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="undo_batch">
+                            <button type="submit" class="manage-btn manage-orange">
+                              Undo Batch
+                            </button>
+                          </form>
+                        {% endif %}
+
+                        <form method="post"
+                              action="{% url 'provincecod:batch_detail' r.id %}"
+                              onsubmit="return confirm('Delete PVCOD-{{ r.id }} permanently? This cannot be undone.');">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="delete_batch">
+                          <button type="submit" class="manage-btn manage-red">
+                            Delete Batch
+                          </button>
+                        </form>
+
+                      </div>
+                    </details>
+                  {% endif %}
+                </div>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="10" class="empty-row">
-                No Province COD batch.
-              </td>
+              <td colspan="10" class="empty-row">No Province COD batch.</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
-
 </div>
 
 <style>
-  .page-wrap{
-    width:100%;
-  }
-
-  .page-head-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:12px;
-    margin-bottom:10px;
-    flex-wrap:wrap;
-  }
-
-  .head-actions{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:center;
-  }
-
-  .content-title{
-    font-size:32px;
-    font-weight:900;
-    color:#0f172a;
-    line-height:1.1;
-  }
-
-  .content-subtitle{
-    margin-top:4px;
-    font-size:13px;
-    color:#6b7280;
-    font-weight:700;
-  }
-
-  .btn{
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:900;
-  }
-
-  .btn-blue-action{
-    background:#2563eb;
-    color:#fff;
-    border:none;
-    border-radius:12px;
-    padding:12px 18px;
-    min-height:44px;
-  }
-
-  .btn-report-link{
-    background:#fff;
-    color:#111827;
-    border:1px solid #d1d5db;
-    border-radius:12px;
-    padding:12px 18px;
-    min-height:44px;
-  }
-
-  .btn-report-link:hover{
-    background:#f8fafc;
-  }
-
-  .filter-card{
-    padding:12px;
-    border-radius:14px;
-    margin-bottom:12px;
-  }
-
-  .filter-row{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:end;
-  }
-
-  .field-box{
-    min-width:110px;
-    flex:1;
-  }
-
-  .field-box label{
-    display:block;
-    margin-bottom:6px;
-    font-size:11px;
-    color:#6b7280;
-    font-weight:700;
-  }
-
-  .input{
-    width:100%;
-    min-width:120px;
-    height:38px;
-    border:1px solid #d1d5db;
-    border-radius:12px;
-    padding:0 12px;
-    background:#fff;
-    outline:none;
-  }
-
-  .input:focus{
-    border-color:#22a553;
-    box-shadow:0 0 0 3px rgba(34,165,83,.12);
-  }
-
-  .field-actions{
-    display:flex;
-    align-items:end;
-    gap:10px;
-  }
-
-  .btn-search-black{
-    background:#111827;
-    color:#fff;
-    border:none;
-    border-radius:12px;
-    height:38px;
-    padding:0 16px;
-    font-weight:900;
-    cursor:pointer;
-  }
-
-  .btn-reset-link{
-    color:#111827;
-    padding:0 2px;
-    height:38px;
-  }
-
-  .table-card{
-    padding:10px;
-    border-radius:14px;
-  }
-
-  .table-wrap{
-    overflow:auto;
-  }
-
-  .province-like{
-    width:100%;
-    min-width:1180px;
-    border-collapse:separate;
-    border-spacing:0;
-  }
-
-  .province-like th{
-    background:#f8fafc;
-    color:#111827;
-    font-size:12px;
-    font-weight:900;
-    text-align:center;
-    padding:10px 12px;
-    border-bottom:1px solid #e5e7eb;
-    white-space:nowrap;
-  }
-
-  .province-like td{
-    text-align:center;
-    padding:12px;
-    border-bottom:1px solid #e5e7eb;
-    font-size:13px;
-    background:#fff;
-    white-space:nowrap;
-  }
-
-  .province-like tbody tr:hover td{
-    background:#f8fbff;
-  }
-
-  .empty-row{
-    text-align:center;
-    color:#6b7280;
-    padding:18px !important;
-  }
-
-  .status-pill{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:88px;
-    height:28px;
-    border-radius:999px;
-    font-size:11px;
-    font-weight:900;
-    padding:0 10px;
-  }
-
-  .status-green{
-    background:#dcfce7;
-    color:#166534;
-  }
-
-  .status-yellow{
-    background:#fef3c7;
-    color:#92400e;
-  }
-
-  .status-red{
-    background:#fee2e2;
-    color:#b91c1c;
-  }
-
-  .action-link{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:74px;
-    height:32px;
-    padding:0 12px;
-    border-radius:999px;
-    background:#eff6ff;
-    color:#1d4ed8;
-    font-weight:800;
-    text-decoration:none;
-    border:1px solid #bfdbfe;
-    transition:all .15s ease;
-  }
-
-  .action-link:hover{
-    background:#1d4ed8;
-    color:#fff;
-    border-color:#1d4ed8;
-    transform:translateY(-1px);
-  }
+  .page-wrap{width:100%}
+  .page-head-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .head-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .content-title{font-size:32px;font-weight:900;color:#0f172a;line-height:1.1}
+  .content-subtitle{margin-top:4px;font-size:13px;color:#6b7280;font-weight:700}
+  .btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-weight:900}
+  .btn-blue-action{background:#2563eb;color:#fff;border:none;border-radius:12px;padding:12px 18px;min-height:44px}
+  .btn-report-link{background:#fff;color:#111827;border:1px solid #d1d5db;border-radius:12px;padding:12px 18px;min-height:44px}
+  .btn-report-link:hover{background:#f8fafc}
+  .filter-card{padding:12px;border-radius:14px;margin-bottom:12px}
+  .filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+  .field-box{min-width:110px;flex:1}
+  .field-box label{display:block;margin-bottom:6px;font-size:11px;color:#6b7280;font-weight:700}
+  .input{width:100%;min-width:120px;height:38px;border:1px solid #d1d5db;border-radius:12px;padding:0 12px;background:#fff;outline:none}
+  .input:focus{border-color:#22a553;box-shadow:0 0 0 3px rgba(34,165,83,.12)}
+  .field-actions{display:flex;align-items:end;gap:10px}
+  .btn-search-black{background:#111827;color:#fff;border:none;border-radius:12px;height:38px;padding:0 16px;font-weight:900;cursor:pointer}
+  .btn-reset-link{color:#111827;padding:0 2px;height:38px}
+  .table-card{padding:10px;border-radius:14px}
+  .table-wrap{overflow:auto}
+  .province-like{width:100%;min-width:1180px;border-collapse:separate;border-spacing:0}
+  .province-like th{background:#f8fafc;color:#111827;font-size:12px;font-weight:900;text-align:center;padding:10px 12px;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+  .province-like td{text-align:center;padding:12px;border-bottom:1px solid #e5e7eb;font-size:13px;background:#fff;white-space:nowrap}
+  .province-like tbody tr:hover td{background:#f8fbff}
+  .empty-row{text-align:center;color:#6b7280;padding:18px!important}
+  .status-pill{display:inline-flex;align-items:center;justify-content:center;min-width:88px;height:28px;border-radius:999px;font-size:11px;font-weight:900;padding:0 10px}
+  .status-green{background:#dcfce7;color:#166534}
+  .status-yellow{background:#fef3c7;color:#92400e}
+  .status-red{background:#fee2e2;color:#b91c1c}
+  .row-actions{display:flex;align-items:center;justify-content:center;gap:7px}
+  .action-link{display:inline-flex;align-items:center;justify-content:center;min-width:65px;height:32px;padding:0 12px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-weight:800;text-decoration:none;border:1px solid #bfdbfe}
+  .action-link:hover{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+  .manage-menu{position:relative}
+  .manage-menu summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-width:65px;height:32px;border-radius:999px;background:#f8fafc;color:#111827;border:1px solid #cbd5e1;font-weight:850}
+  .manage-menu summary::-webkit-details-marker{display:none}
+  .manage-panel{position:absolute;right:0;top:38px;z-index:30;width:220px;background:#fff;border:1px solid #dbe3ec;border-radius:14px;padding:11px;box-shadow:0 18px 45px rgba(15,23,42,.18);text-align:left}
+  .manage-panel form+form{margin-top:9px;padding-top:9px;border-top:1px solid #eef2f7}
+  .manage-panel label{display:block;font-size:10px;font-weight:900;color:#64748b;margin-bottom:5px}
+  .manage-input{width:100%;height:36px;border:1px solid #cbd5e1;border-radius:9px;padding:0 9px;margin-bottom:7px;background:#fff}
+  .manage-btn{width:100%;min-height:36px;border:0;border-radius:9px;color:#fff;font-weight:900;cursor:pointer}
+  .manage-blue{background:#2563eb}
+  .manage-orange{background:#ea580c}
+  .manage-red{background:#dc2626}
 
   @media(max-width:800px){
-    .content-title{
-      font-size:24px;
-    }
-
-    .head-actions{
-      width:100%;
-    }
-
-    .head-actions .btn{
-      flex:1;
-    }
-
-    .field-box{
-      min-width:100%;
-    }
+    .content-title{font-size:24px}
+    .head-actions{width:100%}
+    .head-actions .btn{flex:1}
+    .field-box{min-width:100%}
   }
 </style>
 {% endblock %}

@@ -13,12 +13,14 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from openpyxl import Workbook, load_workbook
 
+from masterdata.models import Shipper
 from orders.activity import add_order_activity
 from orders.audit import add_audit_log
 from orders.models import AuditLog, ImportBatch, Order, OrderActivity
@@ -30,6 +32,8 @@ from inventory.services import (
 )
 
 from provinceops.models import ProvinceBatch, ProvinceBatchItem
+from provincecod.models import ProvinceCODBatch, ProvinceCODItem
+from provincecod.services import money
 from reports.excel import export_delivery_report_xlsx
 from reports.services import (
     get_done_queryset,
@@ -119,9 +123,9 @@ def _safe_rate(part, total):
     return min(max(value, 0), 100)
 
 
-def _get_report_range(request, seller=None):
+def _get_report_range(request, seller=None, default_period="last_30_days"):
     today = _report_today(seller)
-    period = (request.GET.get("period") or "last_30_days").strip()
+    period = (request.GET.get("period") or default_period).strip()
 
     if period == "today":
         start_date = today
@@ -130,6 +134,10 @@ def _get_report_range(request, seller=None):
     elif period == "yesterday":
         start_date = today - timedelta(days=1)
         end_date = start_date
+
+    elif period == "last_3_days":
+        start_date = today - timedelta(days=2)
+        end_date = today
 
     elif period == "last_7_days":
         start_date = today - timedelta(days=6)
@@ -253,6 +261,72 @@ def _is_province_order(order):
         )
         or province_fee > ZERO
     )
+
+
+def _province_cod_customer_result(order):
+    """Return customer-facing result for orders already sent in Province COD.
+
+    Internal Province COD marks a batch as SENT and keeps collection progress
+    on ProvinceCODItem. For customer portal order status, a SENT province COD
+    item should behave like Delivered, unless the item itself is marked RETURNED.
+    """
+    order_id = getattr(order, "id", None)
+
+    if not order_id:
+        return None
+
+    try:
+        from provincecod.models import ProvinceCODBatch, ProvinceCODItem
+    except Exception:
+        return None
+
+    try:
+        item = (
+            ProvinceCODItem.objects
+            .select_related("batch")
+            .filter(order_id=order_id)
+            .exclude(batch__status=ProvinceCODBatch.STATUS_CANCELLED)
+            .order_by("-id")
+            .first()
+        )
+    except Exception:
+        return None
+
+    if not item:
+        return None
+
+    batch_status = (getattr(getattr(item, "batch", None), "status", "") or "").strip().upper()
+    cod_status = (getattr(item, "cod_status", "") or "").strip().upper()
+
+    if cod_status == getattr(ProvinceCODItem, "STATUS_RETURNED", "RETURNED"):
+        return "returned"
+
+    if batch_status == getattr(ProvinceCODBatch, "STATUS_SENT", "SENT"):
+        return "delivered"
+
+    return None
+
+
+def _is_customer_delivered_order(order):
+    status = (getattr(order, "status", "") or "").strip().upper()
+
+    if status in {
+        getattr(Order, "STATUS_DELIVERED", "DELIVERED"),
+        "DONE",
+        "SENT",
+    }:
+        return True
+
+    return _province_cod_customer_result(order) == "delivered"
+
+
+def _is_customer_returned_order(order):
+    status = (getattr(order, "status", "") or "").strip().upper()
+
+    if status == getattr(Order, "STATUS_RETURNED", "RETURNED"):
+        return True
+
+    return _province_cod_customer_result(order) == "returned"
 
 
 def _get_created_date(order):
@@ -469,11 +543,11 @@ def _is_unassigned_pending_over_72h(order):
 def _get_computer_status(order):
     status = (getattr(order, "status", "") or "").strip().upper()
 
-    if status == getattr(Order, "STATUS_DELIVERED", "DELIVERED"):
-        return "delivered", "Delivered"
-
-    if status == getattr(Order, "STATUS_RETURNED", "RETURNED"):
+    if _is_customer_returned_order(order):
         return "returned", "Returned"
+
+    if _is_customer_delivered_order(order):
+        return "delivered", "Delivered"
 
     if status == getattr(Order, "STATUS_VOID", "VOID"):
         return "void", "Void"
@@ -560,6 +634,8 @@ def _decorate_order(order):
     reason = (getattr(order, "reason", "") or "").strip()
     if not reason and order.computer_status_key == "pending" and _is_unassigned_pending_over_72h(order):
         reason = "No assignment over 72h"
+    if not reason and order.computer_status_key == "delivered" and _province_cod_customer_result(order) == "delivered":
+        reason = "Province COD sent"
     order.computer_reason = reason or "-"
 
     return order
@@ -656,7 +732,7 @@ def computer_dashboard(request):
 
         row["new_orders"] += 1
 
-        if status == Order.STATUS_DELIVERED:
+        if _is_customer_delivered_order(order):
             cod_value = _order_cod(order)
             fee_value = _order_total_fee(order)
 
@@ -668,7 +744,7 @@ def computer_dashboard(request):
             total_cod += cod_value
             total_fees += fee_value
 
-        elif status == Order.STATUS_RETURNED:
+        elif _is_customer_returned_order(order):
             row["returned"] += 1
             total_returned += 1
 
@@ -803,7 +879,12 @@ def computer_orders(request):
     if seller is None:
         return redirect("portal:computer_login")
 
-    period, start_date, end_date, period_label = _get_report_range(request, seller)
+    period, start_date, end_date, period_label = _get_report_range(
+        request,
+        seller,
+        default_period="last_3_days",
+    )
+    show_order_results = bool(request.GET)
     q = (request.GET.get("q") or "").strip()
     status_filter = (request.GET.get("status") or "ALL").strip().upper()
 
@@ -833,38 +914,41 @@ def computer_orders(request):
     summary_pending = sum(1 for order in summary_orders if order.computer_status_key == "pending")
     summary_returned = sum(1 for order in summary_orders if order.computer_status_key == "returned")
 
-    orders_qs = period_orders_qs
+    orders = []
 
-    if q:
-        orders_qs = orders_qs.filter(
-            Q(tracking_no__icontains=q)
-            | Q(seller_name__icontains=q)
-            | Q(seller_order_code__icontains=q)
-            | Q(receiver_name__icontains=q)
-            | Q(receiver_phone__icontains=q)
-            | Q(receiver_address__icontains=q)
-            | Q(product_desc__icontains=q)
-            | Q(reason__icontains=q)
-        )
+    if show_order_results:
+        orders_qs = period_orders_qs
 
-    orders = list(orders_qs.order_by("-created_at", "-id"))
+        if q:
+            orders_qs = orders_qs.filter(
+                Q(tracking_no__icontains=q)
+                | Q(seller_name__icontains=q)
+                | Q(seller_order_code__icontains=q)
+                | Q(receiver_name__icontains=q)
+                | Q(receiver_phone__icontains=q)
+                | Q(receiver_address__icontains=q)
+                | Q(product_desc__icontains=q)
+                | Q(reason__icontains=q)
+            )
 
-    for order in orders:
-        _decorate_order(order)
+        orders = list(orders_qs.order_by("-created_at", "-id"))
 
-    if status_filter in {"CREATED", "DELIVERING", "PENDING", "DELIVERED", "RETURNED", "PROVINCE", "RETURNING", "VOID"}:
-        status_key_map = {
-            "CREATED": "created",
-            "DELIVERING": "delivering",
-            "PENDING": "pending",
-            "DELIVERED": "delivered",
-            "RETURNED": "returned",
-            "PROVINCE": "province",
-            "RETURNING": "returning",
-            "VOID": "void",
-        }
-        wanted_key = status_key_map.get(status_filter)
-        orders = [order for order in orders if order.computer_status_key == wanted_key]
+        for order in orders:
+            _decorate_order(order)
+
+        if status_filter in {"CREATED", "DELIVERING", "PENDING", "DELIVERED", "RETURNED", "PROVINCE", "RETURNING", "VOID"}:
+            status_key_map = {
+                "CREATED": "created",
+                "DELIVERING": "delivering",
+                "PENDING": "pending",
+                "DELIVERED": "delivered",
+                "RETURNED": "returned",
+                "PROVINCE": "province",
+                "RETURNING": "returning",
+                "VOID": "void",
+            }
+            wanted_key = status_key_map.get(status_filter)
+            orders = [order for order in orders if order.computer_status_key == wanted_key]
 
     context = _common_context(
         seller,
@@ -879,6 +963,7 @@ def computer_orders(request):
             "q": q,
             "status_filter": status_filter,
             "orders": orders,
+            "show_order_results": show_order_results,
             "summary_total": summary_total,
             "summary_created": summary_created,
             "summary_delivering": summary_delivering,
@@ -1227,6 +1312,229 @@ def computer_delivery_report(request):
 # COMPUTER COD REPORT
 # =========================================================
 
+def _computer_active_province_carriers():
+    return Shipper.objects.filter(
+        is_active=True,
+        shipper_type=Shipper.TYPE_PROVINCE,
+    ).order_by("name")
+
+
+
+
+def _pc_local_date(value):
+    """Return local date from datetime/date safely. Runtime helper only."""
+    if not value:
+        return None
+
+    try:
+        if isinstance(value, datetime):
+            if settings.USE_TZ and timezone.is_aware(value):
+                value = timezone.localtime(value)
+            return value.date()
+
+        if isinstance(value, date):
+            return value
+    except Exception:
+        return None
+
+    return None
+
+
+def _pc_date_in_range(value, start_date, end_date):
+    value_date = _pc_local_date(value)
+
+    if not value_date:
+        return None
+
+    if start_date and value_date < start_date:
+        return None
+
+    if end_date and value_date > end_date:
+        return None
+
+    return value_date
+
+
+def _pc_empty_daily_summary_row(row_date):
+    return {
+        "date": row_date,
+        "sent_orders": 0,
+        "sent_cod": ZERO,
+        "received_orders": 0,
+        "settled_orders": 0,
+        "returned_orders": 0,
+        "done_orders": 0,
+        "done_rate": 0,
+    }
+
+
+def _build_province_cod_daily_rows(items, start_date, end_date):
+    """Build a sent-date cohort summary.
+
+    Every item stays on the date it was originally sent. Its current COD
+    result is counted on that same sent-date row, even when it was received,
+    paid, settled, or returned on a later date.
+    """
+    if not start_date or not end_date:
+        return []
+
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    rows_by_date = {}
+    current = start_date
+    max_days = 370
+    days = 0
+
+    while current <= end_date and days < max_days:
+        rows_by_date[current] = _pc_empty_daily_summary_row(current)
+        current += timedelta(days=1)
+        days += 1
+
+    for item in items:
+        original_cod = money(getattr(item, "original_cod", ZERO))
+
+        sent_source = (
+            getattr(item, "activity_date", None)
+            or getattr(item, "sent_at", None)
+            or getattr(getattr(item, "batch", None), "sent_at", None)
+            or getattr(getattr(item, "batch", None), "assigned_at", None)
+            or getattr(getattr(item, "batch", None), "created_at", None)
+        )
+        sent_date = _pc_date_in_range(
+            sent_source,
+            start_date,
+            end_date,
+        )
+
+        if sent_date not in rows_by_date:
+            continue
+
+        row = rows_by_date[sent_date]
+        row["sent_orders"] += 1
+        row["sent_cod"] += original_cod
+
+        cod_status = (
+            getattr(item, "cod_status", "") or ""
+        ).strip().upper()
+
+        # PAID has already passed RECEIVED, so it is included in received.
+        if cod_status in {
+            ProvinceCODItem.STATUS_RECEIVED,
+            ProvinceCODItem.STATUS_PAID,
+        }:
+            row["received_orders"] += 1
+
+        if getattr(item, "seller_settled", False):
+            row["settled_orders"] += 1
+
+        if cod_status == ProvinceCODItem.STATUS_RETURNED:
+            row["returned_orders"] += 1
+
+        # Count each item once only.
+        if cod_status in {
+            ProvinceCODItem.STATUS_RECEIVED,
+            ProvinceCODItem.STATUS_PAID,
+            ProvinceCODItem.STATUS_RETURNED,
+        }:
+            row["done_orders"] += 1
+
+    for row in rows_by_date.values():
+        row["done_rate"] = _safe_rate(
+            row["done_orders"],
+            row["sent_orders"],
+        )
+
+    return [
+        rows_by_date[row_date]
+        for row_date in sorted(rows_by_date.keys(), reverse=True)
+    ]
+
+
+def _computer_province_cod_export_xlsx(rows, seller):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Province COD"
+
+    headers = [
+        "ID",
+        "Date",
+        "Batch",
+        "Tracking",
+        "Seller",
+        "Carrier",
+        "Receiver",
+        "Phone",
+        "Address",
+        "Original COD",
+        "Province Fee",
+        "Status",
+        "Carrier Fee",
+        "Net COD",
+        "Reference",
+        "Settled",
+        "Updated",
+        "Reason / Note",
+    ]
+    ws.append(headers)
+
+    for item in rows:
+        order = getattr(item, "order", None)
+        batch = getattr(item, "batch", None)
+
+        reason_note = (
+            getattr(item, "return_reason", "")
+            or getattr(item, "note", "")
+            or getattr(order, "reason", "")
+            or "-"
+        )
+
+        ws.append([
+            item.id,
+            item.activity_date.strftime("%Y-%m-%d %H:%M") if getattr(item, "activity_date", None) else "",
+            f"PVCOD-{getattr(item, 'batch_id', '')}",
+            getattr(order, "tracking_no", "") if order else "",
+            getattr(getattr(order, "seller", None), "name", "") if order else "",
+            getattr(getattr(batch, "shipper", None), "name", "") if batch else "",
+            getattr(order, "receiver_name", "") if order else "",
+            getattr(order, "receiver_phone", "") if order else "",
+            getattr(order, "receiver_address", "") if order else "",
+            float(money(getattr(item, "original_cod", ZERO))),
+            float(money(getattr(item, "province_fee", ZERO))),
+            getattr(item, "display_status", "") or "PENDING",
+            float(money(getattr(item, "carrier_fee", ZERO))),
+            float(money(getattr(item, "net_cod", ZERO))),
+            getattr(item, "carrier_reference", "") or "-",
+            "YES" if getattr(item, "seller_settled", False) else "NO",
+            item.updated_at.strftime("%Y-%m-%d %H:%M") if getattr(item, "updated_at", None) else "",
+            reason_note,
+        ])
+
+    for col in ws.columns:
+        max_len = 10
+        col_letter = col[0].column_letter
+        for cell in col:
+            try:
+                max_len = max(max_len, len(str(cell.value or "")))
+            except Exception:
+                pass
+        ws.column_dimensions[col_letter].width = min(max_len + 2, 45)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"province-cod-{getattr(seller, 'name', 'seller')}.xlsx"
+    filename = re.sub(r"[^A-Za-z0-9_.-]+", "_", filename)
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
 @login_required(login_url="portal:computer_login")
 def computer_cod_report(request):
     seller = _get_logged_in_seller(request)
@@ -1234,51 +1542,229 @@ def computer_cod_report(request):
     if seller is None:
         return redirect("portal:computer_login")
 
-    period, start_date, end_date, period_label = _get_report_range(request)
+    today = timezone.localdate()
+    default_from = today.isoformat()
+    default_to = today.isoformat()
 
-    rows = list(
-        _base_seller_orders(seller).filter(
-            status=Order.STATUS_DELIVERED,
-            done_at__gte=start_date,
-            done_at__lte=end_date,
-        ).order_by("-done_at", "-id")
+    date_from = (request.GET.get("date_from") or default_from).strip()
+    date_to = (request.GET.get("date_to") or default_to).strip()
+    status = (request.GET.get("status") or "").strip().upper()
+    settlement = (request.GET.get("settlement") or "").strip().upper()
+    shipper_id = (request.GET.get("shipper") or "").strip()
+    q = (request.GET.get("q") or "").strip()
+
+    sort = (request.GET.get("sort") or "sent_date").strip().lower()
+    direction = (request.GET.get("direction") or "desc").strip().lower()
+    if direction not in {"asc", "desc"}:
+        direction = "desc"
+
+    sort_map = {
+        "id": "id",
+        "sent_date": "activity_date",
+        "batch": "batch_id",
+        "tracking": "order__tracking_no",
+        "carrier": "batch__shipper__name",
+        "receiver": "order__receiver_name",
+        "phone": "order__receiver_phone",
+        "original_cod": "original_cod",
+        "province_fee": "province_fee",
+        "status": "cod_status",
+        "carrier_fee": "carrier_fee",
+        "net_cod": "net_cod",
+        "reference": "carrier_reference",
+        "settled": "seller_settled",
+        "updated": "updated_at",
+    }
+
+    if sort not in sort_map:
+        sort = "sent_date"
+
+    base_rows = (
+        ProvinceCODItem.objects
+        .select_related(
+            "batch",
+            "batch__shipper",
+            "order",
+            "order__seller",
+            "received_confirmed_by",
+            "paid_confirmed_by",
+            "returned_confirmed_by",
+            "seller_settled_by",
+        )
+        .exclude(batch__status=ProvinceCODBatch.STATUS_CANCELLED)
+        .filter(order__seller=seller)
+        .annotate(
+            activity_date=Coalesce("sent_at", "batch__created_at"),
+        )
     )
 
-    total_cod = ZERO
-    total_delivery_fee = ZERO
-    total_additional_fee = ZERO
-    total_province_fee = ZERO
-    total_fees = ZERO
-    net_balance = ZERO
+    if status == "PENDING":
+        base_rows = base_rows.filter(cod_status="")
+    elif status:
+        base_rows = base_rows.filter(cod_status=status)
 
-    for order in rows:
-        _decorate_order(order)
+    if settlement == "SETTLED":
+        base_rows = base_rows.filter(seller_settled=True)
+    elif settlement == "UNSETTLED":
+        base_rows = base_rows.filter(seller_settled=False)
 
-        total_cod += order.computer_cod
-        total_delivery_fee += order.computer_delivery_fee
-        total_additional_fee += order.computer_additional_fee
-        total_province_fee += order.computer_province_fee
-        total_fees += order.computer_total_fee
-        net_balance += order.computer_net
+    if shipper_id.isdigit():
+        base_rows = base_rows.filter(batch__shipper_id=int(shipper_id))
+
+    if q:
+        base_rows = base_rows.filter(
+            Q(order__tracking_no__icontains=q)
+            | Q(order__receiver_name__icontains=q)
+            | Q(order__receiver_phone__icontains=q)
+            | Q(order__receiver_address__icontains=q)
+            | Q(batch__shipper__name__icontains=q)
+            | Q(carrier_reference__icontains=q)
+            | Q(received_person__icontains=q)
+            | Q(return_reason__icontains=q)
+            | Q(note__icontains=q)
+        )
+
+    summary_start_date = _parse_date(date_from) or today
+    summary_end_date = _parse_date(date_to) or today
+
+    # The COD summary is grouped by each item's original sent date.
+    # Later received, paid, settled, or returned results stay on that row.
+    summary_items = list(base_rows.order_by("activity_date", "id"))
+
+    rows = base_rows
+
+    if date_from:
+        rows = rows.filter(activity_date__date__gte=date_from)
+
+    if date_to:
+        rows = rows.filter(activity_date__date__lte=date_to)
+
+    order_field = sort_map[sort]
+    if direction == "desc":
+        order_field = f"-{order_field}"
+
+    rows = list(rows.order_by(order_field, "-id"))
+
+    for item in rows:
+        item.suggested_fee_display = item.suggested_carrier_fee()
+        item.display_status = item.cod_status or "PENDING"
+
+    for item in summary_items:
+        item.suggested_fee_display = item.suggested_carrier_fee()
+        item.display_status = item.cod_status or "PENDING"
+
+    cod_daily_rows = _build_province_cod_daily_rows(
+        summary_items,
+        summary_start_date,
+        summary_end_date,
+    )
+
+    # Average daily Done Rate.
+    # Only dates with at least one sent order are counted.
+    active_sent_days = [
+        row
+        for row in cod_daily_rows
+        if row.get("sent_orders", 0) > 0
+    ]
+
+    average_done_rate = (
+        round(
+            sum(
+                float(row.get("done_rate", 0) or 0)
+                for row in active_sent_days
+            ) / len(active_sent_days),
+            2,
+        )
+        if active_sent_days
+        else 0
+    )
+
+    paid_rows = [
+        item
+        for item in rows
+        if item.cod_status == ProvinceCODItem.STATUS_PAID
+    ]
+    settled_rows = [
+        item
+        for item in rows
+        if getattr(item, "seller_settled", False)
+    ]
+
+    summary_count = len(rows)
+    summary_paid = len(paid_rows)
+    summary_settled = len(settled_rows)
+
+    summary = {
+        "count": summary_count,
+        "original_cod": sum((money(item.original_cod) for item in rows), ZERO),
+        "carrier_fee": sum((money(item.carrier_fee) for item in rows), ZERO),
+        "province_fee": sum((money(item.province_fee) for item in rows), ZERO),
+        "net_cod": sum((money(item.net_cod) for item in rows), ZERO),
+        "done_cod": sum((money(item.original_cod) for item in settled_rows), ZERO),
+        "done_net_cod": sum((money(item.net_cod) for item in settled_rows), ZERO),
+        "done_rate": average_done_rate,
+        "pending": sum(1 for item in rows if not item.cod_status),
+        "sent": sum(1 for item in rows if item.cod_status == ProvinceCODItem.STATUS_SENT),
+        "received": sum(1 for item in rows if item.cod_status == ProvinceCODItem.STATUS_RECEIVED),
+        "paid": summary_paid,
+        "returned": sum(1 for item in rows if item.cod_status == ProvinceCODItem.STATUS_RETURNED),
+        "settled": sum(1 for item in rows if item.seller_settled),
+        "sent_cod": sum((money(item.original_cod) for item in rows), ZERO),
+        "received_cod": sum(
+            (money(item.original_cod) for item in rows if getattr(item, "received_at", None)),
+            ZERO,
+        ),
+        "settled_cod": sum(
+            (money(item.net_cod) for item in rows if getattr(item, "seller_settled", False)),
+            ZERO,
+        ),
+        "returned_cod": sum(
+            (money(item.original_cod) for item in rows if item.cod_status == ProvinceCODItem.STATUS_RETURNED),
+            ZERO,
+        ),
+    }
+
+    if (request.GET.get("action") or "").strip() == "export":
+        return _computer_province_cod_export_xlsx(rows, seller)
+
+    sort_urls = {}
+    for key in sort_map:
+        params = request.GET.copy()
+        next_direction = "asc"
+        if sort == key and direction == "asc":
+            next_direction = "desc"
+        params["sort"] = key
+        params["direction"] = next_direction
+        sort_urls[key] = f"?{params.urlencode()}"
 
     context = _common_context(
         seller,
-        period,
-        start_date,
-        end_date,
-        period_label,
+        "custom",
+        _parse_date(date_from) or today,
+        _parse_date(date_to) or today,
+        (
+            f"{date_from} - {date_to}"
+            if date_from != date_to
+            else date_from
+        ),
     )
 
     context.update(
         {
             "rows": rows,
-            "total_orders": len(rows),
-            "total_cod": total_cod,
-            "total_delivery_fee": total_delivery_fee,
-            "total_additional_fee": total_additional_fee,
-            "total_province_fee": total_province_fee,
-            "total_fees": total_fees,
-            "net_balance": net_balance,
+            "summary": summary,
+            "cod_daily_rows": cod_daily_rows,
+            "date_from": date_from,
+            "date_to": date_to,
+            "status": status,
+            "settlement": settlement,
+            "shipper_id": shipper_id,
+            "q": q,
+            "sort": sort,
+            "direction": direction,
+            "sort_urls": sort_urls,
+            "current_query": request.GET.urlencode(),
+            "shippers": _computer_active_province_carriers(),
         }
     )
 

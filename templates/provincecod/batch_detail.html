@@ -139,7 +139,7 @@
     </div>
   </div>
 
-  {% if batch.status == "PENDING" %}
+  {% if batch.status != "CANCELLED" %}
     <div class="section-title">Edit Batch</div>
 
     <div class="edit-box" style="margin-bottom:12px;">
@@ -147,10 +147,16 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="change_shipper">
 
-        <label class="shipper-label">Change carrier</label>
+        <label class="shipper-label">
+          Change carrier
+        </label>
 
         <div class="inline-fields">
-          <select name="shipper_id" class="shipper-select" required>
+          <select
+            name="shipper_id"
+            class="shipper-select"
+            required
+          >
             {% for s in shippers %}
               <option
                 value="{{ s.id }}"
@@ -161,35 +167,47 @@
             {% endfor %}
           </select>
 
-          <button class="btn btn-primary" type="submit">
+          <button
+            class="btn btn-primary"
+            type="submit"
+          >
             Save Carrier
           </button>
         </div>
       </form>
     </div>
 
-    <div class="edit-box">
-      <form method="post" class="scan-form">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="add_codes">
+    {% if batch.status == "PENDING" %}
+      <div class="edit-box">
+        <form method="post" class="scan-form">
+          {% csrf_token %}
+          <input
+            type="hidden"
+            name="action"
+            value="add_codes"
+          >
 
-        <label class="shipper-label">
-          Add tracking code(s), one per line
-        </label>
+          <label class="shipper-label">
+            Add tracking code(s), one per line
+          </label>
 
-        <textarea
-          class="scan-box"
-          name="scan_codes"
-          placeholder="Scan here..."
-        ></textarea>
+          <textarea
+            class="scan-box"
+            name="scan_codes"
+            placeholder="Scan here..."
+          ></textarea>
 
-        <div class="edit-actions">
-          <button class="btn btn-primary" type="submit">
-            + Add Orders
-          </button>
-        </div>
-      </form>
-    </div>
+          <div class="edit-actions">
+            <button
+              class="btn btn-primary"
+              type="submit"
+            >
+              + Add Orders
+            </button>
+          </div>
+        </form>
+      </div>
+    {% endif %}
   {% endif %}
 
   <!-- TABLE -->

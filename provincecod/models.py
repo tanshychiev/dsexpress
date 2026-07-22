@@ -111,15 +111,26 @@ class ProvinceCODBatch(models.Model):
 
 class ProvinceCODItem(models.Model):
     STATUS_SENT = "SENT"
+    STATUS_AT_STATION = "AT_STATION"
+    STATUS_OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY"
+    STATUS_DELIVERY_ISSUE = "DELIVERY_ISSUE"
     STATUS_RECEIVED = "RECEIVED"
     STATUS_PAID = "PAID"
+    STATUS_RETURNING = "RETURNING"
+    STATUS_RETURN_RECEIVED = "RETURN_RECEIVED"
+    # Kept for backward compatibility with historical records.
     STATUS_RETURNED = "RETURNED"
 
     STATUS_CHOICES = [
         (STATUS_SENT, "Sent"),
+        (STATUS_AT_STATION, "At Station"),
+        (STATUS_OUT_FOR_DELIVERY, "Out for Delivery"),
+        (STATUS_DELIVERY_ISSUE, "Delivery Issue"),
         (STATUS_RECEIVED, "Received"),
-        (STATUS_PAID, "Paid"),
-        (STATUS_RETURNED, "Returned"),
+        (STATUS_PAID, "Settled from Carrier"),
+        (STATUS_RETURNING, "Returning"),
+        (STATUS_RETURN_RECEIVED, "Return Received"),
+        (STATUS_RETURNED, "Returned (Legacy)"),
     ]
 
     METHOD_CALL = "CALL"
@@ -203,6 +214,24 @@ class ProvinceCODItem(models.Model):
         db_index=True,
     )
 
+    at_station_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    out_for_delivery_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    delivery_issue_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
     received_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -254,6 +283,18 @@ class ProvinceCODItem(models.Model):
         max_length=255,
         blank=True,
         default="",
+    )
+
+    returning_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    return_received_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
     )
 
     returned_at = models.DateTimeField(

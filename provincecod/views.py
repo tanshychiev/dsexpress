@@ -18,8 +18,13 @@ from .models import ProvinceCODBatch, ProvinceCODItem
 from .services import (
     cancel_pending_batch,
     complete_batch_sent,
+    mark_item_at_station,
+    mark_item_delivery_issue,
+    mark_item_out_for_delivery,
     mark_item_paid,
     mark_item_received,
+    mark_item_return_received,
+    mark_item_returning,
     mark_item_returned,
     mark_item_seller_settled,
     money,
@@ -1040,6 +1045,98 @@ def batch_detail(request, pk):
                     ),
                 )
 
+            elif action == "mark_at_station":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_at_station(
+                    item,
+                    request.user,
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as AT STATION.",
+                )
+
+            elif action == "mark_out_for_delivery":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_out_for_delivery(
+                    item,
+                    request.user,
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as OUT FOR DELIVERY.",
+                )
+
+            elif action == "mark_delivery_issue":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_delivery_issue(
+                    item,
+                    request.user,
+                    issue_reason=request.POST.get(
+                        "issue_reason",
+                        "",
+                    ),
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as DELIVERY ISSUE.",
+                )
+
+            elif action == "mark_returning":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_returning(
+                    item,
+                    request.user,
+                    return_reason=request.POST.get(
+                        "return_reason",
+                        "",
+                    ),
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as RETURNING.",
+                )
+
+            elif action == "mark_return_received":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_return_received(
+                    item,
+                    request.user,
+                    received_person=request.POST.get(
+                        "received_person",
+                        "",
+                    ),
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as RETURN RECEIVED.",
+                )
+
             elif action == "mark_received":
                 item = get_object_or_404(
                     ProvinceCODItem,
@@ -1248,6 +1345,36 @@ def batch_detail(request, pk):
             if item.cod_status
             == ProvinceCODItem.STATUS_SENT
         ),
+        "at_station": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_AT_STATION
+        ),
+        "out_for_delivery": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_OUT_FOR_DELIVERY
+        ),
+        "delivery_issue": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_DELIVERY_ISSUE
+        ),
+        "returning": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_RETURNING
+        ),
+        "return_received": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_RETURN_RECEIVED
+        ),
         "received": sum(
             1
             for item in items
@@ -1447,7 +1574,69 @@ def province_cod_report(request):
 
             for item in items:
                 try:
-                    if action == "mark_received":
+                    if action == "mark_at_station":
+                        mark_item_at_station(
+                            item,
+                            request.user,
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_out_for_delivery":
+                        mark_item_out_for_delivery(
+                            item,
+                            request.user,
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_delivery_issue":
+                        mark_item_delivery_issue(
+                            item,
+                            request.user,
+                            issue_reason=request.POST.get(
+                                "issue_reason",
+                                "",
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_returning":
+                        mark_item_returning(
+                            item,
+                            request.user,
+                            return_reason=request.POST.get(
+                                "return_reason",
+                                "",
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_return_received":
+                        mark_item_return_received(
+                            item,
+                            request.user,
+                            received_person=request.POST.get(
+                                "received_person",
+                                "",
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_received":
                         mark_item_received(
                             item,
                             request.user,
@@ -1872,6 +2061,51 @@ def province_cod_report(request):
                 item.cod_status
                 == ProvinceCODItem
                 .STATUS_SENT
+            )
+        ),
+        "at_station": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_AT_STATION
+            )
+        ),
+        "out_for_delivery": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_OUT_FOR_DELIVERY
+            )
+        ),
+        "delivery_issue": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_DELIVERY_ISSUE
+            )
+        ),
+        "returning": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_RETURNING
+            )
+        ),
+        "return_received": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_RETURN_RECEIVED
             )
         ),
         "received": sum(

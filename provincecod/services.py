@@ -317,174 +317,109 @@ def complete_batch_sent(batch, user):
 
 
 @transaction.atomic
-def mark_item_received(
-    item,
-    user,
-    received_person="",
-    confirmation_method="",
-    note="",
-):
+def _transition_item(item, allowed_from, new_status, timestamp_field, *, user=None, note="", extra_fields=None):
     item = (
         ProvinceCODItem.objects
         .select_for_update()
         .select_related("order", "batch")
         .get(pk=item.pk)
     )
-
-    if item.cod_status not in {
-        ProvinceCODItem.STATUS_SENT,
-        ProvinceCODItem.STATUS_RECEIVED,
-    }:
-        raise ValueError(
-            "Only a sent item can be marked as received."
-        )
-
-    item.cod_status = ProvinceCODItem.STATUS_RECEIVED
-    item.received_at = timezone.now()
-    item.received_confirmed_by = user
-    item.received_person = (received_person or "").strip()
-    item.confirmation_method = (confirmation_method or "").strip()
+    if item.cod_status not in set(allowed_from):
+        allowed = ", ".join(sorted(allowed_from))
+        raise ValueError(f"Status {item.cod_status or 'EMPTY'} cannot become {new_status}. Allowed from: {allowed}.")
+    now = timezone.now()
+    item.cod_status = new_status
+    setattr(item, timestamp_field, now)
     item.note = (note or item.note or "").strip()
-    item.net_cod = ZERO
-
-    item.save(
-        update_fields=[
-            "cod_status",
-            "received_at",
-            "received_confirmed_by",
-            "received_person",
-            "confirmation_method",
-            "note",
-            "net_cod",
-            "updated_at",
-        ]
-    )
-
+    update_fields = ["cod_status", timestamp_field, "note", "updated_at"]
+    for field, value in (extra_fields or {}).items():
+        setattr(item, field, value)
+        update_fields.append(field)
+    item.save(update_fields=list(dict.fromkeys(update_fields)))
     return item
 
 
 @transaction.atomic
-def mark_item_paid(
-    item,
-    user,
-    carrier_fee=None,
-    carrier_reference="",
-    note="",
-):
-    item = (
-        ProvinceCODItem.objects
-        .select_for_update()
-        .select_related("order", "batch")
-        .get(pk=item.pk)
-    )
+def mark_item_at_station(item, user, note=""):
+    return _transition_item(item, {ProvinceCODItem.STATUS_SENT}, ProvinceCODItem.STATUS_AT_STATION, "at_station_at", user=user, note=note)
 
-    if item.cod_status not in {
-        ProvinceCODItem.STATUS_SENT,
+
+@transaction.atomic
+def mark_item_out_for_delivery(item, user, note=""):
+    return _transition_item(item, {ProvinceCODItem.STATUS_AT_STATION, ProvinceCODItem.STATUS_DELIVERY_ISSUE}, ProvinceCODItem.STATUS_OUT_FOR_DELIVERY, "out_for_delivery_at", user=user, note=note)
+
+
+@transaction.atomic
+def mark_item_delivery_issue(item, user, issue_reason="", note=""):
+    reason = (issue_reason or "").strip()
+    if not reason:
+        raise ValueError("Please enter the delivery issue reason.")
+    return _transition_item(item, {ProvinceCODItem.STATUS_OUT_FOR_DELIVERY}, ProvinceCODItem.STATUS_DELIVERY_ISSUE, "delivery_issue_at", user=user, note=note, extra_fields={"return_reason": reason})
+
+
+@transaction.atomic
+def mark_item_received(item, user, received_person="", confirmation_method="", note=""):
+    item = _transition_item(
+        item,
+        {ProvinceCODItem.STATUS_OUT_FOR_DELIVERY},
         ProvinceCODItem.STATUS_RECEIVED,
-    }:
-        raise ValueError(
-            "Only a sent or received item can be marked as paid."
-        )
+        "received_at",
+        user=user, note=note,
+        extra_fields={
+            "received_confirmed_by": user,
+            "received_person": (received_person or "").strip(),
+            "confirmation_method": (confirmation_method or "").strip(),
+            "net_cod": ZERO,
+        },
+    )
+    return item
 
-    if carrier_fee in (None, ""):
-        final_carrier_fee = item.suggested_carrier_fee()
-    else:
-        final_carrier_fee = money(carrier_fee)
 
+@transaction.atomic
+def mark_item_paid(item, user, carrier_fee=None, carrier_reference="", note=""):
+    item = (ProvinceCODItem.objects.select_for_update().select_related("order", "batch").get(pk=item.pk))
+    if item.cod_status != ProvinceCODItem.STATUS_RECEIVED:
+        raise ValueError("Only a received item can be settled from the carrier.")
+    final_carrier_fee = item.suggested_carrier_fee() if carrier_fee in (None, "") else money(carrier_fee)
     if final_carrier_fee < ZERO:
         raise ValueError("Carrier fee cannot be negative.")
-
     if final_carrier_fee > money(item.original_cod):
-        raise ValueError(
-            "Carrier fee cannot be higher than the COD amount."
-        )
-
-    paid_time = timezone.now()
-
-    if not item.received_at:
-        item.received_at = paid_time
-        item.received_confirmed_by = user
-        item.confirmation_method = ProvinceCODItem.METHOD_CARRIER
-
+        raise ValueError("Carrier fee cannot be higher than the COD amount.")
     item.cod_status = ProvinceCODItem.STATUS_PAID
-    item.paid_at = paid_time
+    item.paid_at = timezone.now()
     item.paid_confirmed_by = user
     item.carrier_fee = final_carrier_fee
     item.net_cod = money(item.original_cod - final_carrier_fee)
     item.carrier_reference = (carrier_reference or "").strip()
     item.note = (note or item.note or "").strip()
-
-    item.save(
-        update_fields=[
-            "cod_status",
-            "received_at",
-            "received_confirmed_by",
-            "confirmation_method",
-            "paid_at",
-            "paid_confirmed_by",
-            "carrier_fee",
-            "net_cod",
-            "carrier_reference",
-            "note",
-            "updated_at",
-        ]
-    )
-
+    item.save(update_fields=["cod_status", "paid_at", "paid_confirmed_by", "carrier_fee", "net_cod", "carrier_reference", "note", "updated_at"])
     return item
 
 
 @transaction.atomic
-def mark_item_returned(
-    item,
-    user,
-    return_reason="",
-    note="",
-):
-    item = (
-        ProvinceCODItem.objects
-        .select_for_update()
-        .select_related("order", "batch")
-        .get(pk=item.pk)
-    )
+def mark_item_returning(item, user, return_reason="", note=""):
+    reason = (return_reason or "").strip()
+    if not reason:
+        raise ValueError("Please enter the return reason.")
+    return _transition_item(item, {ProvinceCODItem.STATUS_DELIVERY_ISSUE}, ProvinceCODItem.STATUS_RETURNING, "returning_at", user=user, note=note, extra_fields={"return_reason": reason, "carrier_fee": ZERO, "net_cod": ZERO, "seller_settled": False, "seller_settled_at": None, "seller_settled_by": None})
 
-    if item.cod_status == ProvinceCODItem.STATUS_PAID:
-        raise ValueError("A paid item cannot be changed to returned.")
 
-    if item.cod_status not in {
-        ProvinceCODItem.STATUS_SENT,
-        ProvinceCODItem.STATUS_RECEIVED,
-        ProvinceCODItem.STATUS_RETURNED,
-    }:
-        raise ValueError("This item has not been sent yet.")
-
-    item.cod_status = ProvinceCODItem.STATUS_RETURNED
-    item.returned_at = timezone.now()
-    item.returned_confirmed_by = user
-    item.return_reason = (return_reason or "").strip()
-    item.carrier_fee = ZERO
-    item.net_cod = ZERO
-    item.seller_settled = False
-    item.seller_settled_at = None
-    item.seller_settled_by = None
-    item.note = (note or item.note or "").strip()
-
-    item.save(
-        update_fields=[
-            "cod_status",
-            "returned_at",
-            "returned_confirmed_by",
-            "return_reason",
-            "carrier_fee",
-            "net_cod",
-            "seller_settled",
-            "seller_settled_at",
-            "seller_settled_by",
-            "note",
-            "updated_at",
-        ]
-    )
-
+@transaction.atomic
+def mark_item_return_received(item, user, received_person="", note=""):
+    item = _transition_item(item, {ProvinceCODItem.STATUS_RETURNING}, ProvinceCODItem.STATUS_RETURN_RECEIVED, "return_received_at", user=user, note=note, extra_fields={"returned_at": timezone.now(), "returned_confirmed_by": user, "received_person": (received_person or "").strip(), "carrier_fee": ZERO, "net_cod": ZERO, "seller_settled": False, "seller_settled_at": None, "seller_settled_by": None})
     return item
+
+
+@transaction.atomic
+def mark_item_returned(item, user, return_reason="", note=""):
+    """Backward-compatible alias for the completed return workflow."""
+    if item.cod_status == ProvinceCODItem.STATUS_DELIVERY_ISSUE:
+        item = mark_item_returning(item, user, return_reason=return_reason, note=note)
+    if item.cod_status == ProvinceCODItem.STATUS_RETURNING:
+        return mark_item_return_received(item, user, received_person="", note=note)
+    if item.cod_status in {ProvinceCODItem.STATUS_RETURN_RECEIVED, ProvinceCODItem.STATUS_RETURNED}:
+        return item
+    raise ValueError("Only a delivery-issue item can enter the return workflow.")
 
 
 @transaction.atomic
@@ -496,7 +431,7 @@ def mark_item_seller_settled(item, user):
     )
 
     if item.cod_status != ProvinceCODItem.STATUS_PAID:
-        raise ValueError("Only a paid item can be settled.")
+        raise ValueError("Only an item settled from the carrier can be settled to the customer.")
 
     if item.seller_settled:
         return item

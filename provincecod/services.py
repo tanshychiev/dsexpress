@@ -399,27 +399,136 @@ def mark_item_paid(item, user, carrier_fee=None, carrier_reference="", note=""):
 @transaction.atomic
 def mark_item_returning(item, user, return_reason="", note=""):
     reason = (return_reason or "").strip()
+
     if not reason:
         raise ValueError("Please enter the return reason.")
-    return _transition_item(item, {ProvinceCODItem.STATUS_DELIVERY_ISSUE}, ProvinceCODItem.STATUS_RETURNING, "returning_at", user=user, note=note, extra_fields={"return_reason": reason, "carrier_fee": ZERO, "net_cod": ZERO, "seller_settled": False, "seller_settled_at": None, "seller_settled_by": None})
+
+    item = (
+        ProvinceCODItem.objects
+        .select_for_update()
+        .select_related("order", "batch", "batch__shipper")
+        .get(pk=item.pk)
+    )
+
+    old_order_status = str(item.order.status or "").upper()
+
+    item = _transition_item(
+        item,
+        {ProvinceCODItem.STATUS_DELIVERY_ISSUE},
+        ProvinceCODItem.STATUS_RETURNING,
+        "returning_at",
+        user=user,
+        note=note,
+        extra_fields={
+            "return_reason": reason,
+            "carrier_fee": ZERO,
+            "net_cod": ZERO,
+            "seller_settled": False,
+            "seller_settled_at": None,
+            "seller_settled_by": None,
+        },
+    )
+
+    Order.objects.filter(pk=item.order_id).update(
+        status="RETURN_ASSIGNED",
+        updated_at=timezone.now(),
+        updated_by=user,
+    )
+
+    log_order_activity(
+        order=item.order,
+        user=user,
+        action="PROVINCE_COD_RETURNING",
+        old_status=old_order_status,
+        new_status="RETURN_ASSIGNED",
+        shipper=item.batch.shipper,
+        note=note or reason,
+    )
+
+    return item
 
 
 @transaction.atomic
 def mark_item_return_received(item, user, received_person="", note=""):
-    item = _transition_item(item, {ProvinceCODItem.STATUS_RETURNING}, ProvinceCODItem.STATUS_RETURN_RECEIVED, "return_received_at", user=user, note=note, extra_fields={"returned_at": timezone.now(), "returned_confirmed_by": user, "received_person": (received_person or "").strip(), "carrier_fee": ZERO, "net_cod": ZERO, "seller_settled": False, "seller_settled_at": None, "seller_settled_by": None})
+    item = (
+        ProvinceCODItem.objects
+        .select_for_update()
+        .select_related("order", "batch", "batch__shipper")
+        .get(pk=item.pk)
+    )
+
+    old_order_status = str(item.order.status or "").upper()
+
+    item = _transition_item(
+        item,
+        {ProvinceCODItem.STATUS_RETURNING},
+        ProvinceCODItem.STATUS_RETURN_RECEIVED,
+        "return_received_at",
+        user=user,
+        note=note,
+        extra_fields={
+            "returned_at": timezone.now(),
+            "returned_confirmed_by": user,
+            "received_person": (received_person or "").strip(),
+            "carrier_fee": ZERO,
+            "net_cod": ZERO,
+            "seller_settled": False,
+            "seller_settled_at": None,
+            "seller_settled_by": None,
+        },
+    )
+
+    Order.objects.filter(pk=item.order_id).update(
+        status="RETURNED",
+        updated_at=timezone.now(),
+        updated_by=user,
+    )
+
+    log_order_activity(
+        order=item.order,
+        user=user,
+        action="PROVINCE_COD_RETURN_RECEIVED",
+        old_status=old_order_status,
+        new_status="RETURNED",
+        shipper=item.batch.shipper,
+        note=note or "Returned parcel received.",
+    )
+
     return item
 
 
 @transaction.atomic
 def mark_item_returned(item, user, return_reason="", note=""):
-    """Backward-compatible alias for the completed return workflow."""
+    """
+    Compatibility for old buttons or old views.
+
+    The legacy action now starts the return workflow only. It does not mark
+    the parcel as received back. Staff must confirm Return Received separately.
+    """
+    item = (
+        ProvinceCODItem.objects
+        .select_for_update()
+        .get(pk=item.pk)
+    )
+
     if item.cod_status == ProvinceCODItem.STATUS_DELIVERY_ISSUE:
-        item = mark_item_returning(item, user, return_reason=return_reason, note=note)
-    if item.cod_status == ProvinceCODItem.STATUS_RETURNING:
-        return mark_item_return_received(item, user, received_person="", note=note)
-    if item.cod_status in {ProvinceCODItem.STATUS_RETURN_RECEIVED, ProvinceCODItem.STATUS_RETURNED}:
+        return mark_item_returning(
+            item,
+            user,
+            return_reason=return_reason,
+            note=note,
+        )
+
+    if item.cod_status in {
+        ProvinceCODItem.STATUS_RETURNING,
+        ProvinceCODItem.STATUS_RETURN_RECEIVED,
+        ProvinceCODItem.STATUS_RETURNED,
+    }:
         return item
-    raise ValueError("Only a delivery-issue item can enter the return workflow.")
+
+    raise ValueError(
+        "Only a delivery-issue item can enter the return workflow."
+    )
 
 
 @transaction.atomic

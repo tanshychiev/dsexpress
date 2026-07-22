@@ -414,7 +414,13 @@ def mark_item_returning(item, user, return_reason="", note=""):
 
     item = _transition_item(
         item,
-        {ProvinceCODItem.STATUS_DELIVERY_ISSUE},
+        {
+            ProvinceCODItem.STATUS_SENT,
+            ProvinceCODItem.STATUS_AT_STATION,
+            ProvinceCODItem.STATUS_OUT_FOR_DELIVERY,
+            ProvinceCODItem.STATUS_DELIVERY_ISSUE,
+            ProvinceCODItem.STATUS_RECEIVED,
+        },
         ProvinceCODItem.STATUS_RETURNING,
         "returning_at",
         user=user,
@@ -511,7 +517,13 @@ def mark_item_returned(item, user, return_reason="", note=""):
         .get(pk=item.pk)
     )
 
-    if item.cod_status == ProvinceCODItem.STATUS_DELIVERY_ISSUE:
+    if item.cod_status in {
+        ProvinceCODItem.STATUS_SENT,
+        ProvinceCODItem.STATUS_AT_STATION,
+        ProvinceCODItem.STATUS_OUT_FOR_DELIVERY,
+        ProvinceCODItem.STATUS_DELIVERY_ISSUE,
+        ProvinceCODItem.STATUS_RECEIVED,
+    }:
         return mark_item_returning(
             item,
             user,
@@ -527,7 +539,7 @@ def mark_item_returned(item, user, return_reason="", note=""):
         return item
 
     raise ValueError(
-        "Only a delivery-issue item can enter the return workflow."
+        "This item cannot enter the return workflow from its current status."
     )
 
 

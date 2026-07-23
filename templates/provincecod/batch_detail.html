@@ -139,7 +139,7 @@
     </div>
   </div>
 
-  {% if batch.status != "CANCELLED" %}
+  {% if batch.status == "PENDING" %}
     <div class="section-title">Edit Batch</div>
 
     <div class="edit-box" style="margin-bottom:12px;">
@@ -147,16 +147,10 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="change_shipper">
 
-        <label class="shipper-label">
-          Change carrier
-        </label>
+        <label class="shipper-label">Change carrier</label>
 
         <div class="inline-fields">
-          <select
-            name="shipper_id"
-            class="shipper-select"
-            required
-          >
+          <select name="shipper_id" class="shipper-select" required>
             {% for s in shippers %}
               <option
                 value="{{ s.id }}"
@@ -167,47 +161,35 @@
             {% endfor %}
           </select>
 
-          <button
-            class="btn btn-primary"
-            type="submit"
-          >
+          <button class="btn btn-primary" type="submit">
             Save Carrier
           </button>
         </div>
       </form>
     </div>
 
-    {% if batch.status == "PENDING" %}
-      <div class="edit-box">
-        <form method="post" class="scan-form">
-          {% csrf_token %}
-          <input
-            type="hidden"
-            name="action"
-            value="add_codes"
-          >
+    <div class="edit-box">
+      <form method="post" class="scan-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_codes">
 
-          <label class="shipper-label">
-            Add tracking code(s), one per line
-          </label>
+        <label class="shipper-label">
+          Add tracking code(s), one per line
+        </label>
 
-          <textarea
-            class="scan-box"
-            name="scan_codes"
-            placeholder="Scan here..."
-          ></textarea>
+        <textarea
+          class="scan-box"
+          name="scan_codes"
+          placeholder="Scan here..."
+        ></textarea>
 
-          <div class="edit-actions">
-            <button
-              class="btn btn-primary"
-              type="submit"
-            >
-              + Add Orders
-            </button>
-          </div>
-        </form>
-      </div>
-    {% endif %}
+        <div class="edit-actions">
+          <button class="btn btn-primary" type="submit">
+            + Add Orders
+          </button>
+        </div>
+      </form>
+    </div>
   {% endif %}
 
   <!-- TABLE -->
@@ -225,7 +207,6 @@
           <th class="th-center" style="width:180px;">SELLER</th>
           <th class="th-center" style="width:170px;">RECEIVER</th>
           <th class="th-center" style="width:135px;">PHONE</th>
-          <th class="th-center address-column" style="width:260px;">ADDRESS</th>
           <th class="th-center" style="width:120px;">ORIGINAL COD</th>
           <th class="th-center" style="width:115px;">PROVINCE FEE</th>
           <th class="th-center" style="width:125px;">COD STATUS</th>
@@ -263,10 +244,6 @@
               {{ item.order.receiver_phone|default:"-" }}
             </td>
 
-            <td class="td-center address-cell">
-              {{ item.order.receiver_address|default:"-" }}
-            </td>
-
             <td class="td-center">
               <b>${{ item.original_cod|floatformat:2 }}</b>
             </td>
@@ -277,7 +254,7 @@
 
             <td class="td-center">
               {% if item.cod_status == "PAID" %}
-                <span class="badge badge-green">PAID</span>
+                <span class="badge badge-green">SETTLED FROM CARRIER</span>
               {% elif item.cod_status == "RECEIVED" %}
                 <span class="badge badge-yellow">RECEIVED</span>
               {% elif item.cod_status == "RETURNED" %}
@@ -337,7 +314,19 @@
                 </form>
 
               {% elif batch.status == "SENT" %}
-                {% if item.cod_status == "SENT" or item.cod_status == "RECEIVED" %}
+                {% if item.cod_status == "SENT" %}
+                  <form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="item_id" value="{{ item.id }}"><input type="hidden" name="action" value="mark_at_station"><button class="btn btn-primary btn-sm" type="submit">At Station</button></form>
+                {% elif item.cod_status == "AT_STATION" or item.cod_status == "DELIVERY_ISSUE" %}
+                  <form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="item_id" value="{{ item.id }}"><input type="hidden" name="action" value="mark_out_for_delivery"><button class="btn btn-primary btn-sm" type="submit">Out for Delivery</button></form>
+                  {% if item.cod_status == "DELIVERY_ISSUE" %}<form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="item_id" value="{{ item.id }}"><input type="hidden" name="action" value="mark_returning"><input type="text" name="return_reason" placeholder="Return reason" required><button class="btn btn-danger btn-sm" type="submit">Returning</button></form>{% endif %}
+                {% elif item.cod_status == "OUT_FOR_DELIVERY" %}
+                  <form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="item_id" value="{{ item.id }}"><input type="hidden" name="action" value="mark_received"><button class="btn btn-success btn-sm" type="submit">Received</button></form>
+                  <form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="item_id" value="{{ item.id }}"><input type="hidden" name="action" value="mark_delivery_issue"><input type="text" name="issue_reason" placeholder="Issue reason" required><button class="btn btn-danger btn-sm" type="submit">Delivery Issue</button></form>
+                {% elif item.cod_status == "RETURNING" %}
+                  <form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="item_id" value="{{ item.id }}"><input type="hidden" name="action" value="mark_return_received"><input type="text" name="received_person" placeholder="Received by"><button class="btn btn-success btn-sm" type="submit">Return Received</button></form>
+                {% endif %}
+
+                {% if item.cod_status == "RECEIVED" %}
                   <details class="action-details">
                     <summary>Update COD</summary>
 
@@ -413,7 +402,7 @@
                     <input type="hidden" name="item_id" value="{{ item.id }}">
 
                     <button class="btn btn-dark btn-small" type="submit">
-                      Settle Seller
+                      Settled to Customer
                     </button>
                   </form>
 
@@ -441,7 +430,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="14" class="empty-row">
+            <td colspan="13" class="empty-row">
               No orders in this batch.
             </td>
           </tr>
@@ -650,7 +639,7 @@
 
   table.wide{
     width:100%;
-    min-width:1840px;
+    min-width:1580px;
   }
 
   .th-center,
@@ -687,19 +676,6 @@
 
   .ds-table tbody tr:hover td{
     background:rgba(255,255,255,.45);
-  }
-
-  .address-column{
-    min-width:260px;
-  }
-
-  .address-cell{
-    min-width:260px;
-    max-width:320px;
-    text-align:left;
-    white-space:normal;
-    line-height:1.45;
-    word-break:break-word;
   }
 
   .seller-cell{

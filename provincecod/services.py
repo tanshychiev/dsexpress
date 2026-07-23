@@ -317,36 +317,112 @@ def complete_batch_sent(batch, user):
 
 
 @transaction.atomic
-def _transition_item(item, allowed_from, new_status, timestamp_field, *, user=None, note="", extra_fields=None):
+def _transition_item(
+    item,
+    allowed_from,
+    new_status,
+    timestamp_field,
+    *,
+    user=None,
+    note="",
+    extra_fields=None,
+    order_status=None,
+    activity_action="PROVINCE_COD_STATUS_CHANGE",
+):
+    """Change Province COD status and keep the linked Order synchronized."""
     item = (
         ProvinceCODItem.objects
         .select_for_update()
-        .select_related("order", "batch")
+        .select_related("order", "batch", "batch__shipper")
         .get(pk=item.pk)
     )
-    if item.cod_status not in set(allowed_from):
-        allowed = ", ".join(sorted(allowed_from))
-        raise ValueError(f"Status {item.cod_status or 'EMPTY'} cannot become {new_status}. Allowed from: {allowed}.")
+
+    current_status = (item.cod_status or "").strip().upper()
+    allowed = set(allowed_from)
+
+    # Idempotent: double-clicking the same action must not show an error.
+    if current_status == new_status:
+        return item
+
+    if current_status not in allowed:
+        allowed_text = ", ".join(sorted(allowed))
+        raise ValueError(
+            f"Status {current_status or 'EMPTY'} cannot become {new_status}. "
+            f"Allowed from: {allowed_text}."
+        )
+
     now = timezone.now()
+    old_order_status = str(item.order.status or "").upper()
+
     item.cod_status = new_status
     setattr(item, timestamp_field, now)
-    item.note = (note or item.note or "").strip()
-    update_fields = ["cod_status", timestamp_field, "note", "updated_at"]
+    if note:
+        item.note = note.strip()
+
+    update_fields = ["cod_status", timestamp_field, "updated_at"]
+    if note:
+        update_fields.append("note")
+
     for field, value in (extra_fields or {}).items():
         setattr(item, field, value)
         update_fields.append(field)
+
     item.save(update_fields=list(dict.fromkeys(update_fields)))
+
+    if order_status and old_order_status != order_status:
+        Order.objects.filter(pk=item.order_id).update(
+            status=order_status,
+            updated_at=now,
+            updated_by=user,
+        )
+
+        log_order_activity(
+            order=item.order,
+            user=user,
+            action=activity_action,
+            old_status=old_order_status,
+            new_status=order_status,
+            shipper=item.batch.shipper,
+            note=note or f"Province COD status changed to {new_status}.",
+        )
+
     return item
 
 
 @transaction.atomic
 def mark_item_at_station(item, user, note=""):
-    return _transition_item(item, {ProvinceCODItem.STATUS_SENT}, ProvinceCODItem.STATUS_AT_STATION, "at_station_at", user=user, note=note)
+    return _transition_item(
+        item,
+        {
+            ProvinceCODItem.STATUS_SENT,
+            ProvinceCODItem.STATUS_DELIVERY_ISSUE,
+        },
+        ProvinceCODItem.STATUS_AT_STATION,
+        "at_station_at",
+        user=user,
+        note=note,
+        # Main Order has no AT_STATION status, so it stays SENT.
+        order_status="SENT",
+        activity_action="PROVINCE_COD_AT_STATION",
+    )
 
 
 @transaction.atomic
 def mark_item_out_for_delivery(item, user, note=""):
-    return _transition_item(item, {ProvinceCODItem.STATUS_AT_STATION, ProvinceCODItem.STATUS_DELIVERY_ISSUE}, ProvinceCODItem.STATUS_OUT_FOR_DELIVERY, "out_for_delivery_at", user=user, note=note)
+    return _transition_item(
+        item,
+        {
+            ProvinceCODItem.STATUS_SENT,
+            ProvinceCODItem.STATUS_AT_STATION,
+            ProvinceCODItem.STATUS_DELIVERY_ISSUE,
+        },
+        ProvinceCODItem.STATUS_OUT_FOR_DELIVERY,
+        "out_for_delivery_at",
+        user=user,
+        note=note,
+        order_status="OUT_FOR_DELIVERY",
+        activity_action="PROVINCE_COD_OUT_FOR_DELIVERY",
+    )
 
 
 @transaction.atomic
@@ -354,45 +430,125 @@ def mark_item_delivery_issue(item, user, issue_reason="", note=""):
     reason = (issue_reason or "").strip()
     if not reason:
         raise ValueError("Please enter the delivery issue reason.")
-    return _transition_item(item, {ProvinceCODItem.STATUS_OUT_FOR_DELIVERY}, ProvinceCODItem.STATUS_DELIVERY_ISSUE, "delivery_issue_at", user=user, note=note, extra_fields={"return_reason": reason})
+
+    return _transition_item(
+        item,
+        {
+            ProvinceCODItem.STATUS_SENT,
+            ProvinceCODItem.STATUS_AT_STATION,
+            ProvinceCODItem.STATUS_OUT_FOR_DELIVERY,
+            ProvinceCODItem.STATUS_DELIVERY_ISSUE,
+        },
+        ProvinceCODItem.STATUS_DELIVERY_ISSUE,
+        "delivery_issue_at",
+        user=user,
+        note=note,
+        extra_fields={"return_reason": reason},
+        # Keep it in the active delivery queue while staff resolves the issue.
+        order_status="OUT_FOR_DELIVERY",
+        activity_action="PROVINCE_COD_DELIVERY_ISSUE",
+    )
 
 
 @transaction.atomic
-def mark_item_received(item, user, received_person="", confirmation_method="", note=""):
-    item = _transition_item(
+def mark_item_received(
+    item,
+    user,
+    received_person="",
+    confirmation_method="",
+    note="",
+):
+    return _transition_item(
         item,
-        {ProvinceCODItem.STATUS_OUT_FOR_DELIVERY},
+        {
+            ProvinceCODItem.STATUS_SENT,
+            ProvinceCODItem.STATUS_AT_STATION,
+            ProvinceCODItem.STATUS_OUT_FOR_DELIVERY,
+            ProvinceCODItem.STATUS_DELIVERY_ISSUE,
+        },
         ProvinceCODItem.STATUS_RECEIVED,
         "received_at",
-        user=user, note=note,
+        user=user,
+        note=note,
         extra_fields={
             "received_confirmed_by": user,
             "received_person": (received_person or "").strip(),
             "confirmation_method": (confirmation_method or "").strip(),
             "net_cod": ZERO,
         },
+        order_status="DELIVERED",
+        activity_action="PROVINCE_COD_RECEIVED",
     )
-    return item
 
 
 @transaction.atomic
 def mark_item_paid(item, user, carrier_fee=None, carrier_reference="", note=""):
-    item = (ProvinceCODItem.objects.select_for_update().select_related("order", "batch").get(pk=item.pk))
+    item = (
+        ProvinceCODItem.objects
+        .select_for_update()
+        .select_related("order", "batch", "batch__shipper")
+        .get(pk=item.pk)
+    )
+
+    if item.cod_status == ProvinceCODItem.STATUS_PAID:
+        return item
+
     if item.cod_status != ProvinceCODItem.STATUS_RECEIVED:
         raise ValueError("Only a received item can be settled from the carrier.")
-    final_carrier_fee = item.suggested_carrier_fee() if carrier_fee in (None, "") else money(carrier_fee)
+
+    final_carrier_fee = (
+        item.suggested_carrier_fee()
+        if carrier_fee in (None, "")
+        else money(carrier_fee)
+    )
+
     if final_carrier_fee < ZERO:
         raise ValueError("Carrier fee cannot be negative.")
     if final_carrier_fee > money(item.original_cod):
         raise ValueError("Carrier fee cannot be higher than the COD amount.")
+
+    now = timezone.now()
+    old_order_status = str(item.order.status or "").upper()
+
     item.cod_status = ProvinceCODItem.STATUS_PAID
-    item.paid_at = timezone.now()
+    item.paid_at = now
     item.paid_confirmed_by = user
     item.carrier_fee = final_carrier_fee
     item.net_cod = money(item.original_cod - final_carrier_fee)
     item.carrier_reference = (carrier_reference or "").strip()
-    item.note = (note or item.note or "").strip()
-    item.save(update_fields=["cod_status", "paid_at", "paid_confirmed_by", "carrier_fee", "net_cod", "carrier_reference", "note", "updated_at"])
+    if note:
+        item.note = note.strip()
+
+    item.save(
+        update_fields=[
+            "cod_status",
+            "paid_at",
+            "paid_confirmed_by",
+            "carrier_fee",
+            "net_cod",
+            "carrier_reference",
+            "note",
+            "updated_at",
+        ]
+    )
+
+    # A paid COD parcel must remain delivered in the normal Order workflow.
+    if old_order_status != "DELIVERED":
+        Order.objects.filter(pk=item.order_id).update(
+            status="DELIVERED",
+            updated_at=now,
+            updated_by=user,
+        )
+        log_order_activity(
+            order=item.order,
+            user=user,
+            action="PROVINCE_COD_PAID",
+            old_status=old_order_status,
+            new_status="DELIVERED",
+            shipper=item.batch.shipper,
+            note=note or "Carrier COD payment received.",
+        )
+
     return item
 
 

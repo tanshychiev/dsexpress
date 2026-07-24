@@ -390,6 +390,114 @@ def _transition_item(
 
 
 @transaction.atomic
+def correct_item_status(item, user, target_status, reason):
+    """Correct an accidentally entered COD status and keep the reason internal."""
+    item = (
+        ProvinceCODItem.objects
+        .select_for_update()
+        .select_related("order", "batch", "batch__shipper")
+        .get(pk=item.pk)
+    )
+
+    current_status = (item.cod_status or "").strip().upper()
+    target_status = (target_status or "").strip().upper()
+    reason = (reason or "").strip()
+
+    status_rank = {
+        ProvinceCODItem.STATUS_SENT: 10,
+        ProvinceCODItem.STATUS_AT_STATION: 20,
+        ProvinceCODItem.STATUS_OUT_FOR_DELIVERY: 30,
+        ProvinceCODItem.STATUS_DELIVERY_ISSUE: 35,
+        ProvinceCODItem.STATUS_RECEIVED: 40,
+        ProvinceCODItem.STATUS_PAID: 50,
+        ProvinceCODItem.STATUS_RETURNING: 60,
+        ProvinceCODItem.STATUS_RETURN_RECEIVED: 70,
+    }
+
+    if current_status not in status_rank or target_status not in status_rank:
+        raise ValueError("Invalid status correction.")
+    if status_rank[target_status] >= status_rank[current_status]:
+        raise ValueError("Status correction is only for moving back to an earlier status.")
+    if current_status == ProvinceCODItem.STATUS_PAID or item.seller_settled:
+        raise ValueError("Undo payment/customer settlement before correcting this status.")
+    if not reason:
+        raise ValueError("Please enter the internal correction reason.")
+
+    now = timezone.now()
+    old_order_status = str(item.order.status or "").upper()
+
+    order_status_map = {
+        ProvinceCODItem.STATUS_SENT: "SENT",
+        ProvinceCODItem.STATUS_AT_STATION: "SENT",
+        ProvinceCODItem.STATUS_OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
+        ProvinceCODItem.STATUS_DELIVERY_ISSUE: "OUT_FOR_DELIVERY",
+        ProvinceCODItem.STATUS_RECEIVED: "DELIVERED",
+        ProvinceCODItem.STATUS_RETURNING: "RETURN_ASSIGNED",
+        ProvinceCODItem.STATUS_RETURN_RECEIVED: "RETURNED",
+    }
+    timestamp_map = {
+        ProvinceCODItem.STATUS_SENT: "sent_at",
+        ProvinceCODItem.STATUS_AT_STATION: "at_station_at",
+        ProvinceCODItem.STATUS_OUT_FOR_DELIVERY: "out_for_delivery_at",
+        ProvinceCODItem.STATUS_DELIVERY_ISSUE: "delivery_issue_at",
+        ProvinceCODItem.STATUS_RECEIVED: "received_at",
+        ProvinceCODItem.STATUS_RETURNING: "returning_at",
+        ProvinceCODItem.STATUS_RETURN_RECEIVED: "return_received_at",
+    }
+
+    item.cod_status = target_status
+    target_timestamp = timestamp_map[target_status]
+    setattr(item, target_timestamp, now)
+
+    # Clear data belonging to statuses after the corrected target.
+    if status_rank[target_status] < status_rank[ProvinceCODItem.STATUS_RECEIVED]:
+        item.received_at = None
+        item.received_confirmed_by = None
+        item.received_person = ""
+        item.confirmation_method = ""
+    item.paid_at = None
+    item.paid_confirmed_by = None
+    item.carrier_fee = ZERO
+    item.net_cod = ZERO
+    item.carrier_reference = ""
+    item.seller_settled = False
+    item.seller_settled_at = None
+    item.seller_settled_by = None
+
+    update_fields = [
+        "cod_status", target_timestamp, "received_at",
+        "received_confirmed_by", "received_person", "confirmation_method",
+        "paid_at", "paid_confirmed_by", "carrier_fee", "net_cod",
+        "carrier_reference", "seller_settled", "seller_settled_at",
+        "seller_settled_by", "updated_at",
+    ]
+    item.save(update_fields=list(dict.fromkeys(update_fields)))
+
+    new_order_status = order_status_map[target_status]
+    Order.objects.filter(pk=item.order_id).update(
+        status=new_order_status,
+        updated_at=now,
+        updated_by=user,
+    )
+
+    # Internal audit only: do not write this correction reason to item.note.
+    log_order_activity(
+        order=item.order,
+        user=user,
+        action="INTERNAL_PROVINCE_COD_STATUS_CORRECTION",
+        old_status=old_order_status,
+        new_status=new_order_status,
+        shipper=item.batch.shipper,
+        note=(
+            f"Province COD corrected from {current_status} to {target_status}. "
+            f"Internal reason: {reason}"
+        ),
+    )
+
+    return item
+
+
+@transaction.atomic
 def mark_item_at_station(item, user, note=""):
     return _transition_item(
         item,

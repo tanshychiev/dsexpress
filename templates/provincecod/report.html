@@ -277,9 +277,8 @@
           <th><a href="{{ sort_urls.paid_date }}">CARRIER PAYMENT DATE <span class="sort-mark">{% if sort == "paid_date" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.reference }}">REFERENCE <span class="sort-mark">{% if sort == "reference" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
           <th><a href="{{ sort_urls.settled }}">CUSTOMER SETTLED <span class="sort-mark">{% if sort == "settled" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th class="no-sort">LAST NOTE</th>
+          <th class="no-sort">REASON</th>
           <th><a href="{{ sort_urls.updated }}">UPDATED <span class="sort-mark">{% if sort == "updated" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th class="no-sort">ACTION</th>
         </tr>
       </thead>
 
@@ -314,8 +313,35 @@
             <td style="min-width:190px;max-width:260px;white-space:normal;line-height:1.35">{{ item.order.receiver_address|default:"-" }}</td>
             <td class="right"><b>${{ item.original_cod|floatformat:2 }}</b></td>
 
-            <td class="center">
+            <td class="center" style="min-width:150px">
               <span class="pc-pill {{ item.display_status|lower }}">{{ item.display_status }}</span>
+
+              {% if item.cod_status and item.cod_status != "PAID" and item.cod_status != "RETURN_RECEIVED" and item.cod_status != "RETURNED" %}
+                <div style="margin-top:7px">
+                  <button
+                    type="button"
+                    class="pc-btn pc-soft pc-mini js-open-status"
+                    data-item-id="{{ item.id }}"
+                    data-tracking="{{ item.order.tracking_no }}"
+                    data-current-status="{{ item.cod_status }}"
+                    data-original-cod="{{ item.original_cod|floatformat:2 }}"
+                    data-paid-amount="{% if item.cod_status == 'PAID' %}{{ item.net_cod|floatformat:2 }}{% else %}{{ item.original_cod|floatformat:2 }}{% endif %}"
+                    data-paid-date="{% if item.paid_at %}{{ item.paid_at|date:'Y-m-d' }}{% else %}{{ today }}{% endif %}"
+                    data-reference="{{ item.carrier_reference|default:'' }}"
+                  >Update Status</button>
+                </div>
+              {% elif item.cod_status == "PAID" %}
+                <form method="post" style="margin-top:7px">
+                  {% csrf_token %}
+                  <input type="hidden" name="item_id" value="{{ item.id }}">
+                  <input type="hidden" name="next_query" value="{{ current_query }}">
+                  {% if item.seller_settled %}
+                    <button class="pc-btn pc-soft pc-mini" type="submit" name="action" value="undo_settlement">Undo Settlement</button>
+                  {% else %}
+                    <button class="pc-btn pc-dark pc-mini" type="submit" name="action" value="settle_seller">Settle Customer</button>
+                  {% endif %}
+                </form>
+              {% endif %}
             </td>
 
             <td class="right">
@@ -345,9 +371,9 @@
               {% endif %}
             </td>
 
-            <td style="max-width:220px">
-              {% if item.note %}
-                <div class="pc-note" title="{{ item.note }}">{{ item.note|truncatechars:110 }}</div>
+            <td style="max-width:220px;white-space:normal">
+              {% if item.display_reason %}
+                <div class="pc-note" title="{{ item.display_reason }}">{{ item.display_reason|truncatechars:110 }}</div>
               {% else %}
                 -
               {% endif %}
@@ -355,45 +381,9 @@
 
             <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
 
-            <td>
-              {% if not item.cod_status %}
-                <a class="pc-btn pc-orange pc-mini" href="{% url 'provincecod:batch_detail' item.batch_id %}">Complete Batch First</a>
-
-              {% elif item.cod_status != "PAID" and item.cod_status != "RETURN_RECEIVED" and item.cod_status != "RETURNED" %}
-                <button
-                  type="button"
-                  class="pc-btn pc-soft pc-mini js-open-status"
-                  data-item-id="{{ item.id }}"
-                  data-tracking="{{ item.order.tracking_no }}"
-                  data-current-status="{{ item.cod_status }}"
-                  data-original-cod="{{ item.original_cod|floatformat:2 }}"
-                  data-paid-amount="{% if item.cod_status == 'PAID' %}{{ item.net_cod|floatformat:2 }}{% else %}{{ item.original_cod|floatformat:2 }}{% endif %}"
-                  data-paid-date="{% if item.paid_at %}{{ item.paid_at|date:'Y-m-d' }}{% else %}{{ today }}{% endif %}"
-                  data-reference="{{ item.carrier_reference|default:'' }}"
-                >
-                  Update Status
-                </button>
-
-              {% elif item.cod_status == "PAID" %}
-                <form method="post">
-                  {% csrf_token %}
-                  <input type="hidden" name="item_id" value="{{ item.id }}">
-                  <input type="hidden" name="next_query" value="{{ current_query }}">
-
-                  {% if item.seller_settled %}
-                    <button class="pc-btn pc-soft pc-mini" type="submit" name="action" value="undo_settlement">Undo Customer Settlement</button>
-                  {% else %}
-                    <button class="pc-btn pc-dark pc-mini" type="submit" name="action" value="settle_seller">Settled to Customer</button>
-                  {% endif %}
-                </form>
-
-              {% elif item.cod_status == "RETURNED" %}
-                <div class="pc-note">Returned: {{ item.return_reason|default:"No reason entered" }}</div>
-              {% endif %}
-            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="20" class="pc-empty">No Province COD orders found.</td></tr>
+          <tr><td colspan="19" class="pc-empty">No Province COD orders found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -415,10 +405,11 @@
       <input type="hidden" name="item_id" id="modalItemId">
       <input type="hidden" name="next_query" value="{{ current_query }}">
       <input type="hidden" name="action" id="modalAction" value="mark_received">
+      <input type="hidden" id="modalCurrentStatus" value="">
 
       <div>
         <label class="pc-note">Status</label>
-        <select class="pc-input" id="modalStatus">
+        <select class="pc-input" id="modalStatus" name="target_status">
           <option value="CALL">Call / Follow-up</option>
           <option value="AT_STATION">At Station</option>
           <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
@@ -440,6 +431,13 @@
           </select>
           <div class="pc-note">This records the call without changing the current COD status.</div>
         </div>
+      </div>
+
+      <div class="pc-modal-section is-hidden" id="correctionFields">
+        <div style="font-weight:900;color:#b45309;margin-bottom:7px">Correct an earlier status</div>
+        <div class="pc-note" style="margin-bottom:8px">This reason is internal only and is not shown to customers.</div>
+        <label class="pc-note">Internal correction reason *</label>
+        <textarea class="pc-textarea" id="correctionReason" name="correction_reason" placeholder="Example: Staff selected Received by mistake"></textarea>
       </div>
 
       <div class="pc-modal-section is-hidden" id="receivedFields">
@@ -582,6 +580,9 @@
     const modalTracking = document.getElementById("statusModalTracking");
     const modalStatus = document.getElementById("modalStatus");
     const modalAction = document.getElementById("modalAction");
+    const modalCurrentStatus = document.getElementById("modalCurrentStatus");
+    const correctionFields = document.getElementById("correctionFields");
+    const correctionReason = document.getElementById("correctionReason");
     const modalPaidAmount = document.getElementById("modalPaidAmount");
     const modalPaidDate = document.getElementById("modalPaidDate");
     const modalReference = document.getElementById("modalReference");
@@ -594,21 +595,49 @@
     const modalNote = document.getElementById("modalNote");
     const modalSubmit = document.getElementById("statusModalSubmit");
 
+    const statusRank = {
+      SENT: 10,
+      AT_STATION: 20,
+      OUT_FOR_DELIVERY: 30,
+      DELIVERY_ISSUE: 35,
+      RECEIVED: 40,
+      PAID: 50,
+      RETURNING: 60,
+      RETURN_RECEIVED: 70
+    };
+
     function refreshModalFields() {
       const status = modalStatus.value;
+      const currentStatus = modalCurrentStatus.value;
+      const isCorrection =
+        status !== "CALL" &&
+        statusRank[status] !== undefined &&
+        statusRank[currentStatus] !== undefined &&
+        statusRank[status] < statusRank[currentStatus];
 
+      correctionFields.classList.toggle("is-hidden", !isCorrection);
       callFields.classList.toggle("is-hidden", status !== "CALL");
-      receivedFields.classList.toggle("is-hidden", status !== "RECEIVED");
-      paidFields.classList.toggle("is-hidden", status !== "PAID");
-      issueFields?.classList.toggle("is-hidden", status !== "DELIVERY_ISSUE");
-      returnedFields.classList.toggle("is-hidden", status !== "RETURNING");
+      receivedFields.classList.toggle("is-hidden", status !== "RECEIVED" || isCorrection);
+      paidFields.classList.toggle("is-hidden", status !== "PAID" || isCorrection);
+      issueFields?.classList.toggle("is-hidden", status !== "DELIVERY_ISSUE" || isCorrection);
+      returnedFields.classList.toggle("is-hidden", status !== "RETURNING" || isCorrection);
 
-      if (status === "CALL") {
+      correctionReason.required = isCorrection;
+      modalNote.required = false;
+      modalSubmit.className = "pc-btn pc-primary";
+      modalNoteLabel.textContent = "Note";
+      modalNote.placeholder = "Optional note";
+
+      if (isCorrection) {
+        modalAction.value = "correct_status";
+        modalSubmit.textContent = "Confirm Status Correction";
+        modalSubmit.className = "pc-btn pc-orange";
+      } else if (status === "CALL") {
         modalAction.value = "record_call";
         modalSubmit.textContent = "Save Call Note";
         modalSubmit.className = "pc-btn pc-dark";
         modalNoteLabel.textContent = "Call detail";
-        modalNote.placeholder = "Optional detail about the call";
+        modalNote.placeholder = "Short reason only, example: Customer did not order";
       } else if (status === "AT_STATION") {
         modalAction.value = "mark_at_station";
         modalSubmit.textContent = "Save as At Station";
@@ -621,9 +650,6 @@
       } else if (status === "PAID") {
         modalAction.value = "mark_paid";
         modalSubmit.textContent = "Save as Settled from Carrier";
-        modalSubmit.className = "pc-btn pc-primary";
-        modalNoteLabel.textContent = "Note";
-        modalNote.placeholder = "Optional note";
       } else if (status === "RETURNING") {
         modalAction.value = "mark_returning";
         modalSubmit.textContent = "Save as Returning";
@@ -631,14 +657,10 @@
         modalAction.value = "mark_return_received";
         modalSubmit.textContent = "Save as Return Received";
         modalSubmit.className = "pc-btn pc-red";
-        modalNoteLabel.textContent = "Note";
-        modalNote.placeholder = "Optional note";
       } else {
         modalAction.value = "mark_received";
         modalSubmit.textContent = "Save as Received";
         modalSubmit.className = "pc-btn pc-blue";
-        modalNoteLabel.textContent = "Note";
-        modalNote.placeholder = "Optional note";
       }
     }
 
@@ -649,6 +671,7 @@
       modalTracking.textContent = "Tracking: " + (button.dataset.tracking || "-");
 
       const currentStatus = button.dataset.currentStatus || "CALL";
+      modalCurrentStatus.value = currentStatus;
       const supportedStatuses = [
         "AT_STATION",
         "OUT_FOR_DELIVERY",
@@ -694,6 +717,14 @@
       });
     });
 
+
+    modalForm?.addEventListener("submit", function (event) {
+      if (modalAction.value === "correct_status" && !correctionReason.value.trim()) {
+        event.preventDefault();
+        alert("Please enter the internal correction reason.");
+        correctionReason.focus();
+      }
+    });
     modalStatus?.addEventListener("change", refreshModalFields);
     document.getElementById("statusModalClose")?.addEventListener("click", closeModal);
     document.getElementById("statusModalCancel")?.addEventListener("click", closeModal);

@@ -18,6 +18,7 @@ from .models import ProvinceCODBatch, ProvinceCODItem
 from .services import (
     cancel_pending_batch,
     complete_batch_sent,
+    correct_item_status,
     mark_item_at_station,
     mark_item_delivery_issue,
     mark_item_out_for_delivery,
@@ -46,6 +47,26 @@ CALL_REASON_CHOICES = [
 ]
 
 CALL_REASON_LABELS = dict(CALL_REASON_CHOICES)
+
+
+def _clean_reason_text(item):
+    """Return one short, readable operational reason for the report table."""
+    reason = str(getattr(item, "return_reason", "") or "").strip()
+    if reason:
+        return reason
+
+    note = str(getattr(item, "note", "") or "").strip()
+    if not note:
+        return ""
+
+    first_line = next((line.strip() for line in note.splitlines() if line.strip()), "")
+    if first_line.startswith("[CALL "):
+        if " — " in first_line:
+            return first_line.split(" — ", 1)[1].strip()
+        if "] " in first_line:
+            return first_line.split("] ", 1)[1].strip()
+
+    return first_line
 
 
 def _record_call_note(
@@ -1542,7 +1563,15 @@ def province_cod_report(request):
 
             for item in items:
                 try:
-                    if action == "mark_at_station":
+                    if action == "correct_status":
+                        correct_item_status(
+                            item,
+                            request.user,
+                            target_status=request.POST.get("target_status", ""),
+                            reason=request.POST.get("correction_reason", ""),
+                        )
+
+                    elif action == "mark_at_station":
                         mark_item_at_station(
                             item,
                             request.user,
@@ -1979,6 +2008,7 @@ def province_cod_report(request):
             item.cod_status
             or "PENDING"
         )
+        item.display_reason = _clean_reason_text(item)
 
     summary = {
         "count": len(rows),

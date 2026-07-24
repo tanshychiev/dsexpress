@@ -56,6 +56,45 @@ def _date_time(value):
         return str(value)
 
 
+def _customer_order_code(order):
+    """
+    Return the order code supplied by the customer/seller.
+
+    Different DS Express versions may use a different field name, so this
+    checks the common field names safely. The first non-empty value is used.
+    Example value: COD P-JET-2307-01
+    """
+    possible_fields = (
+        "order_code",
+        "customer_order_code",
+        "seller_order_code",
+        "external_order_code",
+        "code",
+    )
+
+    for field_name in possible_fields:
+        value = getattr(order, field_name, None)
+        if str(value or "").strip():
+            return str(value).strip()
+
+    return ""
+
+
+def _real_cod(item):
+    """
+    The actual COD confirmed/received from the carrier.
+
+    Province COD stores this amount in net_cod after staff enters the real
+    received amount. Before confirmation it normally remains 0.00.
+    """
+    return _money(item.net_cod)
+
+
+def _reason(item):
+    """Use the issue/return reason first, then fall back to the latest note."""
+    return _display(item.return_reason or item.note)
+
+
 def _filtered_rows(request):
     date_from = (request.GET.get("date_from") or "").strip()
     date_to = (request.GET.get("date_to") or "").strip()
@@ -186,39 +225,36 @@ def export_province_cod_report_xlsx(request):
     left = Alignment(horizontal="left", vertical="center")
     right = Alignment(horizontal="right", vertical="center")
 
+    # Only the requested columns are included in the downloaded Excel file.
     headers = [
         "No",
-        "Item ID",
         "Sent Date",
-        "Batch",
-        "Tracking",
+        "DS Tracking",
+        "Customer Order Code",
         "Seller",
-        "Carrier",
         "Receiver",
         "Phone",
         "Address",
         "Original COD",
-        "Province Fee",
-        "Carrier Fee",
-        "Net COD",
+        "Real COD",
         "COD Status",
-        "Received By",
-        "Confirmation",
-        "Received Date",
-        "Paid Date",
-        "Carrier Reference",
-        "Seller Settled",
-        "Settlement Date",
-        "Return Reason",
-        "Note",
-        "Updated At",
+        "REASON",
     ]
 
     last_col = len(headers)
     last_col_letter = get_column_letter(last_col)
 
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_col)
-    title_cell = ws.cell(row=1, column=1, value="DS EXPRESS - Province COD Report")
+    ws.merge_cells(
+        start_row=1,
+        start_column=1,
+        end_row=1,
+        end_column=last_col,
+    )
+    title_cell = ws.cell(
+        row=1,
+        column=1,
+        value="DS EXPRESS - Province COD Report",
+    )
     title_cell.fill = title_fill
     title_cell.font = title_font
     title_cell.alignment = center
@@ -231,17 +267,36 @@ def export_province_cod_report_xlsx(request):
         f"Search: {filters['q'] or '-'}",
         f"Sort: {filters['sort']} {filters['direction']}",
     ]
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_col)
-    ws.cell(row=2, column=1, value=" | ".join(filter_parts)).alignment = left
-    ws.cell(row=2, column=1).font = Font(size=10, italic=True, color="475569")
+    ws.merge_cells(
+        start_row=2,
+        start_column=1,
+        end_row=2,
+        end_column=last_col,
+    )
+    filter_cell = ws.cell(
+        row=2,
+        column=1,
+        value=" | ".join(filter_parts),
+    )
+    filter_cell.alignment = left
+    filter_cell.font = Font(size=10, italic=True, color="475569")
 
-    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=last_col)
-    ws.cell(
+    ws.merge_cells(
+        start_row=3,
+        start_column=1,
+        end_row=3,
+        end_column=last_col,
+    )
+    exported_cell = ws.cell(
         row=3,
         column=1,
-        value=f"Exported: {timezone.localtime().strftime('%Y-%m-%d %H:%M')} | Orders: {len(rows)}",
-    ).alignment = left
-    ws.cell(row=3, column=1).font = Font(size=10, color="475569")
+        value=(
+            f"Exported: {timezone.localtime().strftime('%Y-%m-%d %H:%M')}"
+            f" | Orders: {len(rows)}"
+        ),
+    )
+    exported_cell.alignment = left
+    exported_cell.font = Font(size=10, color="475569")
 
     header_row = 5
     for col, header in enumerate(headers, start=1):
@@ -252,31 +307,18 @@ def export_province_cod_report_xlsx(request):
         cell.alignment = center
 
     widths = {
-        1: 7,
-        2: 10,
-        3: 18,
-        4: 13,
-        5: 20,
-        6: 22,
-        7: 18,
-        8: 20,
-        9: 16,
-        10: 35,
-        11: 14,
-        12: 13,
-        13: 13,
-        14: 13,
-        15: 14,
-        16: 18,
-        17: 15,
-        18: 18,
-        19: 18,
-        20: 22,
-        21: 15,
-        22: 18,
-        23: 28,
-        24: 30,
-        25: 18,
+        1: 7,    # No
+        2: 18,   # Sent Date
+        3: 22,   # DS Tracking
+        4: 24,   # Customer Order Code
+        5: 20,   # Seller
+        6: 22,   # Receiver
+        7: 16,   # Phone
+        8: 42,   # Address
+        9: 15,   # Original COD
+        10: 15,  # Real COD
+        11: 20,  # COD Status
+        12: 35,  # Reason
     }
     for col, width in widths.items():
         ws.column_dimensions[get_column_letter(col)].width = width
@@ -286,8 +328,13 @@ def export_province_cod_report_xlsx(request):
     status_fills = {
         "PENDING": PatternFill("solid", fgColor=light_gray),
         "SENT": PatternFill("solid", fgColor=light_blue),
+        "AT_STATION": PatternFill("solid", fgColor=light_yellow),
+        "OUT_FOR_DELIVERY": PatternFill("solid", fgColor=light_yellow),
+        "DELIVERY_ISSUE": PatternFill("solid", fgColor=light_red),
         "RECEIVED": PatternFill("solid", fgColor=light_yellow),
         "PAID": PatternFill("solid", fgColor=light_green),
+        "RETURNING": PatternFill("solid", fgColor=light_red),
+        "RETURN_RECEIVED": PatternFill("solid", fgColor=light_green),
         "RETURNED": PatternFill("solid", fgColor=light_red),
     }
 
@@ -295,35 +342,21 @@ def export_province_cod_report_xlsx(request):
         row_no = data_start + index - 1
         order = item.order
         seller = getattr(order, "seller", None)
-        shipper = getattr(item.batch, "shipper", None)
         status = item.cod_status or "PENDING"
 
         values = [
             index,
-            item.id,
             _date_time(item.activity_date),
-            f"PVCOD-{item.batch_id}",
             _display(getattr(order, "tracking_no", ""), ""),
+            _customer_order_code(order),
             _display(getattr(seller, "name", "")),
-            _display(getattr(shipper, "name", "")),
             _display(getattr(order, "receiver_name", "")),
             _display(getattr(order, "receiver_phone", "")),
             _display(getattr(order, "receiver_address", "")),
             float(_money(item.original_cod)),
-            float(_money(item.province_fee)),
-            float(_money(item.carrier_fee)),
-            float(_money(item.net_cod)),
+            float(_real_cod(item)),
             status,
-            _display(item.received_person),
-            _display(item.confirmation_method),
-            _date_time(item.received_at),
-            _date_time(item.paid_at),
-            _display(item.carrier_reference),
-            "YES" if item.seller_settled else "NO",
-            _date_time(item.seller_settled_at),
-            _display(item.return_reason),
-            _display(item.note),
-            _date_time(item.updated_at),
+            _reason(item),
         ]
 
         for col, value in enumerate(values, start=1):
@@ -331,53 +364,67 @@ def export_province_cod_report_xlsx(request):
             cell.border = border
             cell.alignment = left
 
-        for col in (1, 2, 4, 15, 17, 21):
+        # Center: No, dates, codes, phone and status.
+        for col in (1, 2, 3, 4, 7, 11):
             ws.cell(row=row_no, column=col).alignment = center
 
-        for col in (11, 12, 13, 14):
+        # Money formatting.
+        for col in (9, 10):
             ws.cell(row=row_no, column=col).alignment = right
             ws.cell(row=row_no, column=col).number_format = '$#,##0.00'
 
-        ws.cell(row=row_no, column=15).fill = status_fills.get(
+        # Wrap long address/reason text.
+        ws.cell(row=row_no, column=8).alignment = Alignment(
+            horizontal="left",
+            vertical="center",
+            wrap_text=True,
+        )
+        ws.cell(row=row_no, column=12).alignment = Alignment(
+            horizontal="left",
+            vertical="center",
+            wrap_text=True,
+        )
+
+        status_cell = ws.cell(row=row_no, column=11)
+        status_cell.fill = status_fills.get(
             status,
             PatternFill("solid", fgColor=white),
         )
-        ws.cell(row=row_no, column=15).font = bold
-
-        if item.seller_settled:
-            ws.cell(row=row_no, column=21).fill = total_fill
-            ws.cell(row=row_no, column=21).font = bold
+        status_cell.font = bold
 
     data_end = data_start + len(rows) - 1
     total_row = data_end + 1 if rows else data_start
 
     ws.cell(row=total_row, column=1, value="TOTAL").font = bold
-    ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=10)
+    ws.merge_cells(
+        start_row=total_row,
+        start_column=1,
+        end_row=total_row,
+        end_column=8,
+    )
 
     for col in range(1, last_col + 1):
         cell = ws.cell(row=total_row, column=col)
         cell.fill = total_fill
         cell.border = border
 
-    if rows:
-        for col in (11, 12, 13, 14):
+    # Total only Original COD and Real COD.
+    for col in (9, 10):
+        if rows:
             letter = get_column_letter(col)
-            total_cell = ws.cell(
-                row=total_row,
-                column=col,
-                value=f"=SUM({letter}{data_start}:{letter}{data_end})",
-            )
-            total_cell.font = bold
-            total_cell.alignment = right
-            total_cell.number_format = '$#,##0.00'
-    else:
-        for col in (11, 12, 13, 14):
-            total_cell = ws.cell(row=total_row, column=col, value=0)
-            total_cell.font = bold
-            total_cell.alignment = right
-            total_cell.number_format = '$#,##0.00'
+            value = f"=SUM({letter}{data_start}:{letter}{data_end})"
+        else:
+            value = 0
 
-    ws.auto_filter.ref = f"A{header_row}:{last_col_letter}{data_end if rows else header_row}"
+        total_cell = ws.cell(row=total_row, column=col, value=value)
+        total_cell.font = bold
+        total_cell.alignment = right
+        total_cell.number_format = '$#,##0.00'
+
+    ws.auto_filter.ref = (
+        f"A{header_row}:{last_col_letter}"
+        f"{data_end if rows else header_row}"
+    )
     ws.freeze_panes = f"A{data_start}"
     ws.print_title_rows = f"1:{header_row}"
     ws.page_setup.orientation = "landscape"

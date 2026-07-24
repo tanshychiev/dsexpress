@@ -27,6 +27,15 @@
     </div>
 
     <div class="pp-actions no-print">
+      <div class="delivery-counts" aria-label="Delivery progress">
+        <span class="delivery-count done-count">
+          Done: <b id="doneCount">0</b>
+        </span>
+        <span class="delivery-count pending-count">
+          Pending: <b id="pendingCount">0</b>
+        </span>
+      </div>
+
       <a class="btn btn-ghost" target="_blank" href="{% url 'deliverpp_print' batch.id %}">🖨 Print</a>
 
       <button class="btn btn-mini btn-tickall"
@@ -127,7 +136,7 @@
       <tbody id="clearPPBody">
         {% for it in items %}
           {% with o=it.order %}
-            <tr class="{% if it.ticked %}row-ticked{% endif %}"
+            <tr class="{% if it.ticked %}row-ticked{% else %}row-pending{% endif %}"
                 data-item-id="{{ it.id }}"
                 data-cod="{{ o.cod_display|default_if_none:'0' }}"
                 data-seller="{% if o.seller %}{% firstof o.seller.seller_name o.seller.name '-' %}{% else %}-{% endif %}"
@@ -372,8 +381,32 @@
   const aba_khr  = document.getElementById("aba_khr");
   const expense  = document.getElementById("expense");
 
+  const doneCountEl = document.getElementById("doneCount");
+  const pendingCountEl = document.getElementById("pendingCount");
+
+  function refreshDeliveryCounts(){
+    const rows = Array.from(
+      document.querySelectorAll("#clearPPBody tr[data-item-id]")
+    );
+
+    let done = 0;
+
+    rows.forEach(function(tr){
+      const cb = tr.querySelector("input.tick-one");
+      if(cb && cb.checked){
+        done += 1;
+      }
+    });
+
+    const pending = Math.max(rows.length - done, 0);
+
+    if(doneCountEl) doneCountEl.textContent = done;
+    if(pendingCountEl) pendingCountEl.textContent = pending;
+  }
+
   function setRowTicked(tr, on){
     tr.classList.toggle("row-ticked", !!on);
+    tr.classList.toggle("row-pending", !on);
   }
 
   async function postJSON(url, data){
@@ -437,6 +470,8 @@
   }
 
   function refreshSummary(){
+    refreshDeliveryCounts();
+
     const target = calcTargetUSD();
     const input  = calcInputUSD();
     const diffKhr = (input - target) * rate;
@@ -705,6 +740,44 @@
     align-items:center;
   }
 
+  .delivery-counts{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-right:2px;
+  }
+
+  .delivery-count{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    min-height:38px;
+    padding:0 13px;
+    border-radius:999px;
+    border:1px solid transparent;
+    font-size:13px;
+    font-weight:900;
+    white-space:nowrap;
+  }
+
+  .delivery-count b{
+    font-size:17px;
+    font-weight:1000;
+  }
+
+  .done-count{
+    background:#dcfce7;
+    border-color:#86efac;
+    color:#166534;
+  }
+
+  .pending-count{
+    background:#fef3c7;
+    border-color:#fcd34d;
+    color:#92400e;
+  }
+
   .section-title{
     margin-top:14px;
     font-weight:900;
@@ -857,7 +930,27 @@
   }
 
   .row-ticked{
-    background:#eafff1 !important;
+    background:#dcfce7 !important;
+  }
+
+  .row-ticked td{
+    background:#dcfce7 !important;
+  }
+
+  .row-pending{
+    background:#fff7d6 !important;
+  }
+
+  .row-pending td{
+    background:#fff7d6 !important;
+  }
+
+  .row-ticked:hover td{
+    background:#c9f7d8 !important;
+  }
+
+  .row-pending:hover td{
+    background:#ffefad !important;
   }
 
   .pp-bottom-actions{

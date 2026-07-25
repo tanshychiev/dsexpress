@@ -1690,7 +1690,37 @@ def computer_cod_report(request):
         if getattr(item, "seller_settled", False)
     ]
 
+    # Customer-facing final-result counts:
+    # - RECEIVED includes RECEIVED, PAID and seller-settled orders.
+    # - RETURNED means the returned parcel has been received back.
+    # - PENDING is every remaining order the customer has not received.
+    returned_rows = [
+        item
+        for item in rows
+        if item.cod_status == ProvinceCODItem.STATUS_RETURNED
+    ]
+
+    received_rows = [
+        item
+        for item in rows
+        if (
+            item.cod_status in {
+                ProvinceCODItem.STATUS_RECEIVED,
+                ProvinceCODItem.STATUS_PAID,
+            }
+            or getattr(item, "seller_settled", False)
+            or getattr(item, "received_at", None)
+        )
+        and item.cod_status != ProvinceCODItem.STATUS_RETURNED
+    ]
+
     summary_count = len(rows)
+    summary_received = len(received_rows)
+    summary_returned = len(returned_rows)
+    summary_pending = max(
+        summary_count - summary_received - summary_returned,
+        0,
+    )
     summary_paid = len(paid_rows)
     summary_settled = len(settled_rows)
 
@@ -1703,12 +1733,12 @@ def computer_cod_report(request):
         "done_cod": sum((money(item.original_cod) for item in settled_rows), ZERO),
         "done_net_cod": sum((money(item.net_cod) for item in settled_rows), ZERO),
         "done_rate": average_done_rate,
-        "pending": sum(1 for item in rows if not item.cod_status),
+        "pending": summary_pending,
         "sent": sum(1 for item in rows if item.cod_status == ProvinceCODItem.STATUS_SENT),
-        "received": sum(1 for item in rows if item.cod_status == ProvinceCODItem.STATUS_RECEIVED),
+        "received": summary_received,
         "paid": summary_paid,
-        "returned": sum(1 for item in rows if item.cod_status == ProvinceCODItem.STATUS_RETURNED),
-        "settled": sum(1 for item in rows if item.seller_settled),
+        "returned": summary_returned,
+        "settled": summary_settled,
         "sent_cod": sum((money(item.original_cod) for item in rows), ZERO),
         "received_cod": sum(
             (money(item.original_cod) for item in rows if getattr(item, "received_at", None)),

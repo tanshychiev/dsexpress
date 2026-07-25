@@ -247,7 +247,9 @@
           </td>
 
           <td class="center">
-            <b>{{ o.cod_display|default_if_none:"0.00" }}</b>
+            <b>
+              {% firstof it.original_cod o.original_cod o.cod_display o.cod_amount o.cod "0.00" %}
+            </b>
           </td>
 
           <td class="small">

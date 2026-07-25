@@ -29,7 +29,7 @@
   .pc-input:focus{border-color:#119a62;box-shadow:0 0 0 3px rgba(17,154,98,.12)}
 
   .pc-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
-  .pc-grid.pc-grid-four{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .pc-grid.pc-grid-four{grid-template-columns:repeat(5,minmax(0,1fr))}
   .pc-stat{position:relative;overflow:hidden;padding:15px;border-radius:17px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 10px 22px rgba(15,23,42,.045)}
   .pc-stat:after{content:"";position:absolute;right:-18px;top:-22px;width:72px;height:72px;border-radius:50%;background:#ecfdf5}
   .pc-stat span{position:relative;display:block;font-size:10px;color:#64748b;font-weight:950;text-transform:uppercase;letter-spacing:.04em;z-index:1}
@@ -188,6 +188,7 @@
     <div class="pc-stat"><span>Total Orders</span><strong>{{ summary.count }}</strong></div>
     <div class="pc-stat"><span>Received</span><strong>{{ summary.received }}</strong></div>
     <div class="pc-stat"><span>Returned</span><strong>{{ summary.returned }}</strong></div>
+    <div class="pc-stat"><span>Pending</span><strong>{{ summary.pending }}</strong></div>
     <div class="pc-stat"><span>Average Done Rate</span><strong>{{ summary.done_rate|floatformat:1 }}%</strong></div>
   </div>
 

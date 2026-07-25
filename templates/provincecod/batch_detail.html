@@ -205,6 +205,7 @@
           <th class="th-center" style="width:55px;">N</th>
           <th class="th-center" style="width:165px;">TRACKING</th>
           <th class="th-center" style="width:180px;">SELLER</th>
+          <th class="th-center" style="width:220px;">LOCATION</th>
           <th class="th-center" style="width:170px;">RECEIVER</th>
           <th class="th-center" style="width:135px;">PHONE</th>
           <th class="th-center" style="width:120px;">ORIGINAL COD</th>
@@ -234,6 +235,10 @@
 
             <td class="td-center seller-cell">
               {{ item.order.seller.name }}
+            </td>
+
+            <td class="td-center location-cell">
+              {{ item.order.address|default:"-" }}
             </td>
 
             <td class="td-center">
@@ -430,7 +435,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="13" class="empty-row">
+            <td colspan="14" class="empty-row">
               No orders in this batch.
             </td>
           </tr>
@@ -639,7 +644,7 @@
 
   table.wide{
     width:100%;
-    min-width:1580px;
+    min-width:1800px;
   }
 
   .th-center,
@@ -680,6 +685,13 @@
 
   .seller-cell{
     font-weight:1000;
+  }
+
+  .location-cell{
+    min-width:220px;
+    max-width:320px;
+    white-space:normal;
+    line-height:1.35;
   }
 
   .trk{

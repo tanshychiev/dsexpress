@@ -3,6 +3,41 @@
 {% block title %}Inventory | DS EXPRESS Computer Portal{% endblock %}
 {% block nav_inventory %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+  .inventory-stock-total{
+    color:#2563eb;
+    font-weight:900;
+  }
+
+  .inventory-stock-reserved{
+    color:#d97706;
+    font-weight:900;
+  }
+
+  .inventory-stock-available{
+    color:#16a34a;
+    font-weight:950;
+  }
+
+  .inventory-table tfoot td{
+    font-weight:950;
+  }
+
+  .inventory-table tfoot .inventory-stock-total{
+    background:#eff6ff;
+  }
+
+  .inventory-table tfoot .inventory-stock-reserved{
+    background:#fff7ed;
+  }
+
+  .inventory-table tfoot .inventory-stock-available{
+    background:#ecfdf5;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <header class="computer-topbar">
@@ -47,7 +82,7 @@
       <span>Total Stock</span>
       <b>□</b>
     </div>
-    <strong>{{ total_current }}</strong>
+    <strong class="inventory-stock-total">{{ total_current }}</strong>
     <small>Available plus reserved</small>
   </article>
 
@@ -56,7 +91,7 @@
       <span>Reserved</span>
       <b>◷</b>
     </div>
-    <strong>{{ total_reserved }}</strong>
+    <strong class="inventory-stock-reserved">{{ total_reserved }}</strong>
     <small>Reserved by active orders</small>
   </article>
 
@@ -65,7 +100,7 @@
       <span>Available</span>
       <b>✓</b>
     </div>
-    <strong>{{ total_available }}</strong>
+    <strong class="inventory-stock-available">{{ total_available }}</strong>
     <small>Ready to sell</small>
   </article>
 </section>
@@ -91,7 +126,7 @@
           name="q"
           value="{{ q }}"
           data-table-search="inventoryTable"
-          placeholder="Search SKU, product name or type"
+          placeholder="Search SKU or product name"
           aria-label="Search inventory"
         >
 
@@ -138,12 +173,9 @@
           <th>Image</th>
           <th>SKU</th>
           <th>Product Name</th>
-          <th>Type</th>
-          <th>Location</th>
           <th data-type="number">Total Stock</th>
           <th data-type="number">Reserved</th>
           <th data-type="number">Available</th>
-          <th data-type="date">Last Confirmed</th>
         </tr>
       </thead>
 
@@ -176,44 +208,42 @@
           </td>
 
           <td>{{ row.name|default:"-" }}</td>
-          <td>{{ row.product_type|default:"-" }}</td>
-          <td>{{ row.location|default:"-" }}</td>
 
-          <td data-value="{{ row.current_qty }}">
+          <td
+            class="inventory-stock-total"
+            data-value="{{ row.current_qty }}"
+          >
             {{ row.current_qty }}
           </td>
 
-          <td data-value="{{ row.reserved_qty }}">
+          <td
+            class="inventory-stock-reserved"
+            data-value="{{ row.reserved_qty }}"
+          >
             {{ row.reserved_qty }}
           </td>
 
-          <td data-value="{{ row.available_qty }}">
-            <strong>{{ row.available_qty }}</strong>
-          </td>
-
-          <td data-value="{{ row.last_confirmed_at|date:'Y-m-d H:i' }}">
-            {% if row.last_confirmed_at %}
-              {{ row.last_confirmed_at|date:"d/m/Y H:i" }}
-            {% else %}
-              -
-            {% endif %}
+          <td
+            class="inventory-stock-available"
+            data-value="{{ row.available_qty }}"
+          >
+            {{ row.available_qty }}
           </td>
         </tr>
 
         {% empty %}
         <tr class="computer-empty-row">
-          <td colspan="10">No inventory found.</td>
+          <td colspan="7">No inventory found.</td>
         </tr>
         {% endfor %}
       </tbody>
 
       <tfoot>
         <tr>
-          <td colspan="6">Total</td>
-          <td>{{ total_current }}</td>
-          <td>{{ total_reserved }}</td>
-          <td>{{ total_available }}</td>
-          <td></td>
+          <td colspan="4">Total</td>
+          <td class="inventory-stock-total">{{ total_current }}</td>
+          <td class="inventory-stock-reserved">{{ total_reserved }}</td>
+          <td class="inventory-stock-available">{{ total_available }}</td>
         </tr>
       </tfoot>
     </table>

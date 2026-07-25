@@ -238,7 +238,7 @@
             </td>
 
             <td class="td-center location-cell">
-              {{ item.order.address|default:"-" }}
+              {% firstof item.order.receiver_address item.order.address "-" %}
             </td>
 
             <td class="td-center">

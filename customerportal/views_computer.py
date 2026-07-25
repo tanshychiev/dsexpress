@@ -1647,11 +1647,21 @@ def computer_cod_report(request):
 
     for item in rows:
         item.suggested_fee_display = item.suggested_carrier_fee()
-        item.display_status = item.cod_status or "PENDING"
+        raw_status = (item.cod_status or "PENDING").strip().upper()
+        item.display_status = (
+            "RETURNED"
+            if raw_status == "RETURN_RECEIVED"
+            else raw_status
+        )
 
     for item in summary_items:
         item.suggested_fee_display = item.suggested_carrier_fee()
-        item.display_status = item.cod_status or "PENDING"
+        raw_status = (item.cod_status or "PENDING").strip().upper()
+        item.display_status = (
+            "RETURNED"
+            if raw_status == "RETURN_RECEIVED"
+            else raw_status
+        )
 
     cod_daily_rows = _build_province_cod_daily_rows(
         summary_items,
@@ -1694,10 +1704,16 @@ def computer_cod_report(request):
     # - RECEIVED includes RECEIVED, PAID and seller-settled orders.
     # - RETURNED means the returned parcel has been received back.
     # - PENDING is every remaining order the customer has not received.
+    returned_statuses = {
+        ProvinceCODItem.STATUS_RETURNED,
+        getattr(ProvinceCODItem, "STATUS_RETURN_RECEIVED", "RETURN_RECEIVED"),
+    }
+
     returned_rows = [
         item
         for item in rows
-        if item.cod_status == ProvinceCODItem.STATUS_RETURNED
+        if (getattr(item, "cod_status", "") or "").strip().upper()
+        in returned_statuses
     ]
 
     received_rows = [
@@ -1711,7 +1727,8 @@ def computer_cod_report(request):
             or getattr(item, "seller_settled", False)
             or getattr(item, "received_at", None)
         )
-        and item.cod_status != ProvinceCODItem.STATUS_RETURNED
+        and (getattr(item, "cod_status", "") or "").strip().upper()
+        not in returned_statuses
     ]
 
     summary_count = len(rows)

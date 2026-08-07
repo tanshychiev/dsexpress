@@ -603,14 +603,10 @@ def _seller_login_page(request, template_name, success_url):
             else:
                 login(request, user)
 
-                remember_me = request.POST.get("remember_me") == "on"
-
-                if remember_me:
-                    request.session.set_expiry(
-                        settings.SESSION_COOKIE_AGE
-                    )
-                else:
-                    request.session.set_expiry(0)
+                # Always keep the seller portal logged in until the user
+                # manually presses Logout.
+                request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+                request.session.modified = True
 
                 SellerPortalSession.objects.create(
                     seller=seller,

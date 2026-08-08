@@ -1930,6 +1930,14 @@ def province_cod_report(request):
             cod_status=status
         )
 
+    else:
+        rows = rows.exclude(
+            cod_status=(
+                ProvinceCODItem
+                .STATUS_RETURN_RECEIVED
+            )
+        )
+
     if settlement == "SETTLED":
         rows = rows.filter(
             seller_settled=True

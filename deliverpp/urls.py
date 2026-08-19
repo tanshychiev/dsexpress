@@ -15,9 +15,12 @@ urlpatterns = [
     path("clear/settings/", clearpp_views.system_settings_view, name="clearpp_settings"),
     path("clear/<int:batch_id>/", clearpp_views.clearpp_detail, name="clearpp_detail"),
 
-    # ✅ MUST MATCH FUNCTION NAMES IN clearpp_views.py
     path("clear/<int:batch_id>/toggle-tick/", clearpp_views.clearpp_toggle_tick, name="clearpp_toggle_tick"),
     path("clear/<int:batch_id>/set-tick-many/", clearpp_views.clearpp_set_tick_many, name="clearpp_set_tick_many"),
+
+    # Scan inbound helper: validate against this exact PP batch, then confirm/save.
+    path("clear/<int:batch_id>/scan-inbound/lookup/", clearpp_views.clearpp_scan_inbound_lookup, name="clearpp_scan_inbound_lookup"),
+    path("clear/<int:batch_id>/scan-inbound/confirm/", clearpp_views.clearpp_scan_inbound_confirm, name="clearpp_scan_inbound_confirm"),
 
     path("clear/<int:batch_id>/clear-delivery/", clearpp_views.clear_delivery_ajax, name="clearpp_clear_delivery"),
     path("clear/<int:batch_id>/undo/", clearpp_views.clearpp_undo_clear, name="clearpp_undo_clear"),

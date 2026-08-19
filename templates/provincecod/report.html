@@ -1,785 +1,2219 @@
-{% extends "base.html" %}
-{% block title %}Province COD Orders{% endblock %}
-{% block page_title %}Province COD Orders{% endblock %}
-{% block page_subtitle %}All Province COD orders from every batch{% endblock %}
-{% block content %}
+from datetime import datetime, time, timedelta
+from decimal import Decimal
 
-<style>
-  .pc-wrap{width:100%}
-  .pc-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
-  .pc-title{font-size:28px;font-weight:950;color:#0f172a}
-  .pc-sub{font-size:13px;color:#64748b;margin-top:4px;font-weight:700}
-  .pc-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 15px;border:0;border-radius:12px;text-decoration:none;font-weight:900;cursor:pointer;white-space:nowrap}
-  .pc-primary{background:#0f8a4b;color:#fff}
-  .pc-blue{background:#2563eb;color:#fff}
-  .pc-dark{background:#111827;color:#fff}
-  .pc-red{background:#dc2626;color:#fff}
-  .pc-orange{background:#ea580c;color:#fff}
-  .pc-soft{background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0}
-  .pc-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:14px;margin-bottom:14px;box-shadow:0 8px 22px rgba(15,23,42,.05)}
-  .pc-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
-  .pc-stat{padding:14px;border-radius:15px;background:#f8fafc;border:1px solid #e2e8f0}
-  .pc-stat span{display:block;font-size:11px;color:#64748b;font-weight:850;text-transform:uppercase}
-  .pc-stat strong{display:block;font-size:22px;margin-top:5px;color:#0f172a}
-  .pc-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
-  .pc-field{min-width:145px;flex:1}
-  .pc-field label{display:block;font-size:11px;font-weight:850;color:#64748b;margin-bottom:5px}
-  .pc-input{width:100%;height:40px;border:1px solid #cbd5e1;border-radius:11px;padding:0 11px;background:#fff;outline:none}
-  .pc-input:focus{border-color:#119a62;box-shadow:0 0 0 3px rgba(17,154,98,.12)}
-  .pc-textarea{width:100%;min-height:72px;border:1px solid #cbd5e1;border-radius:11px;padding:9px;resize:vertical;outline:none}
-  .pc-table-wrap{overflow:auto;padding:0}
-  .pc-table{width:100%;min-width:1780px;border-collapse:separate;border-spacing:0}
-  .pc-table th{position:sticky;top:0;z-index:3;background:#f8fafc;padding:0;border-bottom:1px solid #dbe3ec;white-space:nowrap;text-align:left}
-  .pc-table th a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 10px;color:#334155;text-decoration:none;font-size:10px;font-weight:950;letter-spacing:.02em}
-  .pc-table th a:hover{background:#eefbf4;color:#087847}
-  .pc-table th.no-sort{padding:11px 10px;font-size:10px;font-weight:950;color:#334155}
-  .sort-mark{color:#0f8a4b;font-size:11px}
-  .pc-table td{padding:10px;font-size:12px;border-bottom:1px solid #eef2f7;vertical-align:top;background:#fff}
-  .pc-table tbody tr:hover td{background:#fbfefc}
-  .center{text-align:center}.right{text-align:right}
-  .pc-pill{display:inline-flex;min-width:80px;justify-content:center;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:950}
-  .sent{background:#dbeafe;color:#1d4ed8}
-  .at_station{background:#e0f2fe;color:#0369a1}
-  .out_for_delivery{background:#ede9fe;color:#6d28d9}
-  .delivery_issue{background:#ffedd5;color:#c2410c}
-  .received{background:#fef3c7;color:#92400e}
-  .paid{background:#dcfce7;color:#166534}
-  .returning{background:#fce7f3;color:#be185d}
-  .return_received{background:#fee2e2;color:#991b1b}
-  .returned{background:#fee2e2;color:#b91c1c}
-  .pending{background:#f1f5f9;color:#475569}
-  .pc-note{font-size:11px;color:#64748b;margin-top:3px;line-height:1.35}
-  .pc-link{font-weight:950;color:#0f8a4b;text-decoration:none}
-  .pc-link:hover{text-decoration:underline}
-  .pc-mini{min-height:32px;padding:0 9px;font-size:10px;border-radius:9px}
-  .pc-bulk-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-  .pc-bulk-title{font-size:15px;font-weight:950;color:#0f172a}
-  .pc-bulk-grid{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:8px}
-  .pc-bulk-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
-  .pc-check{width:17px;height:17px;accent-color:#119a62;cursor:pointer}
-  .pc-empty{padding:30px!important;text-align:center;color:#64748b;font-weight:800}
-  .pc-count{font-size:12px;color:#64748b;font-weight:800}
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import Coalesce
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 
-  .pc-modal-backdrop{
-    display:none;position:fixed;inset:0;z-index:9998;
-    background:rgba(15,23,42,.55);padding:18px;
-    align-items:center;justify-content:center
-  }
-  .pc-modal-backdrop.open{display:flex}
-  .pc-modal{
-    width:min(560px,100%);max-height:92vh;overflow:auto;
-    background:#fff;border-radius:20px;border:1px solid #dbe3ec;
-    box-shadow:0 30px 80px rgba(15,23,42,.28);padding:18px
-  }
-  .pc-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
-  .pc-modal-title{font-size:20px;font-weight:950;color:#0f172a}
-  .pc-modal-close{width:36px;height:36px;border:0;border-radius:10px;background:#f1f5f9;font-size:20px;cursor:pointer}
-  .pc-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .pc-modal-section{margin-top:12px;padding:12px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0}
-  .pc-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}
-  .is-hidden{display:none!important}
+from masterdata.models import Seller, Shipper
+from orders.models import Order, OrderActivity
 
-  @media(max-width:1100px){
-    .pc-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .pc-bulk-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  }
-  @media(max-width:700px){
-    .pc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .pc-bulk-grid,.pc-modal-grid{grid-template-columns:1fr}
-    .pc-field{min-width:100%}
-    .pc-title{font-size:22px}
-  }
-</style>
+from .excel import export_province_cod_report_xlsx
+from .models import ProvinceCODBatch, ProvinceCODItem
+from .services import (
+    cancel_pending_batch,
+    complete_batch_sent,
+    correct_item_status,
+    mark_item_at_station,
+    mark_item_delivery_issue,
+    mark_item_out_for_delivery,
+    mark_item_paid,
+    mark_item_received,
+    mark_item_return_received,
+    mark_item_returning,
+    mark_item_seller_settled,
+    money,
+    prepare_item_pricing,
+    remove_pending_item,
+    undo_seller_settlement,
+)
 
-<div class="pc-wrap">
-  <div class="pc-head">
-    <div>
-      <div class="pc-title">Province COD Orders</div>
-      <div class="pc-sub">All orders from every batch. Click any table heading to sort up or down.</div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a class="pc-btn pc-soft" href="{% url 'provincecod:batch_list' %}">View Batches</a>
-      <a class="pc-btn pc-blue" href="{% url 'provincecod:report_excel' %}{% if current_query %}?{{ current_query }}{% endif %}">Download Excel</a>
-      <a class="pc-btn pc-primary" href="{% url 'provincecod:batch_create' %}">Create Batch</a>
-    </div>
-  </div>
 
-  <div class="pc-card">
-    <form method="get" class="pc-filter">
-      <div class="pc-field">
-        <label>Date From</label>
-        <input class="pc-input" type="date" name="date_from" value="{{ date_from }}">
-      </div>
+ZERO = Decimal("0.00")
 
-      <div class="pc-field">
-        <label>Date To</label>
-        <input class="pc-input" type="date" name="date_to" value="{{ date_to }}">
-      </div>
+CALL_REASON_CHOICES = [
+    ("NO_PICKUP", "No pickup / no answer"),
+    ("ANSWERED", "Answered / picked up"),
+    ("BUSY", "Phone busy"),
+    ("PHONE_OFF", "Phone switched off"),
+    ("WRONG_NUMBER", "Wrong phone number"),
+    ("CALL_BACK", "Asked to call back later"),
+    ("OTHER", "Other"),
+]
 
-      <div class="pc-field">
-        <label>COD Status</label>
-        <select class="pc-input" name="status">
-          <option value="">All</option>
-          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending / Not Sent</option>
-          <option value="SENT" {% if status == "SENT" %}selected{% endif %}>Sent</option>
-          <option value="AT_STATION" {% if status == "AT_STATION" %}selected{% endif %}>At Station</option>
-          <option value="OUT_FOR_DELIVERY" {% if status == "OUT_FOR_DELIVERY" %}selected{% endif %}>Out for Delivery</option>
-          <option value="DELIVERY_ISSUE" {% if status == "DELIVERY_ISSUE" %}selected{% endif %}>Delivery Issue</option>
-          <option value="RECEIVED" {% if status == "RECEIVED" %}selected{% endif %}>Received</option>
-          <option value="PAID" {% if status == "PAID" %}selected{% endif %}>Settled from Carrier</option>
-          <option value="RETURNING" {% if status == "RETURNING" %}selected{% endif %}>Returning</option>
-          <option value="RETURN_RECEIVED" {% if status == "RETURN_RECEIVED" %}selected{% endif %}>Return Received</option>
-        </select>
-      </div>
+CALL_REASON_LABELS = dict(CALL_REASON_CHOICES)
 
-      <div class="pc-field">
-        <label>Customer Settlement</label>
-        <select class="pc-input" name="settlement">
-          <option value="">All</option>
-          <option value="UNSETTLED" {% if settlement == "UNSETTLED" %}selected{% endif %}>Unsettled</option>
-          <option value="SETTLED" {% if settlement == "SETTLED" %}selected{% endif %}>Settled</option>
-        </select>
-      </div>
 
-      <div class="pc-field">
-        <label>Seller</label>
-        <select class="pc-input" name="seller">
-          <option value="">All</option>
-          {% for seller in sellers %}
-            <option value="{{ seller.id }}" {% if seller_id|stringformat:"s" == seller.id|stringformat:"s" %}selected{% endif %}>{{ seller.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
+def _clean_reason_text(item):
+    """Return one short, readable operational reason for the report table."""
+    reason = str(getattr(item, "return_reason", "") or "").strip()
+    if reason:
+        return reason
 
-      <div class="pc-field">
-        <label>Carrier</label>
-        <select class="pc-input" name="shipper">
-          <option value="">All</option>
-          {% for shipper in shippers %}
-            <option value="{{ shipper.id }}" {% if shipper_id|stringformat:"s" == shipper.id|stringformat:"s" %}selected{% endif %}>{{ shipper.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
+    note = str(getattr(item, "note", "") or "").strip()
+    if not note:
+        return ""
 
-      <div class="pc-field" style="min-width:220px">
-        <label>Search</label>
-        <input class="pc-input" name="q" value="{{ q }}" placeholder="Order tracking, carrier tracking, phone, seller...">
-      </div>
+    first_line = next((line.strip() for line in note.splitlines() if line.strip()), "")
+    if first_line.startswith("[CALL "):
+        if " — " in first_line:
+            return first_line.split(" — ", 1)[1].strip()
+        if "] " in first_line:
+            return first_line.split("] ", 1)[1].strip()
 
-      <input type="hidden" name="sort" value="{{ sort }}">
-      <input type="hidden" name="direction" value="{{ direction }}">
+    return first_line
 
-      <button class="pc-btn pc-dark" type="submit">Search</button>
-      <a class="pc-btn pc-soft" href="{% url 'provincecod:report' %}?settlement=">Show All</a>
-    </form>
-  </div>
 
-  <div class="pc-grid">
-    <div class="pc-stat"><span>Total Orders</span><strong>{{ summary.count }}</strong></div>
-    <div class="pc-stat"><span>Pending</span><strong>{{ summary.pending }}</strong></div>
-    <div class="pc-stat"><span>At Station / Out for Delivery</span><strong>{{ summary.at_station }} / {{ summary.out_for_delivery }}</strong></div>
-    <div class="pc-stat"><span>Delivery Issue / Returning</span><strong>{{ summary.delivery_issue }} / {{ summary.returning }}</strong></div>
-    <div class="pc-stat"><span>Received / Return Received</span><strong>{{ summary.received }} / {{ summary.return_received }}</strong></div>
-    <div class="pc-stat"><span>Carrier Settled / Customer Settled</span><strong>{{ summary.paid }} / {{ summary.settled }}</strong></div>
-    <div class="pc-stat"><span>Original COD</span><strong>${{ summary.original_cod|floatformat:2 }}</strong></div>
-    <div class="pc-stat"><span>Received from Carrier</span><strong>${{ summary.net_cod|floatformat:2 }}</strong></div>
-  </div>
+def _record_call_note(
+    item,
+    user,
+    *,
+    call_reason="",
+    note="",
+):
+    """Record a call attempt without changing the Province COD status."""
+    call_reason = (call_reason or "").strip().upper()
 
-  <form method="post" id="bulkForm" class="pc-card" style="margin-top:14px">
-    {% csrf_token %}
-    <input type="hidden" name="next_query" value="{{ current_query }}">
+    if call_reason not in CALL_REASON_LABELS:
+        raise ValueError("Please select a valid call reason.")
 
-    <div class="pc-bulk-head">
-      <div>
-        <div class="pc-bulk-title">Bulk Update Selected Orders</div>
-        <div class="pc-count"><span id="selectedCount">0</span> order(s) selected</div>
-      </div>
-      <button type="button" class="pc-btn pc-soft pc-mini" id="clearSelection">Clear Selection</button>
-    </div>
+    reason_label = CALL_REASON_LABELS[call_reason]
+    detail = (note or "").strip()
 
-    <div class="pc-bulk-grid">
-      <div>
-        <label class="pc-note">Received by</label>
-        <input class="pc-input" name="received_person" placeholder="Person / staff name">
-      </div>
+    actor_name = (
+        user.get_full_name().strip()
+        or user.get_username()
+        or "User"
+    )
 
-      <div>
-        <label class="pc-note">Confirmation</label>
-        <select class="pc-input" name="confirmation_method">
-          {% for value, label in confirmation_methods %}
-            <option value="{{ value }}" {% if value == "CARRIER" %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
+    timestamp = timezone.localtime().strftime("%Y-%m-%d %H:%M")
 
-      <div>
-        <label class="pc-note">Received from Carrier</label>
-        <input class="pc-input" type="number" step="0.01" min="0" name="paid_amount" placeholder="Blank = each COD amount">
-      </div>
+    call_entry = (
+        f"[CALL {timestamp} | {actor_name}] "
+        f"{reason_label}"
+    )
 
-      <div>
-        <label class="pc-note">Carrier payment date</label>
-        <input class="pc-input" type="date" name="payment_received_date" value="{{ today }}">
-      </div>
+    if detail:
+        call_entry += f" — {detail}"
 
-      <div>
-        <label class="pc-note">Carrier reference</label>
-        <input class="pc-input" name="carrier_reference" placeholder="Reference / report number">
-      </div>
+    old_note = (item.note or "").strip()
+    item.note = (
+        f"{call_entry}\n{old_note}"
+        if old_note
+        else call_entry
+    )
 
-      <div>
-        <label class="pc-note">Issue reason</label>
-        <input class="pc-input" name="issue_reason" placeholder="Required for delivery issue">
-      </div>
+    item.save(update_fields=["note", "updated_at"])
 
-      <div>
-        <label class="pc-note">Return reason</label>
-        <input class="pc-input" name="return_reason" placeholder="Required for returning">
-      </div>
 
-      <div>
-        <label class="pc-note">Note</label>
-        <input class="pc-input" name="note" placeholder="Optional note">
-      </div>
-    </div>
+def _payment_received_datetime(raw_value):
+    """Return an aware payment-received datetime from YYYY-MM-DD."""
+    raw_value = (raw_value or "").strip()
 
-    <div class="pc-bulk-actions">
-      <button class="pc-btn pc-soft pc-mini js-bulk-submit" type="submit" name="action" value="mark_at_station">At Station</button>
-      <button class="pc-btn pc-blue pc-mini js-bulk-submit" type="submit" name="action" value="mark_out_for_delivery">Out for Delivery</button>
-      <button class="pc-btn pc-red pc-mini js-bulk-submit" type="submit" name="action" value="mark_delivery_issue">Delivery Issue</button>
-      <button class="pc-btn pc-blue pc-mini js-bulk-submit" type="submit" name="action" value="mark_received">Received</button>
-      <button class="pc-btn pc-primary pc-mini js-bulk-submit" type="submit" name="action" value="mark_paid">Settled from Carrier</button>
-      <button class="pc-btn pc-red pc-mini js-bulk-submit" type="submit" name="action" value="mark_returning">Returning</button>
-      <button class="pc-btn pc-soft pc-mini js-bulk-submit" type="submit" name="action" value="mark_return_received">Return Received</button>
-      <button class="pc-btn pc-dark pc-mini js-bulk-submit" type="submit" name="action" value="settle_seller">Settled to Customer</button>
-      <button class="pc-btn pc-soft pc-mini js-bulk-submit" type="submit" name="action" value="undo_settlement">Undo Customer Settlement</button>
-    </div>
-  </form>
+    if not raw_value:
+        return timezone.now()
 
-  <div class="pc-card pc-table-wrap">
-    <table class="pc-table">
-      <thead>
-        <tr>
-          <th class="no-sort center"><input class="pc-check" type="checkbox" id="selectAll" title="Select all"></th>
-          <th><a href="{{ sort_urls.id }}">ID <span class="sort-mark">{% if sort == "id" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.sent_date }}">DATE <span class="sort-mark">{% if sort == "sent_date" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.batch }}">BATCH <span class="sort-mark">{% if sort == "batch" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.tracking }}">ORDER TRACKING <span class="sort-mark">{% if sort == "tracking" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.carrier_tracking }}">CARRIER TRACKING <span class="sort-mark">{% if sort == "carrier_tracking" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.seller }}">SELLER <span class="sort-mark">{% if sort == "seller" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.carrier }}">CARRIER <span class="sort-mark">{% if sort == "carrier" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.receiver }}">RECEIVER <span class="sort-mark">{% if sort == "receiver" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.phone }}">PHONE <span class="sort-mark">{% if sort == "phone" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.location }}">LOCATION <span class="sort-mark">{% if sort == "location" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.original_cod }}">ORIGINAL COD <span class="sort-mark">{% if sort == "original_cod" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.status }}">STATUS <span class="sort-mark">{% if sort == "status" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.net_cod }}">RECEIVED FROM CARRIER <span class="sort-mark">{% if sort == "net_cod" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.paid_date }}">CARRIER PAYMENT DATE <span class="sort-mark">{% if sort == "paid_date" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.reference }}">REFERENCE <span class="sort-mark">{% if sort == "reference" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th><a href="{{ sort_urls.settled }}">CUSTOMER SETTLED <span class="sort-mark">{% if sort == "settled" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-          <th class="no-sort">REASON</th>
-          <th><a href="{{ sort_urls.updated }}">UPDATED <span class="sort-mark">{% if sort == "updated" %}{% if direction == "asc" %}▲{% else %}▼{% endif %}{% else %}↕{% endif %}</span></a></th>
-        </tr>
-      </thead>
+    try:
+        payment_date = datetime.strptime(
+            raw_value,
+            "%Y-%m-%d",
+        ).date()
+    except ValueError as exc:
+        raise ValueError(
+            "Payment received date must be a valid date."
+        ) from exc
 
-      <tbody>
-        {% for item in rows %}
-          <tr>
-            <td class="center">
-              <input class="pc-check row-check" form="bulkForm" type="checkbox" name="selected_ids" value="{{ item.id }}">
-            </td>
+    current_local = timezone.localtime()
+    naive_value = datetime.combine(
+        payment_date,
+        time(
+            hour=current_local.hour,
+            minute=current_local.minute,
+            second=current_local.second,
+        ),
+    )
 
-            <td>{{ item.id }}</td>
+    return timezone.make_aware(
+        naive_value,
+        timezone.get_current_timezone(),
+    )
 
-            <td>
-              <b>{{ item.activity_date|date:"Y-m-d" }}</b>
-              <div class="pc-note">{{ item.activity_date|date:"H:i" }}</div>
-            </td>
 
-            <td><a class="pc-link" href="{% url 'provincecod:batch_detail' item.batch_id %}">PVCOD-{{ item.batch_id }}</a></td>
-            <td><a class="pc-link" href="/orders/created/{{ item.order_id }}/">{{ item.order.tracking_no }}</a></td>
-            <td>
-              {% if item.tracking_number %}
-                <b>{{ item.tracking_number }}</b>
-                <button type="button" class="pc-btn pc-soft pc-mini js-open-tracking" data-item-id="{{ item.id }}" data-order-tracking="{{ item.order.tracking_no }}" data-carrier-tracking="{{ item.tracking_number }}" style="margin-top:5px">Edit</button>
-              {% else %}
-                <button type="button" class="pc-btn pc-blue pc-mini js-open-tracking" data-item-id="{{ item.id }}" data-order-tracking="{{ item.order.tracking_no }}" data-carrier-tracking="">Add Tracking</button>
-              {% endif %}
-            </td>
-            <td>{{ item.order.seller.name|default:"-" }}</td>
-            <td>{{ item.batch.shipper.name|default:"-" }}</td>
-            <td>{{ item.order.receiver_name|default:"-" }}</td>
-            <td>{{ item.order.receiver_phone|default:"-" }}</td>
-            <td style="min-width:190px;max-width:260px;white-space:normal;line-height:1.35">{{ item.order.receiver_address|default:"-" }}</td>
-            <td class="right"><b>${{ item.original_cod|floatformat:2 }}</b></td>
+def _mark_paid_from_report(
+    item,
+    user,
+    *,
+    paid_amount_raw="",
+    payment_received_date="",
+    carrier_reference="",
+    note="",
+):
+    """Mark one report item as paid with an editable received amount/date."""
+    raw_value = str(paid_amount_raw or "").strip()
 
-            <td class="center" style="min-width:150px">
-              <span class="pc-pill {{ item.display_status|lower }}">{{ item.display_status }}</span>
+    if raw_value:
+        try:
+            paid_amount = money(raw_value)
+        except Exception as exc:
+            raise ValueError(
+                "Paid amount must be a valid number."
+            ) from exc
+    else:
+        paid_amount = money(item.original_cod)
 
-              {% if item.cod_status and item.cod_status != "PAID" and item.cod_status != "RETURN_RECEIVED" and item.cod_status != "RETURNED" %}
-                <div style="margin-top:7px">
-                  <button
-                    type="button"
-                    class="pc-btn pc-soft pc-mini js-open-status"
-                    data-item-id="{{ item.id }}"
-                    data-tracking="{{ item.order.tracking_no }}"
-                    data-current-status="{{ item.cod_status }}"
-                    data-original-cod="{{ item.original_cod|floatformat:2 }}"
-                    data-paid-amount="{% if item.cod_status == 'PAID' %}{{ item.net_cod|floatformat:2 }}{% else %}{{ item.original_cod|floatformat:2 }}{% endif %}"
-                    data-paid-date="{% if item.paid_at %}{{ item.paid_at|date:'Y-m-d' }}{% else %}{{ today }}{% endif %}"
-                    data-reference="{{ item.carrier_reference|default:'' }}"
-                  >Update Status</button>
-                </div>
-              {% elif item.cod_status == "PAID" %}
-                <form method="post" style="margin-top:7px">
-                  {% csrf_token %}
-                  <input type="hidden" name="item_id" value="{{ item.id }}">
-                  <input type="hidden" name="next_query" value="{{ current_query }}">
-                  {% if item.seller_settled %}
-                    <button class="pc-btn pc-soft pc-mini" type="submit" name="action" value="undo_settlement">Undo Settlement</button>
-                  {% else %}
-                    <button class="pc-btn pc-dark pc-mini" type="submit" name="action" value="settle_seller">Settle Customer</button>
-                  {% endif %}
-                </form>
-              {% endif %}
-            </td>
+    if paid_amount < ZERO:
+        raise ValueError("Paid amount cannot be negative.")
 
-            <td class="right">
-              {% if item.cod_status == "PAID" %}
-                <b>${{ item.net_cod|floatformat:2 }}</b>
-              {% else %}
-                -
-              {% endif %}
-            </td>
+    difference = money(
+        money(item.original_cod) - paid_amount
+    )
 
-            <td>
-              {% if item.paid_at %}
-                <b>{{ item.paid_at|date:"Y-m-d" }}</b>
-              {% else %}
-                -
-              {% endif %}
-            </td>
+    service_fee = difference if difference >= ZERO else ZERO
 
-            <td>{{ item.carrier_reference|default:"-" }}</td>
+    mark_item_paid(
+        item,
+        user,
+        carrier_fee=service_fee,
+        carrier_reference=carrier_reference,
+        note=note,
+    )
 
-            <td class="center">
-              {% if item.seller_settled %}
-                <span class="pc-pill paid">SETTLED</span>
-                <div class="pc-note">{{ item.seller_settled_at|date:"Y-m-d" }}</div>
-              {% else %}
-                <span class="pc-pill pending">NOT SETTLED</span>
-              {% endif %}
-            </td>
+    item.refresh_from_db()
+    item.carrier_fee = difference
+    item.paid_at = _payment_received_datetime(
+        payment_received_date
+    )
 
-            <td style="max-width:220px;white-space:normal">
-              {% if item.display_reason %}
-                <div class="pc-note" title="{{ item.display_reason }}">{{ item.display_reason|truncatechars:110 }}</div>
-              {% else %}
-                -
-              {% endif %}
-            </td>
+    item.save(
+        update_fields=[
+            "carrier_fee",
+            "net_cod",
+            "paid_at",
+            "updated_at",
+        ]
+    )
 
-            <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
 
-          </tr>
-        {% empty %}
-          <tr><td colspan="19" class="pc-empty">No Province COD orders found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+def _scan_session_key():
+    return "province_cod_scan_codes"
 
-<div class="pc-modal-backdrop" id="statusModal" aria-hidden="true">
-  <div class="pc-modal" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
-    <div class="pc-modal-head">
-      <div>
-        <div class="pc-modal-title" id="statusModalTitle">Update Province COD Status / Call</div>
-        <div class="pc-note" id="statusModalTracking"></div>
-      </div>
-      <button type="button" class="pc-modal-close" id="statusModalClose" aria-label="Close">×</button>
-    </div>
 
-    <form method="post" id="statusModalForm">
-      {% csrf_token %}
-      <input type="hidden" name="item_id" id="modalItemId">
-      <input type="hidden" name="next_query" value="{{ current_query }}">
-      <input type="hidden" name="action" id="modalAction" value="mark_received">
-      <input type="hidden" id="modalCurrentStatus" value="">
+def _parse_codes(raw):
+    output = []
+    seen = set()
 
-      <div>
-        <label class="pc-note">Status</label>
-        <select class="pc-input" id="modalStatus" name="target_status">
-          <option value="CALL">Call / Follow-up</option>
-          <option value="AT_STATION">At Station</option>
-          <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
-          <option value="DELIVERY_ISSUE">Delivery Issue</option>
-          <option value="RECEIVED">Received</option>
-          <option value="PAID">Settled from Carrier</option>
-          <option value="RETURNING">Returning</option>
-          <option value="RETURN_RECEIVED">Return Received</option>
-        </select>
-      </div>
+    for line in (raw or "").splitlines():
+        code = (line or "").strip()
 
-      <div class="pc-modal-section" id="callFields">
-        <div>
-          <label class="pc-note">Call reason</label>
-          <select class="pc-input" name="call_reason">
-            {% for value, label in call_reason_choices %}
-              <option value="{{ value }}" {% if value == "NO_PICKUP" %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-          <div class="pc-note">This records the call without changing the current COD status.</div>
-        </div>
-      </div>
+        if code and code not in seen:
+            output.append(code)
+            seen.add(code)
 
-      <div class="pc-modal-section is-hidden" id="correctionFields">
-        <div style="font-weight:900;color:#b45309;margin-bottom:7px">Correct an earlier status</div>
-        <div class="pc-note" style="margin-bottom:8px">This reason is internal only and is not shown to customers.</div>
-        <label class="pc-note">Internal correction reason *</label>
-        <textarea class="pc-textarea" id="correctionReason" name="correction_reason" placeholder="Example: Staff selected Received by mistake"></textarea>
-      </div>
+    return output
 
-      <div class="pc-modal-section is-hidden" id="receivedFields">
-        <div class="pc-modal-grid">
-          <div>
-            <label class="pc-note">Received by</label>
-            <input class="pc-input" name="received_person" placeholder="Person / staff name">
-          </div>
 
-          <div>
-            <label class="pc-note">Confirmation</label>
-            <select class="pc-input" name="confirmation_method">
-              {% for value, label in confirmation_methods %}
-                <option value="{{ value }}" {% if value == "CARRIER" %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-      </div>
+def _order_status(order):
+    return str(
+        getattr(order, "status", "") or ""
+    ).upper().strip()
 
-      <div class="pc-modal-section is-hidden" id="paidFields">
-        <div class="pc-modal-grid">
-          <div>
-            <label class="pc-note">Received from Carrier</label>
-            <input class="pc-input" id="modalPaidAmount" type="number" step="0.01" min="0" name="paid_amount">
-            <div class="pc-note">Default is the original COD. You can correct it before saving.</div>
-          </div>
 
-          <div>
-            <label class="pc-note">Carrier payment date</label>
-            <input class="pc-input" id="modalPaidDate" type="date" name="payment_received_date" value="{{ today }}">
-          </div>
-        </div>
+def _order_cod(order):
+    return money(getattr(order, "cod", ZERO))
 
-        <div style="margin-top:10px">
-          <label class="pc-note">Carrier reference</label>
-          <input class="pc-input" id="modalReference" name="carrier_reference" placeholder="Reference / report number">
-        </div>
-      </div>
 
-      <div class="pc-modal-section is-hidden" id="issueFields">
-        <label class="pc-note">Issue reason</label>
-        <input class="pc-input" name="issue_reason" placeholder="Required for delivery issue">
-      </div>
+def _allowed_status(order):
+    return _order_status(order) in {"CREATED", "INBOUND"}
 
-      <div class="pc-modal-section is-hidden" id="returnedFields">
-        <label class="pc-note">Return reason</label>
-        <input class="pc-input" name="return_reason" placeholder="Required when returning">
-      </div>
 
-      <div style="margin-top:12px">
-        <label class="pc-note" id="modalNoteLabel">Note</label>
-        <textarea class="pc-textarea" name="note" id="modalNote" placeholder="Optional note"></textarea>
-      </div>
+def _active_carriers():
+    return Shipper.objects.filter(
+        is_active=True,
+        shipper_type=Shipper.TYPE_PROVINCE,
+    ).order_by("name")
 
-      <div class="pc-modal-actions">
-        <button type="button" class="pc-btn pc-soft" id="statusModalCancel">Cancel</button>
-        <button type="submit" class="pc-btn pc-primary" id="statusModalSubmit">Save Status</button>
-      </div>
-    </form>
-  </div>
-</div>
 
-<div class="pc-modal-backdrop" id="trackingModal" aria-hidden="true">
-  <div class="pc-modal" role="dialog" aria-modal="true" aria-labelledby="trackingModalTitle">
-    <div class="pc-modal-head">
-      <div>
-        <div class="pc-modal-title" id="trackingModalTitle">Carrier Tracking Number</div>
-        <div class="pc-note" id="trackingModalOrder"></div>
-      </div>
-      <button type="button" class="pc-modal-close" id="trackingModalClose" aria-label="Close">×</button>
-    </div>
+def _order_detail_url(order):
+    return f"/orders/created/{order.id}/"
 
-    <form method="post" id="trackingModalForm">
-      {% csrf_token %}
-      <input type="hidden" name="item_id" id="trackingModalItemId">
-      <input type="hidden" name="next_query" value="{{ current_query }}">
-      <input type="hidden" name="action" value="update_tracking_number">
 
-      <div>
-        <label class="pc-note">Tracking number from carrier</label>
-        <input class="pc-input" name="tracking_number" id="trackingNumberInput" maxlength="255" required placeholder="Example: JT123456789KH">
-      </div>
+def _existing_active_order_ids(order_ids):
+    return set(
+        ProvinceCODItem.objects.filter(
+            order_id__in=order_ids,
+            batch__status__in=[
+                ProvinceCODBatch.STATUS_PENDING,
+                ProvinceCODBatch.STATUS_SENT,
+            ],
+        ).values_list("order_id", flat=True)
+    )
 
-      <div class="pc-modal-actions">
-        <button type="button" class="pc-btn pc-soft" id="trackingModalCancel">Cancel</button>
-        <button type="submit" class="pc-btn pc-primary">Save Tracking Number</button>
-      </div>
-    </form>
-  </div>
-</div>
 
-<script>
-  (function () {
-    const selectAll = document.getElementById("selectAll");
-    const checks = Array.from(document.querySelectorAll(".row-check"));
-    const countEl = document.getElementById("selectedCount");
-    const clearBtn = document.getElementById("clearSelection");
-    const bulkForm = document.getElementById("bulkForm");
+def _get_scanned_orders(codes):
+    orders = list(
+        Order.objects.filter(
+            tracking_no__in=codes,
+            is_deleted=False,
+        ).select_related(
+            "seller",
+            "delivery_shipper",
+        )
+    )
 
-    function updateCount() {
-      const selected = checks.filter((item) => item.checked).length;
-      countEl.textContent = selected;
-
-      if (selectAll) {
-        selectAll.checked = checks.length > 0 && selected === checks.length;
-        selectAll.indeterminate = selected > 0 && selected < checks.length;
-      }
+    order_map = {
+        order.tracking_no: order
+        for order in orders
     }
 
-    selectAll?.addEventListener("change", function () {
-      checks.forEach((item) => {
-        item.checked = selectAll.checked;
-      });
-      updateCount();
-    });
+    ordered = []
+    not_found = []
 
-    checks.forEach((item) => item.addEventListener("change", updateCount));
+    for code in codes:
+        order = order_map.get(code)
 
-    clearBtn?.addEventListener("click", function () {
-      checks.forEach((item) => {
-        item.checked = false;
-      });
-      updateCount();
-    });
+        if order is None:
+            not_found.append(code)
+        else:
+            ordered.append(order)
 
-    bulkForm?.addEventListener("submit", function (event) {
-      const selected = checks.some((item) => item.checked);
-      if (!selected) {
-        event.preventDefault();
-        alert("Please select at least one order.");
-      }
-    });
+    active_ids = _existing_active_order_ids(
+        [order.id for order in ordered]
+    )
 
-    updateCount();
+    allowed = []
+    errors = []
 
-    const modal = document.getElementById("statusModal");
-    const modalForm = document.getElementById("statusModalForm");
-    const modalItemId = document.getElementById("modalItemId");
-    const modalTracking = document.getElementById("statusModalTracking");
-    const modalStatus = document.getElementById("modalStatus");
-    const modalAction = document.getElementById("modalAction");
-    const modalCurrentStatus = document.getElementById("modalCurrentStatus");
-    const correctionFields = document.getElementById("correctionFields");
-    const correctionReason = document.getElementById("correctionReason");
-    const modalPaidAmount = document.getElementById("modalPaidAmount");
-    const modalPaidDate = document.getElementById("modalPaidDate");
-    const modalReference = document.getElementById("modalReference");
-    const callFields = document.getElementById("callFields");
-    const receivedFields = document.getElementById("receivedFields");
-    const paidFields = document.getElementById("paidFields");
-    const issueFields = document.getElementById("issueFields");
-    const returnedFields = document.getElementById("returnedFields");
-    const modalNoteLabel = document.getElementById("modalNoteLabel");
-    const modalNote = document.getElementById("modalNote");
-    const modalSubmit = document.getElementById("statusModalSubmit");
+    for order in ordered:
+        if order.id in active_ids:
+            reason = "Already in Province COD"
+        elif not _allowed_status(order):
+            reason = (
+                f"Status {_order_status(order)} not allowed"
+            )
+        elif _order_cod(order) <= ZERO:
+            reason = "No COD"
+        else:
+            allowed.append(order)
+            continue
 
-    const statusRank = {
-      SENT: 10,
-      AT_STATION: 20,
-      OUT_FOR_DELIVERY: 30,
-      DELIVERY_ISSUE: 35,
-      RECEIVED: 40,
-      PAID: 50,
-      RETURNING: 60,
-      RETURN_RECEIVED: 70
-    };
+        errors.append((order, reason))
 
-    function refreshModalFields() {
-      const status = modalStatus.value;
-      const currentStatus = modalCurrentStatus.value;
-      const isCorrection =
-        status !== "CALL" &&
-        statusRank[status] !== undefined &&
-        statusRank[currentStatus] !== undefined &&
-        statusRank[status] < statusRank[currentStatus];
+    return allowed, errors, not_found
 
-      correctionFields.classList.toggle("is-hidden", !isCorrection);
-      callFields.classList.toggle("is-hidden", status !== "CALL");
-      receivedFields.classList.toggle("is-hidden", status !== "RECEIVED" || isCorrection);
-      paidFields.classList.toggle("is-hidden", status !== "PAID" || isCorrection);
-      issueFields?.classList.toggle("is-hidden", status !== "DELIVERY_ISSUE" || isCorrection);
-      returnedFields.classList.toggle("is-hidden", status !== "RETURNING" || isCorrection);
 
-      correctionReason.required = isCorrection;
-      modalNote.required = false;
-      modalSubmit.className = "pc-btn pc-primary";
-      modalNoteLabel.textContent = "Note";
-      modalNote.placeholder = "Optional note";
+def _row_for_order(order, error=""):
+    seller = getattr(order, "seller", None)
 
-      if (isCorrection) {
-        modalAction.value = "correct_status";
-        modalSubmit.textContent = "Confirm Status Correction";
-        modalSubmit.className = "pc-btn pc-orange";
-      } else if (status === "CALL") {
-        modalAction.value = "record_call";
-        modalSubmit.textContent = "Save Call Note";
-        modalSubmit.className = "pc-btn pc-dark";
-        modalNoteLabel.textContent = "Call detail";
-        modalNote.placeholder = "Short reason only, example: Customer did not order";
-      } else if (status === "AT_STATION") {
-        modalAction.value = "mark_at_station";
-        modalSubmit.textContent = "Save as At Station";
-      } else if (status === "OUT_FOR_DELIVERY") {
-        modalAction.value = "mark_out_for_delivery";
-        modalSubmit.textContent = "Save as Out for Delivery";
-      } else if (status === "DELIVERY_ISSUE") {
-        modalAction.value = "mark_delivery_issue";
-        modalSubmit.textContent = "Save Delivery Issue";
-      } else if (status === "PAID") {
-        modalAction.value = "mark_paid";
-        modalSubmit.textContent = "Save as Settled from Carrier";
-      } else if (status === "RETURNING") {
-        modalAction.value = "mark_returning";
-        modalSubmit.textContent = "Save as Returning";
-      } else if (status === "RETURN_RECEIVED") {
-        modalAction.value = "mark_return_received";
-        modalSubmit.textContent = "Save as Return Received";
-        modalSubmit.className = "pc-btn pc-red";
-      } else {
-        modalAction.value = "mark_received";
-        modalSubmit.textContent = "Save as Received";
-        modalSubmit.className = "pc-btn pc-blue";
-      }
+    return {
+        "id": order.id,
+        "tracking_no": order.tracking_no,
+        "tracking_url": _order_detail_url(order),
+        "seller_name": (
+            getattr(seller, "name", "-") or "-"
+        ),
+        "receiver_name": (
+            getattr(order, "receiver_name", "") or "-"
+        ),
+        "receiver_phone": (
+            getattr(order, "receiver_phone", "") or "-"
+        ),
+        "receiver_address": (
+            getattr(order, "receiver_address", "") or "-"
+        ),
+        "cod": _order_cod(order),
+        "status": _order_status(order) or "-",
+        "error": error,
     }
 
-    function openModal(button) {
-      modalForm.reset();
 
-      modalItemId.value = button.dataset.itemId || "";
-      modalTracking.textContent = "Tracking: " + (button.dataset.tracking || "-");
+@login_required
+def batch_list(request):
+    today = timezone.localdate()
+    default_from = today - timedelta(days=6)
 
-      const currentStatus = button.dataset.currentStatus || "CALL";
-      modalCurrentStatus.value = currentStatus;
-      const supportedStatuses = [
-        "AT_STATION",
-        "OUT_FOR_DELIVERY",
-        "DELIVERY_ISSUE",
-        "RECEIVED",
-        "PAID",
-        "RETURNING",
-        "RETURN_RECEIVED"
-      ];
+    date_from = (
+        request.GET.get("date_from")
+        or default_from.isoformat()
+    ).strip()
 
-      modalStatus.value = supportedStatuses.includes(currentStatus)
-        ? currentStatus
-        : "CALL";
+    date_to = (
+        request.GET.get("date_to")
+        or today.isoformat()
+    ).strip()
 
-      modalPaidAmount.value =
-        button.dataset.paidAmount ||
-        button.dataset.originalCod ||
-        "";
+    status = (
+        request.GET.get("status") or ""
+    ).strip().upper()
 
-      modalPaidDate.value =
-        button.dataset.paidDate ||
-        "{{ today }}";
+    shipper_id = (
+        request.GET.get("shipper") or ""
+    ).strip()
 
-      modalReference.value =
-        button.dataset.reference ||
-        "";
+    qs = (
+        ProvinceCODBatch.objects
+        .select_related(
+            "shipper",
+            "created_by",
+            "sent_by",
+        )
+        .annotate(
+            total_items=Count(
+                "items",
+                distinct=True,
+            ),
+            total_shops=Count(
+                "items__order__seller",
+                distinct=True,
+            ),
+            total_cod=Sum("items__original_cod"),
+        )
+        .order_by("-id")
+    )
 
-      refreshModalFields();
-      modal.classList.add("open");
-      modal.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
+    if date_from:
+        qs = qs.filter(
+            created_at__date__gte=date_from
+        )
+
+    if date_to:
+        qs = qs.filter(
+            created_at__date__lte=date_to
+        )
+
+    if status:
+        qs = qs.filter(status=status)
+
+    if shipper_id.isdigit():
+        qs = qs.filter(
+            shipper_id=int(shipper_id)
+        )
+
+    return render(
+        request,
+        "provincecod/batch_list.html",
+        {
+            "rows": qs,
+            "date_from": date_from,
+            "date_to": date_to,
+            "status": status,
+            "shipper_id": shipper_id,
+            "shippers": _active_carriers(),
+        },
+    )
+
+
+@login_required
+def batch_create(request):
+    session_key = _scan_session_key()
+
+    if request.method == "POST":
+        action = (
+            request.POST.get("action") or ""
+        ).strip()
+
+        if action == "scan_add":
+            posted_codes = _parse_codes(
+                request.POST.get(
+                    "scan_codes",
+                    "",
+                )
+            )
+
+            if not posted_codes:
+                messages.error(
+                    request,
+                    "Please scan tracking code(s).",
+                )
+                return redirect(
+                    "provincecod:batch_create"
+                )
+
+            existing = list(
+                request.session.get(
+                    session_key,
+                    [],
+                )
+            )
+            seen = set(existing)
+            added = 0
+
+            for code in posted_codes:
+                if code not in seen:
+                    existing.append(code)
+                    seen.add(code)
+                    added += 1
+
+            request.session[session_key] = existing
+            request.session.modified = True
+
+            messages.success(
+                request,
+                f"Added {added} tracking code(s).",
+            )
+            return redirect(
+                "provincecod:batch_create"
+            )
+
+        if action == "scan_clear":
+            request.session[session_key] = []
+            request.session.modified = True
+
+            messages.success(
+                request,
+                "Scanned list cleared.",
+            )
+            return redirect(
+                "provincecod:batch_create"
+            )
+
+        if action == "remove_scan":
+            code = (
+                request.POST.get("code") or ""
+            ).strip()
+
+            existing = list(
+                request.session.get(
+                    session_key,
+                    [],
+                )
+            )
+
+            request.session[session_key] = [
+                value
+                for value in existing
+                if value != code
+            ]
+            request.session.modified = True
+
+            return redirect(
+                "provincecod:batch_create"
+            )
+
+        if action in {
+            "confirm_create",
+            "confirm_sent",
+        }:
+            shipper_id = (
+                request.POST.get("shipper_id")
+                or ""
+            ).strip()
+
+            remark = (
+                request.POST.get("remark")
+                or ""
+            ).strip()
+
+            checked_ids = [
+                int(value)
+                for value in request.POST.getlist(
+                    "checked_ids"
+                )
+                if str(value).isdigit()
+            ]
+
+            if not shipper_id.isdigit():
+                messages.error(
+                    request,
+                    "Please select a carrier.",
+                )
+                return redirect(
+                    "provincecod:batch_create"
+                )
+
+            shipper = (
+                _active_carriers()
+                .filter(pk=int(shipper_id))
+                .first()
+            )
+
+            if not shipper:
+                messages.error(
+                    request,
+                    "Selected carrier is invalid.",
+                )
+                return redirect(
+                    "provincecod:batch_create"
+                )
+
+            scanned_codes = list(
+                request.session.get(
+                    session_key,
+                    [],
+                )
+            )
+
+            allowed_orders, _, _ = (
+                _get_scanned_orders(
+                    scanned_codes
+                )
+            )
+
+            allowed_map = {
+                order.id: order
+                for order in allowed_orders
+            }
+
+            selected_orders = [
+                allowed_map[order_id]
+                for order_id in checked_ids
+                if order_id in allowed_map
+            ]
+
+            if not selected_orders:
+                messages.error(
+                    request,
+                    (
+                        "Please tick at least one "
+                        "allowed order."
+                    ),
+                )
+                return redirect(
+                    "provincecod:batch_create"
+                )
+
+            try:
+                with transaction.atomic():
+                    batch = (
+                        ProvinceCODBatch.objects.create(
+                            created_by=request.user,
+                            shipper=shipper,
+                            assigned_at=timezone.now(),
+                            remark=remark,
+                            status=(
+                                ProvinceCODBatch
+                                .STATUS_PENDING
+                            ),
+                        )
+                    )
+
+                    for order in selected_orders:
+                        old_status = _order_status(
+                            order
+                        )
+
+                        ProvinceCODItem.objects.create(
+                            batch=batch,
+                            order=order,
+                            original_cod=_order_cod(
+                                order
+                            ),
+                            status_before=old_status,
+                        )
+
+                        Order.objects.filter(
+                            pk=order.pk
+                        ).update(
+                            status="PROCESSING",
+                            delivery_shipper=shipper,
+                            updated_at=timezone.now(),
+                            updated_by=request.user,
+                        )
+
+                        OrderActivity.objects.create(
+                            order=order,
+                            action=(
+                                "ASSIGN_PROVINCE_COD"
+                            ),
+                            old_status=old_status,
+                            new_status="PROCESSING",
+                            actor=request.user,
+                            shipper=shipper,
+                            note=(
+                                "Assigned to Province "
+                                "COD batch "
+                                f"PVCOD-{batch.id}."
+                            ),
+                        )
+
+                    complete_batch_sent(
+                        batch,
+                        request.user,
+                    )
+
+            except ValueError as exc:
+                messages.error(
+                    request,
+                    str(exc),
+                )
+                return redirect(
+                    "provincecod:batch_create"
+                )
+
+            request.session[session_key] = []
+            request.session.modified = True
+
+            messages.success(
+                request,
+                (
+                    f"{len(selected_orders)} "
+                    "Province COD order(s) "
+                    "completed as sent in batch "
+                    f"PVCOD-{batch.id}."
+                ),
+            )
+
+            return redirect(
+                "provincecod:batch_detail",
+                pk=batch.id,
+            )
+
+    scanned_codes = list(
+        request.session.get(
+            session_key,
+            [],
+        )
+    )
+
+    allowed_orders, error_orders, not_found = (
+        _get_scanned_orders(
+            scanned_codes
+        )
+    )
+
+    return render(
+        request,
+        "provincecod/batch_create.html",
+        {
+            "scan_value": "\n".join(
+                scanned_codes
+            ),
+            "rows_allowed": [
+                _row_for_order(order)
+                for order in allowed_orders
+            ],
+            "rows_error": [
+                _row_for_order(
+                    order,
+                    error=reason,
+                )
+                for order, reason
+                in error_orders
+            ],
+            "not_found_codes": not_found,
+            "total_count": len(scanned_codes),
+            "found_count": len(
+                allowed_orders
+            ),
+            "error_count": len(
+                error_orders
+            ),
+            "not_found_count": len(
+                not_found
+            ),
+            "shippers": _active_carriers(),
+        },
+    )
+
+
+@login_required
+def batch_detail(request, pk):
+    batch = get_object_or_404(
+        ProvinceCODBatch.objects.select_related(
+            "shipper",
+            "created_by",
+            "sent_by",
+            "cancelled_by",
+        ),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        action = (
+            request.POST.get("action") or ""
+        ).strip()
+
+        try:
+            if action == "change_shipper":
+                if (
+                    batch.status
+                    == ProvinceCODBatch.STATUS_CANCELLED
+                ):
+                    raise ValueError(
+                        (
+                            "A cancelled batch cannot "
+                            "change carrier."
+                        )
+                    )
+
+                shipper_id = (
+                    request.POST.get(
+                        "shipper_id"
+                    )
+                    or ""
+                ).strip()
+
+                if not shipper_id.isdigit():
+                    raise ValueError(
+                        "Please select a carrier."
+                    )
+
+                new_shipper = (
+                    _active_carriers()
+                    .filter(
+                        pk=int(shipper_id)
+                    )
+                    .first()
+                )
+
+                if not new_shipper:
+                    raise ValueError(
+                        (
+                            "Selected carrier is "
+                            "invalid."
+                        )
+                    )
+
+                has_locked_items = (
+                    batch.items.filter(
+                        Q(
+                            cod_status=(
+                                ProvinceCODItem
+                                .STATUS_PAID
+                            )
+                        )
+                        | Q(
+                            seller_settled=True
+                        )
+                    ).exists()
+                )
+
+                if has_locked_items:
+                    raise ValueError(
+                        (
+                            "Carrier cannot be changed "
+                            "because this batch already "
+                            "has a paid or seller-settled "
+                            "order."
+                        )
+                    )
+
+                old_shipper = batch.shipper
+                old_shipper_name = (
+                    getattr(
+                        old_shipper,
+                        "name",
+                        "",
+                    )
+                    or "-"
+                )
+
+                with transaction.atomic():
+                    locked_batch = (
+                        ProvinceCODBatch.objects
+                        .select_for_update()
+                        .get(pk=batch.pk)
+                    )
+
+                    locked_batch.shipper = (
+                        new_shipper
+                    )
+                    locked_batch.assigned_at = (
+                        timezone.now()
+                    )
+                    locked_batch.save(
+                        update_fields=[
+                            "shipper",
+                            "assigned_at",
+                            "updated_at",
+                        ]
+                    )
+
+                    items = list(
+                        locked_batch.items
+                        .select_for_update()
+                        .select_related(
+                            "order",
+                            "order__seller",
+                        )
+                        .order_by("id")
+                    )
+
+                    for item in items:
+                        prepare_item_pricing(
+                            item
+                        )
+
+                        item.save(
+                            update_fields=[
+                                "province_fee",
+                                "carrier_fixed_fee",
+                                (
+                                    "carrier_percent_"
+                                    "rate"
+                                ),
+                                "updated_at",
+                            ]
+                        )
+
+                        order = item.order
+                        current_status = (
+                            _order_status(order)
+                        )
+
+                        Order.objects.filter(
+                            pk=order.pk
+                        ).update(
+                            delivery_shipper=(
+                                new_shipper
+                            ),
+                            province_fee=(
+                                item.province_fee
+                            ),
+                            updated_at=(
+                                timezone.now()
+                            ),
+                            updated_by=(
+                                request.user
+                            ),
+                        )
+
+                        OrderActivity.objects.create(
+                            order=order,
+                            action=(
+                                "CHANGE_PROVINCE_"
+                                "COD_CARRIER"
+                            ),
+                            old_status=(
+                                current_status
+                            ),
+                            new_status=(
+                                current_status
+                            ),
+                            actor=request.user,
+                            shipper=new_shipper,
+                            note=(
+                                "Province COD carrier "
+                                "changed from "
+                                f"{old_shipper_name} "
+                                "to "
+                                f"{new_shipper.name} "
+                                "in "
+                                f"PVCOD-"
+                                f"{locked_batch.id}."
+                            ),
+                        )
+
+                messages.success(
+                    request,
+                    (
+                        "Carrier changed from "
+                        f"{old_shipper_name} to "
+                        f"{new_shipper.name}."
+                    ),
+                )
+
+            elif action == "add_codes":
+                if (
+                    batch.status
+                    != ProvinceCODBatch.STATUS_PENDING
+                ):
+                    raise ValueError(
+                        (
+                            "Only a pending batch "
+                            "can be edited."
+                        )
+                    )
+
+                codes = _parse_codes(
+                    request.POST.get(
+                        "scan_codes",
+                        "",
+                    )
+                )
+
+                if not codes:
+                    raise ValueError(
+                        (
+                            "Please scan tracking "
+                            "code(s)."
+                        )
+                    )
+
+                (
+                    allowed_orders,
+                    error_orders,
+                    not_found,
+                ) = _get_scanned_orders(codes)
+
+                existing_ids = set(
+                    batch.items.values_list(
+                        "order_id",
+                        flat=True,
+                    )
+                )
+                added = 0
+
+                with transaction.atomic():
+                    for order in allowed_orders:
+                        if order.id in existing_ids:
+                            continue
+
+                        old_status = _order_status(
+                            order
+                        )
+
+                        ProvinceCODItem.objects.create(
+                            batch=batch,
+                            order=order,
+                            original_cod=_order_cod(
+                                order
+                            ),
+                            status_before=old_status,
+                        )
+
+                        Order.objects.filter(
+                            pk=order.pk
+                        ).update(
+                            status="PROCESSING",
+                            delivery_shipper=(
+                                batch.shipper
+                            ),
+                            updated_at=(
+                                timezone.now()
+                            ),
+                            updated_by=(
+                                request.user
+                            ),
+                        )
+
+                        OrderActivity.objects.create(
+                            order=order,
+                            action=(
+                                "ADD_TO_PROVINCE_COD"
+                            ),
+                            old_status=old_status,
+                            new_status="PROCESSING",
+                            actor=request.user,
+                            shipper=batch.shipper,
+                            note=(
+                                "Added to Province COD "
+                                "batch "
+                                f"PVCOD-{batch.id}."
+                            ),
+                        )
+                        added += 1
+
+                messages.success(
+                    request,
+                    f"Added {added} order(s).",
+                )
+
+                if error_orders:
+                    messages.warning(
+                        request,
+                        (
+                            f"{len(error_orders)} "
+                            "order(s) were not allowed."
+                        ),
+                    )
+
+                if not_found:
+                    messages.warning(
+                        request,
+                        (
+                            f"{len(not_found)} tracking "
+                            "code(s) were not found."
+                        ),
+                    )
+
+            elif action == "remove_item":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get(
+                        "item_id"
+                    ),
+                    batch=batch,
+                )
+                remove_pending_item(
+                    item,
+                    request.user,
+                )
+                messages.success(
+                    request,
+                    "Order removed from batch.",
+                )
+
+            elif action == "complete_sent":
+                complete_batch_sent(
+                    batch,
+                    request.user,
+                )
+                messages.success(
+                    request,
+                    (
+                        "Batch completed as SENT. "
+                        "Orders are SENT in "
+                        "Delivery Report."
+                    ),
+                )
+
+            elif action == "cancel":
+                cancel_pending_batch(
+                    batch,
+                    request.user,
+                )
+                messages.success(
+                    request,
+                    (
+                        "Province COD batch "
+                        "cancelled."
+                    ),
+                )
+
+            elif action == "mark_at_station":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_at_station(
+                    item,
+                    request.user,
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as AT STATION.",
+                )
+
+            elif action == "mark_out_for_delivery":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_out_for_delivery(
+                    item,
+                    request.user,
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as OUT FOR DELIVERY.",
+                )
+
+            elif action == "mark_delivery_issue":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_delivery_issue(
+                    item,
+                    request.user,
+                    issue_reason=request.POST.get(
+                        "issue_reason",
+                        "",
+                    ),
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as DELIVERY ISSUE.",
+                )
+
+            elif action in {"mark_returning", "mark_returned"}:
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_returning(
+                    item,
+                    request.user,
+                    return_reason=request.POST.get(
+                        "return_reason",
+                        "",
+                    ),
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as RETURNING.",
+                )
+
+            elif action == "mark_return_received":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get("item_id"),
+                    batch=batch,
+                )
+                mark_item_return_received(
+                    item,
+                    request.user,
+                    received_person=request.POST.get(
+                        "received_person",
+                        "",
+                    ),
+                    note=request.POST.get("note", ""),
+                )
+                messages.success(
+                    request,
+                    "Item marked as RETURN RECEIVED.",
+                )
+
+            elif action == "mark_received":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get(
+                        "item_id"
+                    ),
+                    batch=batch,
+                )
+
+                mark_item_received(
+                    item,
+                    request.user,
+                    received_person=(
+                        request.POST.get(
+                            "received_person",
+                            "",
+                        )
+                    ),
+                    confirmation_method=(
+                        request.POST.get(
+                            "confirmation_method",
+                            "",
+                        )
+                    ),
+                    note=request.POST.get(
+                        "note",
+                        "",
+                    ),
+                )
+                messages.success(
+                    request,
+                    (
+                        "Item marked as "
+                        "RECEIVED."
+                    ),
+                )
+
+            elif action == "mark_paid":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get(
+                        "item_id"
+                    ),
+                    batch=batch,
+                )
+
+                mark_item_paid(
+                    item,
+                    request.user,
+                    carrier_fee=(
+                        request.POST.get(
+                            "carrier_fee",
+                            "",
+                        )
+                    ),
+                    carrier_reference=(
+                        request.POST.get(
+                            "carrier_reference",
+                            "",
+                        )
+                    ),
+                    note=request.POST.get(
+                        "note",
+                        "",
+                    ),
+                )
+                messages.success(
+                    request,
+                    "Item marked as PAID.",
+                )
+
+            elif action == "settle_seller":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get(
+                        "item_id"
+                    ),
+                    batch=batch,
+                )
+                mark_item_seller_settled(
+                    item,
+                    request.user,
+                )
+                messages.success(
+                    request,
+                    (
+                        "Seller settlement "
+                        "confirmed."
+                    ),
+                )
+
+            elif action == "undo_settlement":
+                item = get_object_or_404(
+                    ProvinceCODItem,
+                    pk=request.POST.get(
+                        "item_id"
+                    ),
+                    batch=batch,
+                )
+                undo_seller_settlement(item)
+                messages.success(
+                    request,
+                    (
+                        "Seller settlement "
+                        "undone."
+                    ),
+                )
+
+            else:
+                messages.error(
+                    request,
+                    "Unknown action.",
+                )
+
+        except ValueError as exc:
+            messages.error(
+                request,
+                str(exc),
+            )
+
+        return redirect(
+            "provincecod:batch_detail",
+            pk=batch.id,
+        )
+
+    items = list(
+        batch.items
+        .select_related(
+            "order",
+            "order__seller",
+            "received_confirmed_by",
+            "paid_confirmed_by",
+            "returned_confirmed_by",
+            "seller_settled_by",
+        )
+        .order_by(
+            "order__seller__name",
+            "id",
+        )
+    )
+
+    totals = {
+        "count": len(items),
+        "original_cod": sum(
+            (
+                money(item.original_cod)
+                for item in items
+            ),
+            ZERO,
+        ),
+        "province_fee": sum(
+            (
+                money(item.province_fee)
+                for item in items
+            ),
+            ZERO,
+        ),
+        "carrier_fee": sum(
+            (
+                money(item.carrier_fee)
+                for item in items
+            ),
+            ZERO,
+        ),
+        "net_cod": sum(
+            (
+                money(item.net_cod)
+                for item in items
+            ),
+            ZERO,
+        ),
+        "sent": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_SENT
+        ),
+        "at_station": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_AT_STATION
+        ),
+        "out_for_delivery": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_OUT_FOR_DELIVERY
+        ),
+        "delivery_issue": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_DELIVERY_ISSUE
+        ),
+        "returning": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_RETURNING
+        ),
+        "return_received": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_RETURN_RECEIVED
+        ),
+        "received": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_RECEIVED
+        ),
+        "paid": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_PAID
+        ),
+        "returned": sum(
+            1
+            for item in items
+            if item.cod_status
+            == ProvinceCODItem.STATUS_RETURNED
+        ),
+        "settled": sum(
+            1
+            for item in items
+            if item.seller_settled
+        ),
     }
 
-    function closeModal() {
-      modal.classList.remove("open");
-      modal.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
+    for item in items:
+        item.suggested_fee_display = (
+            item.suggested_carrier_fee()
+        )
+
+    return render(
+        request,
+        "provincecod/batch_detail.html",
+        {
+            "batch": batch,
+            "items": items,
+            "totals": totals,
+            "shippers": _active_carriers(),
+            "confirmation_methods": (
+                ProvinceCODItem
+                .CONFIRMATION_METHOD_CHOICES
+            ),
+        },
+    )
+
+
+@login_required
+def province_cod_report_excel(request):
+    """Download the current filtered Province COD list as Excel."""
+    return export_province_cod_report_xlsx(
+        request
+    )
+
+
+@login_required
+def province_cod_report(request):
+    """Combined Province COD list across non-cancelled batches."""
+
+    if request.method == "POST":
+        action = (
+            request.POST.get("action") or ""
+        ).strip()
+
+        if action == "update_tracking_number":
+            item_id = (
+                request.POST.get("item_id")
+                or ""
+            ).strip()
+
+            tracking_number = (
+                request.POST.get(
+                    "tracking_number"
+                )
+                or ""
+            ).strip()
+
+            if not item_id.isdigit():
+                messages.error(
+                    request,
+                    "Invalid Province COD item.",
+                )
+
+            elif not tracking_number:
+                messages.error(
+                    request,
+                    (
+                        "Please enter the carrier "
+                        "tracking number."
+                    ),
+                )
+
+            elif len(tracking_number) > 255:
+                messages.error(
+                    request,
+                    (
+                        "Tracking number cannot "
+                        "exceed 255 characters."
+                    ),
+                )
+
+            else:
+                item = get_object_or_404(
+                    ProvinceCODItem.objects
+                    .exclude(
+                        batch__status=(
+                            ProvinceCODBatch
+                            .STATUS_CANCELLED
+                        )
+                    ),
+                    pk=int(item_id),
+                )
+
+                item.tracking_number = (
+                    tracking_number
+                )
+                item.save()
+
+                messages.success(
+                    request,
+                    (
+                        "Carrier tracking saved: "
+                        f"{tracking_number}"
+                    ),
+                )
+
+            next_query = (
+                request.POST.get(
+                    "next_query"
+                )
+                or ""
+            ).strip()
+
+            target = reverse(
+                "provincecod:report"
+            )
+
+            if next_query:
+                target = (
+                    f"{target}?{next_query}"
+                )
+
+            return redirect(target)
+
+        selected_ids = [
+            int(value)
+            for value in request.POST.getlist(
+                "selected_ids"
+            )
+            if str(value).isdigit()
+        ]
+
+        item_id = (
+            request.POST.get("item_id")
+            or ""
+        ).strip()
+
+        if (
+            item_id.isdigit()
+            and int(item_id)
+            not in selected_ids
+        ):
+            selected_ids.append(
+                int(item_id)
+            )
+
+        if not selected_ids:
+            messages.error(
+                request,
+                (
+                    "Please select at least "
+                    "one order."
+                ),
+            )
+
+        else:
+            items = list(
+                ProvinceCODItem.objects
+                .select_related(
+                    "batch",
+                    "order",
+                    "order__seller",
+                )
+                .filter(
+                    pk__in=selected_ids
+                )
+                .exclude(
+                    batch__status=(
+                        ProvinceCODBatch
+                        .STATUS_CANCELLED
+                    )
+                )
+                .order_by("id")
+            )
+
+            updated = 0
+            skipped = []
+
+            for item in items:
+                try:
+                    if action == "correct_status":
+                        correct_item_status(
+                            item,
+                            request.user,
+                            target_status=request.POST.get("target_status", ""),
+                            reason=request.POST.get("correction_reason", ""),
+                        )
+
+                    elif action == "mark_at_station":
+                        mark_item_at_station(
+                            item,
+                            request.user,
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_out_for_delivery":
+                        mark_item_out_for_delivery(
+                            item,
+                            request.user,
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_delivery_issue":
+                        mark_item_delivery_issue(
+                            item,
+                            request.user,
+                            issue_reason=request.POST.get(
+                                "issue_reason",
+                                "",
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action in {"mark_returning", "mark_returned"}:
+                        mark_item_returning(
+                            item,
+                            request.user,
+                            return_reason=request.POST.get(
+                                "return_reason",
+                                "",
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_return_received":
+                        mark_item_return_received(
+                            item,
+                            request.user,
+                            received_person=request.POST.get(
+                                "received_person",
+                                "",
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_received":
+                        mark_item_received(
+                            item,
+                            request.user,
+                            received_person=(
+                                request.POST.get(
+                                    "received_person",
+                                    "",
+                                )
+                            ),
+                            confirmation_method=(
+                                request.POST.get(
+                                    (
+                                        "confirmation_"
+                                        "method"
+                                    ),
+                                    (
+                                        ProvinceCODItem
+                                        .METHOD_CARRIER
+                                    ),
+                                )
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "mark_paid":
+                        _mark_paid_from_report(
+                            item,
+                            request.user,
+                            paid_amount_raw=(
+                                request.POST.get(
+                                    "paid_amount",
+                                    "",
+                                )
+                            ),
+                            payment_received_date=(
+                                request.POST.get(
+                                    (
+                                        "payment_"
+                                        "received_date"
+                                    ),
+                                    "",
+                                )
+                            ),
+                            carrier_reference=(
+                                request.POST.get(
+                                    (
+                                        "carrier_"
+                                        "reference"
+                                    ),
+                                    "",
+                                )
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "record_call":
+                        _record_call_note(
+                            item,
+                            request.user,
+                            call_reason=(
+                                request.POST.get(
+                                    "call_reason",
+                                    "",
+                                )
+                            ),
+                            note=request.POST.get(
+                                "note",
+                                "",
+                            ),
+                        )
+
+                    elif action == "settle_seller":
+                        mark_item_seller_settled(
+                            item,
+                            request.user,
+                        )
+
+                    elif (
+                        action
+                        == "undo_settlement"
+                    ):
+                        undo_seller_settlement(
+                            item
+                        )
+
+                    else:
+                        raise ValueError(
+                            (
+                                "Unknown Province "
+                                "COD action."
+                            )
+                        )
+
+                    updated += 1
+
+                except ValueError as exc:
+                    skipped.append(
+                        (
+                            f"{item.order.tracking_no}: "
+                            f"{exc}"
+                        )
+                    )
+
+            if updated:
+                messages.success(
+                    request,
+                    (
+                        f"Updated {updated} "
+                        "Province COD order(s)."
+                    ),
+                )
+
+            if skipped:
+                preview = "; ".join(
+                    skipped[:5]
+                )
+                remaining = (
+                    len(skipped) - 5
+                )
+
+                if remaining > 0:
+                    preview += (
+                        f"; and {remaining} more"
+                    )
+
+                messages.warning(
+                    request,
+                    f"Skipped: {preview}",
+                )
+
+        next_query = (
+            request.POST.get(
+                "next_query"
+            )
+            or ""
+        ).strip()
+
+        target = reverse(
+            "provincecod:report"
+        )
+
+        if next_query:
+            target = f"{target}?{next_query}"
+
+        return redirect(target)
+
+    date_from = (
+        request.GET.get("date_from")
+        or ""
+    ).strip()
+
+    date_to = (
+        request.GET.get("date_to")
+        or ""
+    ).strip()
+
+    status = (
+        request.GET.get("status")
+        or ""
+    ).strip().upper()
+
+    settlement_value = request.GET.get(
+        "settlement"
+    )
+
+    if settlement_value is None:
+        settlement = "UNSETTLED"
+    else:
+        settlement = (
+            settlement_value
+            .strip()
+            .upper()
+        )
+
+    seller_id = (
+        request.GET.get("seller")
+        or ""
+    ).strip()
+
+    shipper_id = (
+        request.GET.get("shipper")
+        or ""
+    ).strip()
+
+    q = (
+        request.GET.get("q")
+        or ""
+    ).strip()
+
+    sort = (
+        request.GET.get("sort")
+        or "sent_date"
+    ).strip().lower()
+
+    direction = (
+        request.GET.get("direction")
+        or "desc"
+    ).strip().lower()
+
+    if direction not in {
+        "asc",
+        "desc",
+    }:
+        direction = "desc"
+
+    sort_map = {
+        "id": "id",
+        "sent_date": "activity_date",
+        "batch": "batch_id",
+        "tracking": "order__tracking_no",
+        "carrier_tracking": (
+            "tracking_number"
+        ),
+        "seller": "order__seller__name",
+        "carrier": (
+            "batch__shipper__name"
+        ),
+        "receiver": (
+            "order__receiver_name"
+        ),
+        "phone": (
+            "order__receiver_phone"
+        ),
+        "location": (
+            "order__receiver_address"
+        ),
+        "original_cod": "original_cod",
+        "status": "cod_status",
+        "net_cod": "net_cod",
+        "paid_date": "paid_at",
+        "reference": (
+            "carrier_reference"
+        ),
+        "settled": "seller_settled",
+        "updated": "updated_at",
     }
 
-    document.querySelectorAll(".js-open-status").forEach((button) => {
-      button.addEventListener("click", function () {
-        openModal(button);
-      });
-    });
+    if sort not in sort_map:
+        sort = "sent_date"
 
+    rows = (
+        ProvinceCODItem.objects
+        .select_related(
+            "batch",
+            "batch__shipper",
+            "order",
+            "order__seller",
+            "received_confirmed_by",
+            "paid_confirmed_by",
+            "returned_confirmed_by",
+            "seller_settled_by",
+        )
+        .exclude(
+            batch__status=(
+                ProvinceCODBatch
+                .STATUS_CANCELLED
+            )
+        )
+        .annotate(
+            activity_date=Coalesce(
+                "sent_at",
+                "batch__created_at",
+            ),
+        )
+    )
 
-    modalForm?.addEventListener("submit", function (event) {
-      if (modalAction.value === "correct_status" && !correctionReason.value.trim()) {
-        event.preventDefault();
-        alert("Please enter the internal correction reason.");
-        correctionReason.focus();
-      }
-    });
-    modalStatus?.addEventListener("change", refreshModalFields);
-    document.getElementById("statusModalClose")?.addEventListener("click", closeModal);
-    document.getElementById("statusModalCancel")?.addEventListener("click", closeModal);
+    if date_from:
+        rows = rows.filter(
+            activity_date__date__gte=(
+                date_from
+            )
+        )
 
-    modal?.addEventListener("click", function (event) {
-      if (event.target === modal) {
-        closeModal();
-      }
-    });
+    if date_to:
+        rows = rows.filter(
+            activity_date__date__lte=(
+                date_to
+            )
+        )
 
-    const trackingModal = document.getElementById("trackingModal");
-    const trackingModalItemId = document.getElementById("trackingModalItemId");
-    const trackingModalOrder = document.getElementById("trackingModalOrder");
-    const trackingNumberInput = document.getElementById("trackingNumberInput");
+    if status == "PENDING":
+        rows = rows.filter(
+            cod_status=""
+        )
 
-    function openTrackingModal(button) {
-      trackingModalItemId.value = button.dataset.itemId || "";
-      trackingModalOrder.textContent = "Order tracking: " + (button.dataset.orderTracking || "-");
-      trackingNumberInput.value = button.dataset.carrierTracking || "";
-      trackingModal.classList.add("open");
-      trackingModal.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-      setTimeout(() => trackingNumberInput.focus(), 50);
+    elif status:
+        rows = rows.filter(
+            cod_status=status
+        )
+
+    else:
+        rows = rows.exclude(
+            cod_status=(
+                ProvinceCODItem
+                .STATUS_RETURN_RECEIVED
+            )
+        )
+
+    if settlement == "SETTLED":
+        rows = rows.filter(
+            seller_settled=True
+        )
+
+    elif settlement == "UNSETTLED":
+        rows = rows.filter(
+            seller_settled=False
+        )
+
+    if seller_id.isdigit():
+        rows = rows.filter(
+            order__seller_id=(
+                int(seller_id)
+            )
+        )
+
+    if shipper_id.isdigit():
+        rows = rows.filter(
+            batch__shipper_id=(
+                int(shipper_id)
+            )
+        )
+
+    if q:
+        rows = rows.filter(
+            Q(
+                order__tracking_no__icontains=q
+            )
+            | Q(
+                tracking_number__icontains=q
+            )
+            | Q(
+                order__receiver_name__icontains=q
+            )
+            | Q(
+                order__receiver_phone__icontains=q
+            )
+            | Q(
+                order__receiver_address__icontains=q
+            )
+            | Q(
+                order__seller__name__icontains=q
+            )
+            | Q(
+                batch__shipper__name__icontains=q
+            )
+            | Q(
+                carrier_reference__icontains=q
+            )
+            | Q(
+                received_person__icontains=q
+            )
+            | Q(
+                return_reason__icontains=q
+            )
+            | Q(note__icontains=q)
+        )
+
+    order_field = sort_map[sort]
+
+    if direction == "desc":
+        order_field = (
+            f"-{order_field}"
+        )
+
+    rows = list(
+        rows.order_by(
+            order_field,
+            "-id",
+        )
+    )
+
+    for item in rows:
+        item.display_status = (
+            item.cod_status
+            or "PENDING"
+        )
+        item.display_reason = _clean_reason_text(item)
+
+    summary = {
+        "count": len(rows),
+        "original_cod": sum(
+            (
+                money(item.original_cod)
+                for item in rows
+            ),
+            ZERO,
+        ),
+        "net_cod": sum(
+            (
+                money(item.net_cod)
+                for item in rows
+                if (
+                    item.cod_status
+                    == ProvinceCODItem
+                    .STATUS_PAID
+                )
+            ),
+            ZERO,
+        ),
+        "pending": sum(
+            1
+            for item in rows
+            if not item.cod_status
+        ),
+        "sent": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_SENT
+            )
+        ),
+        "at_station": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_AT_STATION
+            )
+        ),
+        "out_for_delivery": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_OUT_FOR_DELIVERY
+            )
+        ),
+        "delivery_issue": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_DELIVERY_ISSUE
+            )
+        ),
+        "returning": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_RETURNING
+            )
+        ),
+        "return_received": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_RETURN_RECEIVED
+            )
+        ),
+        "received": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_RECEIVED
+            )
+        ),
+        "paid": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_PAID
+            )
+        ),
+        "returned": sum(
+            1
+            for item in rows
+            if (
+                item.cod_status
+                == ProvinceCODItem
+                .STATUS_RETURNED
+            )
+        ),
+        "settled": sum(
+            1
+            for item in rows
+            if item.seller_settled
+        ),
     }
 
-    function closeTrackingModal() {
-      trackingModal.classList.remove("open");
-      trackingModal.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
-    }
+    current_params = request.GET.copy()
 
-    document.querySelectorAll(".js-open-tracking").forEach((button) => {
-      button.addEventListener("click", function () {
-        openTrackingModal(button);
-      });
-    });
+    if "settlement" not in current_params:
+        current_params[
+            "settlement"
+        ] = "UNSETTLED"
 
-    document.getElementById("trackingModalClose")?.addEventListener("click", closeTrackingModal);
-    document.getElementById("trackingModalCancel")?.addEventListener("click", closeTrackingModal);
+    sort_urls = {}
 
-    trackingModal?.addEventListener("click", function (event) {
-      if (event.target === trackingModal) {
-        closeTrackingModal();
-      }
-    });
+    for key in sort_map:
+        params = current_params.copy()
+        next_direction = "asc"
 
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && modal.classList.contains("open")) {
-        closeModal();
-      }
-      if (event.key === "Escape" && trackingModal.classList.contains("open")) {
-        closeTrackingModal();
-      }
-    });
-  })();
-</script>
+        if (
+            sort == key
+            and direction == "asc"
+        ):
+            next_direction = "desc"
 
-{% endblock %}
+        params["sort"] = key
+        params["direction"] = (
+            next_direction
+        )
+        sort_urls[key] = (
+            f"?{params.urlencode()}"
+        )
+
+    seller_ids = (
+        ProvinceCODItem.objects
+        .exclude(
+            batch__status=(
+                ProvinceCODBatch
+                .STATUS_CANCELLED
+            )
+        )
+        .exclude(
+            order__seller_id__isnull=True
+        )
+        .values_list(
+            "order__seller_id",
+            flat=True,
+        )
+        .distinct()
+    )
+
+    sellers = (
+        Seller.objects
+        .filter(pk__in=seller_ids)
+        .order_by("name")
+    )
+
+    return render(
+        request,
+        "provincecod/report.html",
+        {
+            "rows": rows,
+            "summary": summary,
+            "date_from": date_from,
+            "date_to": date_to,
+            "status": status,
+            "settlement": settlement,
+            "seller_id": seller_id,
+            "shipper_id": shipper_id,
+            "q": q,
+            "sort": sort,
+            "direction": direction,
+            "sort_urls": sort_urls,
+            "current_query": (
+                current_params.urlencode()
+            ),
+            "sellers": sellers,
+            "shippers": _active_carriers(),
+            "today": (
+                timezone.localdate()
+                .isoformat()
+            ),
+            "call_reason_choices": (
+                CALL_REASON_CHOICES
+            ),
+            "confirmation_methods": (
+                ProvinceCODItem
+                .CONFIRMATION_METHOD_CHOICES
+            ),
+        },
+    )

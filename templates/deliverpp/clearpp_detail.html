@@ -36,6 +36,13 @@
         </span>
       </div>
 
+      <button class="btn btn-scan-inbound"
+              type="button"
+              id="btnScanInbound"
+              {% if stage1_done or stage2_done or batch.status == "CANCELLED" %}disabled{% endif %}>
+        Scan Inbound
+      </button>
+
       <a class="btn btn-ghost" target="_blank" href="{% url 'deliverpp_print' batch.id %}">🖨 Print</a>
 
       <button class="btn btn-mini btn-tickall"
@@ -129,6 +136,7 @@
           <th class="th-center" style="width:90px;">COD</th>
           <th class="th-center" style="width:220px;">Reason</th>
           <th class="th-center no-print" style="width:120px;">Save</th>
+          <th class="th-center scan-col" style="width:70px;">SCAN</th>
           <th class="th-center tick-col tick-head" style="width:140px;">TICK</th>
         </tr>
       </thead>
@@ -180,6 +188,12 @@
                 </button>
               </td>
 
+              <td class="td-center scan-col">
+                <span class="scan-x {% if not it.inbound_scanned %}is-hidden{% endif %}"
+                      id="scanMark_{{ it.id }}"
+                      title="Scanned inbound helper mark">✕</span>
+              </td>
+
               <td class="td-center tick-col">
                 <input type="checkbox"
                        class="tick tick-one"
@@ -189,7 +203,7 @@
             </tr>
           {% endwith %}
         {% empty %}
-          <tr><td colspan="12" style="padding:14px;opacity:.7;text-align:center;">No items.</td></tr>
+          <tr><td colspan="13" style="padding:14px;opacity:.7;text-align:center;">No items.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -306,6 +320,90 @@
       </button>
     </div>
   </form>
+
+  <!-- ========= Scan Inbound Helper Modal ========= -->
+  <div class="scan-modal" id="scanInboundModal" aria-hidden="true">
+    <div class="scan-modal-backdrop" data-scan-close="1"></div>
+    <div class="scan-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="scanInboundTitle">
+      <div class="scan-modal-head">
+        <div>
+          <div class="scan-modal-title" id="scanInboundTitle">Scan Inbound</div>
+          <div class="scan-modal-sub">
+            Batch <b>{{ batch.code }}</b> • Shipper <b>{% if batch.shipper %}{{ batch.shipper.name }}{% else %}-{% endif %}</b>
+          </div>
+        </div>
+        <button type="button" class="scan-close" id="scanInboundClose" aria-label="Close">×</button>
+      </div>
+
+      <div class="scan-assign-card">
+        <div class="scan-assign-head">
+          <div>
+            <h3>Scan Codes</h3>
+            <p>Scan many tracking numbers first, then click Add Codes.</p>
+          </div>
+          <button type="button" class="scan-clear-all" id="scanClearPending">Clear All</button>
+        </div>
+
+        <label class="scan-assign-label">Scan tracking numbers</label>
+
+        <textarea
+          class="scan-assign-textarea"
+          id="scanInboundInput"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          placeholder="Example:
+DS00001234
+DS00001235
+DS00001236"></textarea>
+
+        <div class="scan-assign-meta">
+          <span>Total scanned: <strong id="scanPendingCount">0</strong></span>
+        </div>
+
+        <button type="button" class="scan-add-codes" id="scanInboundAdd" disabled>
+          + Add Codes
+        </button>
+
+        <div class="scan-message" id="scanInboundMessage">Scan many items, then click Add Codes.</div>
+      </div>
+
+      <div class="scan-preview-head">
+        <div>
+          <b>Inbound Preview</b>
+          <small>Only tracking numbers from this exact PP batch are accepted.</small>
+        </div>
+        <span class="scan-preview-badge"><b id="scanPreviewCount">0</b> Shipment</span>
+      </div>
+
+      <div class="scan-preview-wrap">
+        <table class="scan-preview-table">
+          <thead>
+            <tr>
+              <th>Tracking</th>
+              <th>Shop</th>
+              <th>Location</th>
+              <th>Phone Number</th>
+              <th>COD</th>
+              <th>Reason</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="scanPreviewBody">
+            <tr class="scan-preview-empty"><td colspan="7">No items scanned yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="scan-modal-foot">
+        <div class="scan-warning">Scan only marks the parcel with a red ✕. It does not tick/untick or change order status.</div>
+        <div class="scan-foot-actions">
+          <button type="button" class="btn btn-ghost" id="scanInboundCancel">Close</button>
+          <button type="button" class="btn btn-primary" id="scanInboundConfirm" disabled>Confirm Scanned Items</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -677,6 +775,274 @@
       if(id) rowSave(id);
     });
   });
+
+  // =====================================================
+  // Scan Inbound helper
+  // Same flow as Assign PP: scan many -> Add Codes -> preview -> confirm
+  // =====================================================
+  const btnScanInbound = document.getElementById("btnScanInbound");
+  const scanModal = document.getElementById("scanInboundModal");
+  const scanClose = document.getElementById("scanInboundClose");
+  const scanCancel = document.getElementById("scanInboundCancel");
+  const scanInput = document.getElementById("scanInboundInput");
+  const scanAdd = document.getElementById("scanInboundAdd");
+  const scanClearPending = document.getElementById("scanClearPending");
+  const scanPendingCount = document.getElementById("scanPendingCount");
+  const scanMessage = document.getElementById("scanInboundMessage");
+  const scanPreviewBody = document.getElementById("scanPreviewBody");
+  const scanPreviewCount = document.getElementById("scanPreviewCount");
+  const scanConfirm = document.getElementById("scanInboundConfirm");
+  const scanLookupUrl = "{{ scan_inbound_lookup_url }}";
+  const scanConfirmUrl = "{{ scan_inbound_confirm_url }}";
+
+  const scanRows = new Map();
+  let scanBusy = false;
+
+  function setScanMessage(text, kind){
+    if(!scanMessage) return;
+    scanMessage.textContent = text || "";
+    scanMessage.classList.remove("ok", "bad", "warn");
+    if(kind) scanMessage.classList.add(kind);
+  }
+
+  function getTypedScanCodes(){
+    if(!scanInput) return [];
+
+    const seen = new Set();
+    const out = [];
+
+    String(scanInput.value || "")
+      .split(/\r?\n/)
+      .map(x => x.trim())
+      .filter(Boolean)
+      .forEach(code => {
+        if(!seen.has(code)){
+          seen.add(code);
+          out.push(code);
+        }
+      });
+
+    return out;
+  }
+
+  function refreshPendingCount(){
+    const count = getTypedScanCodes().length;
+    if(scanPendingCount) scanPendingCount.textContent = count;
+    if(scanAdd) scanAdd.disabled = scanBusy || count === 0;
+  }
+
+  function clearPendingScans(){
+    if(scanInput) scanInput.value = "";
+    refreshPendingCount();
+  }
+
+  function openScanModal(){
+    if(!scanModal) return;
+    scanModal.classList.add("open");
+    scanModal.setAttribute("aria-hidden", "false");
+    setTimeout(()=>scanInput?.focus(), 40);
+  }
+
+  function closeScanModal(){
+    if(!scanModal) return;
+    scanModal.classList.remove("open");
+    scanModal.setAttribute("aria-hidden", "true");
+  }
+
+  function renderScanPreview(){
+    if(!scanPreviewBody) return;
+    scanPreviewBody.innerHTML = "";
+
+    const rows = Array.from(scanRows.values());
+    if(scanPreviewCount) scanPreviewCount.textContent = rows.length;
+    if(scanConfirm) scanConfirm.disabled = rows.length === 0 || scanBusy;
+
+    if(!rows.length){
+      const tr = document.createElement("tr");
+      tr.className = "scan-preview-empty";
+      tr.innerHTML = '<td colspan="7">No shipment codes added yet.</td>';
+      scanPreviewBody.appendChild(tr);
+      return;
+    }
+
+    rows.forEach(item=>{
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-preview-item", item.item_id);
+
+      const values = [
+        item.tracking,
+        item.shop,
+        item.location,
+        item.phone,
+        "$" + Number(item.cod || 0).toFixed(2)
+      ];
+
+      values.forEach(v=>{
+        const td = document.createElement("td");
+        td.textContent = v || "-";
+        tr.appendChild(td);
+      });
+
+      const reasonTd = document.createElement("td");
+      const reason = document.createElement("input");
+      reason.type = "text";
+      reason.className = "input scan-reason";
+      reason.placeholder = "Reason...";
+      reason.value = item.reason || "";
+      reason.addEventListener("input", ()=>{
+        const row = scanRows.get(String(item.item_id));
+        if(row) row.reason = reason.value;
+      });
+      reasonTd.appendChild(reason);
+      tr.appendChild(reasonTd);
+
+      const removeTd = document.createElement("td");
+      removeTd.className = "td-center";
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "scan-remove";
+      remove.textContent = "🗑";
+      remove.title = "Remove";
+      remove.addEventListener("click", ()=>{
+        scanRows.delete(String(item.item_id));
+        renderScanPreview();
+        scanInput?.focus();
+      });
+
+      removeTd.appendChild(remove);
+      tr.appendChild(removeTd);
+      scanPreviewBody.appendChild(tr);
+    });
+  }
+
+  async function addPendingScans(){
+    const codes = getTypedScanCodes();
+    if(scanBusy || !codes.length) return;
+
+    scanBusy = true;
+    refreshPendingCount();
+    if(scanInput) scanInput.disabled = true;
+    if(scanAdd) scanAdd.disabled = true;
+
+    let added = 0;
+    let rejected = 0;
+    const errors = [];
+
+    for(let i = 0; i < codes.length; i++){
+      const code = codes[i];
+      setScanMessage("Checking " + (i + 1) + "/" + codes.length + ": " + code, "warn");
+
+      try{
+        const j = await postJSON(scanLookupUrl, {tracking: code});
+        const item = j.item;
+        const key = String(item.item_id);
+
+        if(scanRows.has(key)){
+          rejected += 1;
+        }else{
+          scanRows.set(key, item);
+          added += 1;
+        }
+      }catch(err){
+        rejected += 1;
+        errors.push(code + ": " + (err.message || String(err)));
+      }
+    }
+
+    clearPendingScans();
+    scanBusy = false;
+    renderScanPreview();
+
+    if(scanInput){
+      scanInput.disabled = false;
+      scanInput.focus();
+    }
+
+    refreshPendingCount();
+
+    if(errors.length){
+      setScanMessage("Added " + added + ". Rejected " + rejected + ". " + errors[0], "bad");
+    }else if(rejected){
+      setScanMessage("Added " + added + ". Skipped " + rejected + " duplicate/already scanned item(s).", "warn");
+    }else{
+      setScanMessage("Added " + added + " shipment(s) to preview.", "ok");
+    }
+  }
+
+  if(btnScanInbound) btnScanInbound.addEventListener("click", openScanModal);
+  if(scanClose) scanClose.addEventListener("click", closeScanModal);
+  if(scanCancel) scanCancel.addEventListener("click", closeScanModal);
+
+  if(scanModal){
+    scanModal.querySelectorAll("[data-scan-close='1']").forEach(
+      el => el.addEventListener("click", closeScanModal)
+    );
+  }
+
+  if(scanInput){
+    scanInput.addEventListener("input", refreshPendingCount);
+    scanInput.addEventListener("keydown", e=>{
+      if(e.key === "Enter"){
+        setTimeout(refreshPendingCount, 0);
+      }
+    });
+  }
+
+  if(scanAdd) scanAdd.addEventListener("click", addPendingScans);
+
+  if(scanClearPending){
+    scanClearPending.addEventListener("click", ()=>{
+      clearPendingScans();
+      setScanMessage("Scanned code list cleared.", "warn");
+      scanInput?.focus();
+    });
+  }
+
+  if(scanConfirm){
+    scanConfirm.addEventListener("click", async ()=>{
+      if(scanBusy || !scanRows.size) return;
+
+      const rows = Array.from(scanRows.values()).map(x=>({
+        item_id: x.item_id,
+        reason: x.reason || "",
+      }));
+
+      scanBusy = true;
+      scanConfirm.disabled = true;
+      setScanMessage("Confirming scanned items...", "warn");
+
+      try{
+        const j = await postJSON(scanConfirmUrl, {items: rows});
+
+        rows.forEach(x=>{
+          const mark = document.getElementById("scanMark_" + x.item_id);
+          if(mark) mark.classList.remove("is-hidden");
+
+          const preview = scanRows.get(String(x.item_id));
+          if(preview){
+            const reasonInput = document.getElementById("reason_" + x.item_id);
+            if(reasonInput) reasonInput.value = preview.reason || "";
+          }
+        });
+
+        setScanMessage("Confirmed " + j.confirmed + " inbound item(s).", "ok");
+        scanRows.clear();
+        clearPendingScans();
+        renderScanPreview();
+        setTimeout(closeScanModal, 450);
+      }catch(err){
+        setScanMessage(err.message || String(err), "bad");
+      }finally{
+        scanBusy = false;
+        refreshPendingCount();
+        renderScanPreview();
+      }
+    });
+  }
+
+  refreshPendingCount();
+  renderScanPreview();
 
   refreshSummary();
 })();
@@ -1150,6 +1516,230 @@
     }
   }
 
+  .btn-scan-inbound{
+    padding:8px 11px;
+    border-radius:10px;
+    border:1px solid #b91c1c;
+    background:#fff;
+    color:#b91c1c;
+    font-size:12px;
+    font-weight:900;
+  }
+
+  .scan-col{ width:70px; }
+  .scan-x{
+    color:#dc2626;
+    font-size:23px;
+    font-weight:1000;
+    line-height:1;
+  }
+  .scan-x.is-hidden{ visibility:hidden; }
+
+  .scan-modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    z-index:9999;
+  }
+  .scan-modal.open{ display:block; }
+  .scan-modal-backdrop{
+    position:absolute;
+    inset:0;
+    background:rgba(15,23,42,.55);
+  }
+  .scan-modal-dialog{
+    position:relative;
+    width:min(1180px, calc(100vw - 28px));
+    max-height:calc(100vh - 40px);
+    overflow:auto;
+    margin:20px auto;
+    border-radius:16px;
+    background:#fff;
+    box-shadow:0 20px 70px rgba(0,0,0,.25);
+    padding:16px;
+  }
+  .scan-modal-head,
+  .scan-preview-head,
+  .scan-modal-foot,
+  .scan-foot-actions{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .scan-modal-title{ font-size:20px; font-weight:1000; }
+  .scan-modal-sub{ margin-top:3px; font-size:12px; opacity:.72; }
+  .scan-close{
+    border:0;
+    background:transparent;
+    font-size:30px;
+    line-height:1;
+    cursor:pointer;
+  }
+
+  .scan-assign-card{
+    background:#fff;
+    border:1px solid #e7edf3;
+    border-radius:18px;
+    padding:14px;
+    margin-bottom:12px;
+    box-shadow:0 8px 20px rgba(15,23,42,.05);
+  }
+
+  .scan-assign-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:10px;
+  }
+
+  .scan-assign-head h3{
+    margin:0;
+    font-size:16px;
+    font-weight:900;
+    color:#172033;
+  }
+
+  .scan-assign-head p{
+    margin:3px 0 0;
+    font-size:11px;
+    color:#66758b;
+  }
+
+  .scan-clear-all{
+    min-height:34px;
+    padding:0 16px;
+    border-radius:13px;
+    border:1px solid #fecdd3;
+    background:#fff1f2;
+    color:#e11d48;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .scan-assign-label{
+    display:block;
+    margin-bottom:7px;
+    font-size:12px;
+    font-weight:800;
+    color:#172033;
+  }
+
+  .scan-assign-textarea{
+    width:100%;
+    min-height:120px;
+    resize:vertical;
+    border-radius:14px;
+    border:1px solid #d8e0ea;
+    background:#f7f9fc;
+    padding:12px 13px;
+    font-size:13px;
+    line-height:1.45;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    color:#334155;
+    outline:none;
+    margin-bottom:8px;
+  }
+
+  .scan-assign-textarea:focus{
+    border-color:#22a553;
+    box-shadow:0 0 0 4px rgba(34,165,83,.12);
+    background:#fff;
+  }
+
+  .scan-assign-meta{
+    display:flex;
+    justify-content:flex-end;
+    margin:0 0 8px;
+    font-size:12px;
+    font-weight:800;
+    color:#334155;
+  }
+
+  .scan-assign-meta strong{
+    color:#149145;
+    font-size:15px;
+  }
+
+  .scan-add-codes{
+    width:100%;
+    min-height:40px;
+    border:0;
+    border-radius:13px;
+    background:#19a94a;
+    color:#fff;
+    font-size:13px;
+    font-weight:900;
+    cursor:pointer;
+    box-shadow:0 8px 16px rgba(25,169,74,.18);
+  }
+
+  .scan-add-codes:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+    box-shadow:none;
+  }
+
+  .scan-preview-head > div{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .scan-preview-head small{
+    color:#66758b;
+    font-size:11px;
+    font-weight:600;
+  }
+
+  .scan-preview-badge{
+    white-space:nowrap;
+    padding:6px 11px;
+    border-radius:999px;
+    background:#eafbf0;
+    border:1px solid #bef0cd;
+    color:#149145;
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .scan-entry{ margin-top:14px; }
+  .scan-input{
+    width:100%;
+    min-height:48px;
+    font-size:18px;
+    font-family:ui-monospace,Consolas,monospace;
+    font-weight:900;
+  }
+  .scan-message{ min-height:20px; margin-top:6px; font-size:13px; font-weight:800; }
+  .scan-message.ok{ color:#166534; }
+  .scan-message.bad{ color:#b91c1c; }
+  .scan-message.warn{ color:#92400e; }
+  .scan-preview-head{ margin-top:14px; }
+  .scan-preview-wrap{ margin-top:8px; overflow:auto; border:1px solid #e5e7eb; border-radius:12px; }
+  .scan-preview-table{ width:100%; border-collapse:collapse; min-width:980px; }
+  .scan-preview-table th,
+  .scan-preview-table td{ padding:8px; border-bottom:1px solid #e5e7eb; font-size:12px; vertical-align:middle; }
+  .scan-preview-table th{ background:#f8fafc; text-align:left; font-weight:900; }
+  .scan-preview-empty td{ text-align:center; opacity:.6; padding:22px; }
+  .scan-reason{ min-width:180px; }
+  .scan-remove{
+    border:0;
+    background:transparent;
+    color:#b91c1c;
+    cursor:pointer;
+    font-weight:800;
+  }
+  .scan-modal-foot{ margin-top:14px; align-items:flex-end; }
+  .scan-warning{ max-width:650px; font-size:12px; opacity:.7; }
+
+  @media (max-width: 700px){
+    .scan-modal-dialog{ width:calc(100vw - 16px); margin:8px auto; max-height:calc(100vh - 16px); }
+    .scan-modal-foot{ align-items:stretch; flex-direction:column; }
+    .scan-foot-actions{ justify-content:flex-end; }
+  }
+
   @media print{
     .no-print{
       display:none !important;
@@ -1166,5 +1756,11 @@
       padding:7px;
     }
   }
+
+  .scan-entry-row{display:flex;gap:8px;align-items:center;}
+  .scan-entry-row .scan-input{flex:1;}
+  .scan-entry-meta{display:flex;justify-content:space-between;align-items:center;margin-top:7px;font-size:13px;font-weight:800;}
+  .scan-clear-pending{border:0;background:transparent;color:#64748b;cursor:pointer;font-weight:800;padding:2px 4px;}
+  .scan-clear-pending:hover{text-decoration:underline;}
 </style>
 {% endblock %}

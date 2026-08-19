@@ -1555,8 +1555,28 @@ def pp_delivery_print(request, batch_id: int):
                 "cod": getattr(lb, "cod_amount", 0) or 0,
             })
 
+    # Cashier helper only: expected COD from parcels that did NOT scan back inbound.
+    # This does not change official COD, Clear COD, tick state, or order status.
+    cashier_helper_cod = Decimal("0.00")
+    cashier_helper_count = 0
+    inbound_scan_count = 0
+
+    for it in items:
+        if getattr(it, "inbound_scanned", False):
+            inbound_scan_count += 1
+            continue
+
+        cashier_helper_count += 1
+        try:
+            cashier_helper_cod += Decimal(str(getattr(it.order, "cod", 0) or 0))
+        except Exception:
+            pass
+
     return render(request, "deliverpp/print_list.html", {
         "batch": batch,
         "items": items,
         "return_blocks": return_blocks,
+        "cashier_helper_cod": cashier_helper_cod.quantize(Decimal("0.00")),
+        "cashier_helper_count": cashier_helper_count,
+        "inbound_scan_count": inbound_scan_count,
     })

@@ -109,6 +109,17 @@ class PPDeliveryItem(models.Model):
 
     tick_locked = models.BooleanField(default=False)
 
+    # Clear PP helper scan only. This does NOT change order status or tick state.
+    inbound_scanned = models.BooleanField(default=False, db_index=True)
+    inbound_scanned_at = models.DateTimeField(null=True, blank=True)
+    inbound_scanned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pp_inbound_scans",
+    )
+
     cod_snapshot = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
 
     reason = models.CharField(max_length=255, blank=True, default="")

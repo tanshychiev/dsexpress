@@ -796,9 +796,233 @@ def clearpp_detail(request: HttpRequest, batch_id: int) -> HttpResponse:
         "state_color": state_color,
         "toggle_tick_url": reverse("clearpp_toggle_tick", args=[batch.id]),
         "set_tick_many_url": reverse("clearpp_set_tick_many", args=[batch.id]),
+        "scan_inbound_lookup_url": reverse("clearpp_scan_inbound_lookup", args=[batch.id]),
+        "scan_inbound_confirm_url": reverse("clearpp_scan_inbound_confirm", args=[batch.id]),
         "clear_delivery_url": reverse("clearpp_clear_delivery", args=[batch.id]),
         "undo_clear_url": reverse("clearpp_undo_clear", args=[batch.id]),
         "cancel_url": reverse("clearpp_cancel", args=[batch.id]),
+    })
+
+
+# =========================================================
+# 3B) AJAX: SCAN INBOUND HELPER
+# IMPORTANT: scan is ONLY a helper mark. It does NOT change
+# order.status, PP ticked, clear_delivery, or COD settlement.
+# =========================================================
+@login_required
+def clearpp_scan_inbound_lookup(request: HttpRequest, batch_id: int) -> JsonResponse:
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "POST only"}, status=405)
+
+    batch = get_object_or_404(PPDeliveryBatch, id=batch_id)
+
+    if batch.status == PPDeliveryBatch.STATUS_CANCELLED:
+        return JsonResponse({"ok": False, "error": "Batch is CANCELLED."}, status=400)
+    if _stage1_done(batch):
+        return JsonResponse({"ok": False, "error": "Scan is locked after Clear Delivery."}, status=400)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = {}
+
+    tracking = str(payload.get("tracking") or "").strip()
+    if not tracking:
+        return JsonResponse({"ok": False, "error": "Scan a tracking number."}, status=400)
+
+    # STRICT RULE: only find a NORMAL item inside THIS exact batch.
+    # A tracking number from another shipper/batch is never accepted here.
+    it = (
+        PPDeliveryItem.objects
+        .filter(
+            batch=batch,
+            source_type=PPDeliveryItem.SOURCE_NORMAL,
+            order__tracking_no__iexact=tracking,
+        )
+        .select_related("order", "order__seller")
+        .first()
+    )
+
+    if not it:
+        # Give a clearer message when the code exists in another PP batch.
+        other = (
+            PPDeliveryItem.objects
+            .filter(
+                source_type=PPDeliveryItem.SOURCE_NORMAL,
+                order__tracking_no__iexact=tracking,
+            )
+            .exclude(batch=batch)
+            .select_related("batch", "batch__shipper")
+            .first()
+        )
+        if other:
+            other_shipper = getattr(getattr(other.batch, "shipper", None), "name", "") or "another shipper"
+            return JsonResponse({
+                "ok": False,
+                "error": f"Not in this batch. Tracking belongs to {other.batch.code} / {other_shipper}.",
+            }, status=400)
+
+        return JsonResponse({"ok": False, "error": "Tracking not found in this PP batch."}, status=404)
+
+    if it.inbound_scanned:
+        return JsonResponse({
+            "ok": False,
+            "already_scanned": True,
+            "error": "Already confirmed as scanned inbound.",
+        }, status=409)
+
+    o = it.order
+    seller = getattr(o, "seller", None)
+    shop = "-"
+    if seller:
+        shop = (
+            getattr(seller, "seller_name", "")
+            or getattr(seller, "name", "")
+            or "-"
+        )
+
+    location = (
+        getattr(o, "receiver_address", "")
+        or getattr(o, "address", "")
+        or "-"
+    )
+    phone = (
+        getattr(o, "receiver_phone", "")
+        or getattr(o, "phone", "")
+        or "-"
+    )
+
+    return JsonResponse({
+        "ok": True,
+        "item": {
+            "item_id": it.id,
+            "tracking": _full_tracking(o),
+            "shop": str(shop),
+            "location": str(location),
+            "phone": str(phone),
+            "cod": str(_pick_cod_for_item(it)),
+            "reason": it.reason or "",
+        },
+        "batch": {
+            "id": batch.id,
+            "code": batch.code,
+            "shipper": getattr(getattr(batch, "shipper", None), "name", "") or "-",
+        },
+    })
+
+
+@login_required
+def clearpp_scan_inbound_confirm(request: HttpRequest, batch_id: int) -> JsonResponse:
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "POST only"}, status=405)
+
+    batch = get_object_or_404(PPDeliveryBatch, id=batch_id)
+
+    if batch.status == PPDeliveryBatch.STATUS_CANCELLED:
+        return JsonResponse({"ok": False, "error": "Batch is CANCELLED."}, status=400)
+    if _stage1_done(batch):
+        return JsonResponse({"ok": False, "error": "Scan is locked after Clear Delivery."}, status=400)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = {}
+
+    rows = payload.get("items") or []
+    if not isinstance(rows, list) or not rows:
+        return JsonResponse({"ok": False, "error": "No scanned items to confirm."}, status=400)
+
+    clean_rows = []
+    seen = set()
+    for row in rows:
+        try:
+            item_id = int(row.get("item_id"))
+        except Exception:
+            continue
+        if item_id in seen:
+            continue
+        seen.add(item_id)
+        clean_rows.append({
+            "item_id": item_id,
+            "reason": str(row.get("reason") or "").strip()[:255],
+        })
+
+    if not clean_rows:
+        return JsonResponse({"ok": False, "error": "No valid scanned items."}, status=400)
+
+    item_ids = [x["item_id"] for x in clean_rows]
+    items = list(
+        PPDeliveryItem.objects
+        .filter(
+            batch=batch,
+            source_type=PPDeliveryItem.SOURCE_NORMAL,
+            id__in=item_ids,
+        )
+        .select_related("order")
+    )
+
+    # Security/data-integrity check: every submitted item MUST belong to this exact batch.
+    found_ids = {it.id for it in items}
+    if found_ids != set(item_ids):
+        return JsonResponse({"ok": False, "error": "One or more scanned items are not in this batch."}, status=400)
+
+    reason_map = {x["item_id"]: x["reason"] for x in clean_rows}
+    now = timezone.now()
+
+    with transaction.atomic():
+        for it in items:
+            old_reason = it.reason or ""
+            new_reason = reason_map.get(it.id, "")
+
+            it.inbound_scanned = True
+            it.inbound_scanned_at = now
+            it.inbound_scanned_by = request.user
+            it.reason = new_reason
+            it.save(update_fields=[
+                "inbound_scanned",
+                "inbound_scanned_at",
+                "inbound_scanned_by",
+                "reason",
+            ])
+
+            # Keep the existing reason behavior in sync with Order.reason.
+            if it.order_id:
+                it.order.reason = new_reason
+                it.order.updated_at = now
+                it.order.updated_by = request.user
+                it.order.save(update_fields=["reason", "updated_at", "updated_by"])
+
+                if old_reason != new_reason:
+                    add_audit_log(
+                        module=AuditLog.MODULE_ORDER,
+                        obj=it.order,
+                        action=AuditLog.ACTION_UPDATE,
+                        user=request.user,
+                        field_name="reason",
+                        old_value=old_reason,
+                        new_value=new_reason,
+                        note=f"Reason saved from Clear PP inbound scan, batch {batch.code}",
+                    )
+
+        add_audit_log(
+            module=AuditLog.MODULE_CLEAR_PP,
+            obj=batch,
+            action=AuditLog.ACTION_UPDATE,
+            user=request.user,
+            note=f"Confirmed {len(items)} inbound scan helper mark(s) for batch {batch.code}",
+        )
+
+    # Return helper figures for UI only. No official COD data is changed.
+    remaining_count = PPDeliveryItem.objects.filter(
+        batch=batch,
+        source_type=PPDeliveryItem.SOURCE_NORMAL,
+        inbound_scanned=False,
+    ).count()
+
+    return JsonResponse({
+        "ok": True,
+        "confirmed": len(items),
+        "remaining_count": remaining_count,
     })
 
 

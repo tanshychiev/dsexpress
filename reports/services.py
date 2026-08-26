@@ -137,11 +137,15 @@ def display_status(order):
 
 def report_money(order):
     """
-    Display-only money values for report.
+    Display-only money values for Delivery Report.
     Do NOT change DB.
 
-    Pending and returned rows show 0.
-    Done/Sent rows show their current values.
+    Rules:
+    - Pending / returned rows show 0.
+    - Normal done rows use Order.cod.
+    - Province COD rows use ProvinceCODItem.original_cod because Order.cod
+      is intentionally cleared after the Province COD batch is sent.
+    - Province COD RETURNED shows COD 0.
     """
     row_type = classify_row(order)
 
@@ -165,6 +169,38 @@ def report_money(order):
     ).quantize(Decimal("0.00"))
 
     cod = safe_decimal(getattr(order, "cod", 0))
+
+    # Province COD keeps the seller's real COD in original_cod.
+    # Import locally so this report service remains safe if the app import
+    # order changes during Django startup.
+    try:
+        from provincecod.models import ProvinceCODItem
+
+        province_cod_item = (
+            ProvinceCODItem.objects
+            .filter(order_id=getattr(order, "pk", None))
+            .order_by("-id")
+            .first()
+        )
+
+        if province_cod_item:
+            cod_status = (
+                getattr(province_cod_item, "cod_status", "") or ""
+            ).upper().strip()
+
+            if cod_status in {
+                ProvinceCODItem.STATUS_SENT,
+                ProvinceCODItem.STATUS_RECEIVED,
+                ProvinceCODItem.STATUS_PAID,
+            }:
+                cod = safe_decimal(province_cod_item.original_cod)
+
+            elif cod_status == ProvinceCODItem.STATUS_RETURNED:
+                cod = Decimal("0.00")
+
+    except (ImportError, AttributeError):
+        # Keep normal Order.cod behavior if Province COD is unavailable.
+        pass
 
     return {
         "cod": cod,

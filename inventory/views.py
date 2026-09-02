@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import uuid
 from datetime import datetime, time
 
 from django.contrib import messages
@@ -21,7 +20,7 @@ from .models import OrderStockItem, StockMovement, StockProduct
 from .services import (
     add_stock_in,
     adjust_stock,
-    confirm_stock as confirm_stock_service,
+    confirm_stock,
     current_available_qty,
     get_seller_inventory_setting,
     last_confirmed,
@@ -192,60 +191,55 @@ def stock_in(request):
         return redirect("portal:dashboard")
 
     selected_seller = get_selected_seller_from_request(request)
+    sellers = Seller.objects.filter(is_active=True).order_by("name")
 
     if request.method == "POST":
         seller = selected_seller
         note = (request.POST.get("note") or "").strip()
-        items_raw = (request.POST.get("items_json") or "").strip()
+        items_json = (request.POST.get("items_json") or "").strip()
 
         if not seller:
             messages.error(request, "Please choose seller/shop.")
             return redirect("inventory:stock_in")
 
         try:
-            items = json.loads(items_raw or "[]")
+            items_data = json.loads(items_json) if items_json else []
         except Exception:
-            items = []
+            items_data = []
 
-        if not isinstance(items, list) or not items:
-            messages.error(request, "Please add at least one product to this batch.")
-            return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+        if not isinstance(items_data, list):
+            items_data = []
 
         clean_items = []
-        for index, item in enumerate(items):
-            if not isinstance(item, dict):
+        for raw in items_data:
+            if not isinstance(raw, dict):
                 continue
 
-            product_id = str(item.get("product_id") or "").strip()
-            new_product_name = str(item.get("new_product_name") or "").strip()
-            product_type = str(item.get("product_type") or "").strip()
-            location = str(item.get("location") or "").strip()
+            product_id = str(raw.get("product_id") or "").strip()
+            new_product_name = str(raw.get("new_product_name") or "").strip()
+            product_type = str(raw.get("product_type") or "").strip()
+            location = str(raw.get("location") or "").strip()
 
             try:
-                qty = int(item.get("qty") or 0)
+                qty = int(raw.get("qty") or 0)
             except Exception:
                 qty = 0
 
             if qty <= 0:
-                messages.error(request, f"Row {index + 1}: Qty must be greater than 0.")
-                return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+                continue
 
             product = None
             if product_id.isdigit():
-                product = (
-                    StockProduct.objects
-                    .filter(id=int(product_id), seller=seller, is_active=True)
-                    .first()
-                )
-                if not product:
-                    messages.error(request, f"Row {index + 1}: Product is invalid for this seller.")
-                    return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
-            elif not new_product_name:
-                messages.error(request, f"Row {index + 1}: Choose an existing product or enter a new product name.")
-                return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+                product = StockProduct.objects.filter(
+                    id=int(product_id),
+                    seller=seller,
+                    is_active=True,
+                ).first()
+
+            if not product and not new_product_name:
+                continue
 
             clean_items.append({
-                "row_index": index,
                 "product": product,
                 "new_product_name": new_product_name,
                 "product_type": product_type,
@@ -254,68 +248,64 @@ def stock_in(request):
             })
 
         if not clean_items:
-            messages.error(request, "Please add at least one valid product to this batch.")
-            return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+            messages.error(request, "Add at least one product with quantity greater than 0.")
+            return redirect("inventory:stock_in")
 
         now = timezone.localtime()
-        batch_ref = f"RCV-{now:%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:5].upper()}"
-        batch_marker = f"[BATCH:{batch_ref}]"
-        movement_note = f"{batch_marker} {note or 'Batch stock in'}".strip()
+        batch_ref = f"RCV-{now:%Y%m%d-%H%M%S}-{request.user.id}"
+        common_note = f"[BATCH:{batch_ref}] {note or 'Batch stock in'}"
 
         with transaction.atomic():
             for item in clean_items:
                 product = item["product"]
-                photo = request.FILES.get(f"photo_{item['row_index']}")
 
-                if product is None:
+                if not product:
                     product = StockProduct.objects.create(
                         seller=seller,
                         name=item["new_product_name"],
                         product_type=item["product_type"],
                         location=item["location"],
-                        photo=photo,
                         created_by=request.user,
                     )
                 else:
-                    changed = False
-                    if photo:
-                        product.photo = photo
-                        changed = True
-                    if item["product_type"]:
+                    changed_fields = []
+                    if item["product_type"] and item["product_type"] != product.product_type:
                         product.product_type = item["product_type"]
-                        changed = True
-                    if item["location"]:
+                        changed_fields.append("product_type")
+                    if item["location"] and item["location"] != product.location:
                         product.location = item["location"]
-                        changed = True
-                    if changed:
-                        product.save()
+                        changed_fields.append("location")
+                    if changed_fields:
+                        product.save(update_fields=changed_fields)
 
                 add_stock_in(
                     product=product,
                     qty=item["qty"],
                     actor=request.user,
-                    note=movement_note,
+                    note=common_note,
                 )
 
-        messages.success(request, f"Batch stock in saved. Receipt: {batch_ref}")
+        messages.success(request, f"Batch stock in saved: {len(clean_items)} item(s).")
         return redirect("inventory:stock_in_receipt", batch_ref=batch_ref)
 
     return render(
         request,
         "inventory/stock_in.html",
         {
+            "sellers": sellers,
             "selected_seller_id": selected_seller.id if selected_seller else "",
-            "selected_seller_display": seller_display(selected_seller),
         },
     )
 
 
 @login_required
-def stock_in_receipt(request, batch_ref):
+def stock_in_receipt(request, batch_ref: str):
     if not staff_only(request):
         return redirect("portal:dashboard")
 
+    batch_ref = (batch_ref or "").strip()
     marker = f"[BATCH:{batch_ref}]"
+
     movements = list(
         StockMovement.objects
         .select_related("seller", "product", "created_by")
@@ -328,36 +318,115 @@ def stock_in_receipt(request, batch_ref):
 
     if not movements:
         messages.error(request, "Receive goods receipt not found.")
-        return redirect("inventory:history")
+        return redirect("inventory:list")
 
     first = movements[0]
-    rows = []
-    total_qty = 0
-
-    for movement in movements:
-        qty = int(movement.qty_delta or 0)
-        total_qty += qty
-        rows.append({
-            "product": movement.product,
-            "qty": qty,
-        })
-
-    raw_note = first.note or ""
-    receipt_note = raw_note.replace(marker, "", 1).strip()
-    if receipt_note == "Batch stock in":
-        receipt_note = ""
+    seller = first.seller
+    total_qty = sum(max(int(m.qty_delta or 0), 0) for m in movements)
+    clean_note = (first.note or "").replace(marker, "", 1).strip()
 
     return render(
         request,
         "inventory/stock_in_receipt.html",
         {
             "batch_ref": batch_ref,
-            "seller": first.seller,
+            "seller": seller,
+            "movements": movements,
+            "total_qty": total_qty,
             "received_at": first.created_at,
             "received_by": first.created_by,
-            "rows": rows,
-            "total_qty": total_qty,
-            "receipt_note": receipt_note,
+            "note": clean_note,
+        },
+    )
+
+
+@login_required
+def stock_in_list(request):
+    """List batch Stock In receipts reconstructed from existing StockMovement rows."""
+    if not staff_only(request):
+        return redirect("portal:dashboard")
+
+    seller_id = (request.GET.get("seller_id") or "").strip()
+    q = (request.GET.get("q") or "").strip()
+    from_date, to_date, start_dt, end_dt = inventory_date_range(request)
+
+    qs = (
+        StockMovement.objects
+        .select_related("seller", "product", "created_by")
+        .filter(
+            movement_type=StockMovement.STOCK_IN,
+            created_at__gte=start_dt,
+            created_at__lte=end_dt,
+            note__contains="[BATCH:",
+        )
+        .order_by("-created_at", "-id")
+    )
+
+    if seller_id.isdigit():
+        qs = qs.filter(seller_id=int(seller_id))
+
+    if q:
+        qs = qs.filter(
+            Q(seller__name__icontains=q)
+            | Q(seller__code__icontains=q)
+            | Q(product__name__icontains=q)
+            | Q(product__sku__icontains=q)
+            | Q(note__icontains=q)
+        )
+
+    batches = {}
+    for movement in qs:
+        note = movement.note or ""
+        start = note.find("[BATCH:")
+        end = note.find("]", start)
+        if start < 0 or end < 0:
+            continue
+
+        batch_ref = note[start + 7:end].strip()
+        if not batch_ref:
+            continue
+
+        row = batches.setdefault(
+            batch_ref,
+            {
+                "batch_ref": batch_ref,
+                "seller": movement.seller,
+                "received_at": movement.created_at,
+                "received_by": movement.created_by,
+                "total_qty": 0,
+                "product_count": 0,
+                "products": [],
+                "note": note[end + 1:].strip(),
+            },
+        )
+
+        qty = max(int(movement.qty_delta or 0), 0)
+        row["total_qty"] += qty
+        row["product_count"] += 1
+        row["products"].append(
+            {
+                "name": movement.product.name if movement.product else "-",
+                "sku": movement.product.sku if movement.product else "",
+                "qty": qty,
+            }
+        )
+
+    rows = list(batches.values())
+    rows.sort(key=lambda x: x["received_at"], reverse=True)
+
+    paginator = Paginator(rows, 30)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "inventory/stock_in_list.html",
+        {
+            "page_obj": page_obj,
+            "sellers": Seller.objects.filter(is_active=True).order_by("name"),
+            "selected_seller_id": seller_id,
+            "q": q,
+            "from_date": from_date.isoformat(),
+            "to_date": to_date.isoformat(),
         },
     )
 
@@ -426,156 +495,52 @@ def adjust_stock_view(request):
 
 @login_required
 def confirm_stock_view(request):
-    """
-    Confirm stock by shop.
-
-    New workflow:
-    - choose seller/shop once
-    - show all active products for that shop
-    - staff can confirm one product row or confirm all rows
-    - if real qty differs from system available qty, service auto creates adjustment
-    """
     if not staff_only(request):
         return redirect("portal:dashboard")
 
     selected_seller = get_selected_seller_from_request(request)
+    selected_product = get_selected_product_from_request(request)
 
     if request.method == "POST":
-        if not selected_seller:
-            messages.error(request, "Please choose seller/shop first.")
+        product = selected_product
+        real_qty_raw = (request.POST.get("real_qty") or "").strip()
+        note = (request.POST.get("note") or "").strip()
+
+        if not product:
+            messages.error(request, "Please choose product.")
             return redirect("inventory:confirm")
 
-        only_product_id = (request.POST.get("only_product_id") or "").strip()
-        product_ids = request.POST.getlist("product_id")
+        try:
+            real_qty = int(real_qty_raw or 0)
+        except Exception:
+            messages.error(request, "Real qty must be a number.")
+            return redirect("inventory:confirm")
 
-        # If user clicked one row Confirm button, only confirm that row.
-        if only_product_id.isdigit():
-            product_ids = [only_product_id]
+        if real_qty < 0:
+            messages.error(request, "Real qty cannot be negative.")
+            return redirect("inventory:confirm")
 
-        confirmed_count = 0
-        adjusted_count = 0
-        skipped_count = 0
-
-        with transaction.atomic():
-            for product_id in product_ids:
-                if not str(product_id).isdigit():
-                    skipped_count += 1
-                    continue
-
-                product = (
-                    StockProduct.objects
-                    .filter(
-                        id=int(product_id),
-                        seller=selected_seller,
-                        is_active=True,
-                    )
-                    .first()
-                )
-
-                if not product:
-                    skipped_count += 1
-                    continue
-
-                real_qty_raw = (
-                    request.POST.get(f"real_qty_{product.id}")
-                    or request.POST.get("real_qty")
-                    or ""
-                ).strip()
-
-                note = (
-                    request.POST.get(f"note_{product.id}")
-                    or request.POST.get("note")
-                    or ""
-                ).strip()
-
-                if real_qty_raw == "":
-                    skipped_count += 1
-                    continue
-
-                try:
-                    real_qty = int(real_qty_raw)
-                except Exception:
-                    skipped_count += 1
-                    continue
-
-                if real_qty < 0:
-                    skipped_count += 1
-                    continue
-
-                before_qty = current_available_qty(product)
-
-                confirm_stock_service(
-                    product=product,
-                    real_qty=real_qty,
-                    actor=request.user,
-                    note=(
-                        note
-                        or (
-                            "Confirm stock by shop page. "
-                            f"System available before: {before_qty}, real count: {real_qty}"
-                        )
-                    ),
-                )
-
-                confirmed_count += 1
-
-                if before_qty != real_qty:
-                    adjusted_count += 1
-
-        if confirmed_count:
-            messages.success(
-                request,
-                (
-                    f"✅ Confirmed {confirmed_count} product(s). "
-                    f"Adjusted {adjusted_count}. Skipped {skipped_count}."
-                ),
-            )
-        else:
-            messages.error(request, "No product was confirmed. Please enter real qty.")
-
-        return redirect(f"{request.path}?seller_id={selected_seller.id}")
-
-    products = []
-
-    if selected_seller:
-        qs = (
-            StockProduct.objects
-            .filter(seller=selected_seller, is_active=True)
-            .order_by("name", "sku")
+        confirm_stock(
+            product=product,
+            real_qty=real_qty,
+            actor=request.user,
+            note=note or "Stock confirmed",
         )
 
-        for product in qs:
-            available = current_available_qty(product)
-            reserved = reserved_qty(product)
-            snapshot = last_confirmed(product)
-
-            products.append({
-                "product": product,
-                "product_id": product.id,
-                "photo_url": product.photo.url if product.photo else "",
-                "name": product.name,
-                "sku": product.sku,
-                "product_type": product.product_type,
-                "location": product.location,
-                "current_qty": available + reserved,
-                "reserved_qty": reserved,
-                "available_qty": available,
-                "last_confirmed_at": snapshot.confirmed_at if snapshot else None,
-            })
+        messages.success(request, f"Stock confirmed: {product.name} = {real_qty}")
+        return redirect("inventory:list")
 
     return render(
         request,
         "inventory/confirm_stock.html",
         {
-            "selected_seller": selected_seller,
             "selected_seller_id": selected_seller.id if selected_seller else "",
             "selected_seller_display": seller_display(selected_seller),
-            "selected_product_id": "",
-            "selected_product_display": "",
-            "products": products,
-            "today": timezone.localdate(),
+            "selected_product_id": selected_product.id if selected_product else "",
+            "selected_product_display": product_display(selected_product),
         },
     )
+
 
 @login_required
 def history(request):

@@ -1,0 +1,55 @@
+{% extends "inventory/base_inventory.html" %}
+{% block title %}Receive Goods Receipt - DS Express{% endblock %}
+{% block inventory_content %}
+<div class="receipt-actions no-print">
+  <a class="btn-soft" href="{% url 'inventory:list' %}">Back to Inventory</a>
+  <button class="btn-green" type="button" onclick="window.print()">Print Receipt</button>
+</div>
+
+<div class="receipt-sheet">
+  <div class="receipt-head">
+    <div>
+      <div class="brand">DS EXPRESS</div>
+      <div class="sub">WAREHOUSE RECEIVING</div>
+    </div>
+    <div class="receipt-title">RECEIVE GOODS RECEIPT</div>
+  </div>
+
+  <div class="meta-grid">
+    <div><span>Receipt No.</span><strong>{{ batch_ref }}</strong></div>
+    <div><span>Received Date</span><strong>{{ received_at|date:"d M Y H:i" }}</strong></div>
+    <div><span>Seller / Shop</span><strong>{{ seller.name }}{% if seller.code %} - {{ seller.code }}{% endif %}</strong></div>
+    <div><span>Received By</span><strong>{% if received_by %}{{ received_by.get_full_name|default:received_by.username }}{% else %}-{% endif %}</strong></div>
+  </div>
+
+  <table class="receipt-table">
+    <thead><tr><th>#</th><th>Product</th><th>SKU / Code</th><th>Type</th><th>Location</th><th class="num">Qty Received</th></tr></thead>
+    <tbody>
+      {% for m in movements %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><strong>{{ m.product.name|default:"-" }}</strong></td>
+        <td>{{ m.product.sku|default:"-" }}</td>
+        <td>{{ m.product.product_type|default:"-" }}</td>
+        <td>{{ m.product.location|default:"-" }}</td>
+        <td class="num"><strong>{{ m.qty_delta }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="5">TOTAL GOODS RECEIVED</td><td class="num">{{ total_qty }}</td></tr></tfoot>
+  </table>
+
+  <div class="note-box"><span>Note</span><div>{{ note|default:"-" }}</div></div>
+
+  <div class="signature-grid">
+    <div><div class="sig-line"></div><strong>Warehouse / Receiver</strong><span>Signature</span></div>
+    <div><div class="sig-line"></div><strong>Seller / Handover By</strong><span>Signature</span></div>
+  </div>
+
+  <div class="footer">DS Express • Goods received into warehouse inventory</div>
+</div>
+
+<style>
+.receipt-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px}.receipt-sheet{max-width:900px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:28px;color:#111827}.receipt-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;border-bottom:3px solid #0f8a3b;padding-bottom:18px}.brand{font-size:28px;font-weight:1000;color:#0f8a3b;letter-spacing:.5px}.sub{font-size:11px;font-weight:800;letter-spacing:1.5px;color:#64748b}.receipt-title{font-size:22px;font-weight:950;text-align:right}.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.meta-grid div{border:1px solid #e5e7eb;border-radius:12px;padding:11px}.meta-grid span,.note-box span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#64748b;font-weight:850;margin-bottom:4px}.receipt-table{width:100%;border-collapse:collapse}.receipt-table th,.receipt-table td{border:1px solid #dbe2ea;padding:10px;font-size:12px}.receipt-table th{background:#f1f5f9;text-align:left}.receipt-table .num{text-align:right}.receipt-table tfoot td{font-weight:950;background:#ecfdf5;font-size:14px}.note-box{margin-top:16px;border:1px solid #e5e7eb;border-radius:12px;padding:12px;min-height:58px}.signature-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:60px;text-align:center}.sig-line{border-top:1px solid #111827;margin-bottom:8px}.signature-grid span{display:block;font-size:10px;color:#64748b;margin-top:3px}.footer{text-align:center;margin-top:28px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#64748b}@media(max-width:650px){.meta-grid{grid-template-columns:1fr}.receipt-sheet{padding:16px}.receipt-head{flex-direction:column}.receipt-title{text-align:left}.signature-grid{gap:30px}}@media print{.no-print,.sidebar,.topbar,nav{display:none!important}.receipt-sheet{border:0;border-radius:0;max-width:none;padding:0;margin:0}.receipt-table th{background:#f1f5f9!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.receipt-table tfoot td{background:#ecfdf5!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:12mm}body{background:#fff!important}}
+</style>
+{% endblock %}

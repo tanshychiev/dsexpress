@@ -8,6 +8,7 @@ urlpatterns = [
     # Inventory main pages
     path("", views.inventory_list, name="list"),
     path("stock-in/", views.stock_in, name="stock_in"),
+    path("stock-in/receipt/<str:batch_ref>/", views.stock_in_receipt, name="stock_in_receipt"),
     path("adjust/", views.adjust_stock_view, name="adjust"),
     path("confirm/", views.confirm_stock_view, name="confirm"),
     path("history/", views.history, name="history"),

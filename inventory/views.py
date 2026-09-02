@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import datetime, time
 
 from django.contrib import messages
@@ -191,73 +192,113 @@ def stock_in(request):
         return redirect("portal:dashboard")
 
     selected_seller = get_selected_seller_from_request(request)
-    selected_product = get_selected_product_from_request(request)
 
     if request.method == "POST":
         seller = selected_seller
-        product = selected_product
-
-        new_product_name = (request.POST.get("new_product_name") or "").strip()
-        product_type = (request.POST.get("product_type") or "").strip()
-        location = (request.POST.get("location") or "").strip()
-        qty_raw = (request.POST.get("qty") or "").strip()
         note = (request.POST.get("note") or "").strip()
-        photo = request.FILES.get("photo")
-
-        try:
-            qty = int(qty_raw or 0)
-        except Exception:
-            qty = 0
+        items_raw = (request.POST.get("items_json") or "").strip()
 
         if not seller:
             messages.error(request, "Please choose seller/shop.")
             return redirect("inventory:stock_in")
 
-        if qty <= 0:
-            messages.error(request, "Qty must be greater than 0.")
-            return redirect("inventory:stock_in")
+        try:
+            items = json.loads(items_raw or "[]")
+        except Exception:
+            items = []
+
+        if not isinstance(items, list) or not items:
+            messages.error(request, "Please add at least one product to this batch.")
+            return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+
+        clean_items = []
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+
+            product_id = str(item.get("product_id") or "").strip()
+            new_product_name = str(item.get("new_product_name") or "").strip()
+            product_type = str(item.get("product_type") or "").strip()
+            location = str(item.get("location") or "").strip()
+
+            try:
+                qty = int(item.get("qty") or 0)
+            except Exception:
+                qty = 0
+
+            if qty <= 0:
+                messages.error(request, f"Row {index + 1}: Qty must be greater than 0.")
+                return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+
+            product = None
+            if product_id.isdigit():
+                product = (
+                    StockProduct.objects
+                    .filter(id=int(product_id), seller=seller, is_active=True)
+                    .first()
+                )
+                if not product:
+                    messages.error(request, f"Row {index + 1}: Product is invalid for this seller.")
+                    return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+            elif not new_product_name:
+                messages.error(request, f"Row {index + 1}: Choose an existing product or enter a new product name.")
+                return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+
+            clean_items.append({
+                "row_index": index,
+                "product": product,
+                "new_product_name": new_product_name,
+                "product_type": product_type,
+                "location": location,
+                "qty": qty,
+            })
+
+        if not clean_items:
+            messages.error(request, "Please add at least one valid product to this batch.")
+            return redirect(f"/inventory/stock-in/?seller_id={seller.id}")
+
+        now = timezone.localtime()
+        batch_ref = f"RCV-{now:%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:5].upper()}"
+        batch_marker = f"[BATCH:{batch_ref}]"
+        movement_note = f"{batch_marker} {note or 'Batch stock in'}".strip()
 
         with transaction.atomic():
-            if not product:
-                if not new_product_name:
-                    messages.error(request, "Choose existing product or enter new product name.")
-                    return redirect("inventory:stock_in")
+            for item in clean_items:
+                product = item["product"]
+                photo = request.FILES.get(f"photo_{item['row_index']}")
 
-                product = StockProduct.objects.create(
-                    seller=seller,
-                    name=new_product_name,
-                    product_type=product_type,
-                    location=location,
-                    photo=photo,
-                    created_by=request.user,
+                if product is None:
+                    product = StockProduct.objects.create(
+                        seller=seller,
+                        name=item["new_product_name"],
+                        product_type=item["product_type"],
+                        location=item["location"],
+                        photo=photo,
+                        created_by=request.user,
+                    )
+                else:
+                    changed = False
+                    if photo:
+                        product.photo = photo
+                        changed = True
+                    if item["product_type"]:
+                        product.product_type = item["product_type"]
+                        changed = True
+                    if item["location"]:
+                        product.location = item["location"]
+                        changed = True
+                    if changed:
+                        product.save()
+
+                add_stock_in(
+                    product=product,
+                    qty=item["qty"],
+                    actor=request.user,
+                    note=movement_note,
                 )
-            else:
-                changed = False
 
-                if photo:
-                    product.photo = photo
-                    changed = True
-
-                if product_type:
-                    product.product_type = product_type
-                    changed = True
-
-                if location:
-                    product.location = location
-                    changed = True
-
-                if changed:
-                    product.save()
-
-            add_stock_in(
-                product=product,
-                qty=qty,
-                actor=request.user,
-                note=note or "Stock in",
-            )
-
-        messages.success(request, f"Stock in saved: {product.name} +{qty}")
-        return redirect("inventory:list")
+        messages.success(request, f"Batch stock in saved. Receipt: {batch_ref}")
+        return redirect("inventory:stock_in_receipt", batch_ref=batch_ref)
 
     return render(
         request,
@@ -265,8 +306,58 @@ def stock_in(request):
         {
             "selected_seller_id": selected_seller.id if selected_seller else "",
             "selected_seller_display": seller_display(selected_seller),
-            "selected_product_id": selected_product.id if selected_product else "",
-            "selected_product_display": product_display(selected_product),
+        },
+    )
+
+
+@login_required
+def stock_in_receipt(request, batch_ref):
+    if not staff_only(request):
+        return redirect("portal:dashboard")
+
+    marker = f"[BATCH:{batch_ref}]"
+    movements = list(
+        StockMovement.objects
+        .select_related("seller", "product", "created_by")
+        .filter(
+            movement_type=StockMovement.STOCK_IN,
+            note__contains=marker,
+        )
+        .order_by("id")
+    )
+
+    if not movements:
+        messages.error(request, "Receive goods receipt not found.")
+        return redirect("inventory:history")
+
+    first = movements[0]
+    rows = []
+    total_qty = 0
+
+    for movement in movements:
+        qty = int(movement.qty_delta or 0)
+        total_qty += qty
+        rows.append({
+            "product": movement.product,
+            "qty": qty,
+        })
+
+    raw_note = first.note or ""
+    receipt_note = raw_note.replace(marker, "", 1).strip()
+    if receipt_note == "Batch stock in":
+        receipt_note = ""
+
+    return render(
+        request,
+        "inventory/stock_in_receipt.html",
+        {
+            "batch_ref": batch_ref,
+            "seller": first.seller,
+            "received_at": first.created_at,
+            "received_by": first.created_by,
+            "rows": rows,
+            "total_qty": total_qty,
+            "receipt_note": receipt_note,
         },
     )
 

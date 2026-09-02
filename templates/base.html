@@ -1003,6 +1003,18 @@
             <span class="menu-label">Stock In</span>
           </a>
 
+          <a class="menu-item {% if request.path == '/inventory/stock-in/list/' or '/inventory/stock-in/receipt/' in request.path %}active{% endif %}" href="{% url 'inventory:stock_in_list' %}">
+            <span class="menu-icon-wrap">
+              <svg class="menu-icon" viewBox="0 0 24 24">
+                <path d="M4 5h16v14H4z"></path>
+                <path d="M8 9h8"></path>
+                <path d="M8 13h8"></path>
+                <path d="M8 17h5"></path>
+              </svg>
+            </span>
+            <span class="menu-label">Stock In List</span>
+          </a>
+
           <a class="menu-item {% if request.path == '/inventory/adjust/' %}active{% endif %}" href="{% url 'inventory:adjust' %}">
             <span class="menu-icon-wrap">
               <svg class="menu-icon" viewBox="0 0 24 24">

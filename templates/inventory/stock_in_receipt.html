@@ -1,55 +1,44 @@
 {% extends "inventory/base_inventory.html" %}
+{% load static %}
 {% block title %}Receive Goods Receipt - DS Express{% endblock %}
 {% block inventory_content %}
-<div class="receipt-actions no-print">
-  <a class="btn-soft" href="{% url 'inventory:list' %}">Back to Inventory</a>
-  <button class="btn-green" type="button" onclick="window.print()">Print Receipt</button>
-</div>
+<div class="receipt-actions no-print"><a class="btn-soft" href="{% url 'inventory:stock_in_list' %}">Stock In List</a><button class="btn-green" type="button" onclick="window.print()">Print Receipt</button></div>
 
 <div class="receipt-sheet">
-  <div class="receipt-head">
-    <div>
-      <div class="brand">DS EXPRESS</div>
-      <div class="sub">WAREHOUSE RECEIVING</div>
-    </div>
-    <div class="receipt-title">RECEIVE GOODS RECEIPT</div>
-  </div>
+  <header class="receipt-head">
+    <div class="brand-block"><img src="{% static 'img/ds-logo.png' %}" alt="DS Express"><div>WAREHOUSE RECEIVING RECORD</div></div>
+    <div class="title-block"><h1>RECEIVE GOODS RECEIPT</h1><div class="receipt-no"><span>Receipt No.</span><strong>{{ batch_ref }}</strong></div></div>
+  </header>
 
-  <div class="meta-grid">
-    <div><span>Receipt No.</span><strong>{{ batch_ref }}</strong></div>
+  <section class="meta-grid">
     <div><span>Received Date</span><strong>{{ received_at|date:"d M Y H:i" }}</strong></div>
-    <div><span>Seller / Shop</span><strong>{{ seller.name }}{% if seller.code %} - {{ seller.code }}{% endif %}</strong></div>
     <div><span>Received By</span><strong>{% if received_by %}{{ received_by.get_full_name|default:received_by.username }}{% else %}-{% endif %}</strong></div>
-  </div>
+    <div class="seller-meta"><span>Seller / Shop</span><strong>{{ seller.name }}{% if seller.code %} - {{ seller.code }}{% endif %}</strong></div>
+  </section>
 
   <table class="receipt-table">
-    <thead><tr><th>#</th><th>Product</th><th>SKU / Code</th><th>Type</th><th>Location</th><th class="num">Qty Received</th></tr></thead>
-    <tbody>
-      {% for m in movements %}
-      <tr>
-        <td>{{ forloop.counter }}</td>
-        <td><strong>{{ m.product.name|default:"-" }}</strong></td>
-        <td>{{ m.product.sku|default:"-" }}</td>
-        <td>{{ m.product.product_type|default:"-" }}</td>
-        <td>{{ m.product.location|default:"-" }}</td>
-        <td class="num"><strong>{{ m.qty_delta }}</strong></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot><tr><td colspan="5">TOTAL GOODS RECEIVED</td><td class="num">{{ total_qty }}</td></tr></tfoot>
+    <thead><tr><th>#</th><th>Product</th><th>SKU / Code</th><th class="num">Qty Received</th></tr></thead>
+    <tbody>{% for m in movements %}<tr><td>{{ forloop.counter }}</td><td><strong>{{ m.product.name|default:"-" }}</strong></td><td>{{ m.product.sku|default:"-" }}</td><td class="num"><strong>{{ m.qty_delta }}</strong></td></tr>{% endfor %}</tbody>
+    <tfoot><tr><td colspan="3">TOTAL GOODS RECEIVED</td><td class="num">{{ total_qty }}</td></tr></tfoot>
   </table>
 
   <div class="note-box"><span>Note</span><div>{{ note|default:"-" }}</div></div>
 
-  <div class="signature-grid">
-    <div><div class="sig-line"></div><strong>Warehouse / Receiver</strong><span>Signature</span></div>
-    <div><div class="sig-line"></div><strong>Seller / Handover By</strong><span>Signature</span></div>
-  </div>
+  <div class="receiving-note"><strong>Receiving Note:</strong> Please ensure goods are permitted for delivery. The sender is responsible for the contents. This receipt confirms quantity received only.</div>
 
-  <div class="footer">DS Express • Goods received into warehouse inventory</div>
+  <section class="signature-grid">
+    <div class="signature-box">
+      <div class="signature-space">{% if receiver_signature_url %}<img src="{{ receiver_signature_url }}" alt="Receiver signature">{% endif %}</div>
+      <div class="sig-line"></div><strong>Warehouse / Receiver</strong>
+      <small>{% if received_by %}{{ received_by.get_full_name|default:received_by.username }}{% endif %}</small>
+    </div>
+    <div class="signature-box"><div class="signature-space"></div><div class="sig-line"></div><strong>Seller / Handover By</strong><small>Signature</small></div>
+  </section>
+
+  <footer>DS Express • Goods received into warehouse inventory</footer>
 </div>
 
 <style>
-.receipt-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px}.receipt-sheet{max-width:900px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:28px;color:#111827}.receipt-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;border-bottom:3px solid #0f8a3b;padding-bottom:18px}.brand{font-size:28px;font-weight:1000;color:#0f8a3b;letter-spacing:.5px}.sub{font-size:11px;font-weight:800;letter-spacing:1.5px;color:#64748b}.receipt-title{font-size:22px;font-weight:950;text-align:right}.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.meta-grid div{border:1px solid #e5e7eb;border-radius:12px;padding:11px}.meta-grid span,.note-box span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#64748b;font-weight:850;margin-bottom:4px}.receipt-table{width:100%;border-collapse:collapse}.receipt-table th,.receipt-table td{border:1px solid #dbe2ea;padding:10px;font-size:12px}.receipt-table th{background:#f1f5f9;text-align:left}.receipt-table .num{text-align:right}.receipt-table tfoot td{font-weight:950;background:#ecfdf5;font-size:14px}.note-box{margin-top:16px;border:1px solid #e5e7eb;border-radius:12px;padding:12px;min-height:58px}.signature-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:60px;text-align:center}.sig-line{border-top:1px solid #111827;margin-bottom:8px}.signature-grid span{display:block;font-size:10px;color:#64748b;margin-top:3px}.footer{text-align:center;margin-top:28px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#64748b}@media(max-width:650px){.meta-grid{grid-template-columns:1fr}.receipt-sheet{padding:16px}.receipt-head{flex-direction:column}.receipt-title{text-align:left}.signature-grid{gap:30px}}@media print{.no-print,.sidebar,.topbar,nav{display:none!important}.receipt-sheet{border:0;border-radius:0;max-width:none;padding:0;margin:0}.receipt-table th{background:#f1f5f9!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.receipt-table tfoot td{background:#ecfdf5!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:12mm}body{background:#fff!important}}
+.receipt-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px}.receipt-sheet{max-width:820px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px 32px;color:#111827;box-shadow:0 8px 30px rgba(15,23,42,.05)}.receipt-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;border-bottom:3px solid #0b8a3d;padding-bottom:18px}.brand-block img{width:145px;max-height:70px;object-fit:contain;object-position:left center}.brand-block div{margin-top:4px;font-size:9px;font-weight:850;letter-spacing:1.5px;color:#64748b}.title-block{text-align:right}.title-block h1{font-size:21px;margin:0 0 14px;font-weight:950;letter-spacing:.2px}.receipt-no{display:inline-block;min-width:220px;border:1px solid #0b8a3d;border-radius:8px;overflow:hidden;text-align:center}.receipt-no span{display:block;background:#0b8a3d;color:#fff;font-size:9px;text-transform:uppercase;font-weight:900;padding:5px}.receipt-no strong{display:block;padding:8px 10px;font-size:13px}.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.meta-grid>div{border:1px solid #e3e8ee;border-radius:10px;padding:11px 12px}.meta-grid .seller-meta{grid-column:1/-1}.meta-grid span,.note-box span{display:block;color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:.7px;font-weight:900;margin-bottom:4px}.meta-grid strong{font-size:12px}.receipt-table{width:100%;border-collapse:collapse}.receipt-table th,.receipt-table td{border:1px solid #dbe2ea;padding:10px 11px;font-size:11px}.receipt-table th{background:#0b7d38;color:#fff;font-weight:900;text-align:left}.receipt-table .num{text-align:right}.receipt-table tfoot td{font-size:13px;font-weight:950;background:#eefbf3}.note-box{margin-top:14px;border:1px solid #e5e7eb;border-radius:10px;padding:11px;min-height:44px}.note-box div{font-size:11px}.receiving-note{margin-top:14px;padding:8px 10px;border-top:1px solid #dbe2ea;border-bottom:1px solid #dbe2ea;color:#475569;font-size:9px;line-height:1.45}.receiving-note strong{color:#166534}.signature-grid{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:24px;text-align:center}.signature-space{height:70px;display:flex;align-items:flex-end;justify-content:center}.signature-space img{max-width:170px;max-height:65px;object-fit:contain}.sig-line{border-top:1px solid #111827;margin:0 0 7px}.signature-box strong{display:block;font-size:11px}.signature-box small{display:block;color:#64748b;font-size:9px;margin-top:3px}footer{text-align:center;margin-top:25px;padding-top:10px;border-top:1px solid #e5e7eb;color:#64748b;font-size:8px}@media(max-width:650px){.receipt-head{flex-direction:column}.title-block{text-align:left;width:100%}.meta-grid{grid-template-columns:1fr}.meta-grid .seller-meta{grid-column:auto}.signature-grid{gap:28px}.receipt-sheet{padding:18px}}@media print{.no-print,.sidebar,.topbar,nav{display:none!important}.receipt-sheet{border:0;box-shadow:none;border-radius:0;max-width:none;margin:0;padding:0}.receipt-table th{background:#0b7d38!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.receipt-table tfoot td{background:#eefbf3!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:12mm}body{background:#fff!important}}
 </style>
 {% endblock %}

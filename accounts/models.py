@@ -54,6 +54,13 @@ class Account(models.Model):
     # True only for Seller.portal_user. The owner always has full access.
     is_seller_owner = models.BooleanField(default=False)
 
+    # Optional handwritten signature used on operational receipts created by this user.
+    signature = models.ImageField(
+        upload_to="user_signatures/",
+        blank=True,
+        null=True,
+    )
+
     # Soft-delete fields. Archived accounts keep their history and audit trail.
     is_archived = models.BooleanField(default=False)
     archived_at = models.DateTimeField(null=True, blank=True)

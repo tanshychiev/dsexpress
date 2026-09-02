@@ -2,6 +2,7 @@
 
 {% block page_title %}
   {% if mode == "edit" %}Edit User{% else %}Create User{% endif %}
+
 {% endblock %}
 
 {% block page_subtitle %}User account + role{% endblock %}
@@ -96,6 +97,16 @@
     gap:10px;
     flex-wrap:wrap;
   }
+
+  .signature-card{margin-top:16px;border:1px solid #dbe7df;border-radius:14px;padding:16px;background:#fbfffc;}
+  .signature-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:18px;align-items:center;}
+  .signature-drop{min-height:130px;border:1.5px dashed #9ecfb0;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;padding:14px;box-sizing:border-box;}
+  .signature-drop.dragging,.signature-drop:focus{outline:none;border-color:#16a34a;background:#f0fdf4;}
+  .signature-drop strong{display:block;color:#166534;font-size:14px;}.signature-drop small{display:block;color:#64748b;margin-top:5px;font-weight:700;}
+  .signature-preview{min-height:130px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;position:relative;padding:10px;box-sizing:border-box;}
+  .signature-preview img{max-width:100%;max-height:105px;object-fit:contain;}.signature-empty{color:#94a3b8;font-size:12px;font-weight:800;}
+  .signature-remove{position:absolute;right:8px;top:8px;border:1px solid #fecaca;background:#fff;color:#dc2626;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:850;cursor:pointer;}
+  @media(max-width:760px){.signature-grid{grid-template-columns:1fr;}}
 </style>
 
 <div class="form-wrap">
@@ -124,7 +135,7 @@
 
     <div style="height:16px;"></div>
 
-    <form method="post" autocomplete="off">
+    <form method="post" enctype="multipart/form-data" autocomplete="off">
       {% csrf_token %}
 
       <div class="grid">
@@ -272,6 +283,25 @@
         </div>
       </div>
 
+      <div class="signature-card">
+        <div style="margin-bottom:10px;">
+          <label style="margin-bottom:3px;">User Signature</label>
+          <div class="hint">Upload once. This signature will appear automatically on stock receiving receipts created by this user.</div>
+        </div>
+        <div class="signature-grid">
+          <div id="signatureDrop" class="signature-drop" tabindex="0">
+            <input id="signatureInput" type="file" name="signature" accept="image/png,image/jpeg,image/webp" hidden>
+            <div><strong>Drag, paste, or click to upload signature</strong><small>PNG / JPG / WEBP • transparent PNG works best</small></div>
+          </div>
+          <div class="signature-preview">
+            <img id="signaturePreview" {% if mode == "edit" and u.account.signature %}src="{{ u.account.signature.url }}"{% else %}style="display:none"{% endif %} alt="Signature preview">
+            <div id="signatureEmpty" class="signature-empty" {% if mode == "edit" and u.account.signature %}style="display:none"{% endif %}>No signature uploaded</div>
+            <button id="signatureRemove" class="signature-remove" type="button" {% if not mode == "edit" or not u.account.signature %}style="display:none"{% endif %}>Remove</button>
+          </div>
+        </div>
+        <input id="removeSignature" type="hidden" name="remove_signature" value="0">
+      </div>
+
       {% if mode != "edit" %}
         <div style="height:14px;"></div>
 
@@ -364,5 +394,23 @@
     el.type = (el.type === "password") ? "text" : "password";
     btn.textContent = (el.type === "password") ? "Show" : "Hide";
   }
+</script>
+
+<script>
+(function(){
+  const drop=document.getElementById('signatureDrop'),input=document.getElementById('signatureInput'),preview=document.getElementById('signaturePreview'),empty=document.getElementById('signatureEmpty'),remove=document.getElementById('signatureRemove'),removeFlag=document.getElementById('removeSignature');
+  if(!drop) return; let objectUrl='';
+  function show(file){
+    if(!file || !file.type.startsWith('image/')) return;
+    try{const dt=new DataTransfer();dt.items.add(file);input.files=dt.files}catch(e){}
+    if(objectUrl) URL.revokeObjectURL(objectUrl); objectUrl=URL.createObjectURL(file); preview.src=objectUrl;preview.style.display='block';empty.style.display='none';remove.style.display='block';removeFlag.value='0';
+  }
+  function clear(){if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=''}input.value='';preview.removeAttribute('src');preview.style.display='none';empty.style.display='block';remove.style.display='none';removeFlag.value='1';}
+  drop.addEventListener('click',()=>input.click());drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});input.addEventListener('change',()=>show(input.files[0]));
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('dragging')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('dragging')}));drop.addEventListener('drop',e=>show(e.dataTransfer?.files?.[0]));
+  drop.addEventListener('paste',e=>{for(const item of e.clipboardData?.items||[]){if(item.type.startsWith('image/')){e.preventDefault();show(item.getAsFile());break}}});
+  document.addEventListener('paste',e=>{for(const item of e.clipboardData?.items||[]){if(item.type.startsWith('image/')){e.preventDefault();show(item.getAsFile());break}}});
+  remove.addEventListener('click',clear);
+})();
 </script>
 {% endblock %}

@@ -10,6 +10,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import UserCreateForm, UserEditForm, ChangePasswordForm
+from .models import Account
 
 
 PER_PAGE = 25
@@ -95,6 +96,11 @@ def user_create(request):
         form = UserCreateForm(request.POST)
         if form.is_valid():
             user = form.save()
+            account, _ = Account.objects.get_or_create(user=user)
+            signature = request.FILES.get("signature")
+            if signature:
+                account.signature = signature
+                account.save(update_fields=["signature", "updated_at"])
             messages.success(request, f"✅ Created user: {user.username}")
             return redirect("user_list")
         messages.error(request, "❌ Please fix errors below.")
@@ -123,6 +129,21 @@ def user_edit(request, user_id: int):
         form = UserEditForm(request.POST, instance=u)
         if form.is_valid():
             form.save()
+            account, _ = Account.objects.get_or_create(user=u)
+
+            if request.POST.get("remove_signature") == "1":
+                if account.signature:
+                    account.signature.delete(save=False)
+                account.signature = None
+                account.save(update_fields=["signature", "updated_at"])
+
+            signature = request.FILES.get("signature")
+            if signature:
+                if account.signature:
+                    account.signature.delete(save=False)
+                account.signature = signature
+                account.save(update_fields=["signature", "updated_at"])
+
             messages.success(request, f"✅ Updated user: {u.username}")
             return redirect("user_list")
         messages.error(request, "❌ Please fix errors below.")

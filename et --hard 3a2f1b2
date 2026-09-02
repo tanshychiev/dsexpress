@@ -1,0 +1,68 @@
+[33m819568a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{0}: reset: moving to HEAD@{1}
+[33m819568a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{1}: reset: moving to origin/main
+[33m819568a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{2}: reset: moving to origin/main
+[33m1bd6929[m HEAD@{3}: reset: moving to origin/main
+[33m5d55479[m HEAD@{4}: reset: moving to origin/main
+[33m4fa8961[m HEAD@{5}: reset: moving to origin/main
+[33m4fa8961[m HEAD@{6}: reset: moving to origin/main
+[33md89c7e0[m HEAD@{7}: reset: moving to origin/main
+[33m908a827[m HEAD@{8}: reset: moving to origin/main
+[33mfe2cb2a[m HEAD@{9}: reset: moving to origin/main
+[33m4d602e2[m HEAD@{10}: pull origin main: Fast-forward
+[33m40ff335[m HEAD@{11}: pull origin main: Fast-forward
+[33me0d3df6[m HEAD@{12}: pull origin main: Fast-forward
+[33m7f69f5f[m HEAD@{13}: pull origin main: Fast-forward
+[33m52500a1[m HEAD@{14}: pull origin main: Fast-forward
+[33me3ca538[m HEAD@{15}: pull origin main: Fast-forward
+[33m69fd10d[m HEAD@{16}: pull: Fast-forward
+[33m74380ac[m HEAD@{17}: pull: Fast-forward
+[33m8fd91c0[m HEAD@{18}: pull origin main: Fast-forward
+[33m37a4fe3[m HEAD@{19}: reset: moving to origin/main
+[33m64763cd[m HEAD@{20}: reset: moving to origin/main
+[33mddb045b[m HEAD@{21}: reset: moving to origin/main
+[33ma6a6639[m HEAD@{22}: reset: moving to origin/main
+[33m0fbb92a[m HEAD@{23}: reset: moving to origin/main
+[33m0fbb92a[m HEAD@{24}: reset: moving to origin/main
+[33m0fbb92a[m HEAD@{25}: pull: Fast-forward
+[33m5ad2459[m HEAD@{26}: pull origin main: Fast-forward
+[33mc44f4d4[m HEAD@{27}: pull origin main: Fast-forward
+[33ma9029f2[m HEAD@{28}: pull origin main: Fast-forward
+[33m71e5657[m HEAD@{29}: pull origin main: Fast-forward
+[33m07bc376[m HEAD@{30}: pull origin main: Fast-forward
+[33md73689c[m HEAD@{31}: pull: Fast-forward
+[33mdc72da2[m HEAD@{32}: pull: Fast-forward
+[33mc737ab1[m HEAD@{33}: pull origin main: Fast-forward
+[33m88290ef[m HEAD@{34}: pull: Fast-forward
+[33m1132e66[m HEAD@{35}: pull origin main: Fast-forward
+[33maeefc12[m HEAD@{36}: pull: Fast-forward
+[33m3096c1d[m HEAD@{37}: reset: moving to origin/main
+[33m3096c1d[m HEAD@{38}: pull: Fast-forward
+[33m9ab7386[m HEAD@{39}: reset: moving to HEAD
+[33m9ab7386[m HEAD@{40}: reset: moving to HEAD
+[33m9ab7386[m HEAD@{41}: pull: Fast-forward
+[33ma071a6f[m HEAD@{42}: reset: moving to origin/main
+[33md9f04d2[m HEAD@{43}: pull: Fast-forward
+[33mdbcb7a5[m HEAD@{44}: reset: moving to HEAD~1
+[33m399391a[m HEAD@{45}: pull origin main: Fast-forward
+[33mdbcb7a5[m HEAD@{46}: pull origin main: Fast-forward
+[33mc92aa7f[m HEAD@{47}: pull origin main: Fast-forward
+[33m5788403[m HEAD@{48}: pull origin main: Fast-forward
+[33m29b2035[m HEAD@{49}: pull origin main: Fast-forward
+[33mc4c46b1[m HEAD@{50}: pull origin main: Fast-forward
+[33mb789edc[m HEAD@{51}: pull origin main: Fast-forward
+[33mec4e245[m HEAD@{52}: pull origin main: Fast-forward
+[33mef32481[m HEAD@{53}: pull: Fast-forward
+[33mfe94bd2[m HEAD@{54}: checkout: moving from master to main
+[33mcd3d05f[m[33m ([m[1;32mmaster[m[33m)[m HEAD@{55}: reset: moving to HEAD
+[33mcd3d05f[m[33m ([m[1;32mmaster[m[33m)[m HEAD@{56}: reset: moving to origin/main
+[33m6d61d2c[m HEAD@{57}: reset: moving to origin/main
+[33m6d61d2c[m HEAD@{58}: pull --rebase: Fast-forward
+[33m80f1341[m HEAD@{59}: pull --rebase: Fast-forward
+[33mbbd88b0[m HEAD@{60}: reset: moving to HEAD
+[33mbbd88b0[m HEAD@{61}: pull --rebase: Fast-forward
+[33m9c826e5[m HEAD@{62}: reset: moving to HEAD
+[33m9c826e5[m HEAD@{63}: reset: moving to HEAD
+[33m9c826e5[m HEAD@{64}: reset: moving to HEAD
+[33m9c826e5[m HEAD@{65}: pull origin main: Fast-forward
+[33m8b040fa[m HEAD@{66}: reset: moving to origin/main
+[33m18cef9c[m HEAD@{67}: initial pull

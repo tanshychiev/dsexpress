@@ -7,3 +7,11 @@ media/
 staticfiles/
 *.log__pycache__/
 *.pyc
+FETCH_HEAD
+backups/
+*.sqlite3.backup*
+db_backup*.sqlite3
+gunicorn.log
+*.server_backup
+*.bak
+*_backup.txt

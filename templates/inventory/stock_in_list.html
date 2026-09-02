@@ -1,0 +1,164 @@
+{% extends "inventory/base_inventory.html" %}
+{% block title %}Stock In List - DS Express{% endblock %}
+
+{% block inventory_content %}
+<div class="sil-page">
+  <div class="sil-hero">
+    <div>
+      <h1 class="sil-title">Stock In List</h1>
+      <div class="sil-sub">All saved receiving batches. Open and print any Receive Goods Receipt again anytime.</div>
+    </div>
+    <a class="btn-green" href="{% url 'inventory:stock_in' %}">+ New Stock In</a>
+  </div>
+
+  <div class="inv-card sil-filter-card">
+    <form method="get" class="sil-filters">
+      <div class="form-row seller-search-wrap">
+        <label>Seller / Shop</label>
+        <input class="ds-input" id="sellerSearch" type="text"
+               value="{{ selected_seller_display|default:'' }}"
+               placeholder="Search seller / code / phone..." autocomplete="off">
+        <input type="hidden" id="sellerId" name="seller_id" value="{{ selected_seller_id|default:'' }}">
+        <div id="sellerDropdown" class="search-dropdown"></div>
+      </div>
+
+      <div class="form-row">
+        <label>From Date</label>
+        <input class="ds-input" type="date" name="from_date" value="{{ from_date }}">
+      </div>
+
+      <div class="form-row">
+        <label>To Date</label>
+        <input class="ds-input" type="date" name="to_date" value="{{ to_date }}">
+      </div>
+
+      <div class="form-row sil-q">
+        <label>Search</label>
+        <input class="ds-input" type="text" name="q" value="{{ q }}"
+               placeholder="Receipt no. / product / SKU / note...">
+      </div>
+
+      <div class="sil-filter-actions">
+        <button class="btn-green" type="submit">Search</button>
+        <a class="btn-soft" href="{% url 'inventory:stock_in_list' %}">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="sil-summary-row">
+    <div class="sil-summary-card"><span>Receiving Batches</span><strong>{{ total_batches }}</strong></div>
+  </div>
+
+  <div class="inv-card sil-list-card">
+    {% if page_obj.object_list %}
+      <div class="sil-table-wrap">
+        <table class="sil-table">
+          <thead>
+            <tr>
+              <th>Receipt / Batch</th>
+              <th>Date Received</th>
+              <th>Seller / Shop</th>
+              <th>Products</th>
+              <th class="num">Total Qty</th>
+              <th>Received By</th>
+              <th>Note</th>
+              <th class="action-col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for batch in page_obj %}
+              <tr>
+                <td>
+                  <div class="sil-ref">{{ batch.batch_ref }}</div>
+                </td>
+                <td>
+                  <strong>{{ batch.received_at|date:"d-m-Y" }}</strong>
+                  <div class="muted">{{ batch.received_at|date:"H:i" }}</div>
+                </td>
+                <td>
+                  <strong>{{ batch.seller.name }}</strong>
+                  {% if batch.seller.code %}<div class="muted">{{ batch.seller.code }}</div>{% endif %}
+                </td>
+                <td>
+                  <div class="sil-product-count">{{ batch.product_count }} product{{ batch.product_count|pluralize }}</div>
+                  <div class="sil-product-preview">
+                    {% for product in batch.products|slice:":3" %}
+                      <span>{{ product.name }}{% if product.sku %} · {{ product.sku }}{% endif %}</span>
+                    {% endfor %}
+                    {% if batch.product_count > 3 %}<span>+{{ batch.product_count|add:"-3" }} more</span>{% endif %}
+                  </div>
+                </td>
+                <td class="num"><span class="sil-qty">{{ batch.total_qty }}</span></td>
+                <td>{{ batch.received_by.username|default:"-" }}</td>
+                <td><div class="sil-note">{{ batch.note|default:"-" }}</div></td>
+                <td class="action-col">
+                  <a class="sil-print-btn" href="{% url 'inventory:stock_in_receipt' batch.batch_ref %}">Print Receipt</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if page_obj.has_other_pages %}
+        <div class="sil-pagination">
+          {% if page_obj.has_previous %}
+            <a class="btn-soft" href="?page={{ page_obj.previous_page_number }}&seller_id={{ selected_seller_id }}&from_date={{ from_date }}&to_date={{ to_date }}&q={{ q|urlencode }}">Previous</a>
+          {% endif %}
+          <span class="sil-page-info">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}
+            <a class="btn-soft" href="?page={{ page_obj.next_page_number }}&seller_id={{ selected_seller_id }}&from_date={{ from_date }}&to_date={{ to_date }}&q={{ q|urlencode }}">Next</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="sil-empty">
+        <div class="sil-empty-icon">▤</div>
+        <strong>No Stock In batches found</strong>
+        <span>Saved Batch Stock In receipts will appear here.</span>
+        <a class="btn-green" href="{% url 'inventory:stock_in' %}">Create Stock In</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  .sil-page{display:grid;gap:14px}
+  .sil-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:2px 2px 4px}
+  .sil-title{margin:0;color:#0f172a;font-size:27px;line-height:1.15;font-weight:1000;letter-spacing:-.4px}
+  .sil-sub{margin-top:5px;color:#64748b;font-size:13px;font-weight:650}
+  .sil-filter-card{padding:14px 16px}
+  .sil-filters{display:grid;grid-template-columns:minmax(220px,1.3fr) 160px 160px minmax(220px,1fr) auto;gap:10px;align-items:end}
+  .sil-filter-actions{display:flex;gap:8px}
+  .sil-summary-row{display:flex;gap:10px}
+  .sil-summary-card{min-width:170px;background:linear-gradient(135deg,#f0fdf4,#fff);border:1px solid #d8f2df;border-radius:15px;padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+  .sil-summary-card span{color:#64748b;font-size:11px;font-weight:850}.sil-summary-card strong{font-size:24px;color:#087637;font-weight:1000}
+  .sil-list-card{padding:0;overflow:hidden}
+  .sil-table-wrap{width:100%;overflow-x:auto}
+  .sil-table{width:100%;border-collapse:collapse;min-width:1120px;background:#fff}
+  .sil-table th{padding:12px 14px;background:#f8fafc;border-bottom:1px solid #e7edf1;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.35px;font-weight:950;text-align:left;white-space:nowrap}
+  .sil-table td{padding:13px 14px;border-bottom:1px solid #eef2f5;color:#1f2937;font-size:12px;vertical-align:middle}
+  .sil-table tbody tr:hover{background:#fbfefc}
+  .sil-table tbody tr:last-child td{border-bottom:0}
+  .sil-ref{display:inline-flex;align-items:center;min-height:29px;padding:0 9px;border-radius:9px;background:#edf9f1;color:#087637;font-weight:950;font-size:11px;white-space:nowrap}
+  .sil-product-count{font-weight:950;color:#1f2937;margin-bottom:4px}
+  .sil-product-preview{display:flex;gap:4px;flex-wrap:wrap;max-width:330px}
+  .sil-product-preview span{background:#f5f7f8;border:1px solid #e8ecef;border-radius:7px;padding:3px 6px;color:#64748b;font-size:10px;font-weight:750;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sil-qty{display:inline-grid;place-items:center;min-width:42px;height:32px;border-radius:10px;background:#eaf8ef;color:#087637;font-size:16px;font-weight:1000}
+  .num{text-align:center!important}
+  .sil-note{max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#64748b}
+  .action-col{text-align:right!important;white-space:nowrap}
+  .sil-print-btn{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 11px;border:1px solid #b9dfc6;border-radius:10px;background:#fff;color:#087637;text-decoration:none;font-weight:950;font-size:11px}
+  .sil-print-btn:hover{background:#edf9f1;border-color:#82c99b}
+  .sil-pagination{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:13px 15px;border-top:1px solid #eef2f5}
+  .sil-page-info{font-size:12px;color:#64748b;font-weight:850;padding:0 6px}
+  .sil-empty{min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;color:#64748b;padding:28px}
+  .sil-empty-icon{width:54px;height:54px;border-radius:16px;background:#edf9f1;color:#087637;display:grid;place-items:center;font-size:24px}
+  .sil-empty strong{font-size:16px;color:#0f172a}.sil-empty span{font-size:12px;margin-bottom:8px}
+  .seller-search-wrap{position:relative}.search-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:99999;max-height:280px;overflow:auto;background:#fff;border:1px solid #d1d5db;border-radius:12px;box-shadow:0 14px 34px rgba(15,23,42,.16)}
+  @media(max-width:1050px){.sil-filters{grid-template-columns:1fr 1fr}.sil-q{grid-column:1/-1}.sil-filter-actions{grid-column:1/-1}.sil-filter-actions .btn-green,.sil-filter-actions .btn-soft{flex:1}}
+  @media(max-width:650px){.sil-hero{align-items:stretch;flex-direction:column}.sil-hero>.btn-green{width:100%}.sil-filters{grid-template-columns:1fr}.sil-q,.sil-filter-actions{grid-column:auto}.sil-summary-card{width:100%}.sil-title{font-size:23px}}
+</style>
+
+{% include "inventory/search_js.html" %}
+{% endblock %}

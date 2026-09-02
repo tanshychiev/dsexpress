@@ -2,66 +2,89 @@
 {% block title %}Batch Stock In - DS Express{% endblock %}
 
 {% block inventory_content %}
-<div class="inv-head">
-  <div>
-    <h1 class="inv-title">Batch Stock In</h1>
-    <div class="inv-sub">Receive many products from one seller in one batch, then print the Receive Goods Receipt.</div>
+<div class="batch-page">
+  <div class="batch-hero">
+    <div class="batch-hero-icon">▣</div>
+    <div class="batch-hero-copy">
+      <h1 class="batch-page-title">Batch Stock In</h1>
+      <p class="batch-page-sub">Receive many products from one seller in one batch, then print the Receive Goods Receipt.</p>
+    </div>
+    <a class="btn-soft batch-list-link" href="{% url 'inventory:stock_in_list' %}">Stock In List</a>
   </div>
-</div>
 
-<div class="inv-card">
-  <form method="post" enctype="multipart/form-data" id="batchStockInForm">
+  <form method="post" enctype="multipart/form-data" id="batchStockInForm" class="batch-form">
     {% csrf_token %}
     <input type="hidden" name="items_json" id="itemsJson" value="[]">
 
-    <div class="batch-top-grid">
-      <div class="form-row seller-search-wrap">
-        <label>Seller / Shop</label>
-        <input class="ds-input" id="sellerSearch" type="text"
-               value="{{ selected_seller_display|default:'' }}"
-               placeholder="Type shop name / code / phone..." autocomplete="off">
-        <input type="hidden" id="sellerId" name="seller_id" value="{{ selected_seller_id|default:'' }}">
-        <div id="sellerDropdown" class="search-dropdown"></div>
-        <div class="form-help">One batch can receive products for one seller only.</div>
+    <section class="batch-panel batch-top-panel">
+      <div class="batch-top-grid">
+        <div class="form-row seller-search-wrap">
+          <label>Seller / Shop <span class="required-mark">*</span></label>
+          <div class="input-shell input-shell-seller">
+            <span class="input-leading">▣</span>
+            <input class="ds-input" id="sellerSearch" type="text"
+                   value="{{ selected_seller_display|default:'' }}"
+                   placeholder="Type shop name / code / phone..." autocomplete="off">
+          </div>
+          <input type="hidden" id="sellerId" name="seller_id" value="{{ selected_seller_id|default:'' }}">
+          <div id="sellerDropdown" class="search-dropdown"></div>
+          <div class="form-help">One batch can receive products for one seller only.</div>
+        </div>
+
+        <div class="form-row">
+          <label>Batch Note</label>
+          <textarea class="ds-input batch-note" name="note" rows="2" placeholder="Optional: box count, sender name, condition, etc."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="batch-panel products-panel">
+      <div class="batch-toolbar">
+        <div class="section-heading">
+          <div class="section-icon">◆</div>
+          <div>
+            <strong>Products Received</strong>
+            <div class="muted">Search an existing product or add a new product on each row.</div>
+          </div>
+        </div>
+        <button type="button" class="add-product-btn" id="addRowBtn"><span>＋</span> Add Product</button>
       </div>
 
-      <div class="form-row">
-        <label>Batch Note</label>
-        <textarea class="ds-input" name="note" rows="2" placeholder="Optional: box count, sender name, condition, etc."></textarea>
+      <div id="batchRows" class="batch-rows"></div>
+
+      <div class="batch-footer-grid">
+        <div class="batch-summary">
+          <div class="summary-card">
+            <span class="summary-icon">▤</span>
+            <div><small>Product Rows</small><strong id="rowCount">0</strong></div>
+          </div>
+          <div class="summary-card">
+            <span class="summary-icon">✓</span>
+            <div><small>Total Qty Received</small><strong id="totalQty">0</strong></div>
+          </div>
+        </div>
+
+        <div class="batch-actions">
+          <a class="btn-soft batch-cancel" href="{% url 'inventory:list' %}">Cancel</a>
+          <button class="btn-green batch-save" type="submit">Save Batch &amp; Print Receipt</button>
+        </div>
       </div>
-    </div>
-
-    <div class="batch-toolbar">
-      <div>
-        <strong>Products Received</strong>
-        <div class="muted">Choose an existing product or type a new product name on each row.</div>
-      </div>
-      <button type="button" class="btn-soft" id="addRowBtn">+ Add Product</button>
-    </div>
-
-    <div id="batchRows" class="batch-rows"></div>
-
-    <div class="batch-summary">
-      <div><span>Product Rows</span><strong id="rowCount">0</strong></div>
-      <div><span>Total Qty Received</span><strong id="totalQty">0</strong></div>
-    </div>
-
-    <div class="batch-actions">
-      <button class="btn-green" type="submit">Save Batch & Print Receipt</button>
-      <a class="btn-soft" href="{% url 'inventory:list' %}">Cancel</a>
-    </div>
+    </section>
   </form>
 </div>
 
 <template id="rowTemplate">
   <div class="batch-row">
     <div class="row-head">
-      <strong class="row-title">Product</strong>
-      <button type="button" class="remove-row">Remove</button>
+      <div class="row-title-wrap">
+        <span class="row-number-dot"></span>
+        <strong class="row-title">Product</strong>
+      </div>
+      <button type="button" class="remove-row"><span>×</span> Remove</button>
     </div>
 
     <div class="row-grid">
-      <div class="form-row product-search-wrap">
+      <div class="form-row product-search-wrap product-col">
         <label>Existing Product</label>
         <input class="ds-input product-search" type="text" placeholder="Type product name / SKU..." autocomplete="off">
         <input type="hidden" class="product-id">
@@ -77,27 +100,27 @@
         <div class="form-help selected-stock"></div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row new-name-col">
         <label>New Product Name</label>
         <input class="ds-input new-product-name" placeholder="Only if product is new">
       </div>
 
-      <div class="form-row">
+      <div class="form-row type-col">
         <label>Product Type</label>
         <input class="ds-input product-type" placeholder="Serum / Cream / Gel">
       </div>
 
-      <div class="form-row">
+      <div class="form-row location-col">
         <label>Location</label>
         <input class="ds-input location" placeholder="Shelf / box location">
       </div>
 
-      <div class="form-row qty-box">
+      <div class="form-row qty-box qty-col">
         <label>Qty Received</label>
         <input class="ds-input qty" type="number" min="1" step="1" placeholder="0" required>
       </div>
 
-      <div class="form-row">
+      <div class="form-row photo-col">
         <label>Photo <span class="muted">(optional)</span></label>
         <div class="row-photo-drop" tabindex="0">
           <input class="photo-input" type="file" accept="image/*" hidden>
@@ -116,38 +139,44 @@
 </template>
 
 <style>
+  .batch-page{width:100%;max-width:none;margin:0;padding-bottom:28px}
+  .batch-hero{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:0 2px}
+  .batch-hero-copy{flex:1;min-width:0}.batch-list-link{margin-left:auto;white-space:nowrap}
+  .batch-hero-icon{width:44px;height:44px;border-radius:14px;background:#eaf8ef;color:#0f8a3b;display:grid;place-items:center;font-size:20px;font-weight:950;flex:0 0 44px;border:1px solid #d7eee2}
+  .batch-page-title{margin:0;color:#0f172a;font-size:25px;line-height:1.08;font-weight:1000;letter-spacing:-.4px}
+  .batch-page-sub{margin:4px 0 0;color:#64748b;font-size:12px;font-weight:650}
+  .batch-form{display:grid;gap:12px}
+  .batch-panel{background:#fff;border:1px solid #e3e9e5;border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+  .batch-top-panel{padding:16px 18px}.products-panel{padding:0 0 16px;overflow:visible}
   .seller-search-wrap,.product-search-wrap{position:relative}
-  .batch-top-grid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,1fr);gap:14px}
-  .batch-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 12px}
-  .batch-rows{display:grid;gap:12px}
-  .batch-row{border:1px solid #e5e7eb;border-radius:18px;padding:14px;background:#fbfefc}
-  .row-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-  .row-title{font-size:14px;color:#0f172a}
-  .remove-row{border:0;background:#fee2e2;color:#991b1b;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:950;cursor:pointer}
-  .row-grid{display:grid;grid-template-columns:minmax(220px,1.4fr) minmax(190px,1.2fr) minmax(140px,.8fr) minmax(140px,.8fr) 120px minmax(170px,.9fr);gap:10px;align-items:end}
-  .qty-box .ds-input{font-weight:950;font-size:16px;text-align:center}
-  .batch-summary{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-  .batch-summary>div{min-width:170px;border:1px solid #d1fae5;background:#f0fdf4;border-radius:14px;padding:11px 14px}
-  .batch-summary span{display:block;color:#64748b;font-size:11px;font-weight:850}
-  .batch-summary strong{display:block;color:#166534;font-size:22px;margin-top:3px}
-  .batch-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
-  .search-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:99999;max-height:280px;overflow:auto;background:#fff;border:1px solid #d1d5db;border-radius:12px;box-shadow:0 14px 34px rgba(15,23,42,.16)}
-  .search-dd-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:13px;color:#0f172a}
-  .search-dd-item:hover{background:#f0fdf4}.search-dd-name{font-weight:950}.search-dd-code{color:#64748b;font-size:12px;font-weight:800;margin-top:2px}
-  .product-result{display:flex;align-items:center;gap:10px;min-width:0}
-  .product-result-photo,.product-result-no-photo{width:48px;height:48px;border-radius:10px;flex:0 0 48px;border:1px solid #e5e7eb;background:#f8fafc;object-fit:cover}
-  .product-result-no-photo{display:grid;place-items:center;font-size:9px;font-weight:900;color:#94a3b8}
-  .product-result-body{min-width:0}.product-result-body .search-dd-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .selected-product-card{margin-top:8px;display:flex;align-items:center;gap:9px;padding:8px;border:1px solid #d1fae5;background:#f0fdf4;border-radius:12px;position:relative}
-  .selected-product-photo{width:48px;height:48px;border-radius:10px;object-fit:cover;background:#fff;border:1px solid #dcfce7}
-  .selected-product-info{min-width:0;padding-right:24px}.selected-product-info strong{display:block;font-size:12px;color:#14532d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.selected-product-meta{font-size:10px;color:#64748b;margin-top:2px}
-  .clear-selected-product{position:absolute;right:6px;top:6px;width:24px;height:24px;border:0;border-radius:999px;background:#fff;color:#991b1b;font-size:17px;line-height:1;cursor:pointer}
-  .row-photo-drop{min-height:58px;border:1.5px dashed #86efac;border-radius:12px;background:#f8fff9;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;outline:none}
-  .row-photo-drop.dragging,.row-photo-drop:focus{border-color:#0f8a3b;background:#ecfdf5}
-  .row-photo-empty{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px;text-align:left;color:#166534}.row-photo-empty span{display:block;font-size:9px;color:#94a3b8}.row-photo-plus{width:30px;height:30px;border-radius:999px;background:#0f8a3b;color:#fff;display:grid;place-items:center;font-size:18px;font-weight:950}
-  .row-photo-preview-wrap{width:100%;height:72px;position:relative;background:#f8fafc}.row-photo-preview{width:100%;height:100%;object-fit:contain}.row-photo-remove{position:absolute;top:4px;right:4px;width:26px;height:26px;border:0;border-radius:999px;background:#dc2626;color:#fff;font-size:18px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.18)}
-  @media(max-width:1100px){.row-grid{grid-template-columns:repeat(3,minmax(180px,1fr))}}
-  @media(max-width:700px){.batch-top-grid,.row-grid{grid-template-columns:1fr}.batch-toolbar{align-items:flex-start;flex-direction:column}.batch-row{padding:12px}}
+  .batch-top-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+  .form-row{min-width:0}.form-row label{display:block;height:17px;margin-bottom:5px;color:#334155;font-size:10.5px;font-weight:950;letter-spacing:.02em}
+  .required-mark{color:#dc2626}
+  .ds-input{width:100%;height:40px;border:1px solid #dbe2e8;border-radius:10px;background:#fff;padding:0 11px;color:#0f172a;font-size:12px;font-weight:700;transition:border-color .16s,box-shadow .16s,background .16s}
+  textarea.ds-input{height:58px;min-height:58px;padding:9px 11px;line-height:1.4;resize:vertical}
+  .ds-input:hover{border-color:#cbd5e1}.ds-input:focus{outline:none;border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.09)}
+  .input-shell{position:relative}.input-shell .ds-input{padding-left:38px}.input-leading{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:7px;background:#eaf8ef;color:#15803d;display:grid;place-items:center;font-size:11px;font-weight:1000;z-index:2}
+  .form-help{min-height:14px;color:#94a3b8;font-size:9.5px;font-weight:700;margin-top:4px;line-height:1.25}
+  .batch-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid #edf2ee}
+  .section-heading{display:flex;align-items:center;gap:9px;min-width:0}.section-icon{width:30px;height:30px;border-radius:9px;background:#eaf8ef;color:#0f8a3b;display:grid;place-items:center;font-size:12px;font-weight:1000;flex:0 0 30px}.section-heading strong{display:block;color:#0f172a;font-size:13px;font-weight:1000}.section-heading .muted{margin-top:1px;color:#94a3b8;font-size:10px;font-weight:700}
+  .add-product-btn{height:36px;padding:0 13px;border:1px solid #9bd4af;border-radius:10px;background:#fff;color:#087733;font-size:11px;font-weight:950;display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}.add-product-btn:hover{background:#f0fdf4;border-color:#16a34a}.add-product-btn span{font-size:16px}
+  .batch-rows{display:grid;gap:10px;padding:12px 14px}
+  .batch-row{border:1px solid #e5ebe7;border-radius:14px;padding:12px;background:#fbfdfb;transition:.16s}.batch-row:hover{border-color:#cfe1d5;background:#fff;box-shadow:0 5px 16px rgba(15,23,42,.035)}
+  .row-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.row-title-wrap{display:flex;align-items:center;gap:7px}.row-number-dot{width:7px;height:7px;border-radius:999px;background:#16a34a;box-shadow:0 0 0 3px #eaf8ef}.row-title{font-size:12px;color:#0f172a;font-weight:1000}
+  .remove-row{height:28px;border:0;background:#fff0f0;color:#dc2626;border-radius:999px;padding:0 9px;font-size:9.5px;font-weight:950;cursor:pointer;display:inline-flex;align-items:center;gap:3px}.remove-row:hover{background:#fee2e2}
+  .row-grid{display:grid;grid-template-columns:2.05fr 1.45fr 1fr 1fr .65fr 1.15fr;gap:8px;align-items:start;width:100%}
+  .row-grid>.form-row{min-width:0}.row-grid .ds-input{height:39px;font-size:11.5px}
+  .qty-col .ds-input{text-align:center;font-size:14px;font-weight:950;padding-left:6px;padding-right:6px}
+  .search-dropdown{display:none;position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:99999;max-height:300px;overflow:auto;background:#fff;border:1px solid #dbe2e8;border-radius:12px;box-shadow:0 18px 42px rgba(15,23,42,.16);padding:4px}
+  .search-dd-item{display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;cursor:pointer}.search-dd-item:hover{background:#f0fdf4}.search-dd-photo{width:38px;height:38px;object-fit:cover;border-radius:8px;background:#f1f5f9;flex:0 0 38px}.search-dd-photo-empty{width:38px;height:38px;border-radius:8px;background:#f1f5f9;display:grid;place-items:center;color:#94a3b8;font-size:8px;font-weight:900;flex:0 0 38px}.search-dd-name{font-size:11px;font-weight:950;color:#0f172a}.search-dd-code{margin-top:2px;color:#64748b;font-size:9.5px;font-weight:750}
+  .selected-product-card{margin-top:5px;height:44px;padding:4px 6px;display:flex;align-items:center;gap:7px;border:1px solid #cdebd8;border-radius:10px;background:#f0fdf4;position:relative}.selected-product-photo{width:34px;height:34px;object-fit:cover;border-radius:7px;background:#fff;border:1px solid #d7eee2;flex:0 0 34px}.selected-product-info{min-width:0;padding-right:18px}.selected-product-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#166534;font-size:10.5px;font-weight:950}.selected-product-meta{margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8.8px;font-weight:750}.clear-selected-product{position:absolute;right:5px;top:5px;width:19px;height:19px;border:0;border-radius:999px;background:#fff;color:#dc2626;font-size:13px;cursor:pointer}
+  .row-photo-drop{height:58px;border:1.5px dashed #86efac;border-radius:10px;background:#f7fff9;display:grid;place-items:center;cursor:pointer;overflow:hidden;position:relative;outline:none}.row-photo-drop:hover,.row-photo-drop.dragging,.row-photo-drop:focus{border-color:#16a34a;background:#ecfdf3}.row-photo-empty{display:flex;align-items:center;justify-content:center;gap:7px;padding:5px;text-align:left}.row-photo-plus{width:24px;height:24px;border-radius:999px;background:#16a34a;color:#fff;display:grid;place-items:center;font-size:17px;font-weight:1000;flex:0 0 24px}.row-photo-empty strong{display:block;color:#166534;font-size:9.5px;line-height:1.05}.row-photo-empty span{display:block;margin-top:2px;color:#94a3b8;font-size:8px;font-weight:800}.row-photo-preview-wrap{width:100%;height:58px;position:relative;background:#f8fafc}.row-photo-preview{width:100%;height:100%;object-fit:contain}.row-photo-remove{position:absolute;top:4px;right:4px;width:22px;height:22px;border:0;border-radius:999px;background:#dc2626;color:#fff;font-size:14px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+  .batch-footer-grid{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 14px 0;border-top:1px solid #edf2ee}
+  .batch-summary{display:flex;gap:8px;flex-wrap:wrap}.summary-card{min-width:145px;height:58px;border:1px solid #dcefe3;background:#f8fcf9;border-radius:11px;padding:8px 10px;display:flex;align-items:center;gap:8px}.summary-icon{width:30px;height:30px;border-radius:9px;background:#eaf8ef;color:#0f8a3b;display:grid;place-items:center;font-size:14px;font-weight:1000;flex:0 0 30px}.summary-card small{display:block;color:#64748b;font-size:8.8px;font-weight:850}.summary-card strong{display:block;color:#0f8a3b;font-size:17px;line-height:1;margin-top:2px;font-weight:1000}
+  .batch-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end}.batch-actions .btn-soft,.batch-actions .btn-green{height:40px;min-height:40px;border-radius:10px;padding:0 14px;font-size:11px;font-weight:950}.batch-save{min-width:190px;box-shadow:0 6px 15px rgba(15,138,59,.14)}
+  @media(max-width:1180px){.row-grid{grid-template-columns:1.8fr 1.3fr 1fr 1fr .65fr 1.05fr;gap:7px}.row-photo-empty strong{font-size:9px}}
+  @media(max-width:920px){.row-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.product-col,.new-name-col{grid-column:span 1}.batch-footer-grid{align-items:stretch;flex-direction:column}.batch-actions{justify-content:flex-start}}
+  @media(max-width:700px){.batch-hero{flex-wrap:wrap}.batch-list-link{width:100%;margin-left:0}.batch-hero-icon{width:40px;height:40px;flex-basis:40px}.batch-page-title{font-size:22px}.batch-top-grid,.row-grid{grid-template-columns:1fr}.batch-toolbar{align-items:flex-start;flex-direction:column;padding:12px}.batch-rows{padding:10px}.batch-row{padding:10px}.batch-footer-grid{padding:12px 10px 0}.batch-summary{display:grid;grid-template-columns:1fr 1fr;width:100%}.summary-card{min-width:0}.batch-actions{display:grid;grid-template-columns:1fr}.batch-actions .btn-soft,.batch-actions .btn-green{width:100%}.batch-save{order:-1}.batch-top-panel{padding:12px}}
 </style>
 
 <script>

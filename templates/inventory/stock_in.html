@@ -63,9 +63,17 @@
     <div class="row-grid">
       <div class="form-row product-search-wrap">
         <label>Existing Product</label>
-        <input class="ds-input product-search" type="text" placeholder="Search product / SKU..." autocomplete="off">
+        <input class="ds-input product-search" type="text" placeholder="Type product name / SKU..." autocomplete="off">
         <input type="hidden" class="product-id">
         <div class="search-dropdown product-dropdown"></div>
+        <div class="selected-product-card" style="display:none;">
+          <img class="selected-product-photo" alt="Selected product">
+          <div class="selected-product-info">
+            <strong class="selected-product-name"></strong>
+            <div class="selected-product-meta"></div>
+          </div>
+          <button type="button" class="clear-selected-product" title="Clear selected product">×</button>
+        </div>
         <div class="form-help selected-stock"></div>
       </div>
 
@@ -91,7 +99,17 @@
 
       <div class="form-row">
         <label>Photo <span class="muted">(optional)</span></label>
-        <input class="ds-input photo-input" type="file" accept="image/*">
+        <div class="row-photo-drop" tabindex="0">
+          <input class="photo-input" type="file" accept="image/*" hidden>
+          <div class="row-photo-empty">
+            <div class="row-photo-plus">＋</div>
+            <div><strong>Drop or choose photo</strong><span>JPG / PNG</span></div>
+          </div>
+          <div class="row-photo-preview-wrap" style="display:none;">
+            <img class="row-photo-preview" alt="Photo preview">
+            <button type="button" class="row-photo-remove" title="Remove photo">×</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -116,6 +134,18 @@
   .search-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:99999;max-height:280px;overflow:auto;background:#fff;border:1px solid #d1d5db;border-radius:12px;box-shadow:0 14px 34px rgba(15,23,42,.16)}
   .search-dd-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:13px;color:#0f172a}
   .search-dd-item:hover{background:#f0fdf4}.search-dd-name{font-weight:950}.search-dd-code{color:#64748b;font-size:12px;font-weight:800;margin-top:2px}
+  .product-result{display:flex;align-items:center;gap:10px;min-width:0}
+  .product-result-photo,.product-result-no-photo{width:48px;height:48px;border-radius:10px;flex:0 0 48px;border:1px solid #e5e7eb;background:#f8fafc;object-fit:cover}
+  .product-result-no-photo{display:grid;place-items:center;font-size:9px;font-weight:900;color:#94a3b8}
+  .product-result-body{min-width:0}.product-result-body .search-dd-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .selected-product-card{margin-top:8px;display:flex;align-items:center;gap:9px;padding:8px;border:1px solid #d1fae5;background:#f0fdf4;border-radius:12px;position:relative}
+  .selected-product-photo{width:48px;height:48px;border-radius:10px;object-fit:cover;background:#fff;border:1px solid #dcfce7}
+  .selected-product-info{min-width:0;padding-right:24px}.selected-product-info strong{display:block;font-size:12px;color:#14532d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.selected-product-meta{font-size:10px;color:#64748b;margin-top:2px}
+  .clear-selected-product{position:absolute;right:6px;top:6px;width:24px;height:24px;border:0;border-radius:999px;background:#fff;color:#991b1b;font-size:17px;line-height:1;cursor:pointer}
+  .row-photo-drop{min-height:58px;border:1.5px dashed #86efac;border-radius:12px;background:#f8fff9;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;outline:none}
+  .row-photo-drop.dragging,.row-photo-drop:focus{border-color:#0f8a3b;background:#ecfdf5}
+  .row-photo-empty{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px;text-align:left;color:#166534}.row-photo-empty span{display:block;font-size:9px;color:#94a3b8}.row-photo-plus{width:30px;height:30px;border-radius:999px;background:#0f8a3b;color:#fff;display:grid;place-items:center;font-size:18px;font-weight:950}
+  .row-photo-preview-wrap{width:100%;height:72px;position:relative;background:#f8fafc}.row-photo-preview{width:100%;height:100%;object-fit:contain}.row-photo-remove{position:absolute;top:4px;right:4px;width:26px;height:26px;border:0;border-radius:999px;background:#dc2626;color:#fff;font-size:18px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.18)}
   @media(max-width:1100px){.row-grid{grid-template-columns:repeat(3,minmax(180px,1fr))}}
   @media(max-width:700px){.batch-top-grid,.row-grid{grid-template-columns:1fr}.batch-toolbar{align-items:flex-start;flex-direction:column}.batch-row{padding:12px}}
 </style>
@@ -159,6 +189,7 @@
       row.querySelector('.product-id').value='';
       row.querySelector('.product-search').value='';
       row.querySelector('.selected-stock').textContent='';
+      const card=row.querySelector('.selected-product-card');if(card)card.style.display='none';
     });
   }
 
@@ -175,7 +206,38 @@
     const box=row.querySelector('.product-dropdown');
     const stock=row.querySelector('.selected-stock');
     const newName=row.querySelector('.new-product-name');
+    const typeInput=row.querySelector('.product-type');
+    const locationInput=row.querySelector('.location');
+    const selectedCard=row.querySelector('.selected-product-card');
+    const selectedPhoto=row.querySelector('.selected-product-photo');
+    const selectedName=row.querySelector('.selected-product-name');
+    const selectedMeta=row.querySelector('.selected-product-meta');
+    const clearSelected=row.querySelector('.clear-selected-product');
     let timer=null;
+
+    function clearSelectedProduct(clearText){
+      hidden.value='';
+      stock.textContent='';
+      selectedCard.style.display='none';
+      selectedPhoto.removeAttribute('src');
+      selectedName.textContent='';
+      selectedMeta.textContent='';
+      if(clearText) input.value='';
+    }
+
+    function selectProduct(item){
+      input.value=`${item.name}${item.sku?' - '+item.sku:''}`;
+      hidden.value=item.id;
+      newName.value='';
+      if(item.product_type) typeInput.value=item.product_type;
+      if(item.location) locationInput.value=item.location;
+      stock.textContent=`Current available: ${item.available_qty}`;
+      selectedName.textContent=item.name;
+      selectedMeta.textContent=`${item.sku||'-'} · Available: ${item.available_qty}${item.location?' · '+item.location:''}`;
+      if(item.photo_url){selectedPhoto.src=item.photo_url;selectedPhoto.style.display='block'}else{selectedPhoto.removeAttribute('src');selectedPhoto.style.display='none'}
+      selectedCard.style.display='flex';
+      hide(box);
+    }
 
     function search(q){
       const sid=sellerId.value||'';q=(q||'').trim();
@@ -183,22 +245,57 @@
       fetch(`/inventory/api/products/?seller_id=${encodeURIComponent(sid)}&q=${encodeURIComponent(q)}`,{headers:{Accept:'application/json'}})
         .then(r=>r.json()).then(data=>{
           const items=normalize(data);box.innerHTML='';
+          if(!items.length){box.innerHTML='<div class="search-dd-item">No product found. You can enter it as a new product.</div>';box.style.display='block';return}
           items.forEach(item=>{
             const d=document.createElement('div');d.className='search-dd-item';
-            d.innerHTML=`<div class="search-dd-name">${esc(item.name)}</div><div class="search-dd-code">${esc(item.sku||'-')} · Available: ${item.available_qty}${item.location?' · '+esc(item.location):''}</div>`;
-            d.onclick=()=>{input.value=`${item.name}${item.sku?' - '+item.sku:''}`;hidden.value=item.id;newName.value='';stock.textContent=`Current available: ${item.available_qty}`;hide(box)};
+            const photo=item.photo_url?`<img class="product-result-photo" src="${esc(item.photo_url)}" alt="">`:'<div class="product-result-no-photo">NO PHOTO</div>';
+            d.innerHTML=`<div class="product-result">${photo}<div class="product-result-body"><div class="search-dd-name">${esc(item.name)}</div><div class="search-dd-code">${esc(item.sku||'-')} · Available: ${item.available_qty}${item.location?' · '+esc(item.location):''}</div></div></div>`;
+            d.addEventListener('click',()=>selectProduct(item));
             box.appendChild(d);
-          });box.style.display=items.length?'block':'none';
+          });box.style.display='block';
         }).catch(()=>hide(box));
     }
-    input.addEventListener('input',()=>{hidden.value='';stock.textContent='';clearTimeout(timer);timer=setTimeout(()=>search(input.value),150)});
+    input.addEventListener('input',()=>{clearSelectedProduct(false);clearTimeout(timer);timer=setTimeout(()=>search(input.value),120)});
     input.addEventListener('focus',()=>search(input.value));
-    newName.addEventListener('input',()=>{if(newName.value.trim()){hidden.value='';input.value='';stock.textContent=''}});
+    clearSelected.addEventListener('click',()=>{clearSelectedProduct(true);input.focus();search('')});
+    newName.addEventListener('input',()=>{if(newName.value.trim()){clearSelectedProduct(true)}});
+  }
+
+  function setupPhotoDrop(row){
+    const drop=row.querySelector('.row-photo-drop');
+    const input=row.querySelector('.photo-input');
+    const empty=row.querySelector('.row-photo-empty');
+    const wrap=row.querySelector('.row-photo-preview-wrap');
+    const preview=row.querySelector('.row-photo-preview');
+    const remove=row.querySelector('.row-photo-remove');
+    let objectUrl='';
+
+    function clearPhoto(){
+      if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=''}
+      input.value='';preview.removeAttribute('src');wrap.style.display='none';empty.style.display='flex';
+    }
+    function showFile(file){
+      if(!file || !file.type || !file.type.startsWith('image/')) return;
+      if(objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl=URL.createObjectURL(file);preview.src=objectUrl;empty.style.display='none';wrap.style.display='block';
+    }
+    drop.addEventListener('click',e=>{if(!e.target.closest('.row-photo-remove')) input.click()});
+    drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});
+    input.addEventListener('change',()=>showFile(input.files[0]));
+    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('dragging')}));
+    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('dragging')}));
+    drop.addEventListener('drop',e=>{
+      const file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+      if(!file || !file.type.startsWith('image/')) return;
+      try{const dt=new DataTransfer();dt.items.add(file);input.files=dt.files}catch(_){}
+      showFile(file);
+    });
+    remove.addEventListener('click',e=>{e.stopPropagation();clearPhoto()});
   }
 
   function addRow(){
     const node=template.content.cloneNode(true);const row=node.querySelector('.batch-row');
-    rowsBox.appendChild(node);setupProductSearch(row);
+    rowsBox.appendChild(node);setupProductSearch(row);setupPhotoDrop(row);
     row.querySelector('.remove-row').onclick=()=>{if(rowsBox.children.length>1){row.remove();updateSummary()}};
     row.querySelector('.qty').addEventListener('input',updateSummary);
     updateSummary();

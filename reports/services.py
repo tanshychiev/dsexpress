@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.db.models import Q
 
 from provinceops.models import ProvinceBatch, ProvinceBatchItem
+from provincecod.models import ProvinceCODBatch, ProvinceCODItem
 
 
 # =========================================================
@@ -118,11 +119,54 @@ def classify_row(order):
     return "pending"
 
 
+def _latest_active_province_cod_item(order):
+    """
+    Latest non-cancelled Province COD record for this order.
+    """
+    return (
+        ProvinceCODItem.objects
+        .select_related("batch")
+        .filter(order=order)
+        .exclude(batch__status=ProvinceCODBatch.STATUS_CANCELLED)
+        .order_by("-id")
+        .first()
+    )
+
+
 def display_status(order):
+    """
+    Delivery Report visible status for Province COD:
+
+    SENT       -> SENT COD
+    RECEIVED   -> RECEIVED
+    PAID       -> RECEIVED
+    settled    -> DONE
+    RETURNED   -> RETURNED
+    """
+    item = _latest_active_province_cod_item(order)
+
+    if item:
+        cod_status = (getattr(item, "cod_status", "") or "").upper().strip()
+
+        if cod_status == ProvinceCODItem.STATUS_RETURNED:
+            return "RETURNED"
+
+        if getattr(item, "seller_settled", False):
+            return "DONE"
+
+        if cod_status in {
+            ProvinceCODItem.STATUS_RECEIVED,
+            ProvinceCODItem.STATUS_PAID,
+        }:
+            return "RECEIVED"
+
+        if cod_status == ProvinceCODItem.STATUS_SENT:
+            return "SENT COD"
+
     status = (getattr(order, "status", "") or "").upper().strip()
 
-    if status == "SENT":
-        return "SENT"
+    if status in {"SENT", "SENT COD", "SENT_COD"}:
+        return "SENT COD"
 
     row_type = classify_row(order)
 
@@ -137,15 +181,11 @@ def display_status(order):
 
 def report_money(order):
     """
-    Display-only money values for Delivery Report.
+    Display-only money values for report.
     Do NOT change DB.
 
-    Rules:
-    - Pending / returned rows show 0.
-    - Normal done rows use Order.cod.
-    - Province COD rows use ProvinceCODItem.original_cod because Order.cod
-      is intentionally cleared after the Province COD batch is sent.
-    - Province COD RETURNED shows COD 0.
+    Pending and returned rows show 0.
+    Done/Sent rows show their current values.
     """
     row_type = classify_row(order)
 
@@ -170,37 +210,25 @@ def report_money(order):
 
     cod = safe_decimal(getattr(order, "cod", 0))
 
-    # Province COD keeps the seller's real COD in original_cod.
-    # Import locally so this report service remains safe if the app import
-    # order changes during Django startup.
-    try:
-        from provincecod.models import ProvinceCODItem
+    # Province COD stores the real COD in ProvinceCODItem.original_cod
+    # after Order.cod is set to 0.
+    province_cod_item = _latest_active_province_cod_item(order)
 
-        province_cod_item = (
-            ProvinceCODItem.objects
-            .filter(order_id=getattr(order, "pk", None))
-            .order_by("-id")
-            .first()
-        )
+    if province_cod_item:
+        cod_status = (
+            getattr(province_cod_item, "cod_status", "")
+            or ""
+        ).upper().strip()
 
-        if province_cod_item:
-            cod_status = (
-                getattr(province_cod_item, "cod_status", "") or ""
-            ).upper().strip()
+        if cod_status in {
+            ProvinceCODItem.STATUS_SENT,
+            ProvinceCODItem.STATUS_RECEIVED,
+            ProvinceCODItem.STATUS_PAID,
+        }:
+            cod = safe_decimal(province_cod_item.original_cod)
 
-            if cod_status in {
-                ProvinceCODItem.STATUS_SENT,
-                ProvinceCODItem.STATUS_RECEIVED,
-                ProvinceCODItem.STATUS_PAID,
-            }:
-                cod = safe_decimal(province_cod_item.original_cod)
-
-            elif cod_status == ProvinceCODItem.STATUS_RETURNED:
-                cod = Decimal("0.00")
-
-    except (ImportError, AttributeError):
-        # Keep normal Order.cod behavior if Province COD is unavailable.
-        pass
+        elif cod_status == ProvinceCODItem.STATUS_RETURNED:
+            cod = Decimal("0.00")
 
     return {
         "cod": cod,
@@ -271,6 +299,35 @@ def _province_done_order_ids(d_from=None, d_to=None, seller=None):
         qs = qs.filter(order__seller=seller)
 
     return qs.values_list("order_id", flat=True)
+
+
+
+def _province_cod_sent_order_ids(d_from=None, d_to=None, seller=None):
+    """
+    Province COD orders belong to Delivery Report according to
+    ProvinceCODItem.sent_at, NOT Order.created_at.
+    """
+    qs = (
+        ProvinceCODItem.objects
+        .select_related("batch", "order", "order__seller")
+        .filter(
+            batch__status=ProvinceCODBatch.STATUS_SENT,
+            sent_at__isnull=False,
+            order__is_deleted=False,
+        )
+    )
+
+    if d_from:
+        qs = qs.filter(sent_at__gte=_start(d_from))
+
+    if d_to:
+        qs = qs.filter(sent_at__lte=_end(d_to))
+
+    if seller:
+        qs = qs.filter(order__seller=seller)
+
+    return qs.values_list("order_id", flat=True)
+
 
 
 def get_done_queryset(Order, cleaned):
@@ -350,9 +407,25 @@ def get_done_queryset(Order, cleaned):
         )
     )
 
+    province_cod_ids = _province_cod_sent_order_ids(
+        d_from=d_from,
+        d_to=d_to,
+        seller=seller,
+    )
+
+    province_cod_qs = (
+        Order.objects
+        .select_related("seller", "delivery_shipper")
+        .filter(
+            is_deleted=False,
+            id__in=province_cod_ids,
+        )
+    )
+
     return (
         normal_done_qs
         | province_done_qs
+        | province_cod_qs
     ).distinct().order_by(
         "seller_code",
         "seller_name",

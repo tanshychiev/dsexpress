@@ -6,6 +6,7 @@ import json
 from datetime import date, datetime, time
 from decimal import Decimal
 from urllib.parse import urlencode
+from django.utils.http import url_has_allowed_host_and_scheme
 import re
 
 import qrcode
@@ -32,6 +33,7 @@ from .models import (
     Order,
     OrderActivity,
     OrderSetting,
+    SystemLock,
 )
 
 PER_PAGE = 50
@@ -530,6 +532,60 @@ def order_list(request):
             "total_results": total_results,
         },
     )
+@login_required
+def system_lock_and_download(request: HttpRequest):
+    """Lock the internal system with a required reason, then download the filtered Excel."""
+    if request.method != "POST":
+        return redirect("order_list")
+
+    reason = (request.POST.get("lock_reason") or "").strip()
+    next_url = (request.POST.get("next_url") or "").strip()
+
+    if not reason:
+        messages.error(request, "Lock reason is required.")
+        return redirect("order_list")
+
+    if not next_url or not url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = request.build_absolute_uri("/orders/download-excel/")
+
+    lock = SystemLock.get_lock()
+    if lock.active and lock.locked_by_id != request.user.id and not request.user.is_superuser:
+        who = lock.locked_by.username if lock.locked_by_id else "another user"
+        messages.error(
+            request,
+            f"System is already locked by {who}. Reason: {lock.reason or 'No reason provided'}",
+        )
+        return redirect("order_list")
+
+    lock.activate(user=request.user, reason=reason)
+    messages.success(request, "System locked. Search/view remain available; data changes are paused.")
+    return redirect(next_url)
+
+
+@login_required
+def system_unlock(request: HttpRequest):
+    if request.method != "POST":
+        return redirect("order_list")
+
+    lock = SystemLock.get_lock()
+    if not lock.active:
+        messages.info(request, "System is already unlocked.")
+        return redirect(request.META.get("HTTP_REFERER") or "order_list")
+
+    can_unlock = request.user.is_superuser or lock.locked_by_id == request.user.id
+    if not can_unlock:
+        messages.error(request, "Only the user who locked the system or a superuser can unlock it.")
+        return redirect(request.META.get("HTTP_REFERER") or "order_list")
+
+    lock.release()
+    messages.success(request, "System unlocked. Staff can create, edit, and update data again.")
+    return redirect(request.META.get("HTTP_REFERER") or "order_list")
+
+
 @login_required
 def download_orders_excel(request: HttpRequest):
     qs = _qs_orders_filtered(request, require_search_click=True)
@@ -1450,6 +1506,15 @@ def bulk_update(request: HttpRequest):
             request,
             f"Bulk update complete. Updated: {updated_count}, Skipped: {skipped_count}, Errors: {error_count}",
         )
+
+        if (request.POST.get("unlock_after_upload") or "") == "1":
+            system_lock = SystemLock.get_lock()
+            if system_lock.active and (
+                request.user.is_superuser or system_lock.locked_by_id == request.user.id
+            ):
+                system_lock.release()
+                messages.success(request, "System unlocked after successful upload.")
+
         return redirect("bulk_update_batch_detail", batch_id=batch.id)
 
     show = _is_search_clicked(request)

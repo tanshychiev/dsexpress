@@ -209,3 +209,103 @@ class InternalLoginRequiredMiddleware:
             return redirect(self.PORTAL_LOGIN)
 
         return self.get_response(request)
+
+class SystemLockMiddleware:
+    """
+    Global internal-system write lock.
+
+    While active:
+    - GET/HEAD/OPTIONS remain available, so search/view/print/download still work.
+    - Normal POST/PUT/PATCH/DELETE requests from internal staff are blocked.
+    - Unlock is always allowed for the lock owner/superuser (authorization is
+      checked by the view).
+    - The lock owner/superuser may POST the Bulk Update Excel so the downloaded
+      file can be uploaded back safely.
+    - Logout remains available.
+    """
+
+    SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
+    ALWAYS_ALLOWED_PATHS = {
+        "/orders/system-lock/unlock/",
+        "/orders/system-lock/lock-and-download/",
+        "/accounts/logout/",
+    }
+    BULK_UPLOAD_PATHS = {
+        "/orders/update/",
+        "/orders/update/upload/",
+        "/orders/upload-update/",
+        "/reports/delivery-report/upload/",
+    }
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Keep startup/migration safe. Before migration exists, do not break app.
+        system_lock = None
+        try:
+            from orders.models import SystemLock
+            system_lock = SystemLock.get_lock()
+        except Exception:
+            system_lock = None
+
+        request.system_lock = system_lock
+        request.can_unlock_system = False
+
+        if system_lock and system_lock.active and getattr(request, "user", None) and request.user.is_authenticated:
+            request.can_unlock_system = bool(
+                request.user.is_superuser or system_lock.locked_by_id == request.user.id
+            )
+
+        # Only internal staff writes are paused. Customer/seller portal users are
+        # not affected by this internal operational lock.
+        should_block = bool(
+            system_lock
+            and system_lock.active
+            and getattr(request, "user", None)
+            and request.user.is_authenticated
+            and request.user.is_staff
+            and request.method.upper() not in self.SAFE_METHODS
+        )
+
+        if not should_block:
+            return self.get_response(request)
+
+        path = request.path or "/"
+
+        if path in self.ALWAYS_ALLOWED_PATHS:
+            return self.get_response(request)
+
+        # Only the person who locked the system (or superuser) may upload the
+        # edited bulk-update file while everyone else remains read-only.
+        if path in self.BULK_UPLOAD_PATHS and request.can_unlock_system:
+            return self.get_response(request)
+
+        from django.contrib import messages
+        from django.http import JsonResponse
+        from django.shortcuts import redirect
+
+        reason = (system_lock.reason or "No reason provided").strip()
+        locker = system_lock.locked_by.username if system_lock.locked_by_id else "Unknown"
+        message = (
+            f"System is temporarily locked by {locker}. "
+            f"Reason: {reason}. You can search and view data, but changes are disabled."
+        )
+
+        # AJAX/API requests should get an explicit locked response.
+        accepts_json = "application/json" in (request.headers.get("Accept") or "")
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        if accepts_json or is_ajax:
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "locked": True,
+                    "message": message,
+                    "reason": reason,
+                    "locked_by": locker,
+                },
+                status=423,
+            )
+
+        messages.error(request, message)
+        return redirect(request.META.get("HTTP_REFERER") or "/")

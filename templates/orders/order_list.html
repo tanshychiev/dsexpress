@@ -924,6 +924,18 @@
       bottom:5px;
     }
   }
+
+  .lock-download-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:18px;}
+  .lock-download-modal.show{display:flex;}
+  .lock-download-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.55);}
+  .lock-download-card{position:relative;width:min(520px,100%);background:#fff;border-radius:18px;padding:20px;box-shadow:0 24px 70px rgba(15,23,42,.28);}
+  .lock-download-card h3{margin:0 0 6px;font-size:20px;color:#0f172a;}
+  .lock-download-card p{margin:0 0 14px;color:#64748b;line-height:1.5;}
+  .lock-reason-label{display:block;font-size:12px;font-weight:800;color:#334155;margin-bottom:6px;}
+  .lock-reason-input{width:100%;min-height:82px;resize:vertical;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font:inherit;outline:none;}
+  .lock-reason-input:focus{border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12);}
+  .lock-download-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .lock-note{margin-top:10px;padding:9px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;color:#92400e;font-size:12px;}
 </style>
 
 <div class="orders-wrap">
@@ -1217,6 +1229,27 @@
     <div class="orders-loading-text">Loading orders...</div>
   </div>
 </div>
+
+<div class="lock-download-modal" id="lockDownloadModal" aria-hidden="true">
+  <div class="lock-download-backdrop" id="lockDownloadBackdrop"></div>
+  <div class="lock-download-card">
+    <h3>Download Excel</h3>
+    <p>Do you want to lock DS Express while you edit this downloaded file?</p>
+
+    <form method="post" action="{% url 'system_lock_and_download' %}" id="lockDownloadForm">
+      {% csrf_token %}
+      <input type="hidden" name="next_url" id="lockDownloadNextUrl" value="">
+      <label class="lock-reason-label" for="lockReason">Reason for locking system *</label>
+      <textarea class="lock-reason-input" id="lockReason" name="lock_reason" required placeholder="Example: Updating downloaded orders / Correcting bulk data"></textarea>
+      <div class="lock-note">While locked, staff can search and view data, but cannot create, edit, delete, change reason/notes, or perform other data-changing actions.</div>
+      <div class="lock-download-actions">
+        <button class="orders-btn" type="button" id="lockDownloadCancel">Cancel</button>
+        <button class="orders-btn" type="button" id="downloadWithoutLock">Download Only</button>
+        <button class="orders-btn orders-btn-success" type="submit">Download &amp; Lock System</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -1226,6 +1259,14 @@
   const bulkAction = document.getElementById("bulkAction");
   const searchForm = document.getElementById("searchForm");
   const downloadExcelBtn = document.getElementById("downloadExcelBtn");
+  const lockDownloadModal = document.getElementById("lockDownloadModal");
+  const lockDownloadBackdrop = document.getElementById("lockDownloadBackdrop");
+  const lockDownloadCancel = document.getElementById("lockDownloadCancel");
+  const downloadWithoutLock = document.getElementById("downloadWithoutLock");
+  const lockDownloadNextUrl = document.getElementById("lockDownloadNextUrl");
+  const lockReason = document.getElementById("lockReason");
+  const systemAlreadyLocked = {% if request.system_lock and request.system_lock.active %}true{% else %}false{% endif %};
+  let pendingDownloadUrl = "";
   const loadingOverlay = document.getElementById("ordersLoading");
   const checkboxes = Array.from(document.querySelectorAll(".orders-cb"));
   const mobileSelectedCount = document.getElementById("mobileSelectedCount");
@@ -1271,9 +1312,14 @@
     showLoading("Searching orders...");
   });
 
+  function closeLockDownloadModal(){
+    lockDownloadModal?.classList.remove("show");
+    lockDownloadModal?.setAttribute("aria-hidden", "true");
+  }
+
   downloadExcelBtn?.addEventListener("click", function(e){
+    e.preventDefault();
     if (!hasAnyFilterFilled()){
-      e.preventDefault();
       alert("Please fill at least one field before Download Excel.");
       return;
     }
@@ -1281,7 +1327,30 @@
     const formData = new FormData(searchForm);
     const query = new URLSearchParams(formData).toString();
     const cleanUrl = downloadExcelBtn.href.split("?")[0];
-    downloadExcelBtn.href = cleanUrl + "?" + query;
+    pendingDownloadUrl = cleanUrl + "?" + query;
+
+    if (systemAlreadyLocked){
+      window.location.href = pendingDownloadUrl;
+      return;
+    }
+
+    if (lockDownloadNextUrl) lockDownloadNextUrl.value = pendingDownloadUrl;
+    if (lockReason) lockReason.value = "";
+    lockDownloadModal?.classList.add("show");
+    lockDownloadModal?.setAttribute("aria-hidden", "false");
+    window.setTimeout(function(){ lockReason?.focus(); }, 50);
+  });
+
+  downloadWithoutLock?.addEventListener("click", function(){
+    if (!pendingDownloadUrl) return;
+    closeLockDownloadModal();
+    window.location.href = pendingDownloadUrl;
+  });
+
+  lockDownloadCancel?.addEventListener("click", closeLockDownloadModal);
+  lockDownloadBackdrop?.addEventListener("click", closeLockDownloadModal);
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape") closeLockDownloadModal();
   });
 
   function selectedCheckboxes(){

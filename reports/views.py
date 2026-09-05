@@ -13,7 +13,7 @@ from openpyxl import load_workbook
 from playwright.sync_api import sync_playwright
 
 from masterdata.models import Seller
-from orders.models import Order
+from orders.models import Order, SystemLock
 from provinceops.models import ProvinceBatchItem
 
 from .excel import export_delivery_report_xlsx
@@ -502,9 +502,21 @@ def delivery_report_upload(request):
 
         messages.success(request, f"Upload complete. Updated {updated_rows} rows.")
 
+        # Keep the system locked after the upload. If the current user is allowed
+        # to unlock it, the upload page will ask whether to unlock now.
+        system_lock = SystemLock.get_lock()
+        ask_unlock = bool(
+            system_lock.active
+            and (request.user.is_superuser or system_lock.locked_by_id == request.user.id)
+        )
+
+    else:
+        ask_unlock = False
+
     return render(request, "reports/delivery_report_upload.html", {
         "form": form,
         "summary": summary,
+        "ask_unlock": ask_unlock,
     })
 
 

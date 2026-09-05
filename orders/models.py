@@ -424,3 +424,56 @@ class AuditLog(models.Model):
 
     def __str__(self) -> str:
         return f"{self.module} | {self.action} | {self.object_repr}"
+
+# ============================================================
+# GLOBAL SYSTEM LOCK
+# ============================================================
+class SystemLock(models.Model):
+    """
+    Singleton lock used while a staff member is editing a downloaded Excel file.
+
+    When active, staff can still view/search the internal system, but normal
+    data-changing requests are blocked by SystemLockMiddleware. The locker
+    (or a superuser) may upload the Bulk Update file and may unlock the system.
+    """
+
+    active = models.BooleanField(default=False, db_index=True)
+    reason = models.TextField(blank=True, default="")
+    locked_at = models.DateTimeField(blank=True, null=True)
+    locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="system_locks_created",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "System Lock"
+        verbose_name_plural = "System Lock"
+
+    def __str__(self) -> str:
+        if not self.active:
+            return "System unlocked"
+        who = self.locked_by.username if self.locked_by_id else "Unknown"
+        return f"System locked by {who}: {self.reason}"
+
+    @classmethod
+    def get_lock(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def activate(self, *, user, reason: str):
+        self.active = True
+        self.reason = (reason or "").strip()
+        self.locked_by = user
+        self.locked_at = timezone.now()
+        self.save(update_fields=["active", "reason", "locked_by", "locked_at", "updated_at"])
+
+    def release(self):
+        self.active = False
+        self.reason = ""
+        self.locked_by = None
+        self.locked_at = None
+        self.save(update_fields=["active", "reason", "locked_by", "locked_at", "updated_at"])

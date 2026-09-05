@@ -34,6 +34,14 @@
       </a>
     </div>
 
+    {% if request.system_lock and request.system_lock.active %}
+      <div style="margin:0 0 14px;padding:12px 14px;border-radius:12px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:13px;line-height:1.5;">
+        <strong>System is locked for this update.</strong><br>
+        Locked by: {{ request.system_lock.locked_by.username|default:"Unknown" }} · Reason: {{ request.system_lock.reason|default:"No reason provided" }}<br>
+        {% if request.can_unlock_system %}Upload the edited file below. After a successful upload, DS Express will ask if you want to unlock the system.{% else %}Only the user who locked the system or a superuser can upload the update file while locked.{% endif %}
+      </div>
+      {% endif %}
+
     <form method="post" enctype="multipart/form-data" class="upload-form">
       {% csrf_token %}
 
@@ -111,6 +119,26 @@
   {% endif %}
 
 </div>
+
+{% if ask_unlock %}
+  <form method="post" action="{% url 'system_unlock' %}" id="unlockAfterUploadForm" style="display:none;">
+    {% csrf_token %}
+  </form>
+
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        const unlockNow = window.confirm(
+          'Upload completed successfully. Do you want to unlock the DS Express system now?\n\n' +
+          'OK = Unlock System\nCancel = Keep System Locked'
+        );
+        if (unlockNow) {
+          document.getElementById('unlockAfterUploadForm').submit();
+        }
+      }, 150);
+    });
+  </script>
+{% endif %}
 
 
 <style>

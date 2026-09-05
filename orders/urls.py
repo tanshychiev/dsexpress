@@ -29,6 +29,8 @@ urlpatterns = [
     path("batch-print/", views.order_batch_print, name="order_batch_print"),
 
     path("download-excel/", views.download_orders_excel, name="download_orders_excel"),
+    path("system-lock/lock-and-download/", views.system_lock_and_download, name="system_lock_and_download"),
+    path("system-lock/unlock/", views.system_unlock, name="system_unlock"),
     path("api/sellers/autocomplete/", views.seller_autocomplete, name="seller_autocomplete"),
 
     # ====================================================

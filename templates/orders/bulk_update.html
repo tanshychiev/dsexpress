@@ -41,6 +41,16 @@
           <input type="file" name="file" required>
           <button type="submit" class="btn btn-success">Upload Update</button>
         </div>
+
+        {% if request.system_lock and request.system_lock.active and request.can_unlock_system %}
+          <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;color:#92400e;cursor:pointer;">
+            <input type="checkbox" name="unlock_after_upload" value="1" checked style="margin-top:2px;">
+            <span>
+              <strong>Unlock system after this upload succeeds</strong><br>
+              <small>Reason: {{ request.system_lock.reason|default:"No reason provided" }}</small>
+            </span>
+          </label>
+        {% endif %}
       </form>
     </div>
 

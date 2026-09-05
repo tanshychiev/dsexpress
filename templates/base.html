@@ -771,7 +771,12 @@
         margin-top:18vh;
       }
     }
-  </style>
+  
+    .system-lock-banner{margin:0 0 14px;padding:12px 14px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:12px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+    .system-lock-banner strong{color:#7c2d12;}
+    .system-lock-meta{font-size:13px;line-height:1.45;}
+    .system-lock-unlock{border:0;background:#b45309;color:#fff;font-weight:700;border-radius:9px;padding:9px 13px;cursor:pointer;white-space:nowrap;}
+</style>
 
 
   {% block extra_css %}{% endblock %}
@@ -1201,6 +1206,26 @@
       </header>
 
       <section class="content">
+        {% if request.system_lock and request.system_lock.active %}
+          <div class="system-lock-banner">
+            <div>
+              <strong>SYSTEM LOCKED — data editing is paused.</strong>
+              <div class="system-lock-meta">
+                Locked by: <b>{{ request.system_lock.locked_by.username|default:"Unknown" }}</b>
+                {% if request.system_lock.locked_at %} · Since: {{ request.system_lock.locked_at|date:"d M Y H:i" }}{% endif %}<br>
+                Reason: <b>{{ request.system_lock.reason|default:"No reason provided" }}</b><br>
+                Search and view are still available. Create, edit, delete, reason/note changes, bulk actions and other data changes are blocked.
+              </div>
+            </div>
+            {% if request.can_unlock_system %}
+              <form method="post" action="{% url 'system_unlock' %}">
+                {% csrf_token %}
+                <button class="system-lock-unlock" type="submit" onclick="return confirm('Unlock the DS Express system now?');">Unlock System</button>
+              </form>
+            {% endif %}
+          </div>
+        {% endif %}
+
         {% if messages %}
           <div style="margin-bottom:14px;">
             {% for message in messages %}

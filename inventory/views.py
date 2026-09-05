@@ -219,7 +219,6 @@ def stock_in(request):
             new_product_name = str(raw.get("new_product_name") or "").strip()
             product_type = str(raw.get("product_type") or "").strip()
             location = str(raw.get("location") or "").strip()
-            photo_key = str(raw.get("photo_key") or "").strip()
 
             try:
                 qty = int(raw.get("qty") or 0)
@@ -245,7 +244,6 @@ def stock_in(request):
                 "new_product_name": new_product_name,
                 "product_type": product_type,
                 "location": location,
-                "photo_key": photo_key,
                 "qty": qty,
             })
 
@@ -261,15 +259,12 @@ def stock_in(request):
             for item in clean_items:
                 product = item["product"]
 
-                uploaded_photo = request.FILES.get(item.get("photo_key") or "")
-
                 if not product:
                     product = StockProduct.objects.create(
                         seller=seller,
                         name=item["new_product_name"],
                         product_type=item["product_type"],
                         location=item["location"],
-                        photo=uploaded_photo or None,
                         created_by=request.user,
                     )
                 else:
@@ -280,9 +275,6 @@ def stock_in(request):
                     if item["location"] and item["location"] != product.location:
                         product.location = item["location"]
                         changed_fields.append("location")
-                    if uploaded_photo:
-                        product.photo = uploaded_photo
-                        changed_fields.append("photo")
                     if changed_fields:
                         product.save(update_fields=changed_fields)
 
@@ -302,11 +294,6 @@ def stock_in(request):
         {
             "sellers": sellers,
             "selected_seller_id": selected_seller.id if selected_seller else "",
-            "selected_seller_display": (
-                f"{selected_seller.name} - {selected_seller.code}"
-                if selected_seller and getattr(selected_seller, "code", "")
-                else (selected_seller.name if selected_seller else "")
-            ),
         },
     )
 
@@ -338,15 +325,6 @@ def stock_in_receipt(request, batch_ref: str):
     total_qty = sum(max(int(m.qty_delta or 0), 0) for m in movements)
     clean_note = (first.note or "").replace(marker, "", 1).strip()
 
-    receiver_signature_url = ""
-    if first.created_by_id:
-        try:
-            account = first.created_by.account
-            if account.signature:
-                receiver_signature_url = account.signature.url
-        except Exception:
-            receiver_signature_url = ""
-
     return render(
         request,
         "inventory/stock_in_receipt.html",
@@ -357,7 +335,6 @@ def stock_in_receipt(request, batch_ref: str):
             "total_qty": total_qty,
             "received_at": first.created_at,
             "received_by": first.created_by,
-            "receiver_signature_url": receiver_signature_url,
             "note": clean_note,
         },
     )

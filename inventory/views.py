@@ -63,6 +63,45 @@ def get_selected_seller_from_request(request):
     if seller_id.isdigit():
         return Seller.objects.filter(id=int(seller_id), is_active=True).first()
 
+    # Fallback for pages where the visible seller text is filled but the
+    # hidden seller_id was not submitted by JavaScript.
+    seller_search = (
+        request.POST.get("seller_search")
+        or request.GET.get("seller_search")
+        or ""
+    ).strip()
+
+    if seller_search:
+        # Common display format is: "Shop Name - CODE"
+        if " - " in seller_search:
+            name_part, code_part = seller_search.rsplit(" - ", 1)
+            code_part = code_part.strip()
+            name_part = name_part.strip()
+
+            if code_part:
+                seller = Seller.objects.filter(
+                    code__iexact=code_part,
+                    is_active=True,
+                ).first()
+                if seller:
+                    return seller
+
+            if name_part:
+                seller = Seller.objects.filter(
+                    name__iexact=name_part,
+                    is_active=True,
+                ).first()
+                if seller:
+                    return seller
+
+        # Exact-name fallback.
+        seller = Seller.objects.filter(
+            name__iexact=seller_search,
+            is_active=True,
+        ).first()
+        if seller:
+            return seller
+
     return None
 
 

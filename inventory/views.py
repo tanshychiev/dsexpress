@@ -211,7 +211,7 @@ def stock_in(request):
             items_data = []
 
         clean_items = []
-        for raw in items_data:
+        for item_position, raw in enumerate(items_data, start=1):
             if not isinstance(raw, dict):
                 continue
 
@@ -219,6 +219,23 @@ def stock_in(request):
             new_product_name = str(raw.get("new_product_name") or "").strip()
             product_type = str(raw.get("product_type") or "").strip()
             location = str(raw.get("location") or "").strip()
+
+            # Keep the image/file key sent by the Stock In page.
+            # Older versions of the page may only send row_index, so both
+            # formats are supported here.
+            photo_key = str(
+                raw.get("photo_key")
+                or raw.get("photo_field")
+                or raw.get("file_key")
+                or ""
+            ).strip()
+
+            row_index = str(
+                raw.get("row_index")
+                or raw.get("row")
+                or raw.get("index")
+                or ""
+            ).strip()
 
             try:
                 qty = int(raw.get("qty") or 0)
@@ -244,6 +261,9 @@ def stock_in(request):
                 "new_product_name": new_product_name,
                 "product_type": product_type,
                 "location": location,
+                "photo_key": photo_key,
+                "row_index": row_index,
+                "item_position": item_position,
                 "qty": qty,
             })
 
@@ -259,23 +279,61 @@ def stock_in(request):
             for item in clean_items:
                 product = item["product"]
 
+                # Resolve the uploaded image robustly. The current Stock In UI
+                # can send photo_key, while older UI versions used photo_<row>.
+                photo_candidates = []
+
+                if item.get("photo_key"):
+                    photo_candidates.append(item["photo_key"])
+
+                if item.get("row_index"):
+                    photo_candidates.extend([
+                        f"photo_{item['row_index']}",
+                        f"image_{item['row_index']}",
+                    ])
+
+                # Safe fallbacks for rows generated without row_index.
+                photo_candidates.extend([
+                    f"photo_{item['item_position']}",
+                    f"image_{item['item_position']}",
+                ])
+
+                uploaded_photo = None
+                for key in photo_candidates:
+                    if key and key in request.FILES:
+                        uploaded_photo = request.FILES.get(key)
+                        if uploaded_photo:
+                            break
+
                 if not product:
                     product = StockProduct.objects.create(
                         seller=seller,
                         name=item["new_product_name"],
                         product_type=item["product_type"],
                         location=item["location"],
+                        photo=uploaded_photo or None,
                         created_by=request.user,
                     )
                 else:
                     changed_fields = []
+
                     if item["product_type"] and item["product_type"] != product.product_type:
                         product.product_type = item["product_type"]
                         changed_fields.append("product_type")
+
                     if item["location"] and item["location"] != product.location:
                         product.location = item["location"]
                         changed_fields.append("location")
+
+                    # If a new image was selected during Stock In, save it to
+                    # the product so Inventory and the receipt can display it.
+                    if uploaded_photo:
+                        product.photo = uploaded_photo
+                        changed_fields.append("photo")
+
                     if changed_fields:
+                        # Remove duplicates while preserving field order.
+                        changed_fields = list(dict.fromkeys(changed_fields))
                         product.save(update_fields=changed_fields)
 
                 add_stock_in(

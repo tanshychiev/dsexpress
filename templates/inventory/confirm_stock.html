@@ -180,7 +180,7 @@
   </div>
 
   <div class="inv-card">
-    <form method="get" class="confirm-toolbar" id="confirmSellerForm">
+    <form method="get" class="confirm-toolbar">
       <div class="form-row seller-search-wrap">
         <label>Shop / Seller</label>
         <input
@@ -351,75 +351,17 @@
 
 
 <script>
-(function () {
-  const form = document.getElementById("confirmSellerForm");
-  const input = document.getElementById("sellerSearch");
-  const hidden = document.getElementById("sellerId");
+(function(){
+  const form = document.querySelector('.confirm-toolbar');
+  const visible = document.getElementById('sellerSearch');
+  const hidden = document.getElementById('sellerId');
 
-  if (!form || !input || !hidden) return;
+  if (!form || !visible || !hidden) return;
 
-  let resolving = false;
-
-  function normalize(data) {
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray(data.items)) return data.items;
-    if (data && Array.isArray(data.results)) return data.results;
-    return [];
-  }
-
-  function displayValue(item) {
-    return `${item.name || ""}${item.code ? " - " + item.code : ""}`.trim();
-  }
-
-  form.addEventListener("submit", async function (event) {
-    if (hidden.value || resolving) return;
-
-    const typed = (input.value || "").trim();
-    if (!typed) return;
-
-    // Prevent the form from submitting with an empty seller_id.
-    event.preventDefault();
-    resolving = true;
-
-    try {
-      const response = await fetch(
-        `/api/sellers/autocomplete/?q=${encodeURIComponent(typed)}`,
-        {headers: {"Accept": "application/json"}}
-      );
-      const items = normalize(await response.json());
-
-      const typedLower = typed.toLowerCase();
-      let match = items.find(item =>
-        displayValue(item).toLowerCase() === typedLower
-      );
-
-      // Fallback: exact seller name or exact seller code contained in the text.
-      if (!match) {
-        match = items.find(item =>
-          String(item.name || "").trim().toLowerCase() === typedLower ||
-          (
-            item.code &&
-            typedLower.endsWith(" - " + String(item.code).trim().toLowerCase())
-          )
-        );
-      }
-
-      // If autocomplete returned exactly one result, it is safe to use it.
-      if (!match && items.length === 1) match = items[0];
-
-      if (match && match.id) {
-        hidden.value = match.id;
-        input.value = displayValue(match);
-        form.submit();
-        return;
-      }
-
-      alert("Please choose the shop from the search result first.");
-    } catch (error) {
-      alert("Cannot load seller. Please try again.");
-    } finally {
-      resolving = false;
-    }
+  // Always allow normal GET submit. The backend can resolve seller_search
+  // even when seller_id is blank.
+  form.addEventListener('submit', function(){
+    visible.value = (visible.value || '').trim();
   });
 })();
 </script>

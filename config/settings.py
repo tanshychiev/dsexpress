@@ -71,7 +71,6 @@ MIDDLEWARE = [
     "customerportal.middleware.SellerPortalActivityMiddleware",
 
     "django.contrib.messages.middleware.MessageMiddleware",
-    "config.middleware.SystemLockMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -160,6 +159,11 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Stock In can upload several product photos in one request.
+# Nginx is configured separately to allow up to 50 MB per request.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 TELEGRAM_DS_TEAM_BOT_TOKEN = "8022902036:AAHSJkKgMCWFwWeSBWd7oTM48RlQyJiHe_M"
 TELEGRAM_DS_TEAM_CHAT_ID = "-5060955651"

@@ -71,6 +71,7 @@ MIDDLEWARE = [
     "customerportal.middleware.SellerPortalActivityMiddleware",
 
     "django.contrib.messages.middleware.MessageMiddleware",
+    "config.middleware.SystemLockMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 

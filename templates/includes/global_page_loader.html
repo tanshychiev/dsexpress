@@ -171,113 +171,94 @@
   "use strict";
 
   const loader = document.getElementById("dsGlobalLoader");
-
-  if (!loader || loader.dataset.ready === "1"){
-    return;
-  }
-
+  if (!loader || loader.dataset.ready === "1") return;
   loader.dataset.ready = "1";
 
   let showTimer = null;
   let safetyTimer = null;
+  let downloadTimer = null;
   let mobileLinkMoving = false;
 
-  const coarsePointer = window.matchMedia
-    ? window.matchMedia("(pointer: coarse)").matches
-    : false;
+  const touchDevice = (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+    navigator.maxTouchPoints > 0 || "ontouchstart" in window;
 
-  const touchDevice =
-    coarsePointer ||
-    navigator.maxTouchPoints > 0 ||
-    "ontouchstart" in window;
-
-  function paintLoaderNow(){
+  function clearTimers(){
     window.clearTimeout(showTimer);
     window.clearTimeout(safetyTimer);
-
-    document.documentElement.classList.add("ds-loading");
-    document.body.classList.add("ds-loading");
-
-    loader.classList.add("is-visible");
-    loader.setAttribute("aria-hidden", "false");
-
-    /*
-      Reading offsetHeight forces the phone browser to apply the visible
-      loader before navigation starts.
-    */
-    void loader.offsetHeight;
-
-    safetyTimer = window.setTimeout(hideLoader, 30000);
+    window.clearTimeout(downloadTimer);
   }
 
-  function showLoader(delay){
+  function paintLoaderNow(note){
+    clearTimers();
+    const noteEl = loader.querySelector('.ds-loader-note');
+    if (noteEl) noteEl.textContent = note || 'Please wait a moment...';
+    document.documentElement.classList.add("ds-loading");
+    document.body.classList.add("ds-loading");
+    loader.classList.add("is-visible");
+    loader.setAttribute("aria-hidden", "false");
+    void loader.offsetHeight;
+    safetyTimer = window.setTimeout(hideLoader, 12000);
+  }
+
+  function showLoader(delay, note){
     window.clearTimeout(showTimer);
-
     const wait = Number(delay || 0);
-
     if (wait <= 0){
-      paintLoaderNow();
+      paintLoaderNow(note);
       return;
     }
-
-    showTimer = window.setTimeout(paintLoaderNow, wait);
+    showTimer = window.setTimeout(function(){ paintLoaderNow(note); }, wait);
   }
 
   function hideLoader(){
-    window.clearTimeout(showTimer);
-    window.clearTimeout(safetyTimer);
-
+    clearTimers();
     mobileLinkMoving = false;
-
     loader.classList.remove("is-visible");
     loader.setAttribute("aria-hidden", "true");
-
     document.documentElement.classList.remove("ds-loading");
     document.body.classList.remove("ds-loading");
+  }
+
+  function scheduleDownloadHide(){
+    window.clearTimeout(downloadTimer);
+    downloadTimer = window.setTimeout(hideLoader, 1400);
   }
 
   window.dsShowLoading = showLoader;
   window.dsHideLoading = hideLoader;
 
+  function isDownloadUrl(url){
+    if (!url) return false;
+    const path = (url.pathname || '').toLowerCase();
+    const action = (url.searchParams && url.searchParams.get('action') || '').toLowerCase();
+    return /(^|\/)(download|export)(\/|[-_])?/.test(path) ||
+      /download|export/.test(path) ||
+      ['export','export_selected','download_update','download'].includes(action) ||
+      /\.(xlsx?|csv|pdf|png|zip)(?:$|\?)/i.test(url.href || '');
+  }
+
+  function isDownloadSubmitter(submitter){
+    if (!submitter) return false;
+    if (submitter.hasAttribute && (submitter.hasAttribute("download") || submitter.hasAttribute("data-download"))) return true;
+    const name = (submitter.getAttribute && submitter.getAttribute("name") || "").toLowerCase();
+    const value = (submitter.value || submitter.textContent || "").toLowerCase();
+    if (name === "action" && /(download|export|save|pdf|png|excel|csv)/.test(value)) return true;
+    return /(^|\s)(download|export|save)(\s|$)/.test(value) || /(excel|pdf|png|csv|xlsx|xls)/.test(value);
+  }
+
   function validNavigationLink(link){
-    if (!link) return null;
-    if (link.hasAttribute("download")) return null;
-    if (link.hasAttribute("data-no-loading")) return null;
+    if (!link || link.hasAttribute("data-no-loading")) return null;
     if ((link.getAttribute("target") || "").toLowerCase() === "_blank") return null;
-
     const rawHref = (link.getAttribute("href") || "").trim();
-
-    if (!rawHref) return null;
-    if (rawHref.startsWith("#")) return null;
-    if (rawHref.startsWith("javascript:")) return null;
-    if (rawHref.startsWith("mailto:")) return null;
-    if (rawHref.startsWith("tel:")) return null;
-
+    if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("javascript:") ||
+        rawHref.startsWith("mailto:") || rawHref.startsWith("tel:")) return null;
     let url;
-
-    try{
-      url = new URL(link.href, window.location.href);
-    }catch(error){
-      return null;
-    }
-
+    try { url = new URL(link.href, window.location.href); } catch(error) { return null; }
     if (url.origin !== window.location.origin) return null;
-
-    if (
-      url.pathname === window.location.pathname &&
-      url.search === window.location.search &&
-      url.hash
-    ){
-      return null;
-    }
-
+    if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return null;
     return url;
   }
 
-  /*
-    Mobile Safari/Chrome may begin navigation before a delayed loader can
-    render. On touch devices, wait for two animation frames before moving.
-  */
   document.addEventListener("click", function(event){
     if (event.defaultPrevented) return;
     if (event.button !== undefined && event.button !== 0) return;
@@ -285,94 +266,72 @@
 
     const link = event.target.closest("a[href]");
     const url = validNavigationLink(link);
-
     if (!url) return;
 
-    if (!touchDevice){
-      paintLoaderNow();
+    const downloading = link.hasAttribute('download') || link.hasAttribute('data-download') || isDownloadUrl(url);
+    paintLoaderNow(downloading ? 'Preparing your file...' : undefined);
+
+    if (downloading){
+      // File responses normally keep the current page alive, so always clear
+      // the overlay instead of waiting for a page-load event that never comes.
+      scheduleDownloadHide();
       return;
     }
 
-    event.preventDefault();
+    if (!touchDevice) return;
 
+    event.preventDefault();
     if (mobileLinkMoving) return;
     mobileLinkMoving = true;
-
-    paintLoaderNow();
-
     window.requestAnimationFrame(function(){
       window.requestAnimationFrame(function(){
-        window.setTimeout(function(){
-          window.location.assign(url.href);
-        }, 20);
+        window.setTimeout(function(){ window.location.assign(url.href); }, 20);
       });
     });
   }, false);
 
-  /*
-    Submit events happen only after normal browser validation succeeds.
-    On a phone, submit again after the loader has had time to paint.
-  */
   document.addEventListener("submit", function(event){
     const form = event.target;
-
     if (!(form instanceof HTMLFormElement)) return;
     if (form.hasAttribute("data-no-loading")) return;
     if ((form.getAttribute("target") || "").toLowerCase() === "_blank") return;
 
+    const submitter = event.submitter || undefined;
+    let formUrl;
+    try { formUrl = new URL(form.action || window.location.href, window.location.href); } catch(error) { formUrl = null; }
+    const downloading = form.hasAttribute('data-download') || isDownloadUrl(formUrl) || isDownloadSubmitter(submitter);
+
     if (form.dataset.dsLoaderSubmitting === "1"){
       delete form.dataset.dsLoaderSubmitting;
-      paintLoaderNow();
+      paintLoaderNow(downloading ? 'Preparing your file...' : undefined);
+      if (downloading) scheduleDownloadHide();
       return;
     }
 
-    if (!touchDevice){
-      paintLoaderNow();
-      return;
-    }
+    paintLoaderNow(downloading ? 'Preparing your file...' : undefined);
+    if (downloading) scheduleDownloadHide();
+    if (!touchDevice) return;
 
     event.preventDefault();
-    paintLoaderNow();
-
     form.dataset.dsLoaderSubmitting = "1";
-    const submitter = event.submitter || undefined;
-
     window.requestAnimationFrame(function(){
       window.requestAnimationFrame(function(){
         window.setTimeout(function(){
-          if (typeof form.requestSubmit === "function"){
-            form.requestSubmit(submitter);
-          }else{
-            form.submit();
-          }
+          if (typeof form.requestSubmit === "function") form.requestSubmit(submitter);
+          else form.submit();
         }, 20);
       });
     });
   }, false);
 
-  window.addEventListener("beforeunload", paintLoaderNow);
-
-  window.addEventListener("pagehide", function(){
-    /*
-      pagehide is more reliable than beforeunload on iPhone/PWA.
-      The click/submit handlers already made the loader visible.
-    */
-    if (mobileLinkMoving){
-      paintLoaderNow();
-    }
-  });
-
-  window.addEventListener("load", hideLoader);
+  // Never allow a stale loader to survive browser back/forward cache, failed
+  // navigation, validation errors, tab switching, or a completed file download.
   window.addEventListener("pageshow", hideLoader);
-
+  window.addEventListener("load", hideLoader);
+  window.addEventListener("focus", function(){ window.setTimeout(hideLoader, 50); });
+  document.addEventListener("DOMContentLoaded", function(){ window.setTimeout(hideLoader, 0); });
   document.addEventListener("visibilitychange", function(){
-    if (document.visibilityState === "visible"){
-      window.setTimeout(hideLoader, 0);
-    }
-  });
-
-  document.addEventListener("DOMContentLoaded", function(){
-    window.setTimeout(hideLoader, 0);
+    if (document.visibilityState === "visible") window.setTimeout(hideLoader, 50);
   });
 })();
 </script>

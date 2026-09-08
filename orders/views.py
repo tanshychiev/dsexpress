@@ -552,16 +552,19 @@ def system_lock_and_download(request: HttpRequest):
     ):
         next_url = request.build_absolute_uri("/orders/download-excel/")
 
-    lock = SystemLock.get_lock()
-    if lock.active and lock.locked_by_id != request.user.id and not request.user.is_superuser:
-        who = lock.locked_by.username if lock.locked_by_id else "another user"
-        messages.error(
-            request,
-            f"System is already locked by {who}. Reason: {lock.reason or 'No reason provided'}",
-        )
-        return redirect("order_list")
+    # Serialize lock acquisition so two staff cannot lock concurrently.
+    with transaction.atomic():
+        SystemLock.get_lock()
+        lock = SystemLock.objects.select_for_update().get(pk=1)
+        if lock.active and lock.locked_by_id != request.user.id and not request.user.is_superuser:
+            who = lock.locked_by.username if lock.locked_by_id else "another user"
+            messages.error(
+                request,
+                f"System is already locked by {who}. Reason: {lock.reason or 'No reason provided'}",
+            )
+            return redirect("order_list")
 
-    lock.activate(user=request.user, reason=reason)
+        lock.activate(user=request.user, reason=reason)
     messages.success(request, "System locked. Search/view remain available; data changes are paused.")
     return redirect(next_url)
 
@@ -1509,11 +1512,17 @@ def bulk_update(request: HttpRequest):
 
         if (request.POST.get("unlock_after_upload") or "") == "1":
             system_lock = SystemLock.get_lock()
-            if system_lock.active and (
+            upload_fully_successful = updated_count > 0 and error_count == 0
+            if upload_fully_successful and system_lock.active and (
                 request.user.is_superuser or system_lock.locked_by_id == request.user.id
             ):
                 system_lock.release()
                 messages.success(request, "System unlocked after successful upload.")
+            elif system_lock.active and error_count > 0:
+                messages.warning(
+                    request,
+                    "System kept locked because the upload contains errors. Fix the errors before unlocking.",
+                )
 
         return redirect("bulk_update_batch_detail", batch_id=batch.id)
 

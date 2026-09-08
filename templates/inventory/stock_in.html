@@ -5,7 +5,7 @@
   <div class="si-head">
     <div>
       <h1>Stock In</h1>
-      <p>Receive existing products or create new products from the same simple form.</p>
+      <p>Choose an existing product or create a new one directly while receiving stock.</p>
     </div>
     <a class="btn-soft" href="{% url 'inventory:stock_in_list' %}">Stock In List</a>
   </div>
@@ -33,9 +33,9 @@
       <div class="card-head">
         <div>
           <h2>Products Received</h2>
-          <p>Existing and new products use the same simple row: Product, Qty, and Image.</p>
+          <p>Search first. If the product is new, create it from the same row.</p>
         </div>
-        <div class="head-actions"><button type="button" class="btn-new" id="newProductBtn">+ New Product</button><button type="button" class="btn-add" id="addRowBtn">+ Add Existing Product</button></div>
+        <button type="button" class="btn-add" id="addRowBtn">+ Add Product</button>
       </div>
 
       <div id="rows"></div>
@@ -50,7 +50,7 @@
 
 <template id="rowTemplate">
   <div class="product-row">
-    <div class="row-top"><div class="row-title-wrap"><strong class="row-label">Product</strong><span class="product-status status-existing">EXISTING PRODUCT</span></div><button class="remove-row" type="button">Remove</button></div>
+    <div class="row-top"><strong class="row-label">Product</strong><button class="remove-row" type="button">Remove</button></div>
     <div class="row-main">
       <div class="product-box">
         <label>Product <b>*</b></label>
@@ -76,17 +76,17 @@
         <label>Product Image <span>(optional)</span></label>
         <div class="photo-drop" tabindex="0">
           <input class="photo-input" type="file" accept="image/*" hidden>
-          <div class="photo-empty"><strong>Drop image here</strong><small>Click to upload or hover here + Ctrl+V</small><div class="photo-tip">Drag • Drop • Copy & Paste</div></div>
+          <div class="photo-empty"><strong>Drop / Paste image</strong><small>or click to upload</small></div>
           <div class="photo-preview-wrap" hidden><img class="photo-preview" alt=""><button type="button" class="remove-photo">×</button></div>
         </div>
       </div>
     </div>
-    <div class="new-hint" hidden><span>New product</span> Enter name, quantity and optional image. SKU will be created automatically.</div>
+    <div class="new-hint" hidden><span>New product</span> SKU will be generated automatically after save.</div>
   </div>
 </template>
 
 <style>
-.si-page{max-width:1250px;margin:0 auto;padding-bottom:30px}.si-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.si-head h1{margin:0;font-size:27px;font-weight:950;color:#0f172a}.si-head p,.card-head p{margin:4px 0 0;color:#64748b;font-size:12px;font-weight:650}.si-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.04)}.seller-card{padding:16px;margin-bottom:12px}.seller-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field,.product-box,.qty-box,.photo-box{position:relative}.field label,.product-box label,.qty-box label,.photo-box label{display:block;margin-bottom:6px;font-size:11px;font-weight:900;color:#334155}.field label b,.product-box label b,.qty-box label b{color:#dc2626}.photo-box label span{font-weight:700;color:#94a3b8}.input{width:100%;height:42px;border:1px solid #d7dee7;border-radius:10px;padding:0 12px;background:#fff;color:#0f172a;font-size:13px;font-weight:700;box-sizing:border-box}.input:focus{outline:none;border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.1)}.dropdown{position:absolute;left:0;right:0;top:100%;margin-top:5px;background:#fff;border:1px solid #dbe3ea;border-radius:12px;box-shadow:0 14px 35px rgba(15,23,42,.14);z-index:30;display:none;max-height:300px;overflow:auto}.dd-item{display:flex;gap:10px;align-items:center;padding:10px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9}.dd-item:last-child{border-bottom:0}.dd-item:hover{background:#f0fdf4}.dd-thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;background:#f1f5f9;flex:0 0 38px}.dd-copy{min-width:0}.dd-copy strong{display:block;font-size:12px;color:#0f172a}.dd-copy small{display:block;font-size:10px;color:#64748b;margin-top:2px}.dd-new{color:#15803d;font-weight:900}.products-card{overflow:visible}.card-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid #eef2f7}.card-head h2{margin:0;font-size:16px;font-weight:950}.head-actions{display:flex;gap:8px;flex-wrap:wrap}.btn-add,.btn-new{border:0;border-radius:10px;padding:10px 14px;font-weight:900;cursor:pointer}.btn-add{background:#eef2f7;color:#334155}.btn-new{background:#16a34a;color:#fff;box-shadow:0 5px 14px rgba(22,163,74,.18)}.product-row{padding:15px 18px;border-bottom:1px solid #eef2f7;border-left:5px solid #cbd5e1;background:#fff;transition:.15s ease}.product-row.mode-existing{border-left-color:#64748b;background:#fff}.product-row.mode-new{border-left-color:#16a34a;background:#f7fff9}.row-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.row-title-wrap{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.row-label{font-size:13px}.product-status{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:9px;font-weight:950;letter-spacing:.35px}.status-existing{background:#eef2f7;color:#475569;border:1px solid #dbe3ea}.status-new{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}.remove-row{border:0;background:transparent;color:#dc2626;font-size:11px;font-weight:850;cursor:pointer}.row-main{display:grid;grid-template-columns:minmax(320px,1.7fr) 150px minmax(240px,1fr);gap:12px;align-items:start}.choice-card{height:52px;border:1px solid #dce7df;background:#f8fffa;border-radius:10px;margin-top:7px;padding:6px;display:flex;align-items:center;gap:9px}.choice-card[hidden]{display:none}.choice-thumb{width:38px;height:38px;border-radius:8px;background:#eaf8ef;display:grid;place-items:center;overflow:hidden;flex:0 0 38px}.choice-img{width:100%;height:100%;object-fit:cover}.choice-placeholder{font-size:9px;font-weight:950;color:#15803d}.choice-copy{flex:1;min-width:0}.choice-copy strong{display:block;font-size:12px}.choice-copy small{display:block;color:#64748b;font-size:10px;margin-top:2px}.clear-choice{border:0;background:transparent;font-size:20px;color:#64748b;cursor:pointer}.photo-drop{height:92px;border:1.5px dashed #b8d8c4;border-radius:12px;background:#fbfffc;display:grid;place-items:center;cursor:pointer;overflow:hidden;position:relative;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .15s ease}.photo-drop:hover,.photo-drop.hovering,.photo-drop.dragging,.photo-drop:focus-within{outline:none;border-color:#16a34a;background:#f0fdf4;box-shadow:0 0 0 3px rgba(22,163,74,.08)}.photo-drop.dragging{transform:scale(1.01)}.photo-empty{text-align:center;color:#15803d;pointer-events:none;padding:8px}.photo-empty strong{display:block;font-size:11px}.photo-empty small{display:block;font-size:9px;color:#64748b;margin-top:3px}.photo-empty .photo-tip{margin-top:5px;color:#94a3b8;font-size:8px;font-weight:700}.photo-drop:hover .photo-empty strong,.photo-drop.dragging .photo-empty strong{color:#166534}.photo-preview-wrap{position:absolute;inset:0}.photo-preview-wrap[hidden]{display:none}.photo-preview{width:100%;height:100%;object-fit:contain;background:#fff}.remove-photo{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}.new-hint{margin-top:8px;font-size:10px;color:#64748b}.new-hint[hidden]{display:none}.new-hint span{display:inline-block;background:#dcfce7;color:#166534;font-weight:900;border-radius:999px;padding:3px 7px;margin-right:5px}.si-bottom{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 18px}.summary{display:flex;gap:10px}.summary span{min-width:110px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 11px}.summary small{display:block;color:#64748b;font-size:9px;font-weight:800}.summary strong{font-size:18px;color:#0f172a}.actions{display:flex;gap:9px}.seller-search-wrap,.product-search-wrap{position:relative}@media(max-width:800px){.seller-grid,.row-main{grid-template-columns:1fr}.si-head,.si-bottom{align-items:stretch;flex-direction:column}.actions{justify-content:flex-end}}
+.si-page{max-width:1250px;margin:0 auto;padding-bottom:30px}.si-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.si-head h1{margin:0;font-size:27px;font-weight:950;color:#0f172a}.si-head p,.card-head p{margin:4px 0 0;color:#64748b;font-size:12px;font-weight:650}.si-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.04)}.seller-card{padding:16px;margin-bottom:12px}.seller-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field,.product-box,.qty-box,.photo-box{position:relative}.field label,.product-box label,.qty-box label,.photo-box label{display:block;margin-bottom:6px;font-size:11px;font-weight:900;color:#334155}.field label b,.product-box label b,.qty-box label b{color:#dc2626}.photo-box label span{font-weight:700;color:#94a3b8}.input{width:100%;height:42px;border:1px solid #d7dee7;border-radius:10px;padding:0 12px;background:#fff;color:#0f172a;font-size:13px;font-weight:700;box-sizing:border-box}.input:focus{outline:none;border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.1)}.dropdown{position:absolute;left:0;right:0;top:100%;margin-top:5px;background:#fff;border:1px solid #dbe3ea;border-radius:12px;box-shadow:0 14px 35px rgba(15,23,42,.14);z-index:30;display:none;max-height:300px;overflow:auto}.dd-item{display:flex;gap:10px;align-items:center;padding:10px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9}.dd-item:last-child{border-bottom:0}.dd-item:hover{background:#f0fdf4}.dd-thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;background:#f1f5f9;flex:0 0 38px}.dd-copy{min-width:0}.dd-copy strong{display:block;font-size:12px;color:#0f172a}.dd-copy small{display:block;font-size:10px;color:#64748b;margin-top:2px}.dd-new{color:#15803d;font-weight:900}.products-card{overflow:visible}.card-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid #eef2f7}.card-head h2{margin:0;font-size:16px;font-weight:950}.btn-add{border:0;background:#eaf8ef;color:#08752f;border-radius:10px;padding:10px 14px;font-weight:900;cursor:pointer}.product-row{padding:15px 18px;border-bottom:1px solid #eef2f7}.row-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.row-label{font-size:13px}.remove-row{border:0;background:transparent;color:#dc2626;font-size:11px;font-weight:850;cursor:pointer}.row-main{display:grid;grid-template-columns:minmax(320px,1.7fr) 150px minmax(240px,1fr);gap:12px;align-items:start}.choice-card{height:52px;border:1px solid #dce7df;background:#f8fffa;border-radius:10px;margin-top:7px;padding:6px;display:flex;align-items:center;gap:9px}.choice-card[hidden]{display:none}.choice-thumb{width:38px;height:38px;border-radius:8px;background:#eaf8ef;display:grid;place-items:center;overflow:hidden;flex:0 0 38px}.choice-img{width:100%;height:100%;object-fit:cover}.choice-placeholder{font-size:9px;font-weight:950;color:#15803d}.choice-copy{flex:1;min-width:0}.choice-copy strong{display:block;font-size:12px}.choice-copy small{display:block;color:#64748b;font-size:10px;margin-top:2px}.clear-choice{border:0;background:transparent;font-size:20px;color:#64748b;cursor:pointer}.photo-drop{height:74px;border:1.5px dashed #b8d8c4;border-radius:10px;background:#fbfffc;display:grid;place-items:center;cursor:pointer;overflow:hidden;position:relative}.photo-drop.dragging,.photo-drop:focus{outline:none;border-color:#16a34a;background:#f0fdf4}.photo-empty{text-align:center;color:#15803d}.photo-empty strong{display:block;font-size:11px}.photo-empty small{display:block;font-size:9px;color:#64748b;margin-top:3px}.photo-preview-wrap{position:absolute;inset:0}.photo-preview-wrap[hidden]{display:none}.photo-preview{width:100%;height:100%;object-fit:contain;background:#fff}.remove-photo{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}.new-hint{margin-top:8px;font-size:10px;color:#64748b}.new-hint[hidden]{display:none}.new-hint span{display:inline-block;background:#dcfce7;color:#166534;font-weight:900;border-radius:999px;padding:3px 7px;margin-right:5px}.si-bottom{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 18px}.summary{display:flex;gap:10px}.summary span{min-width:110px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 11px}.summary small{display:block;color:#64748b;font-size:9px;font-weight:800}.summary strong{font-size:18px;color:#0f172a}.actions{display:flex;gap:9px}.seller-search-wrap,.product-search-wrap{position:relative}@media(max-width:800px){.seller-grid,.row-main{grid-template-columns:1fr}.si-head,.si-bottom{align-items:stretch;flex-direction:column}.actions{justify-content:flex-end}}
 </style>
 
 <script>
@@ -111,22 +111,8 @@
   sellerSearch.addEventListener('focus',()=>sellerSearch.value.trim()&&searchSeller(sellerSearch.value));
 
   function resetProductChoices(){rows.querySelectorAll('.product-row').forEach(r=>clearChoice(r,true));}
-  function setRowMode(row,isNew){
-    row.dataset.mode=isNew?'new':'existing';
-    row.classList.toggle('mode-new',!!isNew);
-    row.classList.toggle('mode-existing',!isNew);
-    const badge=row.querySelector('.product-status');
-    badge.textContent=isNew?'NEW PRODUCT':'EXISTING PRODUCT';
-    badge.classList.toggle('status-new',!!isNew);
-    badge.classList.toggle('status-existing',!isNew);
-    row.querySelector('.product-search').placeholder=isNew?'Enter new product name':'Search existing product name / SKU';
-  }
   function clearChoice(row,clearText=false){
-    row.querySelector('.product-id').value='';
-    row.querySelector('.new-product-name').value='';
-    row.querySelector('.choice-card').hidden=true;
-    row.querySelector('.new-hint').hidden=true;
-    setRowMode(row,false);
+    row.querySelector('.product-id').value='';row.querySelector('.new-product-name').value='';row.querySelector('.choice-card').hidden=true;row.querySelector('.new-hint').hidden=true;
     if(clearText) row.querySelector('.product-search').value='';
   }
   function setChoice(row,item,isNew=false){
@@ -134,12 +120,6 @@
     row.querySelector('.product-id').value=isNew?'':item.id;
     row.querySelector('.new-product-name').value=isNew?item.name:'';
     row.querySelector('.product-search').value=item.name+(item.sku&&!isNew?' - '+item.sku:'');
-    setRowMode(row,isNew);
-    if(isNew){
-      row.querySelector('.product-search').value=item.name||'';
-      row.querySelector('.new-product-name').value=item.name||'';
-      setTimeout(()=>row.querySelector('.product-search').focus(),0);
-    }
     row.querySelector('.choice-name').textContent=item.name;
     row.querySelector('.choice-meta').textContent=isNew?'New product · SKU auto-generated':`${item.sku||'-'} · Available: ${item.available_qty??0}`;
     if(item.photo_url&&!isNew){img.src=item.photo_url;img.hidden=false;ph.hidden=true}else{img.removeAttribute('src');img.hidden=true;ph.hidden=false;ph.textContent=isNew?'NEW':'NO IMG'}
@@ -157,143 +137,89 @@
         box.style.display=box.children.length?'block':'none';
       }).catch(()=>hide(box));
     };
-    input.addEventListener('input',()=>{
-      if(row.dataset.mode==='new'){
-        row.querySelector('.new-product-name').value=input.value.trim();
-        row.querySelector('.choice-name').textContent=input.value.trim()||'New Product';
-        return;
-      }
-      clearChoice(row,false);
-      clearTimeout(timer);
-      timer=setTimeout(()=>search(input.value),120);
-    });
-    input.addEventListener('focus',()=>{if(row.dataset.mode!=='new')search(input.value)});
+    input.addEventListener('input',()=>{clearChoice(row,false);clearTimeout(timer);timer=setTimeout(()=>search(input.value),120)});
+    input.addEventListener('focus',()=>search(input.value));
     row.querySelector('.clear-choice').onclick=()=>{clearChoice(row,true);input.focus();search('')};
   }
 
   let activePhotoSetter=null;
-  let lastPointerX=null, lastPointerY=null;
-
-  // Always remember the real mouse position. This lets Ctrl+V target the
-  // image box that is physically under the cursor instead of the last row used.
-  document.addEventListener('pointermove',e=>{
-    lastPointerX=e.clientX;
-    lastPointerY=e.clientY;
-  },{passive:true});
-
-  function photoSetterUnderMouse(){
-    if(lastPointerX===null || lastPointerY===null) return null;
-    const el=document.elementFromPoint(lastPointerX,lastPointerY);
-    const drop=el?.closest?.('.photo-drop');
-    return drop?._photoSetter || null;
+  async function compressStockPhoto(file){
+    if(!file || !file.type?.startsWith('image/')) return file;
+    // Small images are already safe. Larger phone/camera photos are resized
+    // before submit so a batch Stock In does not create an oversized request.
+    if(file.size <= 2 * 1024 * 1024) return file;
+    try{
+      const bitmap=await createImageBitmap(file);
+      const maxSide=1600;
+      const scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+      canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+      const ctx=canvas.getContext('2d',{alpha:false});
+      ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      bitmap.close?.();
+      let quality=.84;
+      let blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',quality));
+      while(blob && blob.size>2*1024*1024 && quality>.55){
+        quality-=.08;
+        blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',quality));
+      }
+      if(!blob) return file;
+      const base=(file.name||'stock-photo').replace(/\.[^.]+$/,'');
+      return new File([blob],`${base}.jpg`,{type:'image/jpeg',lastModified:Date.now()});
+    }catch(err){
+      console.warn('Photo compression skipped:',err);
+      return file;
+    }
   }
 
   function setupPhoto(row,key){
     const drop=row.querySelector('.photo-drop'),input=row.querySelector('.photo-input'),empty=row.querySelector('.photo-empty'),wrap=row.querySelector('.photo-preview-wrap'),preview=row.querySelector('.photo-preview');
-    input.name=`photo_${key}`; let url='';
-
-    const clear=()=>{
-      if(url) URL.revokeObjectURL(url);
-      url=''; input.value=''; preview.removeAttribute('src'); wrap.hidden=true; empty.hidden=false;
+    input.name=`photo_${key}`; let url='', busy=false;
+    const clear=()=>{if(url)URL.revokeObjectURL(url);url='';input.value='';preview.removeAttribute('src');wrap.hidden=true;empty.hidden=false;busy=false;row.dataset.photoBusy='0'};
+    const set=async file=>{
+      if(!file?.type?.startsWith('image/')) return;
+      busy=true; row.dataset.photoBusy='1';
+      empty.hidden=false; empty.innerHTML='<strong>Preparing image...</strong><small>Please wait</small>';
+      const safeFile=await compressStockPhoto(file);
+      if(safeFile.size>8*1024*1024){
+        alert('This image is too large. Please use an image under 8 MB.');
+        clear(); return;
+      }
+      try{const dt=new DataTransfer();dt.items.add(safeFile);input.files=dt.files}catch(e){}
+      if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(safeFile);preview.src=url;wrap.hidden=false;empty.hidden=true;
+      busy=false; row.dataset.photoBusy='0';
     };
-
-    const set=file=>{
-      if(!file || !file.type || !file.type.startsWith('image/')) return false;
-      try{const dt=new DataTransfer();dt.items.add(file);input.files=dt.files}catch(e){}
-      if(url) URL.revokeObjectURL(url);
-      url=URL.createObjectURL(file); preview.src=url; wrap.hidden=false; empty.hidden=true;
-      drop.classList.remove('dragging');
-      activePhotoSetter=set;
-      return true;
-    };
-
-    // Store the setter directly on this exact drop zone.
-    drop._photoSetter=set;
-
-    const setActive=()=>{activePhotoSetter=set};
-    drop.addEventListener('pointerenter',()=>{setActive();drop.classList.add('hovering')});
-    drop.addEventListener('pointerleave',()=>{drop.classList.remove('hovering')});
-    drop.addEventListener('pointerdown',setActive);
-    drop.addEventListener('focusin',setActive);
-
-    drop.addEventListener('click',e=>{
-      setActive();
-      if(!e.target.closest('.remove-photo')) input.click();
-    });
-    input.addEventListener('change',()=>set(input.files?.[0]));
-
-    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{
-      e.preventDefault(); e.stopPropagation();
-      setActive(); drop.classList.add('dragging');
-      if(e.dataTransfer) e.dataTransfer.dropEffect='copy';
-    }));
-    ['dragleave','dragend'].forEach(ev=>drop.addEventListener(ev,e=>{
-      e.preventDefault(); e.stopPropagation();
-      drop.classList.remove('dragging');
-    }));
-    drop.addEventListener('drop',e=>{
-      e.preventDefault(); e.stopPropagation();
-      drop.classList.remove('dragging');
-      setActive();
-      const file=[...(e.dataTransfer?.files||[])].find(f=>f.type?.startsWith('image/'));
-      if(file) set(file);
-    });
-
-    // Direct paste when this exact box has keyboard focus.
-    drop.addEventListener('paste',e=>{
-      const item=[...(e.clipboardData?.items||[])].find(it=>it.type?.startsWith('image/'));
-      if(item){e.preventDefault();e.stopPropagation();setActive();set(item.getAsFile())}
-    });
-    drop.addEventListener('keydown',e=>{
-      if(e.key==='Enter'||e.key===' '){e.preventDefault();setActive();input.click()}
-    });
-    row.querySelector('.remove-photo').addEventListener('click',e=>{e.stopPropagation();clear()});
+    row.addEventListener('pointerdown',()=>{activePhotoSetter=set});
+    drop.onclick=e=>{if(!e.target.closest('.remove-photo'))input.click()};input.onchange=()=>set(input.files[0]);
+    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('dragging')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('dragging')}));
+    drop.addEventListener('drop',e=>set(e.dataTransfer?.files?.[0]));drop.addEventListener('paste',e=>{for(const it of e.clipboardData?.items||[]){if(it.type.startsWith('image/')){e.preventDefault();set(it.getAsFile());break}}});
+    drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});row.querySelector('.remove-photo').onclick=e=>{e.stopPropagation();clear()};
+    activePhotoSetter=set;
   }
 
   let seq=0;
   function addRow(){
-    const key=++seq,frag=tpl.content.cloneNode(true),row=frag.querySelector('.product-row');row.dataset.photoKey=`photo_${key}`;row.classList.add('mode-existing');rows.appendChild(frag);setupSearch(row);setupPhoto(row,key);setRowMode(row,false);
+    const key=++seq,frag=tpl.content.cloneNode(true),row=frag.querySelector('.product-row');row.dataset.photoKey=`photo_${key}`;rows.appendChild(frag);setupSearch(row);setupPhoto(row,key);
     row.querySelector('.qty').addEventListener('input',summary);row.querySelector('.remove-row').onclick=()=>{if(rows.children.length>1){row.remove();summary()}};summary();
   }
   function summary(){const a=[...rows.querySelectorAll('.product-row')];rowCount.textContent=a.length;totalQty.textContent=a.reduce((s,r)=>s+(parseInt(r.querySelector('.qty').value||0)||0),0);a.forEach((r,i)=>r.querySelector('.row-label').textContent=`Product ${i+1}`)}
   document.getElementById('addRowBtn').onclick=addRow;
-  document.getElementById('newProductBtn').onclick=()=>{addRow();const row=rows.lastElementChild;setChoice(row,{name:''},true);row.querySelector('.product-search').value='';row.querySelector('.new-product-name').value='';row.querySelector('.product-search').focus()};
   document.addEventListener('paste',e=>{
-    const item=[...(e.clipboardData?.items||[])].find(it=>it.type?.startsWith('image/'));
-    if(!item) return;
-
-    // Priority 1: the photo box physically under the mouse right now.
-    // Priority 2: the last photo box clicked/focused, for keyboard-only use.
-    const mouseSetter=photoSetterUnderMouse();
-    const setter=mouseSetter || activePhotoSetter;
-    if(!setter) return;
-
-    // If the mouse is over a photo box, image paste must go there even when
-    // another text input still has keyboard focus.
-    if(mouseSetter){
-      e.preventDefault();
-      e.stopPropagation();
-      setter(item.getAsFile());
-      return;
-    }
-
-    // Without the mouse over a photo box, preserve normal paste in text fields.
-    const tag=(e.target?.tagName||'').toLowerCase();
-    if(tag==='input' || tag==='textarea' || e.target?.isContentEditable) return;
-    e.preventDefault();
-    setter(item.getAsFile());
+    if(!activePhotoSetter) return;
+    for(const item of e.clipboardData?.items||[]){if(item.type.startsWith('image/')){e.preventDefault();activePhotoSetter(item.getAsFile());break}}
   });
 
   form.addEventListener('submit',e=>{
     if(!sellerId.value){e.preventDefault();alert('Please choose Seller / Shop.');sellerSearch.focus();return}
+    if([...rows.querySelectorAll('.product-row')].some(r=>r.dataset.photoBusy==='1')){e.preventDefault();alert('Please wait for the product image to finish preparing.');return}
+    const files=[...form.querySelectorAll('input[type=file]')].flatMap(i=>[...i.files]);
+    const totalFileBytes=files.reduce((sum,f)=>sum+f.size,0);
+    if(totalFileBytes>40*1024*1024){e.preventDefault();alert('Total product images are too large. Please keep the batch under 40 MB.');return}
     const data=[];for(const [i,row] of [...rows.querySelectorAll('.product-row')].entries()){
-      const pid=row.querySelector('.product-id').value.trim();
-      const isNew=row.dataset.mode==='new';
-      const nn=isNew?row.querySelector('.product-search').value.trim():row.querySelector('.new-product-name').value.trim();
-      const qty=parseInt(row.querySelector('.qty').value||0)||0;
-      if(!pid&&!nn){e.preventDefault();alert(`Product ${i+1}: select an existing product or enter a new product name.`);return}
+      const pid=row.querySelector('.product-id').value.trim(),nn=row.querySelector('.new-product-name').value.trim(),qty=parseInt(row.querySelector('.qty').value||0)||0;
+      if(!pid&&!nn){e.preventDefault();alert(`Product ${i+1}: select an existing product or choose Create new product.`);return}
       if(qty<1){e.preventDefault();alert(`Product ${i+1}: enter quantity received.`);return}
-      if(isNew&&!nn){e.preventDefault();alert(`Product ${i+1}: enter the new product name.`);row.querySelector('.product-search').focus();return}
       data.push({product_id:pid,new_product_name:nn,product_type:'',location:'',qty,photo_key:row.dataset.photoKey});
     }itemsJson.value=JSON.stringify(data);
   });

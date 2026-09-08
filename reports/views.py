@@ -505,10 +505,22 @@ def delivery_report_upload(request):
         # Keep the system locked after the upload. If the current user is allowed
         # to unlock it, the upload page will ask whether to unlock now.
         system_lock = SystemLock.get_lock()
+        upload_fully_successful = bool(
+            updated_rows > 0
+            and skipped_rows == 0
+            and not_found_rows == 0
+            and not error_rows
+        )
         ask_unlock = bool(
-            system_lock.active
+            upload_fully_successful
+            and system_lock.active
             and (request.user.is_superuser or system_lock.locked_by_id == request.user.id)
         )
+        if system_lock.active and not upload_fully_successful:
+            messages.warning(
+                request,
+                "System kept locked because some rows were skipped, missing, or failed. Review the upload result before unlocking.",
+            )
 
     else:
         ask_unlock = False

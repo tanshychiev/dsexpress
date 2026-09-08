@@ -130,3 +130,88 @@ input:not([type="checkbox"]):not([type="radio"]),select,textarea{font-size:16px}
     width:100%!important;flex-basis:100%!important
   }
 }
+
+/* ============================================================
+   Internal phone override v3
+   Strong rules use !important so they also beat page-local styles
+   declared inside individual Django templates.
+   ============================================================ */
+@media (max-width:768px){
+  .content,.content form,.content fieldset,
+  .content .card,.content .panel,.content .box,
+  .content [class*="-card"],.content [class*="-panel"],.content [class*="-wrap"]{
+    max-width:100%!important;min-width:0!important
+  }
+
+  .content fieldset{width:100%!important}
+
+  .content input:not([type="checkbox"]):not([type="radio"]),
+  .content select,.content textarea{
+    display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;font-size:16px!important
+  }
+
+  .content input[type="date"],.content input[type="time"],
+  .content input[type="datetime-local"],.content input[type="month"]{
+    min-height:48px!important;padding-left:12px!important;padding-right:12px!important;
+    -webkit-appearance:none;appearance:none
+  }
+
+  .content .form-grid,.content .filter-grid,.content .search-grid,
+  .content .details-grid,.content .detail-grid,.content .fields-grid,
+  .content .input-grid,.content .filters-grid,.content .orders-search-grid,
+  .content .inv-filter{
+    grid-template-columns:minmax(0,1fr)!important
+  }
+
+  .content form>[style*="grid-template-columns"]:not(.mobile-action-bar):not(.orders-toggle-wrap):not(.orders-pager):not(.modal-actions){
+    grid-template-columns:minmax(0,1fr)!important
+  }
+
+  .content .form-row,.content .field-row,.content .filter-row,.content .search-row{
+    min-width:0!important
+  }
+
+  .content form [style*="display:flex"],.content form [style*="display: flex"],
+  .content .toolbar,.content .actions,.content .page-actions,
+  .content .form-actions,.content .filter-actions,.content [class*="toolbar"]{
+    max-width:100%!important;flex-wrap:wrap!important
+  }
+
+  .content .toolbar>*,.content .actions>*,.content .page-actions>*,
+  .content .form-actions>*,.content .filter-actions>*{min-width:0!important}
+
+  /* Intentionally compact controls that should remain side-by-side. */
+  .content .orders-toggle-wrap{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .content .orders-pager{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .mobile-action-bar{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) auto!important}
+  .modal-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+
+  .content .table-wrap,.content .table-responsive,.content .table-container,
+  .content [class*="table-wrap"],.content [class*="table-scroll"]{
+    width:100%!important;max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch
+  }
+
+  .content img,.content svg,.content canvas,.content video{max-width:100%!important}
+
+  .content p,.content dd,.content td,.content .note,.content .description,
+  .content .address,.content [class*="tracking"],.content [class*="code"]{
+    overflow-wrap:anywhere
+  }
+
+  /* Orders: fix iPhone date/time fields colliding in the old 2-column filter. */
+  .orders-search-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+  .orders-field,.orders-field.mobile-full,.orders-field.search-action-field{
+    grid-column:auto!important;width:100%!important;min-width:0!important
+  }
+  .orders-search-actions{width:100%!important}
+  .orders-search-actions>*{min-width:0!important}
+}
+
+@media (max-width:480px){
+  .content{padding-left:8px!important;padding-right:8px!important}
+  .content .orders-card,.content .inv-card,.content [class*="-card"]{border-radius:15px}
+  .orders-search-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .mobile-action-bar{
+    left:6px!important;right:6px!important;bottom:max(6px,env(safe-area-inset-bottom))!important
+  }
+}

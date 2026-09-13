@@ -1,44 +1,458 @@
 {% extends "base.html" %}
+
 {% block title %}Pickup / Booking History | DS Express{% endblock %}
 {% block page_title %}Pickup / Booking History{% endblock %}
 {% block page_subtitle %}Completed customer pickup and Grab orders{% endblock %}
+
 {% block extra_css %}
 <style>
-  .pb-wrap{display:grid;gap:14px}.pb-tabs{display:flex;gap:8px;flex-wrap:wrap}.pb-tab{padding:10px 14px;border:1px solid #dbe4ee;border-radius:10px;background:#fff;color:#334155;text-decoration:none;font-weight:800}.pb-tab.active{background:#0f5b9d;color:#fff;border-color:#0f5b9d}.card{background:#fff;border:1px solid #dfe7ef;border-radius:14px;padding:14px}.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:9px}.input,.select{min-height:41px;border:1px solid #cbd5e1;border-radius:9px;padding:8px 10px;width:100%;box-sizing:border-box}.btn{border:0;border-radius:9px;padding:10px 14px;background:#0f5b9d;color:#fff;font-weight:900;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.table-wrap{overflow:auto}.tbl{width:100%;border-collapse:collapse;min-width:1000px}.tbl th{background:#f1f5f9;color:#475569;font-size:11px;text-transform:uppercase;text-align:left;padding:9px;border-bottom:1px solid #dbe4ee;white-space:nowrap}.tbl td{padding:9px;border-bottom:1px solid #edf2f7;font-size:13px;vertical-align:top}.money{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}.method{display:inline-block;padding:5px 8px;border-radius:999px;background:#eef6ff;color:#0f5b9d;font-size:11px;font-weight:900}.edit{color:#0f5b9d;font-weight:900;text-decoration:none}.muted{color:#64748b}@media(max-width:800px){.filters{grid-template-columns:1fr 1fr}.filters .wide{grid-column:1/-1}.filters .btn{grid-column:1/-1}}
+  .pbh-page{
+    max-width:1400px;
+    margin:0 auto;
+    display:grid;
+    gap:18px;
+  }
+
+  .pbh-tabs{
+    width:max-content;
+    max-width:100%;
+    display:flex;
+    gap:8px;
+    padding:5px;
+    border:1px solid #e1e8e3;
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 8px 24px rgba(15,23,42,.04);
+  }
+
+  .pbh-tab{
+    min-height:38px;
+    padding:0 14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:10px;
+    color:#64748b;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:950;
+  }
+
+  .pbh-tab.active{
+    background:#0f7a45;
+    color:#fff;
+    box-shadow:0 5px 14px rgba(15,122,69,.18);
+  }
+
+  .pbh-card{
+    overflow:hidden;
+    border:1px solid #e2e8e4;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 30px rgba(15,23,42,.05);
+  }
+
+  .pbh-card-head{
+    padding:16px 18px 13px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:1px solid #edf1ee;
+    background:linear-gradient(180deg,#fff,#fbfdfc);
+  }
+
+  .pbh-card-title{
+    margin:0;
+    color:#172235;
+    font-size:15px;
+    font-weight:950;
+  }
+
+  .pbh-card-sub{
+    margin-top:4px;
+    color:#7b8781;
+    font-size:10px;
+    font-weight:700;
+  }
+
+  .pbh-card-body{padding:16px}
+
+  .pbh-filters{
+    display:grid;
+    grid-template-columns:minmax(260px,1.6fr) minmax(180px,.8fr) minmax(150px,.65fr) minmax(150px,.65fr) auto;
+    gap:10px;
+    align-items:end;
+  }
+
+  .pbh-field{
+    min-width:0;
+    display:grid;
+    gap:6px;
+  }
+
+  .pbh-field label{
+    color:#334155;
+    font-size:9px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+
+  .pbh-input,.pbh-select{
+    width:100%;
+    min-height:42px;
+    padding:0 12px;
+    box-sizing:border-box;
+    border:1px solid #d8e1db;
+    border-radius:12px;
+    outline:none;
+    background:#fff;
+    color:#172235;
+    font-size:11px;
+    font-weight:750;
+  }
+
+  .pbh-input:focus,.pbh-select:focus{
+    border-color:#9ccdb3;
+    box-shadow:0 0 0 4px rgba(15,122,69,.09);
+  }
+
+  .pbh-btn{
+    min-height:42px;
+    padding:0 16px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #0f7a45;
+    border-radius:12px;
+    background:#0f7a45;
+    color:#fff;
+    font-size:11px;
+    font-weight:950;
+    cursor:pointer;
+    box-shadow:0 6px 16px rgba(15,122,69,.18);
+  }
+
+  .pbh-table-wrap{
+    width:100%;
+    overflow:auto;
+  }
+
+  .pbh-table{
+    width:100%;
+    min-width:1180px;
+    border-collapse:collapse;
+  }
+
+  .pbh-table th{
+    padding:11px 12px;
+    border-bottom:1px solid #e4ebe6;
+    background:#f6f9f7;
+    color:#708078;
+    text-align:left;
+    font-size:9px;
+    font-weight:950;
+    letter-spacing:.045em;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+
+  .pbh-table td{
+    padding:12px;
+    border-bottom:1px solid #edf1ee;
+    color:#334155;
+    font-size:10px;
+    font-weight:750;
+    vertical-align:middle;
+  }
+
+  .pbh-table tbody tr:hover{background:#fbfdfc}
+  .pbh-table tbody tr:last-child td{border-bottom:0}
+
+  .pbh-tracking{
+    color:#0f7a45;
+    font-size:10px;
+    font-weight:950;
+    text-decoration:none;
+  }
+
+  .pbh-sub{
+    display:block;
+    margin-top:3px;
+    color:#94a099;
+    font-size:8px;
+    font-weight:700;
+  }
+
+  .pbh-method{
+    display:inline-flex;
+    align-items:center;
+    min-height:27px;
+    padding:0 9px;
+    border:1px solid #cce7d7;
+    border-radius:999px;
+    background:#eef8f2;
+    color:#0f7a45;
+    font-size:8px;
+    font-weight:950;
+    white-space:nowrap;
+  }
+
+  .pbh-money{
+    text-align:right;
+    color:#172235;
+    font-weight:950;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+
+  .pbh-reason{
+    max-width:250px;
+    color:#64748b;
+    line-height:1.45;
+  }
+
+  .pbh-date{
+    white-space:nowrap;
+    color:#64748b;
+  }
+
+  .pbh-edit{
+    min-height:31px;
+    padding:0 10px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #d6e5dc;
+    border-radius:9px;
+    background:#fff;
+    color:#0f7a45;
+    text-decoration:none;
+    font-size:9px;
+    font-weight:950;
+  }
+
+  .pbh-edit:hover{background:#eef8f2}
+
+  .pbh-empty{
+    padding:48px 20px!important;
+    text-align:center;
+    color:#94a099!important;
+    font-size:11px!important;
+    font-weight:800!important;
+  }
+
+  .pbh-empty::before{
+    content:"DS";
+    width:42px;
+    height:42px;
+    margin:0 auto 10px;
+    display:grid;
+    place-items:center;
+    border-radius:14px;
+    background:#eef8f2;
+    color:#0f7a45;
+    font-size:12px;
+    font-weight:950;
+  }
+
+  @media(max-width:980px){
+    .pbh-filters{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .pbh-field-search{grid-column:1/-1}
+    .pbh-btn{grid-column:1/-1}
+  }
+
+  @media(max-width:700px){
+    .pbh-page{max-width:none}
+    .pbh-tabs{
+      width:100%;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      box-sizing:border-box;
+    }
+    .pbh-card-body{padding:12px}
+    .pbh-filters{grid-template-columns:1fr}
+    .pbh-field-search,.pbh-btn{grid-column:auto}
+
+    .pbh-table{
+      min-width:0;
+    }
+
+    .pbh-table thead{display:none}
+    .pbh-table,
+    .pbh-table tbody,
+    .pbh-table tr,
+    .pbh-table td{
+      display:block;
+      width:100%;
+      box-sizing:border-box;
+    }
+
+    .pbh-table tbody{
+      display:grid;
+      gap:10px;
+    }
+
+    .pbh-table tr{
+      padding:12px;
+      border:1px solid #e3e9e5;
+      border-radius:15px;
+      background:#fff;
+      box-shadow:0 5px 16px rgba(15,23,42,.04);
+    }
+
+    .pbh-table td{
+      min-height:29px;
+      padding:5px 0;
+      display:grid;
+      grid-template-columns:115px minmax(0,1fr);
+      gap:10px;
+      align-items:start;
+      border:0;
+      font-size:10px;
+    }
+
+    .pbh-table td::before{
+      color:#7b8781;
+      font-size:8px;
+      font-weight:950;
+      text-transform:uppercase;
+    }
+
+    .pbh-table td:nth-child(1)::before{content:"Tracking"}
+    .pbh-table td:nth-child(2)::before{content:"Shop"}
+    .pbh-table td:nth-child(3)::before{content:"Method"}
+    .pbh-table td:nth-child(4)::before{content:"COD"}
+    .pbh-table td:nth-child(5)::before{content:"Delivery Fee"}
+    .pbh-table td:nth-child(6)::before{content:"Additional Fee"}
+    .pbh-table td:nth-child(7)::before{content:"Reason / Note"}
+    .pbh-table td:nth-child(8)::before{content:"Completed By"}
+    .pbh-table td:nth-child(9)::before{content:"Completed At"}
+    .pbh-table td:nth-child(10)::before{content:"Updated"}
+    .pbh-table td:nth-child(11)::before{content:"Action"}
+
+    .pbh-money{text-align:left}
+    .pbh-reason{max-width:none}
+    .pbh-empty{
+      display:block!important;
+      padding:35px 15px!important;
+    }
+    .pbh-empty::before{content:"DS"!important}
+  }
 </style>
 {% endblock %}
+
 {% block content %}
-<div class="pb-wrap">
-  <div class="pb-tabs"><a class="pb-tab" href="{% url 'pickupbooking:home' %}">Pickup / Booking</a><a class="pb-tab active" href="{% url 'pickupbooking:history' %}">History</a></div>
-  <div class="card">
-    <form method="get" class="filters">
-      <input class="input wide" name="q" value="{{ q }}" placeholder="Tracking / shop / receiver / phone">
-      <select class="select" name="method"><option value="">All methods</option>{% for value,label in method_choices %}<option value="{{ value }}" {% if selected_method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-      <input class="input" type="date" name="date_from" value="{{ date_from }}">
-      <input class="input" type="date" name="date_to" value="{{ date_to }}">
-      <button class="btn" type="submit">Search</button>
-    </form>
+<div class="pbh-page">
+
+  <div class="pbh-tabs">
+    <a class="pbh-tab" href="{% url 'pickupbooking:home' %}">Pickup / Booking</a>
+    <a class="pbh-tab active" href="{% url 'pickupbooking:history' %}">History</a>
   </div>
-  <div class="card table-wrap">
-    <table class="tbl">
-      <thead><tr><th>Tracking</th><th>Shop</th><th>Method</th><th>COD</th><th>Delivery Fee</th><th>Additional Fee</th><th>Completed By</th><th>Completed At</th><th>Updated</th><th></th></tr></thead>
-      <tbody>
-      {% for b in rows %}
-        <tr>
-          <td><strong>{{ b.order.tracking_no }}</strong><br><span class="muted">{{ b.order.seller_order_code|default:"" }}</span></td>
-          <td>{{ b.order.seller.name|default:b.order.seller_name|default:"-" }}</td>
-          <td><span class="method">{{ b.get_method_display }}</span></td>
-          <td class="money">${{ b.cod|floatformat:2 }}</td>
-          <td class="money">${{ b.delivery_fee|floatformat:2 }}</td>
-          <td class="money">${{ b.additional_fee|floatformat:2 }}</td>
-          <td>{{ b.completed_by.username|default:"-" }}</td>
-          <td>{{ b.completed_at|date:"d M Y H:i" }}</td>
-          <td>{{ b.updated_at|date:"d M Y H:i" }}</td>
-          <td><a class="edit" href="{% url 'pickupbooking:edit' b.pk %}">Edit</a></td>
-        </tr>
-      {% empty %}<tr><td colspan="10" style="text-align:center;padding:30px;color:#64748b">No Pickup / Booking records found.</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
+
+  <section class="pbh-card">
+    <header class="pbh-card-head">
+      <div>
+        <h2 class="pbh-card-title">Search History</h2>
+        <div class="pbh-card-sub">Find completed Pickup / Booking records by order, method or date.</div>
+      </div>
+    </header>
+
+    <div class="pbh-card-body">
+      <form method="get" class="pbh-filters">
+        <div class="pbh-field pbh-field-search">
+          <label>Search</label>
+          <input
+            class="pbh-input"
+            name="q"
+            value="{{ q }}"
+            placeholder="Tracking / shop / receiver / phone / reason"
+          >
+        </div>
+
+        <div class="pbh-field">
+          <label>Method</label>
+          <select class="pbh-select" name="method">
+            <option value="">All methods</option>
+            {% for value,label in method_choices %}
+              <option value="{{ value }}" {% if selected_method == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="pbh-field">
+          <label>From Date</label>
+          <input class="pbh-input" type="date" name="date_from" value="{{ date_from }}">
+        </div>
+
+        <div class="pbh-field">
+          <label>To Date</label>
+          <input class="pbh-input" type="date" name="date_to" value="{{ date_to }}">
+        </div>
+
+        <button class="pbh-btn" type="submit">Search</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="pbh-card">
+    <header class="pbh-card-head">
+      <div>
+        <h2 class="pbh-card-title">Completed Pickup / Booking</h2>
+        <div class="pbh-card-sub">COD, delivery fee and additional fee stay separate for accounting.</div>
+      </div>
+    </header>
+
+    <div class="pbh-table-wrap">
+      <table class="pbh-table">
+        <thead>
+          <tr>
+            <th>Tracking</th>
+            <th>Shop</th>
+            <th>Method</th>
+            <th>COD</th>
+            <th>Delivery Fee</th>
+            <th>Additional Fee</th>
+            <th>Reason / Note</th>
+            <th>Completed By</th>
+            <th>Completed At</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for b in rows %}
+            <tr>
+              <td>
+                <strong class="pbh-tracking">{{ b.order.tracking_no }}</strong>
+                <span class="pbh-sub">{{ b.order.seller_order_code|default:"" }}</span>
+              </td>
+              <td>{{ b.order.seller.name|default:b.order.seller_name|default:"-" }}</td>
+              <td><span class="pbh-method">{{ b.get_method_display }}</span></td>
+              <td class="pbh-money">${{ b.cod|floatformat:2 }}</td>
+              <td class="pbh-money">${{ b.delivery_fee|floatformat:2 }}</td>
+              <td class="pbh-money">${{ b.additional_fee|floatformat:2 }}</td>
+              <td class="pbh-reason">{{ b.reason|default:"-" }}</td>
+              <td>{{ b.completed_by.username|default:"-" }}</td>
+              <td class="pbh-date">{{ b.completed_at|date:"d M Y H:i" }}</td>
+              <td class="pbh-date">{{ b.updated_at|date:"d M Y H:i" }}</td>
+              <td>
+                <a class="pbh-edit" href="{% url 'pickupbooking:edit' b.pk %}">Edit</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="11" class="pbh-empty">No Pickup / Booking records found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
 </div>
 {% endblock %}

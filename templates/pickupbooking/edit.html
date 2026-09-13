@@ -1,29 +1,654 @@
 {% extends "base.html" %}
+
 {% block title %}Edit Pickup / Booking | DS Express{% endblock %}
 {% block page_title %}Edit Pickup / Booking{% endblock %}
-{% block page_subtitle %}Adjust COD and fees with audit history{% endblock %}
+{% block page_subtitle %}Adjust method, COD, fees and reason with audit history{% endblock %}
+
 {% block extra_css %}
 <style>
-  .wrap{max-width:900px;margin:0 auto;display:grid;gap:14px}.card{background:#fff;border:1px solid #dfe7ef;border-radius:15px;padding:17px}.head{display:flex;justify-content:space-between;gap:15px}.track{font-size:23px;font-weight:950}.shop{font-weight:800;color:#64748b}.grid{display:grid;grid-template-columns:1.25fr repeat(3,1fr);gap:12px;margin-top:16px}.field label{display:block;font-size:12px;font-weight:900;color:#475569;margin-bottom:6px}.input,.select{width:100%;min-height:43px;border:1px solid #cbd5e1;border-radius:9px;padding:9px 11px;box-sizing:border-box}.input{text-align:right;font-weight:900}.actions{display:flex;justify-content:flex-end;gap:9px;border-top:1px solid #e5e7eb;margin-top:16px;padding-top:14px}.btn{padding:10px 14px;border:0;border-radius:9px;text-decoration:none;font-weight:900;cursor:pointer}.save{background:#0f5b9d;color:#fff}.back{background:#eef2f7;color:#334155}.audit{width:100%;border-collapse:collapse}.audit th,.audit td{padding:8px;border-bottom:1px solid #edf2f7;text-align:left;font-size:12px;vertical-align:top}.audit th{background:#f8fafc;color:#475569}.change{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#334155;white-space:normal;word-break:break-word}@media(max-width:760px){.grid{grid-template-columns:1fr}.head{display:block}.actions .btn{flex:1}}
+  .pbe-page{
+    max-width:1180px;
+    margin:0 auto;
+    display:grid;
+    gap:18px;
+  }
+
+  .pbe-tabs{
+    width:max-content;
+    max-width:100%;
+    display:flex;
+    gap:8px;
+    padding:5px;
+    border:1px solid #e1e8e3;
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 8px 24px rgba(15,23,42,.04);
+  }
+
+  .pbe-tab{
+    min-height:38px;
+    padding:0 14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:10px;
+    color:#64748b;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:950;
+    transition:.16s ease;
+  }
+
+  .pbe-tab:hover{
+    background:#f5f9f7;
+    color:#0f7a45;
+  }
+
+  .pbe-tab.active{
+    background:#0f7a45;
+    color:#fff;
+    box-shadow:0 5px 14px rgba(15,122,69,.18);
+  }
+
+  .pbe-card{
+    overflow:hidden;
+    border:1px solid #e2e8e4;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 30px rgba(15,23,42,.05);
+  }
+
+  .pbe-head{
+    padding:18px 20px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    border-bottom:1px solid #edf1ee;
+    background:linear-gradient(180deg,#fff,#fbfdfc);
+  }
+
+  .pbe-track{
+    color:#172235;
+    font-size:22px;
+    line-height:1.15;
+    font-weight:950;
+    letter-spacing:-.025em;
+  }
+
+  .pbe-shop{
+    margin-top:5px;
+    color:#64748b;
+    font-size:11px;
+    font-weight:800;
+  }
+
+  .pbe-complete{
+    min-height:32px;
+    padding:0 11px;
+    display:inline-flex;
+    align-items:center;
+    border:1px solid #cce7d7;
+    border-radius:999px;
+    background:#eef8f2;
+    color:#0f7a45;
+    font-size:9px;
+    font-weight:950;
+    white-space:nowrap;
+  }
+
+  .pbe-body{
+    padding:20px;
+  }
+
+  .pbe-info-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-bottom:18px;
+  }
+
+  .pbe-info{
+    min-width:0;
+    padding:13px;
+    border:1px solid #e3e9e5;
+    border-radius:15px;
+    background:#f8fbf9;
+  }
+
+  .pbe-info b{
+    display:block;
+    color:#7b8781;
+    font-size:8px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+
+  .pbe-info span{
+    display:block;
+    margin-top:5px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    color:#172235;
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .pbe-section-title{
+    margin:0 0 12px;
+    color:#0f7a45;
+    font-size:10px;
+    font-weight:950;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+
+  .pbe-form-grid{
+    display:grid;
+    grid-template-columns:1.2fr repeat(3,minmax(0,1fr));
+    gap:12px;
+  }
+
+  .pbe-field{
+    min-width:0;
+    display:grid;
+    gap:7px;
+  }
+
+  .pbe-field label{
+    color:#334155;
+    font-size:10px;
+    font-weight:900;
+  }
+
+  .pbe-input,
+  .pbe-select,
+  .pbe-textarea{
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid #d8e1db;
+    border-radius:12px;
+    outline:none;
+    background:#fff;
+    color:#172235;
+    font-size:12px;
+    font-weight:750;
+    transition:.16s ease;
+  }
+
+  .pbe-input,
+  .pbe-select{
+    min-height:44px;
+    padding:0 12px;
+  }
+
+  .pbe-textarea{
+    min-height:90px;
+    padding:11px 12px;
+    resize:vertical;
+    font-family:inherit;
+  }
+
+  .pbe-input:focus,
+  .pbe-select:focus,
+  .pbe-textarea:focus{
+    border-color:#9ccdb3;
+    box-shadow:0 0 0 4px rgba(15,122,69,.09);
+  }
+
+  .pbe-money{
+    position:relative;
+  }
+
+  .pbe-money span{
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#7b8781;
+    font-size:11px;
+    font-weight:950;
+    pointer-events:none;
+  }
+
+  .pbe-money input{
+    padding-left:28px;
+    text-align:right;
+    font-weight:950;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .pbe-divider{
+    height:1px;
+    margin:18px 0;
+    background:#edf1ee;
+  }
+
+  .pbe-summary{
+    margin-top:16px;
+    padding:13px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    border:1px solid #dbe9e0;
+    border-radius:14px;
+    background:#f5faf7;
+  }
+
+  .pbe-summary span{
+    color:#64748b;
+    font-size:10px;
+    font-weight:850;
+  }
+
+  .pbe-summary strong{
+    color:#0f7a45;
+    font-size:17px;
+    font-weight:950;
+  }
+
+  .pbe-actions{
+    margin-top:18px;
+    padding-top:16px;
+    display:flex;
+    justify-content:flex-end;
+    gap:9px;
+    border-top:1px solid #edf1ee;
+  }
+
+  .pbe-btn{
+    min-height:42px;
+    padding:0 16px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid transparent;
+    border-radius:12px;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:950;
+    cursor:pointer;
+    transition:.16s ease;
+  }
+
+  .pbe-btn-primary{
+    border-color:#0f7a45;
+    background:#0f7a45;
+    color:#fff;
+    box-shadow:0 6px 16px rgba(15,122,69,.18);
+  }
+
+  .pbe-btn-primary:hover{
+    background:#075c34;
+  }
+
+  .pbe-btn-ghost{
+    border-color:#d8e1db;
+    background:#fff;
+    color:#334155;
+  }
+
+  .pbe-card-head{
+    padding:16px 18px 13px;
+    border-bottom:1px solid #edf1ee;
+    background:linear-gradient(180deg,#fff,#fbfdfc);
+  }
+
+  .pbe-card-head h3{
+    margin:0;
+    color:#172235;
+    font-size:15px;
+    font-weight:950;
+  }
+
+  .pbe-card-head p{
+    margin:4px 0 0;
+    color:#7b8781;
+    font-size:10px;
+    font-weight:700;
+  }
+
+  .pbe-audit-wrap{
+    width:100%;
+    overflow:auto;
+  }
+
+  .pbe-audit{
+    width:100%;
+    min-width:900px;
+    border-collapse:collapse;
+  }
+
+  .pbe-audit th{
+    padding:11px 12px;
+    border-bottom:1px solid #e4ebe6;
+    background:#f6f9f7;
+    color:#708078;
+    text-align:left;
+    font-size:9px;
+    font-weight:950;
+    letter-spacing:.045em;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+
+  .pbe-audit td{
+    padding:12px;
+    border-bottom:1px solid #edf1ee;
+    color:#334155;
+    font-size:10px;
+    font-weight:750;
+    vertical-align:top;
+  }
+
+  .pbe-audit tbody tr:last-child td{
+    border-bottom:0;
+  }
+
+  .pbe-change{
+    max-width:330px;
+    color:#64748b;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:9px;
+    line-height:1.5;
+    word-break:break-word;
+    white-space:normal;
+  }
+
+  .pbe-audit-empty{
+    padding:36px 20px!important;
+    text-align:center!important;
+    color:#94a099!important;
+  }
+
+  @media(max-width:900px){
+    .pbe-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .pbe-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+
+  @media(max-width:680px){
+    .pbe-page{max-width:none}
+    .pbe-tabs{
+      width:100%;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      box-sizing:border-box;
+    }
+
+    .pbe-head{
+      padding:15px;
+      flex-direction:column;
+    }
+
+    .pbe-body{padding:15px}
+
+    .pbe-info-grid,
+    .pbe-form-grid{
+      grid-template-columns:1fr;
+    }
+
+    .pbe-actions{
+      position:sticky;
+      bottom:8px;
+      z-index:4;
+      margin:18px -5px -5px;
+      padding:9px;
+      border:1px solid #e4ebe6;
+      border-radius:14px;
+      background:rgba(255,255,255,.97);
+      box-shadow:0 10px 26px rgba(15,23,42,.10);
+    }
+
+    .pbe-actions .pbe-btn{flex:1}
+
+    .pbe-audit{
+      min-width:0;
+    }
+
+    .pbe-audit thead{display:none}
+
+    .pbe-audit,
+    .pbe-audit tbody,
+    .pbe-audit tr,
+    .pbe-audit td{
+      display:block;
+      width:100%;
+      box-sizing:border-box;
+    }
+
+    .pbe-audit tbody{
+      display:grid;
+      gap:10px;
+      padding:12px;
+    }
+
+    .pbe-audit tr{
+      padding:12px;
+      border:1px solid #e3e9e5;
+      border-radius:14px;
+      background:#fff;
+    }
+
+    .pbe-audit td{
+      min-height:28px;
+      padding:4px 0;
+      display:grid;
+      grid-template-columns:92px minmax(0,1fr);
+      gap:8px;
+      border:0;
+    }
+
+    .pbe-audit td::before{
+      color:#7b8781;
+      font-size:8px;
+      font-weight:950;
+      text-transform:uppercase;
+    }
+
+    .pbe-audit td:nth-child(1)::before{content:"Time"}
+    .pbe-audit td:nth-child(2)::before{content:"User"}
+    .pbe-audit td:nth-child(3)::before{content:"Action"}
+    .pbe-audit td:nth-child(4)::before{content:"Old"}
+    .pbe-audit td:nth-child(5)::before{content:"New"}
+
+    .pbe-change{
+      max-width:none;
+    }
+
+    .pbe-audit-empty{
+      display:block!important;
+      padding:28px 14px!important;
+    }
+
+    .pbe-audit-empty::before{content:none!important}
+  }
 </style>
 {% endblock %}
+
 {% block content %}
-<div class="wrap">
-  <div class="card">
-    <div class="head"><div><div class="track">{{ booking.order.tracking_no }}</div><div class="shop">{{ booking.order.seller.name|default:booking.order.seller_name|default:"-" }}</div></div><div>Completed {{ booking.completed_at|date:"d M Y H:i" }}</div></div>
-    <form method="post">{% csrf_token %}
-      <div class="grid">
-        <div class="field"><label>Pickup Method</label><select class="select" name="method">{% for value,label in method_choices %}<option value="{{ value }}" {% if booking.method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-        <div class="field"><label>COD ($)</label><input class="input" type="number" min="0" step="0.01" name="cod" value="{{ booking.cod|floatformat:2 }}"></div>
-        <div class="field"><label>Delivery Fee ($)</label><input class="input" type="number" min="0" step="0.01" name="delivery_fee" value="{{ booking.delivery_fee|floatformat:2 }}"></div>
-        <div class="field"><label>Additional Fee ($)</label><input class="input" type="number" min="0" step="0.01" name="additional_fee" value="{{ booking.additional_fee|floatformat:2 }}"></div>
+<div class="pbe-page">
+
+  <div class="pbe-tabs">
+    <a class="pbe-tab" href="{% url 'pickupbooking:home' %}">Pickup / Booking</a>
+    <a class="pbe-tab active" href="{% url 'pickupbooking:history' %}">History</a>
+  </div>
+
+  <section class="pbe-card">
+    <div class="pbe-head">
+      <div>
+        <div class="pbe-track">{{ booking.order.tracking_no }}</div>
+        <div class="pbe-shop">
+          {{ booking.order.seller.name|default:booking.order.seller_name|default:"-" }}
+        </div>
       </div>
-      <div class="actions"><a class="btn back" href="{% url 'pickupbooking:history' %}">Back</a><button class="btn save" type="submit">Save Changes</button></div>
-    </form>
-  </div>
-  <div class="card">
-    <h3 style="margin:0 0 10px">Audit Log</h3>
-    <div style="overflow:auto"><table class="audit"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Old</th><th>New</th></tr></thead><tbody>{% for a in audit_logs %}<tr><td>{{ a.changed_at|date:"d M Y H:i" }}</td><td>{{ a.changed_by.username|default:"-" }}</td><td>{{ a.get_action_display }}</td><td class="change">{{ a.old_values }}</td><td class="change">{{ a.new_values }}</td></tr>{% empty %}<tr><td colspan="5">No audit records.</td></tr>{% endfor %}</tbody></table></div>
-  </div>
+
+      <div class="pbe-complete">
+        Completed {{ booking.completed_at|date:"d M Y H:i" }}
+      </div>
+    </div>
+
+    <div class="pbe-body">
+      <div class="pbe-info-grid">
+        <div class="pbe-info">
+          <b>Receiver</b>
+          <span>{{ booking.order.receiver_name|default:"-" }}</span>
+        </div>
+
+        <div class="pbe-info">
+          <b>Phone</b>
+          <span>{{ booking.order.receiver_phone|default:"-" }}</span>
+        </div>
+
+        <div class="pbe-info">
+          <b>Seller Order Code</b>
+          <span>{{ booking.order.seller_order_code|default:"-" }}</span>
+        </div>
+
+        <div class="pbe-info">
+          <b>Completed By</b>
+          <span>{{ booking.completed_by.username|default:"-" }}</span>
+        </div>
+      </div>
+
+      <form method="post" autocomplete="off">
+        {% csrf_token %}
+
+        <h3 class="pbe-section-title">Edit Pickup / Booking Details</h3>
+
+        <div class="pbe-form-grid">
+          <div class="pbe-field">
+            <label>Pickup Method</label>
+            <select class="pbe-select" name="method" required>
+              {% for value,label in method_choices %}
+                <option value="{{ value }}" {% if booking.method == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="pbe-field">
+            <label>COD</label>
+            <div class="pbe-money">
+              <span>$</span>
+              <input
+                class="pbe-input"
+                type="number"
+                min="0"
+                step="0.01"
+                name="cod"
+                value="{{ booking.cod|floatformat:2 }}"
+                required
+              >
+            </div>
+          </div>
+
+          <div class="pbe-field">
+            <label>Delivery Fee</label>
+            <div class="pbe-money">
+              <span>$</span>
+              <input
+                class="pbe-input"
+                type="number"
+                min="0"
+                step="0.01"
+                name="delivery_fee"
+                value="{{ booking.delivery_fee|floatformat:2 }}"
+                required
+              >
+            </div>
+          </div>
+
+          <div class="pbe-field">
+            <label>Additional Fee</label>
+            <div class="pbe-money">
+              <span>$</span>
+              <input
+                class="pbe-input"
+                type="number"
+                min="0"
+                step="0.01"
+                name="additional_fee"
+                value="{{ booking.additional_fee|floatformat:2 }}"
+                required
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="pbe-summary">
+          <span>Current Total Fee</span>
+          <strong>
+            ${{ booking.delivery_fee|add:booking.additional_fee|floatformat:2 }}
+          </strong>
+        </div>
+
+        <div class="pbe-divider"></div>
+
+        <div class="pbe-field">
+          <label>Reason / Note</label>
+          <textarea
+            class="pbe-textarea"
+            name="reason"
+            placeholder="Optional reason or note"
+          >{{ booking.reason|default:"" }}</textarea>
+        </div>
+
+        <div class="pbe-actions">
+          <a class="pbe-btn pbe-btn-ghost" href="{% url 'pickupbooking:history' %}">
+            Cancel
+          </a>
+
+          <button
+            class="pbe-btn pbe-btn-primary"
+            type="submit"
+            onclick="return confirm('Save these Pickup / Booking changes?');"
+          >
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="pbe-card">
+    <div class="pbe-card-head">
+      <h3>Audit Log</h3>
+      <p>Every change to method, COD, fees and reason is recorded here.</p>
+    </div>
+
+    <div class="pbe-audit-wrap">
+      <table class="pbe-audit">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Old</th>
+            <th>New</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for a in audit_logs %}
+            <tr>
+              <td>{{ a.changed_at|date:"d M Y H:i" }}</td>
+              <td>{{ a.changed_by.username|default:"-" }}</td>
+              <td>{{ a.get_action_display }}</td>
+              <td class="pbe-change">{{ a.old_values }}</td>
+              <td class="pbe-change">{{ a.new_values }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="pbe-audit-empty">No audit records yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
 </div>
 {% endblock %}

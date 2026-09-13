@@ -6,101 +6,623 @@
 
 {% block extra_css %}
 <style>
-  .pb-wrap{max-width:980px;margin:0 auto;display:grid;gap:16px}
-  .pb-tabs{display:flex;gap:8px;flex-wrap:wrap}
-  .pb-tab{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #dbe4ee;border-radius:10px;background:#fff;color:#334155;text-decoration:none;font-weight:800}
-  .pb-tab.active{background:#0f5b9d;color:#fff;border-color:#0f5b9d}
-  .pb-card{background:#fff;border:1px solid #dfe7ef;border-radius:16px;box-shadow:0 8px 26px rgba(15,23,42,.06);padding:18px}
-  .scan-row{display:grid;grid-template-columns:1fr auto;gap:10px}
-  .scan-input,.pb-input,.pb-select{width:100%;min-height:44px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;background:#fff;font-size:15px;box-sizing:border-box}
-  .scan-input{font-size:20px;font-weight:800;letter-spacing:.4px}
-  .btn{border:0;border-radius:10px;padding:11px 16px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
-  .btn-primary{background:#0f5b9d;color:#fff}.btn-dark{background:#0f172a;color:#fff}.btn-light{background:#eef2f7;color:#334155}
-  .order-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
-  .tracking{font-size:24px;font-weight:950;color:#0f172a}.shop{font-size:15px;font-weight:800;color:#475569;margin-top:3px}
-  .status{padding:7px 10px;border-radius:999px;background:#eef6ff;color:#0f5b9d;font-size:12px;font-weight:900}
-  .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-  .info{background:#f8fafc;border:1px solid #e5eaf0;border-radius:11px;padding:10px}.info b{display:block;color:#64748b;font-size:11px;text-transform:uppercase;margin-bottom:4px}.info span{font-weight:800;color:#0f172a}
-  .form-grid{display:grid;grid-template-columns:1.25fr repeat(3,1fr);gap:12px}.field label{display:block;font-size:12px;font-weight:900;color:#475569;margin-bottom:6px}.money-wrap{position:relative}.money-wrap span{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:900;color:#64748b}.money-wrap input{padding-left:28px;font-weight:900;text-align:right}
-  .pb-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid #e5e7eb}
-  .note{font-size:12px;color:#64748b;margin-top:8px}.existing{padding:13px;border:1px solid #fde68a;background:#fffbeb;border-radius:12px;color:#854d0e;font-weight:700}
-  @media(max-width:760px){.pb-card{padding:14px}.scan-row{grid-template-columns:1fr}.form-grid,.info-grid{grid-template-columns:1fr}.order-head{display:block}.status{display:inline-block;margin-top:8px}.pb-actions{position:sticky;bottom:8px;background:#fff;padding:10px;border:1px solid #e5e7eb;border-radius:12px}.btn{flex:1}}
+  .pb-page{
+    max-width:1180px;
+    margin:0 auto;
+    display:grid;
+    gap:18px;
+  }
+
+  .pb-topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+
+  .pb-tabs{
+    display:flex;
+    gap:8px;
+    padding:5px;
+    border:1px solid #e1e8e3;
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 8px 24px rgba(15,23,42,.04);
+  }
+
+  .pb-tab{
+    min-height:38px;
+    padding:0 14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:10px;
+    color:#64748b;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:950;
+    transition:.16s ease;
+  }
+
+  .pb-tab:hover{background:#f5f9f7;color:#0f7a45}
+  .pb-tab.active{
+    background:#0f7a45;
+    color:#fff;
+    box-shadow:0 5px 14px rgba(15,122,69,.18);
+  }
+
+  .pb-hero{
+    overflow:hidden;
+    display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);
+    border:1px solid #dfe8e2;
+    border-radius:22px;
+    background:
+      radial-gradient(circle at 88% 18%,rgba(15,122,69,.12),transparent 28%),
+      linear-gradient(135deg,#ffffff 0%,#f7fbf8 100%);
+    box-shadow:0 16px 36px rgba(15,23,42,.06);
+  }
+
+  .pb-hero-copy{
+    padding:25px 26px 24px;
+  }
+
+  .pb-kicker{
+    margin-bottom:8px;
+    color:#0f7a45;
+    font-size:10px;
+    font-weight:950;
+    letter-spacing:.13em;
+    text-transform:uppercase;
+  }
+
+  .pb-hero h2{
+    margin:0;
+    color:#172235;
+    font-size:25px;
+    line-height:1.16;
+    font-weight:950;
+    letter-spacing:-.035em;
+  }
+
+  .pb-hero p{
+    max-width:680px;
+    margin:9px 0 0;
+    color:#718096;
+    font-size:11px;
+    line-height:1.7;
+    font-weight:700;
+  }
+
+  .pb-defaults{
+    padding:20px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    align-content:center;
+  }
+
+  .pb-default{
+    min-width:0;
+    padding:14px;
+    border:1px solid rgba(15,122,69,.13);
+    border-radius:16px;
+    background:rgba(255,255,255,.88);
+  }
+
+  .pb-default span{
+    display:block;
+    color:#7b8781;
+    font-size:9px;
+    font-weight:850;
+    text-transform:uppercase;
+  }
+
+  .pb-default strong{
+    display:block;
+    margin-top:5px;
+    color:#0f7a45;
+    font-size:18px;
+    font-weight:950;
+  }
+
+  .pb-card{
+    overflow:hidden;
+    border:1px solid #e2e8e4;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 30px rgba(15,23,42,.05);
+  }
+
+  .pb-card-head{
+    padding:16px 20px 13px;
+    border-bottom:1px solid #edf1ee;
+    background:linear-gradient(180deg,#fff,#fbfdfc);
+  }
+
+  .pb-card-head h3{
+    margin:0;
+    color:#172235;
+    font-size:15px;
+    font-weight:950;
+  }
+
+  .pb-card-head p{
+    margin:4px 0 0;
+    color:#7b8781;
+    font-size:10px;
+    font-weight:700;
+  }
+
+  .pb-card-body{padding:20px}
+
+  .scan-row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:10px;
+  }
+
+  .scan-box{
+    position:relative;
+  }
+
+  .scan-box::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:4px;
+    border-radius:12px 0 0 12px;
+    background:#0f7a45;
+  }
+
+  .scan-input,
+  .pb-input,
+  .pb-select,
+  .pb-textarea{
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid #d8e1db;
+    border-radius:12px;
+    outline:none;
+    background:#fff;
+    color:#172235;
+    font-size:12px;
+    font-weight:750;
+    transition:.16s ease;
+  }
+
+  .scan-input{
+    min-height:52px;
+    padding:0 16px 0 18px;
+    font-size:17px;
+    font-weight:900;
+    letter-spacing:.02em;
+  }
+
+  .pb-input,.pb-select{
+    min-height:44px;
+    padding:0 12px;
+  }
+
+  .pb-textarea{
+    min-height:86px;
+    padding:11px 12px;
+    resize:vertical;
+    font-family:inherit;
+  }
+
+  .scan-input:focus,
+  .pb-input:focus,
+  .pb-select:focus,
+  .pb-textarea:focus{
+    border-color:#9ccdb3;
+    box-shadow:0 0 0 4px rgba(15,122,69,.09);
+  }
+
+  .pb-btn{
+    min-height:44px;
+    padding:0 16px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid transparent;
+    border-radius:12px;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:950;
+    cursor:pointer;
+    box-sizing:border-box;
+    transition:.16s ease;
+  }
+
+  .pb-btn-primary{
+    background:#0f7a45;
+    border-color:#0f7a45;
+    color:#fff;
+    box-shadow:0 6px 16px rgba(15,122,69,.18);
+  }
+  .pb-btn-primary:hover{background:#075c34}
+
+  .pb-btn-dark{
+    background:#172235;
+    border-color:#172235;
+    color:#fff;
+  }
+
+  .pb-btn-ghost{
+    background:#fff;
+    border-color:#d8e1db;
+    color:#334155;
+  }
+
+  .pb-scan-note{
+    margin-top:9px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    color:#7b8781;
+    font-size:9px;
+    font-weight:700;
+  }
+
+  .pb-scan-note::before{
+    content:"i";
+    width:18px;
+    height:18px;
+    flex:0 0 18px;
+    display:grid;
+    place-items:center;
+    border-radius:50%;
+    background:#eef8f2;
+    color:#0f7a45;
+    font-size:10px;
+    font-weight:950;
+  }
+
+  .pb-order-head{
+    padding:18px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:14px;
+    border-bottom:1px solid #edf1ee;
+    background:linear-gradient(180deg,#fff,#fbfdfc);
+  }
+
+  .pb-tracking{
+    color:#172235;
+    font-size:22px;
+    line-height:1.15;
+    font-weight:950;
+    letter-spacing:-.02em;
+  }
+
+  .pb-shop{
+    margin-top:5px;
+    color:#64748b;
+    font-size:11px;
+    font-weight:800;
+  }
+
+  .pb-status{
+    min-height:28px;
+    padding:0 10px;
+    display:inline-flex;
+    align-items:center;
+    border:1px solid #cce7d7;
+    border-radius:999px;
+    background:#eef8f2;
+    color:#0f7a45;
+    font-size:9px;
+    font-weight:950;
+    white-space:nowrap;
+  }
+
+  .pb-info-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    margin-bottom:18px;
+  }
+
+  .pb-info{
+    min-width:0;
+    padding:13px;
+    border:1px solid #e3e9e5;
+    border-radius:15px;
+    background:#f8fbf9;
+  }
+
+  .pb-info b{
+    display:block;
+    color:#7b8781;
+    font-size:9px;
+    font-weight:900;
+    text-transform:uppercase;
+  }
+
+  .pb-info span{
+    display:block;
+    margin-top:5px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    color:#172235;
+    font-size:12px;
+    font-weight:900;
+  }
+
+  .pb-section-title{
+    margin:0 0 12px;
+    color:#0f7a45;
+    font-size:10px;
+    font-weight:950;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+
+  .pb-form-grid{
+    display:grid;
+    grid-template-columns:1.2fr repeat(3,minmax(0,1fr));
+    gap:12px;
+  }
+
+  .pb-field{min-width:0;display:grid;gap:7px}
+  .pb-field label{
+    color:#334155;
+    font-size:10px;
+    font-weight:900;
+  }
+
+  .money-wrap{position:relative}
+  .money-wrap>span{
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#7b8781;
+    font-size:11px;
+    font-weight:950;
+    pointer-events:none;
+  }
+  .money-wrap input{
+    padding-left:28px;
+    text-align:right;
+    font-weight:950;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .pb-divider{
+    height:1px;
+    margin:18px 0;
+    background:#edf1ee;
+  }
+
+  .pb-existing{
+    padding:14px 15px;
+    border:1px solid #f1d49c;
+    border-radius:14px;
+    background:#fff8e8;
+    color:#8a5a00;
+    font-size:10px;
+    line-height:1.6;
+    font-weight:800;
+  }
+
+  .pb-actions{
+    margin-top:18px;
+    padding-top:16px;
+    display:flex;
+    justify-content:flex-end;
+    gap:9px;
+    border-top:1px solid #edf1ee;
+  }
+
+  @media(max-width:900px){
+    .pb-hero{grid-template-columns:1fr}
+    .pb-defaults{padding-top:0}
+    .pb-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+
+  @media(max-width:680px){
+    .pb-page{max-width:none}
+    .pb-topbar{align-items:stretch}
+    .pb-tabs{width:100%;display:grid;grid-template-columns:1fr 1fr}
+    .pb-hero-copy{padding:20px}
+    .pb-defaults{grid-template-columns:1fr 1fr 1fr;padding:0 20px 20px}
+    .pb-default{padding:11px}
+    .pb-default strong{font-size:15px}
+    .scan-row{grid-template-columns:1fr}
+    .pb-card-body{padding:15px}
+    .pb-info-grid,.pb-form-grid{grid-template-columns:1fr}
+    .pb-order-head{padding:15px}
+    .pb-actions{
+      position:sticky;
+      bottom:8px;
+      z-index:4;
+      margin:18px -5px -5px;
+      padding:9px;
+      border:1px solid #e4ebe6;
+      border-radius:14px;
+      background:rgba(255,255,255,.97);
+      box-shadow:0 10px 26px rgba(15,23,42,.10);
+    }
+    .pb-actions .pb-btn{flex:1}
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="pb-wrap">
-  <div class="pb-tabs">
-    <a class="pb-tab active" href="{% url 'pickupbooking:home' %}">Pickup / Booking</a>
-    <a class="pb-tab" href="{% url 'pickupbooking:history' %}">History</a>
+<div class="pb-page">
+
+  <div class="pb-topbar">
+    <div class="pb-tabs">
+      <a class="pb-tab active" href="{% url 'pickupbooking:home' %}">Pickup / Booking</a>
+      <a class="pb-tab" href="{% url 'pickupbooking:history' %}">History</a>
+    </div>
   </div>
 
-  <div class="pb-card">
-    <form method="get" autocomplete="off">
-      <div class="scan-row">
-        <input class="scan-input" type="text" name="tracking" value="{{ tracking }}" placeholder="Scan or enter tracking number" autofocus>
-        <button class="btn btn-primary" type="submit">Find Order</button>
+  <section class="pb-hero">
+    <div class="pb-hero-copy">
+      <div class="pb-kicker">QUICK COMPLETE</div>
+      <h2>Scan, confirm and complete pickup orders</h2>
+      <p>
+        For Customer Pickup and Grab / External Rider orders. No delivery batch is required.
+        Confirm the amounts, add a note if needed, then complete immediately.
+      </p>
+    </div>
+
+    <div class="pb-defaults">
+      <div class="pb-default">
+        <span>COD Default</span>
+        <strong>$0.00</strong>
       </div>
-      <div class="note">Scan the DS tracking barcode, then confirm method and amounts. COD, Delivery Fee and Additional Fee start at $0.00.</div>
-    </form>
-  </div>
+      <div class="pb-default">
+        <span>Delivery Fee</span>
+        <strong>$0.00</strong>
+      </div>
+      <div class="pb-default">
+        <span>Additional Fee</span>
+        <strong>$0.00</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-card">
+    <div class="pb-card-head">
+      <h3>Find Order</h3>
+      <p>Scan the DS tracking barcode or enter the tracking number manually.</p>
+    </div>
+    <div class="pb-card-body">
+      <form method="get" autocomplete="off">
+        <div class="scan-row">
+          <div class="scan-box">
+            <input
+              class="scan-input"
+              type="text"
+              name="tracking"
+              value="{{ tracking }}"
+              placeholder="Scan or enter tracking number"
+              autofocus
+            >
+          </div>
+          <button class="pb-btn pb-btn-primary" type="submit">Find Order</button>
+        </div>
+        <div class="pb-scan-note">
+          Pickup / Booking starts COD, Delivery Fee and Additional Fee at $0.00.
+        </div>
+      </form>
+    </div>
+  </section>
 
   {% if order %}
-    <div class="pb-card">
-      <div class="order-head">
+    <section class="pb-card">
+      <div class="pb-order-head">
         <div>
-          <div class="tracking">{{ order.tracking_no }}</div>
-          <div class="shop">{{ order.seller.name|default:order.seller_name|default:"-" }}</div>
+          <div class="pb-tracking">{{ order.tracking_no }}</div>
+          <div class="pb-shop">{{ order.seller.name|default:order.seller_name|default:"-" }}</div>
         </div>
-        <div class="status">{{ order.get_status_display|default:order.status }}</div>
+        <div class="pb-status">{{ order.get_status_display|default:order.status }}</div>
       </div>
 
-      <div class="info-grid">
-        <div class="info"><b>Receiver</b><span>{{ order.receiver_name|default:"-" }}</span></div>
-        <div class="info"><b>Phone</b><span>{{ order.receiver_phone|default:"-" }}</span></div>
-        <div class="info"><b>Seller Order Code</b><span>{{ order.seller_order_code|default:"-" }}</span></div>
-      </div>
+      <div class="pb-card-body">
+        <div class="pb-info-grid">
+          <div class="pb-info">
+            <b>Receiver</b>
+            <span>{{ order.receiver_name|default:"-" }}</span>
+          </div>
+          <div class="pb-info">
+            <b>Phone</b>
+            <span>{{ order.receiver_phone|default:"-" }}</span>
+          </div>
+          <div class="pb-info">
+            <b>Seller Order Code</b>
+            <span>{{ order.seller_order_code|default:"-" }}</span>
+          </div>
+        </div>
 
-      {% if existing %}
-        <div class="existing">
-          Already completed as {{ existing.get_method_display }} on {{ existing.completed_at|date:"d M Y H:i" }}.
-          Use History if you need to adjust COD or fees.
-        </div>
-        <div class="pb-actions">
-          <a class="btn btn-light" href="{% url 'pickupbooking:history' %}?q={{ order.tracking_no|urlencode }}">Open History</a>
-        </div>
-      {% else %}
-        <form method="post" autocomplete="off">
-          {% csrf_token %}
-          <input type="hidden" name="tracking_no" value="{{ order.tracking_no }}">
-          <div class="form-grid">
-            <div class="field">
-              <label>Pickup Method</label>
-              <select class="pb-select" name="method" required>
-                <option value="">Choose method</option>
-                {% for value,label in method_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="field">
-              <label>COD</label>
-              <div class="money-wrap"><span>$</span><input class="pb-input" type="number" min="0" step="0.01" name="cod" value="0.00" required></div>
-            </div>
-            <div class="field">
-              <label>Delivery Fee</label>
-              <div class="money-wrap"><span>$</span><input class="pb-input" type="number" min="0" step="0.01" name="delivery_fee" value="0.00" required></div>
-            </div>
-            <div class="field">
-              <label>Additional Fee</label>
-              <div class="money-wrap"><span>$</span><input class="pb-input" type="number" min="0" step="0.01" name="additional_fee" value="0.00" required></div>
-            </div>
+        {% if existing %}
+          <div class="pb-existing">
+            Already completed as <strong>{{ existing.get_method_display }}</strong>
+            on {{ existing.completed_at|date:"d M Y H:i" }}.
+            Use History if you need to adjust COD, fees or reason.
           </div>
           <div class="pb-actions">
-            <a class="btn btn-light" href="{% url 'pickupbooking:home' %}">Cancel</a>
-            <button class="btn btn-dark" type="submit" onclick="return confirm('Complete this order now?');">Complete Order</button>
+            <a class="pb-btn pb-btn-ghost" href="{% url 'pickupbooking:history' %}?q={{ order.tracking_no|urlencode }}">
+              Open History
+            </a>
           </div>
-        </form>
-      {% endif %}
-    </div>
+        {% else %}
+          <form method="post" autocomplete="off">
+            {% csrf_token %}
+            <input type="hidden" name="tracking_no" value="{{ order.tracking_no }}">
+
+            <h3 class="pb-section-title">Completion Information</h3>
+
+            <div class="pb-form-grid">
+              <div class="pb-field">
+                <label>Pickup Method</label>
+                <select class="pb-select" name="method" required>
+                  <option value="">Choose method</option>
+                  {% for value,label in method_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="pb-field">
+                <label>COD</label>
+                <div class="money-wrap">
+                  <span>$</span>
+                  <input class="pb-input" type="number" min="0" step="0.01" name="cod" value="0.00" required>
+                </div>
+              </div>
+
+              <div class="pb-field">
+                <label>Delivery Fee</label>
+                <div class="money-wrap">
+                  <span>$</span>
+                  <input class="pb-input" type="number" min="0" step="0.01" name="delivery_fee" value="0.00" required>
+                </div>
+              </div>
+
+              <div class="pb-field">
+                <label>Additional Fee</label>
+                <div class="money-wrap">
+                  <span>$</span>
+                  <input class="pb-input" type="number" min="0" step="0.01" name="additional_fee" value="0.00" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="pb-divider"></div>
+
+            <div class="pb-field">
+              <label>Reason / Note</label>
+              <textarea
+                class="pb-textarea"
+                name="reason"
+                placeholder="Optional note, e.g. customer booked Grab, customer came to pickup, special instruction..."
+              ></textarea>
+            </div>
+
+            <div class="pb-actions">
+              <a class="pb-btn pb-btn-ghost" href="{% url 'pickupbooking:home' %}">Cancel</a>
+              <button
+                class="pb-btn pb-btn-dark"
+                type="submit"
+                onclick="return confirm('Complete this order now?');"
+              >
+                Complete Order
+              </button>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+    </section>
   {% endif %}
+
 </div>
 {% endblock %}

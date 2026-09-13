@@ -1447,5 +1447,61 @@
       padding:7px;
     }
   }
+
+
+  /* Final override: keep Deliver PP move/reassign popup wide and uncluttered. */
+  .reason-modal-card.move-modal-card{
+    width:min(900px, calc(100vw - 40px));
+    max-width:900px;
+    max-height:92vh;
+  }
+  .reason-modal-card.move-modal-card .move-batch-list{
+    max-height:46vh;
+    padding:10px;
+    gap:8px;
+  }
+  .reason-modal-card.move-modal-card .move-batch-option{
+    grid-template-columns:minmax(190px,1.2fr) minmax(150px,.8fr) minmax(260px,1fr);
+    gap:14px;
+    padding:11px 13px;
+    min-height:62px;
+  }
+  .reason-modal-card.move-modal-card .move-batch-option.selected{
+    padding:10px 12px;
+  }
+  .reason-modal-card.move-modal-card .move-option-main strong{
+    font-size:17px;
+  }
+  .reason-modal-card.move-modal-card .move-option-created b{
+    font-size:13px;
+  }
+  .reason-modal-card.move-modal-card .move-count-pill{
+    padding:6px 8px;
+    font-size:11px;
+  }
+  .reason-modal-card.move-modal-card .move-count-pill b{
+    font-size:14px;
+  }
+  .reason-modal-card.move-modal-card .move-final-pill{
+    padding:7px 9px;
+    font-size:11px;
+  }
+  .reason-modal-card.move-modal-card .move-final-pill b{
+    font-size:15px;
+  }
+  @media (max-width:760px){
+    .reason-modal-card.move-modal-card{
+      width:calc(100vw - 16px);
+      max-width:none;
+    }
+    .reason-modal-card.move-modal-card .move-batch-option{
+      grid-template-columns:1fr;
+      gap:7px;
+    }
+    .reason-modal-card.move-modal-card .move-card-bottom{
+      justify-content:flex-start;
+      flex-wrap:wrap;
+    }
+  }
 </style>
 {% endblock %}

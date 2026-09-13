@@ -1104,6 +1104,18 @@
             </span>
             <span class="menu-label">Clear Delivery PP</span>
           </a>
+
+          <a class="menu-item {% if request.resolver_match and request.resolver_match.namespace == 'pickupbooking' %}active{% endif %}" href="{% url 'pickupbooking:home' %}" title="Customer pickup and Grab / external rider completion">
+            <span class="menu-icon-wrap">
+              <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h16v11H4z"></path>
+                <path d="M8 7V5h8v2"></path>
+                <path d="M9 12h6"></path>
+                <path d="m13 10 2 2-2 2"></path>
+              </svg>
+            </span>
+            <span class="menu-label">Pickup / Booking</span>
+          </a>
         </div>
 
         <div class="menu-sep"></div>

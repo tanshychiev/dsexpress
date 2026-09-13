@@ -1105,6 +1105,7 @@
               <th class="orders-more-col" style="width:90px;">Price</th>
               <th class="orders-more-col" style="width:90px;">COD</th>
               <th style="width:120px;">Status</th>
+              <th style="width:150px;">Complete Date</th>
               <th style="width:150px;">Shipper</th>
               <th style="width:200px;">Reason</th>
               <th style="width:70px;" class="orders-center">Printed</th>
@@ -1161,7 +1162,31 @@
                     <span class="status-pill status-{{ o.status|lower }}">{{ o.status }}</span>
                   </td>
 
-                  <td data-label="Shipper">{{ o.delivery_shipper.name|default:"-" }}</td>
+                  <td data-label="Complete Date">
+                  {% if o.pickup_booking and o.pickup_booking.completed_at %}
+                    {{ o.pickup_booking.completed_at|date:"Y-m-d H:i" }}
+                  {% elif o.complete_at %}
+                    {{ o.complete_at|date:"Y-m-d H:i" }}
+                  {% elif o.done_at %}
+                    {{ o.done_at|date:"Y-m-d" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                  <td data-label="Shipper">
+                    {% if o.pickup_booking %}
+                      {% if o.pickup_booking.method == "CUSTOMER_PICKUP" %}
+                        Customer Pickup
+                      {% elif o.pickup_booking.method == "GRAB" %}
+                        Grab / External Rider
+                      {% else %}
+                        {{ o.pickup_booking.get_method_display }}
+                      {% endif %}
+                    {% else %}
+                      {{ o.delivery_shipper.name|default:"-" }}
+                    {% endif %}
+                  </td>
                   <td class="order-reason" data-label="Reason">{{ o.reason|default:"-" }}</td>
                   <td data-label="Printed">{{ o.print_count|default:0 }}</td>
 

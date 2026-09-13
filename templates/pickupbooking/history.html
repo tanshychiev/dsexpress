@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Pickup / Booking History | DS Express{% endblock %}
+{% block page_title %}Pickup / Booking History{% endblock %}
+{% block page_subtitle %}Completed customer pickup and Grab orders{% endblock %}
+{% block extra_css %}
+<style>
+  .pb-wrap{display:grid;gap:14px}.pb-tabs{display:flex;gap:8px;flex-wrap:wrap}.pb-tab{padding:10px 14px;border:1px solid #dbe4ee;border-radius:10px;background:#fff;color:#334155;text-decoration:none;font-weight:800}.pb-tab.active{background:#0f5b9d;color:#fff;border-color:#0f5b9d}.card{background:#fff;border:1px solid #dfe7ef;border-radius:14px;padding:14px}.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:9px}.input,.select{min-height:41px;border:1px solid #cbd5e1;border-radius:9px;padding:8px 10px;width:100%;box-sizing:border-box}.btn{border:0;border-radius:9px;padding:10px 14px;background:#0f5b9d;color:#fff;font-weight:900;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.table-wrap{overflow:auto}.tbl{width:100%;border-collapse:collapse;min-width:1000px}.tbl th{background:#f1f5f9;color:#475569;font-size:11px;text-transform:uppercase;text-align:left;padding:9px;border-bottom:1px solid #dbe4ee;white-space:nowrap}.tbl td{padding:9px;border-bottom:1px solid #edf2f7;font-size:13px;vertical-align:top}.money{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}.method{display:inline-block;padding:5px 8px;border-radius:999px;background:#eef6ff;color:#0f5b9d;font-size:11px;font-weight:900}.edit{color:#0f5b9d;font-weight:900;text-decoration:none}.muted{color:#64748b}@media(max-width:800px){.filters{grid-template-columns:1fr 1fr}.filters .wide{grid-column:1/-1}.filters .btn{grid-column:1/-1}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="pb-wrap">
+  <div class="pb-tabs"><a class="pb-tab" href="{% url 'pickupbooking:home' %}">Pickup / Booking</a><a class="pb-tab active" href="{% url 'pickupbooking:history' %}">History</a></div>
+  <div class="card">
+    <form method="get" class="filters">
+      <input class="input wide" name="q" value="{{ q }}" placeholder="Tracking / shop / receiver / phone">
+      <select class="select" name="method"><option value="">All methods</option>{% for value,label in method_choices %}<option value="{{ value }}" {% if selected_method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      <input class="input" type="date" name="date_from" value="{{ date_from }}">
+      <input class="input" type="date" name="date_to" value="{{ date_to }}">
+      <button class="btn" type="submit">Search</button>
+    </form>
+  </div>
+  <div class="card table-wrap">
+    <table class="tbl">
+      <thead><tr><th>Tracking</th><th>Shop</th><th>Method</th><th>COD</th><th>Delivery Fee</th><th>Additional Fee</th><th>Completed By</th><th>Completed At</th><th>Updated</th><th></th></tr></thead>
+      <tbody>
+      {% for b in rows %}
+        <tr>
+          <td><strong>{{ b.order.tracking_no }}</strong><br><span class="muted">{{ b.order.seller_order_code|default:"" }}</span></td>
+          <td>{{ b.order.seller.name|default:b.order.seller_name|default:"-" }}</td>
+          <td><span class="method">{{ b.get_method_display }}</span></td>
+          <td class="money">${{ b.cod|floatformat:2 }}</td>
+          <td class="money">${{ b.delivery_fee|floatformat:2 }}</td>
+          <td class="money">${{ b.additional_fee|floatformat:2 }}</td>
+          <td>{{ b.completed_by.username|default:"-" }}</td>
+          <td>{{ b.completed_at|date:"d M Y H:i" }}</td>
+          <td>{{ b.updated_at|date:"d M Y H:i" }}</td>
+          <td><a class="edit" href="{% url 'pickupbooking:edit' b.pk %}">Edit</a></td>
+        </tr>
+      {% empty %}<tr><td colspan="10" style="text-align:center;padding:30px;color:#64748b">No Pickup / Booking records found.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

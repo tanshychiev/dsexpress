@@ -1,4 +1,4 @@
-﻿from django.conf import settings
+from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
@@ -37,6 +37,7 @@ path(
 path("", include("provinceops.urls")),
 path("", include("returnshop.urls")),
 path("deliver-pp/", include("deliverpp.urls")),
+path("pickup-booking/", include("pickupbooking.urls")),
 
 # Province COD
 path(

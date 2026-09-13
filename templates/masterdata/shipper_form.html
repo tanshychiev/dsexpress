@@ -2,65 +2,502 @@
 
 {% block page_title %}
   {% if mode == "edit" %}Edit Shipper{% else %}New Shipper{% endif %}
+
+<script>
+(function(){
+  const activeInput = document.getElementById("shipper_active");
+  const activeBtn = document.getElementById("shipperStatusActive");
+  const inactiveBtn = document.getElementById("shipperStatusInactive");
+
+  if (!activeInput || !activeBtn || !inactiveBtn) return;
+
+  function renderStatus(){
+    activeBtn.classList.toggle("is-selected", activeInput.checked);
+    inactiveBtn.classList.toggle("is-selected", !activeInput.checked);
+  }
+
+  activeBtn.addEventListener("click", function(){
+    activeInput.checked = true;
+    renderStatus();
+  });
+
+  inactiveBtn.addEventListener("click", function(){
+    activeInput.checked = false;
+    renderStatus();
+  });
+
+  renderStatus();
+})();
+</script>
+
 {% endblock %}
 
-{% block page_subtitle %}Driver / Partner{% endblock %}
+{% block page_subtitle %}Driver / Partner profile and portal access{% endblock %}
 
 {% block content %}
+<style>
+  .shipper-page{
+    max-width:1120px;
+    margin:0 auto;
+    display:grid;
+    gap:18px;
+  }
 
-{% if form and form.errors %}
-  <div style="padding:10px;border:1px solid #f5c2c7;background:#f8d7da;border-radius:10px;margin-bottom:12px;">
-    <b>Please check the form again.</b>
-    <div style="margin-top:6px;">{{ form.non_field_errors }}</div>
-  </div>
-{% endif %}
+  .shipper-card{
+    overflow:hidden;
+    border:1px solid #e2e8e4;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 30px rgba(15,23,42,.06);
+  }
 
-<div class="card">
-  <div class="card-title">
-    {% if mode == "edit" %}Update Shipper{% else %}Create Shipper{% endif %}
-  </div>
+  .shipper-card-head{
+    padding:18px 20px 15px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    border-bottom:1px solid #edf1ee;
+    background:linear-gradient(180deg,#fff,#fbfdfc);
+  }
 
-  <form method="post" class="form-grid" novalidate>
-    {% csrf_token %}
+  .shipper-card-title{
+    margin:0;
+    color:#172235;
+    font-size:19px;
+    line-height:1.15;
+    font-weight:950;
+    letter-spacing:-.025em;
+  }
 
-    <div class="field">
-      <label>Name</label>
-      <input class="input" name="name" value="{{ row.name|default:'' }}" required />
-      {% if form and form.name.errors %}
-        <div style="color:#b02a37;font-size:13px;margin-top:6px;">{{ form.name.errors }}</div>
+  .shipper-card-sub{
+    margin-top:5px;
+    color:#718096;
+    font-size:11px;
+    line-height:1.5;
+    font-weight:700;
+  }
+
+  .shipper-code-pill{
+    display:inline-flex;
+    align-items:center;
+    min-height:30px;
+    padding:0 11px;
+    border:1px solid #cce7d7;
+    border-radius:999px;
+    background:#eef8f2;
+    color:#0f7a45;
+    font-size:10px;
+    font-weight:950;
+    white-space:nowrap;
+  }
+
+  .shipper-card-body{padding:20px}
+
+  .shipper-section-title{
+    margin:0 0 12px;
+    color:#0f7a45;
+    font-size:10px;
+    font-weight:950;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+
+  .shipper-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+  }
+
+  .shipper-field{
+    min-width:0;
+    display:grid;
+    gap:7px;
+  }
+
+  .shipper-field.full{grid-column:1/-1}
+
+  .shipper-field label{
+    color:#334155;
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .shipper-input,
+  .shipper-select{
+    width:100%;
+    min-height:44px;
+    padding:0 13px;
+    border:1px solid #d8e1db;
+    border-radius:12px;
+    outline:none;
+    background:#fff;
+    color:#172235;
+    font-size:12px;
+    font-weight:750;
+    transition:.16s ease;
+    box-sizing:border-box;
+  }
+
+  .shipper-select{
+    cursor:pointer;
+    appearance:auto;
+  }
+
+  .shipper-input:focus,
+  .shipper-select:focus{
+    border-color:#9ccdb3;
+    box-shadow:0 0 0 4px rgba(15,122,69,.09);
+  }
+
+  .shipper-input:disabled{
+    background:#f3f6f4;
+    color:#77837d;
+  }
+
+  .shipper-hint{
+    color:#7b8781;
+    font-size:9px;
+    line-height:1.5;
+    font-weight:700;
+  }
+
+  .shipper-check{
+    min-height:44px;
+    padding:0 13px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border:1px solid #d8e1db;
+    border-radius:12px;
+    background:#f8fbf9;
+    color:#334155;
+    font-size:11px;
+    font-weight:850;
+    box-sizing:border-box;
+  }
+
+  .shipper-check input{
+    position:absolute;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .shipper-status-switch{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    width:210px;
+    padding:5px;
+    border:1px solid #d8e1db;
+    border-radius:14px;
+    background:#f3f6f4;
+  }
+
+  .shipper-status-btn{
+    height:34px;
+    border:0;
+    border-radius:10px;
+    background:transparent;
+    color:#64748b;
+    font-size:10px;
+    font-weight:950;
+    cursor:pointer;
+    transition:.16s ease;
+  }
+
+  .shipper-status-btn.active-choice.is-selected{
+    background:#0f7a45;
+    color:#fff;
+    box-shadow:0 4px 12px rgba(15,122,69,.18);
+  }
+
+  .shipper-status-btn.inactive-choice.is-selected{
+    background:#dc2626;
+    color:#fff;
+    box-shadow:0 4px 12px rgba(220,38,38,.18);
+  }
+
+  .shipper-status-btn:not(.is-selected):hover{
+    background:#fff;
+    color:#334155;
+  }
+
+  .shipper-divider{
+    height:1px;
+    margin:20px 0;
+    background:#edf1ee;
+  }
+
+  .shipper-alert{
+    padding:13px 15px;
+    border:1px solid #fecaca;
+    border-radius:13px;
+    background:#fef2f2;
+    color:#b91c1c;
+    font-size:11px;
+    font-weight:850;
+  }
+
+  .shipper-actions{
+    margin-top:20px;
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+  }
+
+  .shipper-btn{
+    min-height:42px;
+    padding:0 17px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid transparent;
+    border-radius:12px;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:950;
+    cursor:pointer;
+    box-sizing:border-box;
+  }
+
+  .shipper-btn-primary{
+    border-color:#0f7a45;
+    background:#0f7a45;
+    color:#fff;
+    box-shadow:0 6px 16px rgba(15,122,69,.16);
+  }
+
+  .shipper-btn-primary:hover{background:#075c34}
+
+  .shipper-btn-ghost{
+    border-color:#d8e1db;
+    background:#fff;
+    color:#334155;
+  }
+
+  .shipper-btn-ghost:hover{background:#f8faf9}
+
+  .portal-disabled{
+    opacity:.58;
+  }
+
+  @media (max-width:760px){
+    .shipper-page{max-width:none}
+    .shipper-form-grid{grid-template-columns:1fr}
+    .shipper-field.full{grid-column:auto}
+    .shipper-card-head{padding:16px}
+    .shipper-card-body{padding:16px}
+    .shipper-actions{
+      position:sticky;
+      bottom:8px;
+      z-index:3;
+      padding:10px;
+      margin:18px -6px -6px;
+      border:1px solid #e4ebe6;
+      border-radius:14px;
+      background:rgba(255,255,255,.96);
+      box-shadow:0 8px 24px rgba(15,23,42,.10);
+    }
+    .shipper-btn{flex:1}
+  }
+</style>
+
+<div class="shipper-page">
+
+  {% if error %}
+    <div class="shipper-alert">{{ error }}</div>
+  {% endif %}
+
+  <section class="shipper-card">
+    <header class="shipper-card-head">
+      <div>
+        <h2 class="shipper-card-title">
+          {% if mode == "edit" %}Edit Shipper{% else %}Create Shipper{% endif %}
+        </h2>
+        <div class="shipper-card-sub">
+          Add or update a DS Express delivery driver / logistics partner.
+        </div>
+      </div>
+
+      {% if mode == "edit" and row.code %}
+        <span class="shipper-code-pill">{{ row.code }}</span>
       {% endif %}
-    </div>
+    </header>
 
-    <div class="field">
-      <label>Phone</label>
-      <input class="input" name="phone" value="{{ row.phone|default:'' }}" />
-      {% if form and form.phone.errors %}
-        <div style="color:#b02a37;font-size:13px;margin-top:6px;">{{ form.phone.errors }}</div>
-      {% endif %}
-    </div>
+    <div class="shipper-card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
 
-    <div class="field full">
-      <label>Type</label>
-     <select class="input" name="shipper_type">
-  <option value="DELIVERY" {% if row.shipper_type == "DELIVERY" %}selected{% endif %}>DELIVERY</option>
-  <option value="PROVINCE" {% if row.shipper_type == "PROVINCE" %}selected{% endif %}>PROVINCE</option>
-  <option value="RETURN" {% if row.shipper_type == "RETURN" %}selected{% endif %}>RETURN</option>
-</select>
-      {% if form and form.shipper_type.errors %}
-        <div style="color:#b02a37;font-size:13px;margin-top:6px;">{{ form.shipper_type.errors }}</div>
-      {% endif %}
-    </div>
+        <h3 class="shipper-section-title">Shipper Information</h3>
 
-    <div class="actions">
-      <a class="btn btn-ghost" href="{% url 'shipper_list' %}">Cancel</a>
-      <button class="btn btn-primary" type="submit">Save</button>
+        <div class="shipper-form-grid">
+          <div class="shipper-field">
+            <label for="shipper_name">Name</label>
+            <input
+              id="shipper_name"
+              class="shipper-input"
+              name="name"
+              value="{{ row.name|default:'' }}"
+              placeholder="Shipper / partner name"
+              autocomplete="off"
+              required
+              autofocus
+            >
+          </div>
+
+          <div class="shipper-field">
+            <label for="shipper_phone">Phone</label>
+            <input
+              id="shipper_phone"
+              class="shipper-input"
+              name="phone"
+              value="{{ row.phone|default:'' }}"
+              placeholder="Phone number"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="shipper-field">
+            <label for="shipper_type">Type</label>
+            <select id="shipper_type" class="shipper-select" name="shipper_type">
+              <option value="DELIVERY" {% if row.shipper_type == "DELIVERY" %}selected{% endif %}>Delivery</option>
+              <option value="PROVINCE" {% if row.shipper_type == "PROVINCE" %}selected{% endif %}>Province</option>
+              <option value="RETURN" {% if row.shipper_type == "RETURN" %}selected{% endif %}>Return</option>
+            </select>
+            <div class="shipper-hint">
+              Delivery = Phnom Penh driver · Province = carrier / partner · Return = return handling.
+            </div>
+          </div>
+
+          <div class="shipper-field">
+            <label>Status</label>
+            <div class="shipper-check">
+              <span>Shipper status</span>
+
+              <input
+                type="checkbox"
+                id="shipper_active"
+                name="is_active"
+                value="1"
+                {% if row.is_active %}checked{% endif %}
+              >
+
+              <div class="shipper-status-switch" role="group" aria-label="Shipper status">
+                <button
+                  type="button"
+                  id="shipperStatusActive"
+                  class="shipper-status-btn active-choice {% if row.is_active %}is-selected{% endif %}"
+                >
+                  Active
+                </button>
+                <button
+                  type="button"
+                  id="shipperStatusInactive"
+                  class="shipper-status-btn inactive-choice {% if not row.is_active %}is-selected{% endif %}"
+                >
+                  Inactive
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {% if mode == "edit" %}
+            <div class="shipper-field full">
+              <label>Shipper Code</label>
+              <input class="shipper-input" value="{{ row.code|default:'-' }}" disabled>
+            </div>
+          {% endif %}
+        </div>
+
+        {% if portal_data %}
+          <div class="shipper-divider"></div>
+
+          <h3 class="shipper-section-title">Shipper Portal Login</h3>
+
+          <div class="shipper-form-grid">
+            <div class="shipper-field full">
+              <label class="shipper-check">
+                <input
+                  type="checkbox"
+                  id="portal_enabled"
+                  name="portal_enabled"
+                  value="1"
+                  {% if portal_data.portal_enabled %}checked{% endif %}
+                >
+                <span>Enable shipper portal login</span>
+              </label>
+              <div class="shipper-hint">
+                Enable this if the shipper needs their own DS Express account.
+              </div>
+            </div>
+
+            <div class="shipper-field portal-field">
+              <label for="portal_username">Username</label>
+              <input
+                id="portal_username"
+                class="shipper-input portal-input"
+                name="portal_username"
+                value="{{ portal_data.portal_username|default:'' }}"
+                placeholder="Shipper username"
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="shipper-field portal-field">
+              <label for="portal_password">
+                {% if mode == "edit" %}Reset / New Password{% else %}Password{% endif %}
+              </label>
+              <input
+                id="portal_password"
+                class="shipper-input portal-input"
+                name="portal_password"
+                type="text"
+                value=""
+                placeholder="{% if mode == 'edit' %}Leave blank to keep current password{% else %}Required when portal login is enabled{% endif %}"
+                autocomplete="new-password"
+              >
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="shipper-actions">
+          <a class="shipper-btn shipper-btn-ghost" href="{% url 'shipper_list' %}">
+            Cancel
+          </a>
+          <button class="shipper-btn shipper-btn-primary" type="submit">
+            {% if mode == "edit" %}Save Changes{% else %}Create Shipper{% endif %}
+          </button>
+        </div>
+      </form>
     </div>
-  </form>
+  </section>
 </div>
-{% if error %}
-  <div style="padding:10px;border:1px solid #f5c2c7;background:#f8d7da;border-radius:10px;margin-bottom:12px;">
-    <b>{{ error }}</b>
-  </div>
-{% endif %}
 
+{% if portal_data %}
+<script>
+(function(){
+  const enabled = document.getElementById("portal_enabled");
+  const inputs = document.querySelectorAll(".portal-input");
+  const fields = document.querySelectorAll(".portal-field");
+
+  function togglePortalFields(){
+    if (!enabled) return;
+    const isEnabled = enabled.checked;
+
+    inputs.forEach(function(input){
+      input.disabled = !isEnabled;
+    });
+
+    fields.forEach(function(field){
+      field.classList.toggle("portal-disabled", !isEnabled);
+    });
+  }
+
+  enabled.addEventListener("change", togglePortalFields);
+  togglePortalFields();
+})();
+</script>
+{% endif %}
 {% endblock %}

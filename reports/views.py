@@ -13,7 +13,7 @@ from openpyxl import load_workbook
 from playwright.sync_api import sync_playwright
 
 from masterdata.models import Seller
-from orders.models import Order, SystemLock
+from orders.models import Order, OrderActivity
 from provinceops.models import ProvinceBatchItem
 
 from .excel import export_delivery_report_xlsx
@@ -26,6 +26,7 @@ from .services import (
     calc_totals,
     get_shipper_name,
     report_money,
+    display_status,
 )
 from .update_excel import export_update_template_xlsx
 
@@ -146,6 +147,25 @@ def enrich_report_rows(rows):
     from provinceops.models import ProvinceBatch, ProvinceBatchItem
 
     order_ids = [o.id for o in rows if getattr(o, "id", None)]
+    province_cod_map = {}
+
+    # Actual completion timestamp from the DS system.
+    # Order.done_at is a DateField, so time must come from system activity.
+    completion_time_map = {}
+    if order_ids:
+        completion_activities = (
+            OrderActivity.objects
+            .filter(order_id__in=order_ids)
+            .order_by("-created_at", "-id")
+        )
+
+        for activity in completion_activities:
+            new_status = str(getattr(activity, "new_status", "") or "").upper().strip()
+            action = str(getattr(activity, "action", "") or "").lower().strip()
+
+            if new_status in {"DELIVERED", "DONE", "SENT"} or action in {"delivered", "done", "sent"}:
+                if activity.order_id not in completion_time_map:
+                    completion_time_map[activity.order_id] = activity.created_at
 
     province_date_map = {}
     if order_ids:
@@ -166,6 +186,45 @@ def enrich_report_rows(rows):
 
     for o in rows:
         o.report_shipper_name = get_shipper_name(o)
+
+        # Pickup / Booking uses the same Shipper column.
+        pickup_booking = None
+        try:
+            pickup_booking = getattr(o, "pickup_booking", None)
+        except Exception:
+            pickup_booking = None
+
+        if pickup_booking:
+            method = str(getattr(pickup_booking, "method", "") or "").upper().strip()
+            if method == "CUSTOMER_PICKUP":
+                o.report_shipper_name = "Customer Pickup"
+            elif method == "GRAB":
+                o.report_shipper_name = "Grab / External Rider"
+            else:
+                try:
+                    o.report_shipper_name = pickup_booking.get_method_display()
+                except Exception:
+                    pass
+
+        # Complete Date means the real system time when the order became
+        # DELIVERED / DONE / SENT.
+        complete_at = None
+
+        if pickup_booking:
+            complete_at = getattr(pickup_booking, "completed_at", None)
+
+        if not complete_at:
+            complete_at = completion_time_map.get(getattr(o, "id", None))
+
+        # Older rows may not have an OrderActivity record.
+        if not complete_at:
+            current_status = str(getattr(o, "status", "") or "").upper().strip()
+            if current_status in {"DELIVERED", "DONE", "SENT"}:
+                complete_at = getattr(o, "updated_at", None)
+
+        o.report_complete_at = complete_at
+        o.report_status = display_status(o)
+        o._report_province_cod_item = province_cod_map.get(getattr(o, "id", None))
 
         money = report_money(o)
         o.report_delivery_fee = money.get("delivery_fee", 0)
@@ -502,33 +561,9 @@ def delivery_report_upload(request):
 
         messages.success(request, f"Upload complete. Updated {updated_rows} rows.")
 
-        # Keep the system locked after the upload. If the current user is allowed
-        # to unlock it, the upload page will ask whether to unlock now.
-        system_lock = SystemLock.get_lock()
-        upload_fully_successful = bool(
-            updated_rows > 0
-            and skipped_rows == 0
-            and not_found_rows == 0
-            and not error_rows
-        )
-        ask_unlock = bool(
-            upload_fully_successful
-            and system_lock.active
-            and (request.user.is_superuser or system_lock.locked_by_id == request.user.id)
-        )
-        if system_lock.active and not upload_fully_successful:
-            messages.warning(
-                request,
-                "System kept locked because some rows were skipped, missing, or failed. Review the upload result before unlocking.",
-            )
-
-    else:
-        ask_unlock = False
-
     return render(request, "reports/delivery_report_upload.html", {
         "form": form,
         "summary": summary,
-        "ask_unlock": ask_unlock,
     })
 
 

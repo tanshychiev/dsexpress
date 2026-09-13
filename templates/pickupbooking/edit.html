@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Edit Pickup / Booking | DS Express{% endblock %}
+{% block page_title %}Edit Pickup / Booking{% endblock %}
+{% block page_subtitle %}Adjust COD and fees with audit history{% endblock %}
+{% block extra_css %}
+<style>
+  .wrap{max-width:900px;margin:0 auto;display:grid;gap:14px}.card{background:#fff;border:1px solid #dfe7ef;border-radius:15px;padding:17px}.head{display:flex;justify-content:space-between;gap:15px}.track{font-size:23px;font-weight:950}.shop{font-weight:800;color:#64748b}.grid{display:grid;grid-template-columns:1.25fr repeat(3,1fr);gap:12px;margin-top:16px}.field label{display:block;font-size:12px;font-weight:900;color:#475569;margin-bottom:6px}.input,.select{width:100%;min-height:43px;border:1px solid #cbd5e1;border-radius:9px;padding:9px 11px;box-sizing:border-box}.input{text-align:right;font-weight:900}.actions{display:flex;justify-content:flex-end;gap:9px;border-top:1px solid #e5e7eb;margin-top:16px;padding-top:14px}.btn{padding:10px 14px;border:0;border-radius:9px;text-decoration:none;font-weight:900;cursor:pointer}.save{background:#0f5b9d;color:#fff}.back{background:#eef2f7;color:#334155}.audit{width:100%;border-collapse:collapse}.audit th,.audit td{padding:8px;border-bottom:1px solid #edf2f7;text-align:left;font-size:12px;vertical-align:top}.audit th{background:#f8fafc;color:#475569}.change{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#334155;white-space:normal;word-break:break-word}@media(max-width:760px){.grid{grid-template-columns:1fr}.head{display:block}.actions .btn{flex:1}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="wrap">
+  <div class="card">
+    <div class="head"><div><div class="track">{{ booking.order.tracking_no }}</div><div class="shop">{{ booking.order.seller.name|default:booking.order.seller_name|default:"-" }}</div></div><div>Completed {{ booking.completed_at|date:"d M Y H:i" }}</div></div>
+    <form method="post">{% csrf_token %}
+      <div class="grid">
+        <div class="field"><label>Pickup Method</label><select class="select" name="method">{% for value,label in method_choices %}<option value="{{ value }}" {% if booking.method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="field"><label>COD ($)</label><input class="input" type="number" min="0" step="0.01" name="cod" value="{{ booking.cod|floatformat:2 }}"></div>
+        <div class="field"><label>Delivery Fee ($)</label><input class="input" type="number" min="0" step="0.01" name="delivery_fee" value="{{ booking.delivery_fee|floatformat:2 }}"></div>
+        <div class="field"><label>Additional Fee ($)</label><input class="input" type="number" min="0" step="0.01" name="additional_fee" value="{{ booking.additional_fee|floatformat:2 }}"></div>
+      </div>
+      <div class="actions"><a class="btn back" href="{% url 'pickupbooking:history' %}">Back</a><button class="btn save" type="submit">Save Changes</button></div>
+    </form>
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 10px">Audit Log</h3>
+    <div style="overflow:auto"><table class="audit"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Old</th><th>New</th></tr></thead><tbody>{% for a in audit_logs %}<tr><td>{{ a.changed_at|date:"d M Y H:i" }}</td><td>{{ a.changed_by.username|default:"-" }}</td><td>{{ a.get_action_display }}</td><td class="change">{{ a.old_values }}</td><td class="change">{{ a.new_values }}</td></tr>{% empty %}<tr><td colspan="5">No audit records.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+</div>
+{% endblock %}

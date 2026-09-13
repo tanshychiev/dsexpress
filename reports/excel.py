@@ -177,7 +177,7 @@ def export_delivery_report_xlsx(
                 float(total_fee),
                 float(cod),
                 report_status,
-                o.delivery_shipper.name if getattr(o, "delivery_shipper", None) else "",
+                getattr(o, "report_shipper_name", "") or "",
                 getattr(o, "reason", "") or "",
             ]
 

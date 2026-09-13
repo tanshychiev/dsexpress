@@ -15,7 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Q, OuterRef, Subquery, DateTimeField
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -516,6 +516,24 @@ def order_list(request):
         qs = Order.objects.none()
     else:
         qs = _qs_orders_filtered(request, require_search_click=True)
+
+    # Exact completion timestamp for the Orders list.
+    # Keep Order.done_at unchanged because it is a DateField.
+    delivered_activity_at = (
+        OrderActivity.objects
+        .filter(
+            order_id=OuterRef("pk"),
+            new_status=Order.STATUS_DELIVERED,
+        )
+        .order_by("-created_at")
+        .values("created_at")[:1]
+    )
+    qs = qs.annotate(
+        complete_at=Subquery(
+            delivered_activity_at,
+            output_field=DateTimeField(),
+        )
+    )
 
     total_results = qs.count()
 

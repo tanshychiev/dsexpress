@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "returnshop",
     "provincecod",
     "deliverpp",
+    "pickupbooking.apps.PickupBookingConfig",
     "reports",
     "inventory.apps.InventoryConfig",
     "customerportal",

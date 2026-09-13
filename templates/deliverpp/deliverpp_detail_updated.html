@@ -305,7 +305,7 @@
         {% for it in items %}
           {% with o=it.order %}
             <tr
-              class="{% if it.id in staged_remove %}row-remove{% elif it.ticked %}row-done{% else %}row-pending{% endif %}"
+              class="{% if it.ticked %}row-done{% else %}row-pending{% endif %}"
               data-done="{% if it.ticked %}1{% else %}0{% endif %}"
               data-seller="{% if o.seller %}{% firstof o.seller.seller_name o.seller.name '-' %}{% else %}-{% endif %}"
               data-tracking="{% firstof o.full_tracking o.tracking_no o.id %}"
@@ -340,34 +340,78 @@
 
               {% if edit_mode %}
                 <td class="td-center">
-                  {% if it.id in staged_remove %}
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="undo_remove">
-                      <input type="hidden" name="item_id" value="{{ it.id }}">
-                      <button class="btn btn-ghost" type="submit">Undo</button>
-                    </form>
-                  {% else %}
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="stage_remove">
-                      <input type="hidden" name="item_id" value="{{ it.id }}">
-                      <button class="btn btn-danger" type="submit">Remove</button>
-                    </form>
-                  {% endif %}
+                  <button
+                    class="btn btn-danger btn-move"
+                    type="button"
+                    data-modal-open="moveModal{{ it.id }}"
+                    {% if it.ticked or it.delivery_cleared_at %}disabled title="Already marked/cleared for delivery"{% endif %}
+                  >
+                    Remove
+                  </button>
                 </td>
               {% endif %}
 
               <td class="td-center">
-                {% if it.id in staged_remove %}
-                  <span class="st-remove">REMOVE</span>
-                {% elif it.ticked %}
+                {% if it.ticked %}
                   <span class="st-done">DONE</span>
                 {% else %}
                   <span class="st-pending">PENDING</span>
                 {% endif %}
               </td>
             </tr>
+
+            {% if edit_mode %}
+              <div class="reason-modal" id="moveModal{{ it.id }}">
+                <div class="reason-modal-card move-modal-card">
+                  <div class="reason-modal-head">
+                    <div class="reason-modal-title">Remove Shipment</div>
+                    <button type="button" class="modal-x" data-modal-close="moveModal{{ it.id }}">×</button>
+                  </div>
+
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove_or_reassign">
+                    <input type="hidden" name="item_id" value="{{ it.id }}">
+
+                    <div class="reason-modal-body move-modal-body">
+                      <div class="move-order-info">
+                        <div>Shipment</div>
+                        <b class="mono">{% firstof o.full_tracking o.tracking_no o.id %}</b>
+                        <span>Current: {{ batch.code }}{% if batch.shipper %} · {{ batch.shipper.name }}{% endif %}</span>
+                      </div>
+
+                      <label class="move-label" for="removeReason{{ it.id }}">Reason <span class="required-star reason-required-star">*</span><span class="reason-optional-text" style="display:none;"> (optional when moving)</span></label>
+                      <textarea
+                        id="removeReason{{ it.id }}"
+                        class="reason-area move-reason"
+                        name="remove_reason"
+                        maxlength="255"
+                        placeholder="Required when removing only. Optional when moving to another batch."
+                      ></textarea>
+
+                      <label class="move-label" for="targetBatch{{ it.id }}">Remove or move</label>
+                      <select id="targetBatch{{ it.id }}" name="target_batch_id" class="move-select" data-reason-id="removeReason{{ it.id }}">
+                        <option value="">Remove only — return order to INBOUND</option>
+                        {% for rb in reassign_batches %}
+                          <option value="{{ rb.id }}">
+                            Move to {{ rb.code }}{% if rb.shipper %} — {{ rb.shipper.name }}{% endif %} ({{ rb.total_pc }} pcs)
+                          </option>
+                        {% endfor %}
+                      </select>
+
+                      <div class="move-help">
+                        Confirming will apply immediately — no need to click the main Save button again. Only today's PENDING PP batches that have not started Clear Delivery are shown for quick move.
+                      </div>
+                    </div>
+
+                    <div class="reason-modal-foot">
+                      <button type="button" class="btn btn-ghost" data-modal-close="moveModal{{ it.id }}">Cancel</button>
+                      <button type="submit" class="btn btn-success move-confirm-btn">Confirm Remove</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            {% endif %}
 
             <div class="reason-modal" id="reasonModal{{ it.id }}">
               <div class="reason-modal-card">
@@ -458,6 +502,34 @@
       var modal = document.getElementById(id);
       if(modal) modal.classList.remove("show");
     });
+  });
+
+  // Removal requires a reason; moving to another active batch does not.
+  document.querySelectorAll(".move-select").forEach(function(select){
+    function syncMoveReasonRequirement(){
+      var modal = select.closest(".reason-modal");
+      var reason = document.getElementById(select.dataset.reasonId);
+      if (!reason) return;
+      var isMove = !!select.value;
+      reason.required = !isMove;
+      var star = modal ? modal.querySelector(".reason-required-star") : null;
+      var optional = modal ? modal.querySelector(".reason-optional-text") : null;
+      if (star) star.style.display = isMove ? "none" : "inline";
+      if (optional) optional.style.display = isMove ? "inline" : "none";
+    }
+    select.addEventListener("change", syncMoveReasonRequirement);
+    syncMoveReasonRequirement();
+  });
+
+  document.querySelectorAll(".move-select").forEach(function(select){
+    function syncMoveButton(){
+      var modal = select.closest(".reason-modal");
+      var btn = modal ? modal.querySelector(".move-confirm-btn") : null;
+      if (!btn) return;
+      btn.textContent = select.value ? "Move Now" : "Confirm Remove";
+    }
+    select.addEventListener("change", syncMoveButton);
+    syncMoveButton();
   });
 
   document.querySelectorAll(".reason-modal").forEach(function(modal){
@@ -590,6 +662,83 @@
     background:#f59e0b;
     border-color:#f59e0b;
     color:#111;
+  }
+
+  .btn-move{
+    padding:8px 10px;
+    white-space:nowrap;
+    font-size:12px;
+  }
+
+  .btn-move:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+
+  .move-modal-card{
+    max-width:560px;
+  }
+
+  .move-modal-body{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+  }
+
+  .move-order-info{
+    display:grid;
+    gap:3px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+  }
+
+  .move-order-info > div{
+    font-size:11px;
+    font-weight:900;
+    color:#64748b;
+    text-transform:uppercase;
+  }
+
+  .move-order-info > span{
+    font-size:12px;
+    color:#64748b;
+  }
+
+  .move-label{
+    margin-top:4px;
+    font-size:12px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .required-star{
+    color:#dc2626;
+  }
+
+  .move-reason{
+    min-height:92px;
+  }
+
+  .move-select{
+    width:100%;
+    min-height:44px;
+    padding:9px 11px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    background:#fff;
+    font-weight:700;
+    color:#0f172a;
+  }
+
+  .move-help{
+    padding:9px 10px;
+    border-radius:10px;
+    background:#ecfdf5;
+    color:#166534;
+    font-size:11px;
+    line-height:1.45;
   }
 
   .pp-state{

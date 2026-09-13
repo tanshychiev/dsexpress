@@ -421,6 +421,11 @@
                             <span class="move-result-count"><span data-result-count>{{ reassign_batches|length }}</span> available</span>
                           </div>
 
+                          <div class="move-list-head">
+                            <span>Staff / Batch</span>
+                            <span>Created</span>
+                            <span>Assigned pcs</span>
+                          </div>
                           <div class="move-batch-list">
                             {% for rb in reassign_batches %}
                               <button
@@ -437,13 +442,12 @@
                                 <span class="move-option-main">
                                   <strong>{% if rb.shipper %}{{ rb.shipper.name }}{% else %}No shipper{% endif %}</strong>
                                   <span class="mono">{{ rb.code }}</span>
-                                  <span class="move-option-created">Created {{ rb.created_at|date:'d M Y' }} · {{ rb.created_at|date:'H:i' }}</span>
                                 </span>
-                                <span class="move-option-meta">
-                                  <span class="move-pc-now"><b>{{ rb.move_normal_pc }}</b> normal pcs</span>
-                                  <span class="move-return-pc"><b>{{ rb.move_return_pc }}</b> return pcs</span>
-                                  <span class="move-pc-final">→ <b>{{ rb.move_normal_pc|add:'1' }}</b> normal pcs after move</span>
-                                  <span class="move-clear-state">{% if rb.move_cleared_pc %}Clear started{% else %}Not cleared{% endif %}</span>
+                                <span class="move-option-created"><b>{{ rb.created_at|date:'d M Y' }}</b><span>{{ rb.created_at|date:'H:i' }}</span></span>
+                                <span class="move-counts-summary">
+                                  <span><b>{{ rb.move_normal_pc }}</b> normal</span>
+                                  <span><b>{{ rb.move_return_pc }}</b> return</span>
+                                  <strong>→ {{ rb.move_normal_pc|add:'1' }} normal after move</strong>
                                 </span>
                               </button>
                             {% empty %}
@@ -454,19 +458,19 @@
                         </div>
 
                         <div class="batch-move-preview" hidden>
-                          <div class="batch-preview-head">Destination batch</div>
-                          <div class="batch-preview-code mono" data-preview-code>-</div>
-                          <div class="batch-preview-grid">
-                            <div><span>Staff</span><b data-preview-staff>-</b></div>
-                            <div><span>Assigned</span><b data-preview-assigned>-</b></div>
-                            <div><span>Clear</span><b class="clear-ok" data-preview-clear>Not cleared</b></div>
-                            <div><span>Normal assigned</span><b><span data-preview-normal>0</span> pcs</b></div>
-                            <div><span>Return assigned</span><b><span data-preview-return>0</span> pcs</b></div>
+                          <div class="batch-preview-simple">
+                            <div>
+                              <span>Move to</span>
+                              <strong data-preview-staff>-</strong>
+                              <small><span data-preview-code>-</span> · <span data-preview-assigned>-</span></small>
+                            </div>
+                            <div class="batch-preview-counts">
+                              <span><b data-preview-normal>0</b> normal</span>
+                              <span><b data-preview-return>0</b> return</span>
+                              <strong>→ <span data-preview-final>1</span> normal</strong>
+                            </div>
                           </div>
-                          <div class="batch-final-count">
-                            <span>Normal assigned after moving this order</span>
-                            <strong><span data-preview-final>1</span> pcs</strong>
-                          </div>
+                          <span data-preview-clear hidden>Not cleared</span>
                         </div>
                       </div>
 
@@ -813,87 +817,61 @@
   }
 
   .move-modal-card{
-    max-width:560px;
+    max-width:980px;
+    width:min(980px, calc(100vw - 36px));
   }
 
-  .move-modal-body{
-    display:flex;
-    flex-direction:column;
-    gap:9px;
-  }
+  .move-modal-body{display:flex;flex-direction:column;gap:10px;}
+  .move-order-info{display:grid;gap:3px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;}
+  .move-order-info > div{font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;}
+  .move-order-info > span{font-size:12px;color:#64748b;}
+  .move-label{margin-top:4px;font-size:12px;font-weight:900;color:#0f172a;}
+  .required-star{color:#dc2626;}
+  .move-reason{min-height:92px;}
 
-  .move-order-info{
-    display:grid;
-    gap:3px;
-    padding:10px 12px;
-    border-radius:12px;
-    background:#f8fafc;
-    border:1px solid #e2e8f0;
-  }
-
-  .move-order-info > div{
-    font-size:11px;
-    font-weight:900;
-    color:#64748b;
-    text-transform:uppercase;
-  }
-
-  .move-order-info > span{
-    font-size:12px;
-    color:#64748b;
-  }
-
-  .move-label{
-    margin-top:4px;
-    font-size:12px;
-    font-weight:900;
-    color:#0f172a;
-  }
-
-  .required-star{
-    color:#dc2626;
-  }
-
-  .move-reason{
-    min-height:92px;
-  }
-
-  .move-picker{
-    border:1px solid #dbe4ef;
-    border-radius:12px;
-    overflow:hidden;
-    background:#fff;
-  }
-  .move-search-wrap{
-    display:flex;align-items:center;gap:8px;padding:10px;
-    border-bottom:1px solid #e8eef5;background:#f8fafc;
-  }
+  .move-picker{border:1px solid #dbe4ef;border-radius:12px;overflow:hidden;background:#fff;}
+  .move-search-wrap{display:flex;align-items:center;gap:8px;padding:11px 12px;border-bottom:1px solid #e8eef5;background:#f8fafc;}
   .move-search-icon{font-size:20px;color:#64748b;line-height:1;}
-  .move-search{
-    flex:1;min-width:0;border:1px solid #cbd5e1;border-radius:9px;
-    padding:10px 12px;font-size:14px;background:#fff;outline:none;
-  }
+  .move-search{flex:1;min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;font-size:15px;background:#fff;outline:none;}
   .move-search:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.10);}
-  .move-result-count{white-space:nowrap;font-size:12px;color:#64748b;font-weight:700;}
-  .move-batch-list{max-height:290px;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px;}
-  .move-batch-option{
-    width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;
-    text-align:left;border:1px solid #e2e8f0;background:#fff;border-radius:10px;
-    padding:11px 12px;cursor:pointer;color:#0f172a;
-  }
+  .move-result-count{white-space:nowrap;font-size:12px;color:#64748b;font-weight:800;}
+
+  .move-list-head{display:grid;grid-template-columns:minmax(220px,1.35fr) 170px minmax(310px,1.4fr);gap:16px;align-items:center;padding:9px 14px;border-bottom:1px solid #e8eef5;background:#fff;color:#64748b;font-size:10px;font-weight:900;text-transform:uppercase;}
+  .move-batch-list{max-height:390px;overflow-y:auto;overflow-x:hidden;padding:7px;display:flex;flex-direction:column;gap:6px;}
+  .move-batch-option{width:100%;display:grid;grid-template-columns:minmax(220px,1.35fr) 170px minmax(310px,1.4fr);align-items:center;gap:16px;text-align:left;border:1px solid #e2e8f0;background:#fff;border-radius:11px;padding:12px 14px;cursor:pointer;color:#0f172a;}
   .move-batch-option:hover{background:#f8fbff;border-color:#93c5fd;}
-  .move-batch-option.selected{background:#eff6ff;border:2px solid #2563eb;padding:10px 11px;}
-  .move-option-main{display:flex;flex-direction:column;gap:3px;min-width:180px;}
-  .move-option-main strong{font-size:15px;}
-  .move-option-main .mono{font-size:12px;color:#64748b;}
-  .move-option-meta{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;font-size:12px;color:#64748b;}
-  .move-option-meta b{color:#0f172a;font-size:13px;}
+  .move-batch-option.selected{background:#eff6ff;border:2px solid #2563eb;padding:11px 13px;}
+  .move-option-main{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .move-option-main strong{font-size:17px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .move-option-main .mono{font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .move-option-created{display:flex;flex-direction:column;gap:3px;color:#334155;line-height:1.15;}
+  .move-option-created b{font-size:14px;color:#0f172a;}
+  .move-option-created span{font-size:16px;font-weight:900;color:#0f172a;}
+  .move-counts-summary{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+  .move-counts-summary > span{padding:7px 9px;border-radius:8px;background:#f8fafc;color:#475569;font-size:12px;font-weight:800;}
+  .move-counts-summary > span:nth-child(2){background:#fff7ed;}
+  .move-counts-summary b{font-size:15px;color:#0f172a;}
+  .move-counts-summary strong{padding:8px 11px;border-radius:9px;background:#dcfce7;color:#166534;font-size:13px;white-space:nowrap;}
   .move-empty{padding:20px;text-align:center;color:#64748b;font-size:13px;}
-  @media (max-width:760px){
-    .move-search-wrap{flex-wrap:wrap;}
-    .move-result-count{width:100%;padding-left:28px;}
-    .move-batch-option{align-items:flex-start;flex-direction:column;}
-    .move-option-meta{justify-content:flex-start;}
+
+  .batch-move-preview{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:12px 14px;}
+  .batch-preview-simple{display:flex;align-items:center;justify-content:space-between;gap:18px;}
+  .batch-preview-simple > div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .batch-preview-simple > div:first-child > span{font-size:10px;font-weight:900;text-transform:uppercase;color:#15803d;}
+  .batch-preview-simple > div:first-child strong{font-size:18px;color:#166534;}
+  .batch-preview-simple small{font-size:11px;color:#64748b;}
+  .batch-preview-counts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .batch-preview-counts span{font-size:12px;font-weight:800;color:#475569;}
+  .batch-preview-counts b{font-size:15px;color:#0f172a;}
+  .batch-preview-counts strong{background:#16a34a;color:#fff;border-radius:9px;padding:8px 11px;font-size:13px;}
+
+  @media (max-width:820px){
+    .move-modal-card{width:calc(100vw - 18px);}
+    .move-list-head{display:none;}
+    .move-batch-option{grid-template-columns:1fr;gap:8px;}
+    .move-counts-summary{justify-content:flex-start;}
+    .batch-preview-simple{align-items:flex-start;flex-direction:column;}
+    .batch-preview-counts{justify-content:flex-start;}
   }
 
   .move-select{

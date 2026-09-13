@@ -451,6 +451,201 @@
     }
     .pb-actions .pb-btn{flex:1}
   }
+
+  .pb-order-hero{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .pb-highlight{
+    min-width:0;
+    padding:16px 18px;
+    border:1px solid #dce8e0;
+    border-radius:17px;
+    background:linear-gradient(135deg,#f7fbf8,#eef8f2);
+  }
+
+  .pb-highlight-label{
+    color:#6f7d76;
+    font-size:9px;
+    font-weight:950;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  .pb-highlight-value{
+    margin-top:6px;
+    color:#172235;
+    font-size:26px;
+    line-height:1.05;
+    font-weight:950;
+    letter-spacing:-.03em;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .pb-highlight-value.cod{
+    color:#0f7a45;
+    font-size:30px;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .pb-customer-grid{
+    display:grid;
+    grid-template-columns:1.15fr .85fr;
+    gap:12px;
+    margin-bottom:18px;
+  }
+
+  .pb-customer-card,
+  .pb-location-card{
+    padding:16px 18px;
+    border:1px solid #e1e8e3;
+    border-radius:17px;
+    background:#fff;
+  }
+
+  .pb-customer-title,
+  .pb-location-title{
+    margin:0 0 12px;
+    color:#172235;
+    font-size:13px;
+    font-weight:950;
+  }
+
+  .pb-customer-main{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px 18px;
+  }
+
+  .pb-customer-item{
+    min-width:0;
+  }
+
+  .pb-customer-item.full{
+    grid-column:1/-1;
+  }
+
+  .pb-customer-item b{
+    display:block;
+    color:#7b8781;
+    font-size:9px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+
+  .pb-customer-item span{
+    display:block;
+    margin-top:5px;
+    color:#172235;
+    font-size:14px;
+    line-height:1.35;
+    font-weight:900;
+    word-break:break-word;
+  }
+
+  .pb-location-value{
+    color:#172235;
+    font-size:18px;
+    line-height:1.35;
+    font-weight:950;
+    word-break:break-word;
+  }
+
+  .pb-location-sub{
+    margin-top:6px;
+    color:#64748b;
+    font-size:11px;
+    line-height:1.5;
+    font-weight:750;
+  }
+
+  .pb-original-cod-note{
+    margin-top:6px;
+    color:#64748b;
+    font-size:9px;
+    font-weight:800;
+  }
+
+  @media(max-width:760px){
+    .pb-order-hero,
+    .pb-customer-grid{
+      grid-template-columns:1fr;
+    }
+    .pb-customer-main{
+      grid-template-columns:1fr;
+    }
+    .pb-customer-item.full{
+      grid-column:auto;
+    }
+    .pb-highlight-value{font-size:22px}
+    .pb-highlight-value.cod{font-size:26px}
+  }
+
+
+  /* Clean final Pickup / Booking layout */
+  .pb-order-hero{
+    gap:10px;
+    margin-bottom:10px;
+  }
+
+  .pb-highlight{
+    padding:14px 16px;
+    border-radius:15px;
+  }
+
+  .pb-highlight-value{
+    margin-top:4px;
+    font-size:23px;
+  }
+
+  .pb-highlight-value.cod{
+    font-size:27px;
+  }
+
+  .pb-original-cod-note{
+    display:none;
+  }
+
+  .pb-customer-grid{
+    gap:10px;
+    margin-bottom:16px;
+  }
+
+  .pb-customer-card,
+  .pb-location-card{
+    padding:14px 16px;
+    border-radius:15px;
+  }
+
+  .pb-customer-title,
+  .pb-location-title{
+    margin-bottom:10px;
+    font-size:12px;
+  }
+
+  .pb-customer-main{
+    gap:10px 16px;
+  }
+
+  .pb-customer-item span{
+    margin-top:3px;
+    font-size:13px;
+  }
+
+  .pb-location-value{
+    font-size:15px;
+    line-height:1.45;
+  }
+
+  .pb-location-sub{
+    display:none;
+  }
+
 </style>
 {% endblock %}
 
@@ -528,18 +723,50 @@
       </div>
 
       <div class="pb-card-body">
-        <div class="pb-info-grid">
-          <div class="pb-info">
-            <b>Receiver</b>
-            <span>{{ order.receiver_name|default:"-" }}</span>
+        <div class="pb-order-hero">
+          <div class="pb-highlight">
+            <div class="pb-highlight-label">Shop / Seller</div>
+            <div class="pb-highlight-value">
+              {{ order.seller.name|default:order.seller_name|default:"-" }}
+            </div>
           </div>
-          <div class="pb-info">
-            <b>Phone</b>
-            <span>{{ order.receiver_phone|default:"-" }}</span>
+
+          <div class="pb-highlight">
+            <div class="pb-highlight-label">Original COD (Customer Payment)</div>
+            <div class="pb-highlight-value cod">
+              ${{ order.cod|default_if_none:"0.00"|floatformat:2 }}
+            </div>
+            <div class="pb-original-cod-note">Original COD from the order before any adjustment.</div>
           </div>
-          <div class="pb-info">
-            <b>Seller Order Code</b>
-            <span>{{ order.seller_order_code|default:"-" }}</span>
+        </div>
+
+        <div class="pb-customer-grid">
+          <div class="pb-customer-card">
+            <h3 class="pb-customer-title">Customer / Receiver Information</h3>
+
+            <div class="pb-customer-main">
+              <div class="pb-customer-item">
+                <b>Receiver Name</b>
+                <span>{{ order.receiver_name|default:"-" }}</span>
+              </div>
+
+              <div class="pb-customer-item">
+                <b>Phone</b>
+                <span>{{ order.receiver_phone|default:"-" }}</span>
+              </div>
+
+              <div class="pb-customer-item full">
+                <b>Seller Order Code</b>
+                <span>{{ order.seller_order_code|default:"-" }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pb-location-card">
+            <h3 class="pb-location-title">Location</h3>
+            <div class="pb-location-value">
+              {{ order.receiver_address|default:"-" }}
+            </div>
           </div>
         </div>
 

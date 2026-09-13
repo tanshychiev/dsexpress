@@ -236,8 +236,13 @@ def _make_qr_data_uri(text: str) -> str:
 
 
 def _fmt_khr_no_decimal(v: Decimal | int) -> str:
+    """Round label KHR to 100៛: remainder > 30៛ rounds up, otherwise down."""
     try:
-        n = int(Decimal(v))
+        amount = Decimal(v)
+        base = (amount // Decimal("100")) * Decimal("100")
+        remainder = amount - base
+        rounded = base + Decimal("100") if remainder > Decimal("30") else base
+        n = int(rounded)
     except Exception:
         n = 0
     return f"{n:,}".replace(",", ".")

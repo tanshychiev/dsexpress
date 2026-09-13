@@ -305,7 +305,7 @@
         {% for it in items %}
           {% with o=it.order %}
             <tr
-              class="{% if it.id in staged_remove %}row-remove{% elif it.ticked %}row-done{% else %}row-pending{% endif %}"
+              class="{% if it.ticked %}row-done{% else %}row-pending{% endif %}"
               data-done="{% if it.ticked %}1{% else %}0{% endif %}"
               data-seller="{% if o.seller %}{% firstof o.seller.seller_name o.seller.name '-' %}{% else %}-{% endif %}"
               data-tracking="{% firstof o.full_tracking o.tracking_no o.id %}"
@@ -340,34 +340,149 @@
 
               {% if edit_mode %}
                 <td class="td-center">
-                  {% if it.id in staged_remove %}
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="undo_remove">
-                      <input type="hidden" name="item_id" value="{{ it.id }}">
-                      <button class="btn btn-ghost" type="submit">Undo</button>
-                    </form>
-                  {% else %}
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="stage_remove">
-                      <input type="hidden" name="item_id" value="{{ it.id }}">
-                      <button class="btn btn-danger" type="submit">Remove</button>
-                    </form>
-                  {% endif %}
+                  <button
+                    class="btn btn-danger btn-move"
+                    type="button"
+                    data-modal-open="moveModal{{ it.id }}"
+                    {% if it.ticked or it.delivery_cleared_at %}disabled title="Already marked/cleared for delivery"{% endif %}
+                  >
+                    Remove
+                  </button>
                 </td>
               {% endif %}
 
               <td class="td-center">
-                {% if it.id in staged_remove %}
-                  <span class="st-remove">REMOVE</span>
-                {% elif it.ticked %}
+                {% if it.ticked %}
                   <span class="st-done">DONE</span>
                 {% else %}
                   <span class="st-pending">PENDING</span>
                 {% endif %}
               </td>
             </tr>
+
+            {% if edit_mode %}
+              <div class="reason-modal" id="moveModal{{ it.id }}">
+                <div class="reason-modal-card move-modal-card">
+                  <div class="reason-modal-head">
+                    <div class="reason-modal-title">Remove Shipment</div>
+                    <button type="button" class="modal-x" data-modal-close="moveModal{{ it.id }}">×</button>
+                  </div>
+
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove_or_reassign">
+                    <input type="hidden" name="item_id" value="{{ it.id }}">
+
+                    <div class="reason-modal-body move-modal-body">
+                      <div class="move-order-info">
+                        <div>Shipment</div>
+                        <b class="mono">{% firstof o.full_tracking o.tracking_no o.id %}</b>
+                        <span>Current: {{ batch.code }}{% if batch.shipper %} · {{ batch.shipper.name }}{% endif %}</span>
+                      </div>
+
+                      <div class="move-action-title">What do you want to do?</div>
+                      <div class="move-action-grid" data-action-box>
+                        <button type="button" class="move-action-card active" data-move-action="remove">
+                          <b>Remove only</b>
+                          <span>Take this order out of the batch</span>
+                        </button>
+                        <button type="button" class="move-action-card" data-move-action="move">
+                          <b>Move to another batch</b>
+                          <span>Quickly reassign to another shipper</span>
+                        </button>
+                      </div>
+
+                      <div class="remove-only-section">
+                        <label class="move-label" for="removeReason{{ it.id }}">Reason <span class="required-star reason-required-star">*</span></label>
+                        <textarea
+                          id="removeReason{{ it.id }}"
+                          class="reason-area move-reason"
+                          name="remove_reason"
+                          maxlength="255"
+                          placeholder="Why is this order being removed?"
+                          required
+                        ></textarea>
+                      </div>
+
+                      <div class="move-only-section" style="display:none;">
+                        <label class="move-label" for="batchSearch{{ it.id }}">Choose staff / active batch</label>
+                        <input type="hidden" name="target_batch_id" class="move-target-input" value="" disabled>
+
+                        <div class="move-picker">
+                          <div class="move-search-wrap">
+                            <span class="move-search-icon">⌕</span>
+                            <input
+                              id="batchSearch{{ it.id }}"
+                              type="search"
+                              class="move-search"
+                              placeholder="Search staff name or batch code..."
+                              autocomplete="off"
+                            >
+                            <span class="move-result-count"><span data-result-count>{{ reassign_batches|length }}</span> available</span>
+                          </div>
+
+                          <div class="move-batch-list">
+                            {% for rb in reassign_batches %}
+                              <button
+                                type="button"
+                                class="move-batch-option"
+                                data-target-batch="{{ rb.id }}"
+                                data-code="{{ rb.code }}"
+                                data-staff="{% if rb.shipper %}{{ rb.shipper.name }}{% else %}-{% endif %}"
+                                data-assigned="{{ rb.created_at|date:'d M Y, H:i' }}"
+                                data-normal="{{ rb.move_normal_pc }}" data-return="{{ rb.move_return_pc }}"
+                                data-clear="{% if rb.move_cleared_pc %}Started{% else %}Not cleared{% endif %}"
+                                data-search="{% if rb.shipper %}{{ rb.shipper.name|lower }} {% endif %}{{ rb.code|lower }}"
+                              >
+                                <span class="move-option-main">
+                                  <strong>{% if rb.shipper %}{{ rb.shipper.name }}{% else %}No shipper{% endif %}</strong>
+                                  <span class="mono">{{ rb.code }}</span>
+                                  <span class="move-option-created">Created {{ rb.created_at|date:'d M Y' }} · {{ rb.created_at|date:'H:i' }}</span>
+                                </span>
+                                <span class="move-option-meta">
+                                  <span class="move-pc-now"><b>{{ rb.move_normal_pc }}</b> normal pcs</span>
+                                  <span class="move-return-pc"><b>{{ rb.move_return_pc }}</b> return pcs</span>
+                                  <span class="move-pc-final">→ <b>{{ rb.move_normal_pc|add:'1' }}</b> normal pcs after move</span>
+                                  <span class="move-clear-state">{% if rb.move_cleared_pc %}Clear started{% else %}Not cleared{% endif %}</span>
+                                </span>
+                              </button>
+                            {% empty %}
+                              <div class="move-empty">No active batch available to move this order.</div>
+                            {% endfor %}
+                            <div class="move-empty move-filter-empty" hidden>No matching staff or batch.</div>
+                          </div>
+                        </div>
+
+                        <div class="batch-move-preview" hidden>
+                          <div class="batch-preview-head">Destination batch</div>
+                          <div class="batch-preview-code mono" data-preview-code>-</div>
+                          <div class="batch-preview-grid">
+                            <div><span>Staff</span><b data-preview-staff>-</b></div>
+                            <div><span>Assigned</span><b data-preview-assigned>-</b></div>
+                            <div><span>Clear</span><b class="clear-ok" data-preview-clear>Not cleared</b></div>
+                            <div><span>Normal assigned</span><b><span data-preview-normal>0</span> pcs</b></div>
+                            <div><span>Return assigned</span><b><span data-preview-return>0</span> pcs</b></div>
+                          </div>
+                          <div class="batch-final-count">
+                            <span>Normal assigned after moving this order</span>
+                            <strong><span data-preview-final>1</span> pcs</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="move-help">
+                        This action saves immediately. You do not need to click the main Save button again.
+                      </div>
+                    </div>
+
+                    <div class="reason-modal-foot">
+                      <button type="button" class="btn btn-ghost" data-modal-close="moveModal{{ it.id }}">Cancel</button>
+                      <button type="submit" class="btn btn-success move-confirm-btn">Confirm Remove</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            {% endif %}
 
             <div class="reason-modal" id="reasonModal{{ it.id }}">
               <div class="reason-modal-card">
@@ -458,6 +573,100 @@
       var modal = document.getElementById(id);
       if(modal) modal.classList.remove("show");
     });
+  });
+
+  // Easier immediate Remove / Move flow.
+  document.querySelectorAll(".reason-modal").forEach(function(modal){
+    var actionBtns = modal.querySelectorAll("[data-move-action]");
+    if (!actionBtns.length) return;
+
+    var removeSection = modal.querySelector(".remove-only-section");
+    var moveSection = modal.querySelector(".move-only-section");
+    var reason = modal.querySelector(".move-reason");
+    var targetInput = modal.querySelector(".move-target-input");
+    var searchInput = modal.querySelector(".move-search");
+    var batchOptions = Array.prototype.slice.call(modal.querySelectorAll(".move-batch-option"));
+    var resultCount = modal.querySelector("[data-result-count]");
+    var filterEmpty = modal.querySelector(".move-filter-empty");
+    var confirmBtn = modal.querySelector(".move-confirm-btn");
+    var preview = modal.querySelector(".batch-move-preview");
+
+    function setAction(action){
+      actionBtns.forEach(function(btn){
+        btn.classList.toggle("active", btn.dataset.moveAction === action);
+      });
+
+      var isMove = action === "move";
+      if (removeSection) removeSection.style.display = isMove ? "none" : "block";
+      if (moveSection) moveSection.style.display = isMove ? "block" : "none";
+      if (reason) reason.required = !isMove;
+      if (targetInput) {
+        targetInput.disabled = !isMove;
+        if (!isMove) targetInput.value = "";
+      }
+      if (searchInput && isMove) {
+        setTimeout(function(){ searchInput.focus(); }, 50);
+      }
+      if (!isMove) {
+        batchOptions.forEach(function(opt){ opt.classList.remove("selected"); });
+      }
+      if (preview && !isMove) preview.hidden = true;
+      if (confirmBtn) confirmBtn.textContent = isMove ? "Move Now" : "Confirm Remove";
+    }
+
+    actionBtns.forEach(function(btn){
+      btn.addEventListener("click", function(){ setAction(btn.dataset.moveAction); });
+    });
+
+    function chooseBatch(opt){
+      batchOptions.forEach(function(btn){ btn.classList.toggle("selected", btn === opt); });
+      if (targetInput) targetInput.value = opt.dataset.targetBatch || "";
+      if (!preview) return;
+      preview.hidden = false;
+      var normalCount = parseInt(opt.dataset.normal || "0", 10);
+      var returnCount = parseInt(opt.dataset.return || "0", 10);
+      var finalCount = normalCount + 1;
+      var el;
+      el = preview.querySelector("[data-preview-code]"); if (el) el.textContent = opt.dataset.code || "-";
+      el = preview.querySelector("[data-preview-staff]"); if (el) el.textContent = opt.dataset.staff || "-";
+      el = preview.querySelector("[data-preview-assigned]"); if (el) el.textContent = opt.dataset.assigned || "-";
+      el = preview.querySelector("[data-preview-clear]"); if (el) el.textContent = opt.dataset.clear || "Not cleared";
+      el = preview.querySelector("[data-preview-normal]"); if (el) el.textContent = normalCount;
+      el = preview.querySelector("[data-preview-return]"); if (el) el.textContent = returnCount;
+      el = preview.querySelector("[data-preview-final]"); if (el) el.textContent = finalCount;
+    }
+
+    batchOptions.forEach(function(opt){
+      opt.addEventListener("click", function(){ chooseBatch(opt); });
+    });
+
+    if (searchInput) {
+      searchInput.addEventListener("input", function(){
+        var q = (searchInput.value || "").trim().toLowerCase();
+        var visible = 0;
+        batchOptions.forEach(function(opt){
+          var match = !q || (opt.dataset.search || "").indexOf(q) !== -1;
+          opt.hidden = !match;
+          if (match) visible += 1;
+        });
+        if (resultCount) resultCount.textContent = visible;
+        if (filterEmpty) filterEmpty.hidden = visible !== 0;
+      });
+    }
+
+    var form = modal.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', function(e){
+        var isMove = modal.querySelector('[data-move-action="move"].active');
+        if (isMove && targetInput && !targetInput.value) {
+          e.preventDefault();
+          if (searchInput) searchInput.focus();
+          alert('Please choose a staff / batch to move this order.');
+        }
+      });
+    }
+
+    setAction("remove");
   });
 
   document.querySelectorAll(".reason-modal").forEach(function(modal){
@@ -590,6 +799,270 @@
     background:#f59e0b;
     border-color:#f59e0b;
     color:#111;
+  }
+
+  .btn-move{
+    padding:8px 10px;
+    white-space:nowrap;
+    font-size:12px;
+  }
+
+  .btn-move:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+
+  .move-modal-card{
+    max-width:560px;
+  }
+
+  .move-modal-body{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+  }
+
+  .move-order-info{
+    display:grid;
+    gap:3px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+  }
+
+  .move-order-info > div{
+    font-size:11px;
+    font-weight:900;
+    color:#64748b;
+    text-transform:uppercase;
+  }
+
+  .move-order-info > span{
+    font-size:12px;
+    color:#64748b;
+  }
+
+  .move-label{
+    margin-top:4px;
+    font-size:12px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .required-star{
+    color:#dc2626;
+  }
+
+  .move-reason{
+    min-height:92px;
+  }
+
+  .move-picker{
+    border:1px solid #dbe4ef;
+    border-radius:12px;
+    overflow:hidden;
+    background:#fff;
+  }
+  .move-search-wrap{
+    display:flex;align-items:center;gap:8px;padding:10px;
+    border-bottom:1px solid #e8eef5;background:#f8fafc;
+  }
+  .move-search-icon{font-size:20px;color:#64748b;line-height:1;}
+  .move-search{
+    flex:1;min-width:0;border:1px solid #cbd5e1;border-radius:9px;
+    padding:10px 12px;font-size:14px;background:#fff;outline:none;
+  }
+  .move-search:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.10);}
+  .move-result-count{white-space:nowrap;font-size:12px;color:#64748b;font-weight:700;}
+  .move-batch-list{max-height:290px;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px;}
+  .move-batch-option{
+    width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;
+    text-align:left;border:1px solid #e2e8f0;background:#fff;border-radius:10px;
+    padding:11px 12px;cursor:pointer;color:#0f172a;
+  }
+  .move-batch-option:hover{background:#f8fbff;border-color:#93c5fd;}
+  .move-batch-option.selected{background:#eff6ff;border:2px solid #2563eb;padding:10px 11px;}
+  .move-option-main{display:flex;flex-direction:column;gap:3px;min-width:180px;}
+  .move-option-main strong{font-size:15px;}
+  .move-option-main .mono{font-size:12px;color:#64748b;}
+  .move-option-meta{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;font-size:12px;color:#64748b;}
+  .move-option-meta b{color:#0f172a;font-size:13px;}
+  .move-empty{padding:20px;text-align:center;color:#64748b;font-size:13px;}
+  @media (max-width:760px){
+    .move-search-wrap{flex-wrap:wrap;}
+    .move-result-count{width:100%;padding-left:28px;}
+    .move-batch-option{align-items:flex-start;flex-direction:column;}
+    .move-option-meta{justify-content:flex-start;}
+  }
+
+  .move-select{
+    width:100%;
+    min-height:44px;
+    padding:9px 11px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    background:#fff;
+    font-weight:700;
+    color:#0f172a;
+  }
+
+  .move-help{
+    padding:9px 10px;
+    border-radius:10px;
+    background:#ecfdf5;
+    color:#166534;
+    font-size:11px;
+    line-height:1.45;
+  }
+
+  .move-action-title{
+    font-size:12px;
+    font-weight:900;
+    color:#0f172a;
+  }
+
+  .move-action-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+
+  .move-action-card{
+    text-align:left;
+    border:2px solid #e2e8f0;
+    border-radius:12px;
+    background:#fff;
+    padding:11px 12px;
+    cursor:pointer;
+    color:#0f172a;
+  }
+
+  .move-action-card b{
+    display:block;
+    font-size:13px;
+    margin-bottom:3px;
+  }
+
+  .move-action-card span{
+    display:block;
+    font-size:11px;
+    color:#64748b;
+    line-height:1.3;
+  }
+
+  .move-action-card.active{
+    border-color:#16a34a;
+    background:#f0fdf4;
+  }
+
+  .move-option-created{
+    display:block;
+    margin-top:6px;
+    font-size:14px !important;
+    font-weight:900;
+    color:#334155 !important;
+    line-height:1.25;
+  }
+
+  .move-option-meta{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+
+  .move-option-meta > span{
+    white-space:nowrap;
+  }
+
+  .move-pc-now, .move-pc-final{
+    font-size:13px;
+  }
+
+  .move-pc-final{
+    padding:5px 8px;
+    border-radius:8px;
+    background:#dcfce7;
+    color:#166534;
+    font-weight:900;
+  }
+
+  .move-clear-state{
+    font-size:11px;
+    color:#64748b;
+  }
+
+  .batch-move-preview{
+    margin-top:8px;
+    border:1px solid #bbf7d0;
+    border-radius:12px;
+    overflow:hidden;
+    background:#f0fdf4;
+  }
+
+  .batch-preview-head{
+    padding:9px 12px 2px;
+    font-size:10px;
+    font-weight:900;
+    color:#64748b;
+    text-transform:uppercase;
+  }
+
+  .batch-preview-code{
+    padding:0 12px 9px;
+    font-size:15px;
+    font-weight:900;
+    color:#166534;
+  }
+
+  .batch-preview-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    border-top:1px solid #dcfce7;
+  }
+
+  .batch-preview-grid > div{
+    padding:9px 12px;
+    border-right:1px solid #dcfce7;
+    border-bottom:1px solid #dcfce7;
+  }
+
+  .batch-preview-grid span{
+    display:block;
+    font-size:10px;
+    color:#64748b;
+    margin-bottom:2px;
+  }
+
+  .batch-preview-grid b{
+    font-size:12px;
+    color:#0f172a;
+  }
+
+  .batch-preview-grid .clear-ok{
+    color:#15803d;
+  }
+
+  .batch-final-count{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 12px;
+    background:#dcfce7;
+    color:#166534;
+    font-weight:900;
+  }
+
+  .batch-final-count strong{
+    font-size:18px;
+  }
+
+  @media (max-width:640px){
+    .move-action-grid, .batch-preview-grid{
+      grid-template-columns:1fr;
+    }
   }
 
   .pp-state{

@@ -1223,6 +1223,7 @@ def pp_delivery_detail(request, batch_id: int):
             "stage_add",
             "stage_remove",
             "undo_remove",
+            "remove_or_reassign",
             "stage_remove_return",
             "undo_remove_return",
             "confirm_save",
@@ -1232,6 +1233,166 @@ def pp_delivery_detail(request, batch_id: int):
 
         if action == "stage_add":
             request.session[SK_ADD_TEXT] = (request.POST.get("scan_codes") or "").strip()
+            request.session.modified = True
+            return redirect(_detail_url(batch.id, edit=True))
+
+        if action == "remove_or_reassign":
+            item_id = (request.POST.get("item_id") or "").strip()
+            remove_reason = (request.POST.get("remove_reason") or "").strip()
+            target_batch_id = (request.POST.get("target_batch_id") or "").strip()
+
+            if not item_id.isdigit():
+                messages.error(request, "Shipment not found.")
+                return redirect(_detail_url(batch.id, edit=True))
+
+            # Reason is required only for a true removal. Moving to another active
+            # batch is an operational reassignment and does not require a reason.
+            if not target_batch_id and not remove_reason:
+                messages.error(request, "Please enter a reason before removing the shipment.")
+                return redirect(_detail_url(batch.id, edit=True))
+
+            if batch.status != PPDeliveryBatch.STATUS_PENDING:
+                messages.error(request, "Only a pending PP batch can be edited.")
+                return redirect(_detail_url(batch.id, edit=True))
+
+            with transaction.atomic():
+                item = (
+                    PPDeliveryItem.objects
+                    .select_for_update()
+                    .select_related("order", "batch", "batch__shipper")
+                    .filter(
+                        id=int(item_id),
+                        batch=batch,
+                        source_type=PPDeliveryItem.SOURCE_NORMAL,
+                    )
+                    .first()
+                )
+
+                if not item or not item.order_id:
+                    messages.error(request, "Shipment not found in this batch.")
+                    return redirect(_detail_url(batch.id, edit=True))
+
+                # Do not move/remove an order that has already been marked/cleared as delivered.
+                if item.ticked or item.delivery_cleared_at:
+                    messages.error(request, "This shipment has already been marked/cleared for delivery and cannot be moved here.")
+                    return redirect(_detail_url(batch.id, edit=True))
+
+                order = item.order
+                old_reason = (order.reason or "").strip()
+                now = timezone.now()
+
+                target_batch = None
+                if target_batch_id:
+                    if not target_batch_id.isdigit():
+                        messages.error(request, "Invalid target batch.")
+                        return redirect(_detail_url(batch.id, edit=True))
+
+                    target_batch = (
+                        PPDeliveryBatch.objects
+                        .select_for_update()
+                        .select_related("shipper")
+                        .filter(
+                            id=int(target_batch_id),
+                            status=PPDeliveryBatch.STATUS_PENDING,
+                            created_at__date=timezone.localdate(),
+                        )
+                        .exclude(id=batch.id)
+                        .first()
+                    )
+
+                    if not target_batch:
+                        messages.error(request, "Target batch is no longer available.")
+                        return redirect(_detail_url(batch.id, edit=True))
+
+                    # Target batch must not have started Clear Delivery.
+                    if target_batch.items.filter(delivery_cleared_at__isnull=False).exists():
+                        messages.error(request, "Target batch has already started Clear Delivery.")
+                        return redirect(_detail_url(batch.id, edit=True))
+
+                    if PPDeliveryItem.objects.filter(batch=target_batch, order=order).exists():
+                        messages.error(request, f"{order.tracking_no} is already in {target_batch.code}.")
+                        return redirect(_detail_url(batch.id, edit=True))
+
+                order.updated_at = now
+                order.updated_by = request.user
+
+                if target_batch:
+                    old_shipper = order.delivery_shipper
+                    old_status = order.status
+                    order.delivery_shipper = target_batch.shipper
+                    order.status = Order.STATUS_OUT_FOR_DELIVERY
+                    order.save(update_fields=[
+                        "delivery_shipper", "status", "updated_at", "updated_by"
+                    ])
+
+                    # Remove from current batch then create the new assignment in one transaction.
+                    old_snapshot = item.cod_snapshot
+                    item.delete()
+                    PPDeliveryItem.objects.create(
+                        batch=target_batch,
+                        order=order,
+                        source_type=PPDeliveryItem.SOURCE_NORMAL,
+                        source_code="",
+                        reason=(item.reason or old_reason or "").strip(),
+                        note=f"Moved from {batch.code} to {target_batch.code}",
+                        cod_snapshot=old_snapshot,
+                    )
+
+                    add_order_activity(
+                        order=order,
+                        action=OrderActivity.ACTION_ASSIGN,
+                        user=request.user,
+                        shipper=target_batch.shipper,
+                        old_status=old_status,
+                        new_status=order.status,
+                        note=f"Moved from {batch.code} to {target_batch.code}",
+                    )
+                    add_audit_log(
+                        module=AuditLog.MODULE_ORDER,
+                        obj=order,
+                        action=AuditLog.ACTION_ASSIGN_SHIPPER,
+                        user=request.user,
+                        field_name="delivery_shipper",
+                        old_value=str(old_shipper.name if old_shipper else ""),
+                        new_value=str(target_batch.shipper.name if target_batch.shipper else ""),
+                        note=f"Quick reassigned from {batch.code} to {target_batch.code}",
+                    )
+
+                    _safe_recalc_batch_totals(batch, save=True)
+                    _safe_recalc_batch_totals(target_batch, save=True)
+                    messages.success(request, f"Moved {order.tracking_no} to {target_batch.code}.")
+                else:
+                    order.reason = remove_reason
+                    order.save(update_fields=["reason", "updated_at", "updated_by"])
+                    order_id = order.id
+                    item.delete()
+
+                    _reset_order_status_if_removed(
+                        [order_id],
+                        user=request.user,
+                        to_status="INBOUND",
+                        exclude_batch_id=batch.id,
+                    )
+
+                    if old_reason != remove_reason:
+                        add_audit_log(
+                            module=AuditLog.MODULE_ORDER,
+                            obj=order,
+                            action=AuditLog.ACTION_UPDATE,
+                            user=request.user,
+                            field_name="reason",
+                            old_value=old_reason,
+                            new_value=remove_reason,
+                            note=f"Reason recorded while removing from PP batch {batch.code}",
+                        )
+
+                    _safe_recalc_batch_totals(batch, save=True)
+                    messages.success(request, f"Removed {order.tracking_no} from {batch.code}.")
+
+            # Clear an old staged-remove flag if the same row had been staged before.
+            request.session[SK_REMOVE_IDS] = [
+                x for x in request.session.get(SK_REMOVE_IDS, []) if x != int(item_id)
+            ]
             request.session.modified = True
             return redirect(_detail_url(batch.id, edit=True))
 
@@ -1500,6 +1661,51 @@ def pp_delivery_detail(request, batch_id: int):
     total_return_batch = len(set(_batch_get_master_ids(batch)))
     total_all = int(total_shipment) + int(total_return_batch)
 
+    # Quick reassignment targets: only today's active PP assignments that have
+    # not started Clear Delivery yet. The current batch is never included.
+    if edit_mode:
+        # Only today's active assignments that have not started Clear Delivery.
+        # Calculate the displayed pc count from the actual PP delivery items.
+        # Doing this explicitly avoids annotation/join edge cases that could show 0
+        # even when the destination batch already contains shipments.
+        reassign_batches = list(
+            PPDeliveryBatch.objects
+            .filter(
+                status=PPDeliveryBatch.STATUS_PENDING,
+                created_at__date=timezone.localdate(),
+            )
+            .exclude(id=batch.id)
+            .exclude(items__delivery_cleared_at__isnull=False)
+            .select_related("shipper", "created_by")
+            .distinct()
+            .order_by("-id")
+        )
+        ReturnBatch, ReturnBatchItem, ReturnLabel, ReturnLabelItem = get_return_models()
+        for rb in reassign_batches:
+            # Keep normal assigned parcels and return parcels separate.
+            # Do not combine them into one total in the destination picker.
+            rb.move_normal_pc = rb.items.filter(
+                source_type=PPDeliveryItem.SOURCE_NORMAL
+            ).count()
+
+            rb.move_return_pc = 0
+            if ReturnLabelItem:
+                for sc in (_batch_get_label_codes(rb) or []):
+                    parts = _ret_parts(sc)
+                    if not parts:
+                        continue
+                    _prefix, _master_id, label_id = parts
+                    if label_id:
+                        rb.move_return_pc += ReturnLabelItem.objects.filter(
+                            label_id=label_id
+                        ).count()
+
+            rb.move_cleared_pc = rb.items.filter(
+                delivery_cleared_at__isnull=False
+            ).count()
+    else:
+        reassign_batches = []
+
     return render(request, "deliverpp/detail.html", {
         "batch": batch,
         "edit_mode": edit_mode,
@@ -1516,6 +1722,7 @@ def pp_delivery_detail(request, batch_id: int):
         "total_all": total_all,
         "now": timezone.now(),
         "shippers": _get_pp_shippers(),
+        "reassign_batches": reassign_batches,
     })
 
 @login_required

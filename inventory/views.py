@@ -236,6 +236,7 @@ def stock_in(request):
         seller = selected_seller
         note = (request.POST.get("note") or "").strip()
         items_json = (request.POST.get("items_json") or "").strip()
+        save_action = (request.POST.get("save_action") or "save_print").strip().lower()
 
         if not seller:
             messages.error(request, "Please choose seller/shop.")
@@ -383,6 +384,8 @@ def stock_in(request):
                 )
 
         messages.success(request, f"Batch stock in saved: {len(clean_items)} item(s).")
+        if save_action == "save_only":
+            return redirect("inventory:stock_in_list")
         return redirect("inventory:stock_in_receipt", batch_ref=batch_ref)
 
     return render(

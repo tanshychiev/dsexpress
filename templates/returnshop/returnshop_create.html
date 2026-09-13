@@ -220,7 +220,18 @@ DS00001236"
                 </td>
 
                 <td class="reason-cell">
-                  <span class="reason-text">{{ r.return_reason|default:"-" }}</span>
+                  <div class="reason-display-wrap">
+                    <span class="reason-display" title="{{ r.return_reason|default_if_none:'' }}">
+                      {{ r.return_reason|default_if_none:'-' }}
+                    </span>
+                    <button
+                      type="button"
+                      class="reason-edit-btn"
+                      title="Edit reason"
+                      aria-label="Edit reason"
+                      onclick="openReasonModal('{{ r.id }}', '{{ r.tracking_no|escapejs }}', '{{ r.return_reason|default_if_none:''|escapejs }}')"
+                    >✎</button>
+                  </div>
                 </td>
 
                 <td>
@@ -288,8 +299,54 @@ DS00001236"
 
 </div>
 
+<!-- EDIT RETURN REASON MODAL -->
+<div id="reasonModal" class="reason-modal" aria-hidden="true">
+  <div class="reason-modal-backdrop" onclick="closeReasonModal()"></div>
+  <div class="reason-modal-card" role="dialog" aria-modal="true" aria-labelledby="reasonModalTitle">
+    <div class="reason-modal-head">
+      <div>
+        <h3 id="reasonModalTitle">Edit Return Reason</h3>
+        <p id="reasonModalTracking"></p>
+      </div>
+      <button type="button" class="reason-modal-close" onclick="closeReasonModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" id="reasonModalForm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_reason">
+      <input type="hidden" name="order_id" id="reasonModalOrderId">
+      <label class="return-label" for="reasonModalInput">Reason</label>
+      <textarea name="reason" id="reasonModalInput" class="reason-modal-input" rows="3" placeholder="Enter return reason..."></textarea>
+      <div class="reason-modal-actions">
+        <button type="button" class="return-btn return-btn-light" onclick="closeReasonModal()">Cancel</button>
+        <button type="submit" class="return-btn return-btn-save">OK &amp; Save</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script>
+function openReasonModal(orderId, tracking, reason){
+  const modal = document.getElementById("reasonModal");
+  document.getElementById("reasonModalOrderId").value = orderId;
+  document.getElementById("reasonModalTracking").textContent = tracking ? "Order: " + tracking : "";
+  document.getElementById("reasonModalInput").value = reason || "";
+  modal.classList.add("show");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("reason-modal-open");
+  setTimeout(() => document.getElementById("reasonModalInput").focus(), 0);
+}
+
+function closeReasonModal(){
+  const modal = document.getElementById("reasonModal");
+  modal.classList.remove("show");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("reason-modal-open");
+}
+
+document.addEventListener("keydown", function(e){
+  if (e.key === "Escape") closeReasonModal();
+});
+
 function handleDoneCheck(el, tracking){
   if (el.checked){
     const ok = confirm(
@@ -663,14 +720,16 @@ document.getElementById("confirmForm").addEventListener("submit", function(e){
   }
 
   .return-table-wrap {
-    overflow: auto;
+    overflow-x: hidden;
+    width: 100%;
     border: 1px solid #e9eef5;
     border-radius: 16px;
   }
 
   .return-table {
     width: 100%;
-    min-width: 1480px;
+    min-width: 0;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
     background: #fff;
@@ -681,14 +740,14 @@ document.getElementById("confirmForm").addEventListener("submit", function(e){
     color: #22314a;
     font-size: 11px;
     font-weight: 900;
-    padding: 12px 10px;
+    padding: 10px 5px;
     text-align: center;
     border-bottom: 1px solid #e6edf5;
     white-space: nowrap;
   }
 
   .return-table tbody td {
-    padding: 12px 10px;
+    padding: 10px 5px;
     border-bottom: 1px solid #edf2f7;
     text-align: center;
     vertical-align: middle;
@@ -707,7 +766,28 @@ document.getElementById("confirmForm").addEventListener("submit", function(e){
 
   .return-table .text-left {
     text-align: left;
-    min-width: 260px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .return-table th:nth-child(1), .return-table td:nth-child(1) { width: 3%; }
+  .return-table th:nth-child(2), .return-table td:nth-child(2) { width: 10%; }
+  .return-table th:nth-child(3), .return-table td:nth-child(3) { width: 7%; }
+  .return-table th:nth-child(4), .return-table td:nth-child(4) { width: 12%; }
+  .return-table th:nth-child(5), .return-table td:nth-child(5) { width: 8%; }
+  .return-table th:nth-child(6), .return-table td:nth-child(6) { width: 8%; }
+  .return-table th:nth-child(7), .return-table td:nth-child(7) { width: 6%; }
+  .return-table th:nth-child(8), .return-table td:nth-child(8) { width: 6%; }
+  .return-table th:nth-child(9), .return-table td:nth-child(9) { width: 9%; }
+  .return-table th:nth-child(10), .return-table td:nth-child(10) { width: 26%; }
+  .return-table th:nth-child(11), .return-table td:nth-child(11) { width: 5%; }
+
+  .return-table td:not(.reason-cell) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .return-code {
@@ -987,6 +1067,77 @@ document.getElementById("confirmForm").addEventListener("submit", function(e){
       width: 100%;
     }
   }
+
+  .reason-display-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .reason-display {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #475569;
+  }
+
+  .reason-edit-btn {
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #cfeedd;
+    border-radius: 9px;
+    background: #eefbf3;
+    color: #14833e;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .reason-edit-btn:hover { background: #dcf8e7; }
+
+  .reason-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+  }
+  .reason-modal.show { display: flex; }
+  .reason-modal-backdrop { position: absolute; inset: 0; background: rgba(15,23,42,.45); }
+  .reason-modal-card {
+    position: relative;
+    width: min(520px, 100%);
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(15,23,42,.22);
+    padding: 20px;
+  }
+  .reason-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .reason-modal-head h3 { margin: 0; color: #172033; font-size: 18px; }
+  .reason-modal-head p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+  .reason-modal-close { border: 0; background: #f1f5f9; width: 32px; height: 32px; border-radius: 9px; font-size: 22px; cursor: pointer; color: #475569; }
+  .reason-modal-input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 6px;
+    padding: 11px 12px;
+    resize: vertical;
+    border: 1px solid #d8e0ea;
+    border-radius: 12px;
+    color: #334155;
+    font: inherit;
+    outline: none;
+  }
+  .reason-modal-input:focus { border-color: #22a553; box-shadow: 0 0 0 3px rgba(34,165,83,.10); }
+  .reason-modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 16px; }
+  body.reason-modal-open { overflow: hidden; }
 </style>
 
 {% endblock %}

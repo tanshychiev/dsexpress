@@ -561,6 +561,37 @@ def returnshop_new(request):
             messages.success(request, "Cleared scanned list.")
             return redirect("returnshop_new")
 
+        if action == "update_reason":
+            order_id = (request.POST.get("order_id") or "").strip()
+            reason = (request.POST.get("reason") or "").strip()
+
+            if not order_id.isdigit():
+                messages.error(request, "Invalid order.")
+                return redirect("returnshop_new")
+
+            # Only allow updating an order that is currently in this preview list.
+            allowed_map = {o.id: o for o in allowed_orders}
+            order = allowed_map.get(int(order_id))
+            if not order:
+                messages.error(request, "Order is not available in this return preview.")
+                return redirect("returnshop_new")
+
+            order.reason = reason or None
+            update_fields = ["reason"]
+
+            if hasattr(order, "updated_at"):
+                order.updated_at = timezone.now()
+                update_fields.append("updated_at")
+
+            if hasattr(order, "updated_by"):
+                order.updated_by = request.user
+                update_fields.append("updated_by")
+
+            order.save(update_fields=list(dict.fromkeys(update_fields)))
+
+            messages.success(request, f"Reason updated for {order.tracking_no}.")
+            return redirect("returnshop_new")
+
         if action == "confirm_create":
             remark = (request.POST.get("remark") or "").strip()
             mode = (request.POST.get("mode") or "save").strip()

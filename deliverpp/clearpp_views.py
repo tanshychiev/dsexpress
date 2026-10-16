@@ -618,7 +618,9 @@ def clearpp_detail(request: HttpRequest, batch_id: int) -> HttpResponse:
                 if it.source_type == PPDeliveryItem.SOURCE_NORMAL:
                     target_total += _pick_cod_for_item(it)
 
-            actual_total = (cash_usd + aba_usd) + ((cash_khr + aba_khr) / rate) - expense
+            # Cash/ABA received plus legitimate expenses must reconcile to the COD owed.
+            # Expense is COD spent, not a second deduction from the money received.
+            actual_total = (cash_usd + aba_usd) + ((cash_khr + aba_khr) / rate) + expense
             diff_khr = int((actual_total - target_total) * rate)
             allow_finalize = (abs(diff_khr) <= tol) or (note != "")
 

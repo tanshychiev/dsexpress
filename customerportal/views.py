@@ -880,6 +880,7 @@ def dashboard(request):
         "selected_month_label": month_start.strftime("%B %Y"),
         "month_balance": month_balance,
         "month_delivered_parcels": month_delivered_parcels,
+        "month_created_orders": month_qs.count(),
         "month_pending_parcels": month_pending_parcels,
         "month_done_percent": month_done_percent,
 

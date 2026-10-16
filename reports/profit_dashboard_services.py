@@ -1,14 +1,26 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, time
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Sum, Count, F
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from provincecod.models import ProvinceCODBatch, ProvinceCODItem
 
 from deliverpp.models import ClearPPCOD, PPDeliveryBatch, PPDeliveryItem
 from orders.models import Order
 from provinceops.models import ProvinceBatch, ProvinceBatchItem
+
+
+def _date_bounds(start_date, end_date):
+    """Index-friendly local day range [start, next_day); no DATE(column) cast."""
+    tz = timezone.get_current_timezone()
+    return (
+        timezone.make_aware(datetime.combine(start_date, time.min), tz),
+        timezone.make_aware(datetime.combine(end_date + timedelta(days=1), time.min), tz),
+    )
 
 
 ZERO = Decimal("0.00")
@@ -173,8 +185,7 @@ def _build_customer_send_report(date_from: date, date_to: date):
         Order.objects
         .select_related("seller")
         .filter(
-            created_at__date__gte=date_from,
-            created_at__date__lte=date_to,
+            created_at__gte=_date_bounds(date_from, date_to)[0], created_at__lt=_date_bounds(date_from, date_to)[1],
         )
         .order_by("seller__name", "id")
     )
@@ -503,14 +514,14 @@ def _build_shipper_done_today_report(date_from: date, date_to: date):
 
 
 def _build_today_cards(target_date: date):
-    created_count = Order.objects.filter(created_at__date=target_date).count()
+    created_count = Order.objects.filter(created_at__gte=_date_bounds(target_date, target_date)[0], created_at__lt=_date_bounds(target_date, target_date)[1]).count()
 
     sent_pp = 0
     pp_batch_qs = (
         PPDeliveryBatch.objects
         .select_related("shipper")
         .prefetch_related("items", "items__order")
-        .filter(assigned_at__date=target_date)
+        .filter(assigned_at__gte=_date_bounds(target_date, target_date)[0], assigned_at__lt=_date_bounds(target_date, target_date)[1])
         .order_by("assigned_at", "id")
     )
 
@@ -522,25 +533,25 @@ def _build_today_cards(target_date: date):
         sent_pp += sum(1 for item in items if _is_normal_pp_item(item))
 
     sent_province = ProvinceBatchItem.objects.filter(
-        batch__assigned_at__date=target_date,
+        batch__assigned_at__gte=_date_bounds(target_date, target_date)[0], batch__assigned_at__lt=_date_bounds(target_date, target_date)[1],
         batch__assigned_at__isnull=False,
         batch__status__in=[ProvinceBatch.STATUS_PENDING, ProvinceBatch.STATUS_DONE],
     ).count()
 
     done_pp_qs = PPDeliveryItem.objects.select_related("batch", "order").filter(
         ticked=True,
-        batch__assigned_at__date=target_date,
+        batch__assigned_at__gte=_date_bounds(target_date, target_date)[0], batch__assigned_at__lt=_date_bounds(target_date, target_date)[1],
         batch__assigned_at__isnull=False,
     )
     done_pp = sum(1 for item in done_pp_qs if _is_normal_pp_item(item))
 
     done_province = ProvinceBatchItem.objects.filter(
-        batch__assigned_at__date=target_date,
+        batch__assigned_at__gte=_date_bounds(target_date, target_date)[0], batch__assigned_at__lt=_date_bounds(target_date, target_date)[1],
         batch__assigned_at__isnull=False,
         batch__status=ProvinceBatch.STATUS_DONE,
     ).count()
 
-    order_fee_agg = Order.objects.filter(created_at__date=target_date).aggregate(
+    order_fee_agg = Order.objects.filter(created_at__gte=_date_bounds(target_date, target_date)[0], created_at__lt=_date_bounds(target_date, target_date)[1]).aggregate(
         delivery_fee_total=Sum("delivery_fee"),
         additional_fee_total=Sum("additional_fee"),
         province_fee_total=Sum("province_fee"),
@@ -559,7 +570,7 @@ def _build_today_cards(target_date: date):
     cod_qs = (
         ClearPPCOD.objects
         .select_related("batch", "batch__shipper")
-        .filter(batch__assigned_at__date=target_date)
+        .filter(batch__assigned_at__gte=_date_bounds(target_date, target_date)[0], batch__assigned_at__lt=_date_bounds(target_date, target_date)[1])
     )
 
     for row in cod_qs:
@@ -611,33 +622,31 @@ def _build_trend_30_days(end_date: date):
         for d in days
     }
 
-    for d in days:
-        agg = Order.objects.filter(created_at__date=d).aggregate(
-            delivery_fee_total=Sum("delivery_fee"),
-            additional_fee_total=Sum("additional_fee"),
-            province_fee_total=Sum("province_fee"),
-        )
-
-        created_count = Order.objects.filter(created_at__date=d).count()
-        delivery_fee_total = _to_decimal(agg.get("delivery_fee_total"))
-        additional_fee_total = _to_decimal(agg.get("additional_fee_total"))
-        province_fee_total = _to_decimal(agg.get("province_fee_total"))
-
-        expense_total = additional_fee_total + province_fee_total
-        revenue_total = delivery_fee_total - expense_total
-
-        trend_map[d]["created"] = created_count
-        trend_map[d]["shipment_fee"] = float(delivery_fee_total)
-        trend_map[d]["expense"] = float(expense_total)
-        trend_map[d]["revenue"] = float(revenue_total)
+    # Single grouped SQL query instead of 30 separate aggregates and 30 counts.
+    for row in (Order.objects.filter(
+        created_at__gte=_date_bounds(start_date, end_date)[0], created_at__lt=_date_bounds(start_date, end_date)[1]
+    ).annotate(day=TruncDate("created_at")).values("day").annotate(
+        created_count=Count("id"),
+        delivery_fee_total=Sum("delivery_fee"),
+        additional_fee_total=Sum("additional_fee"),
+        province_fee_total=Sum("province_fee"),
+    )):
+        d = row["day"]
+        if d not in trend_map:
+            continue
+        delivery = _to_decimal(row["delivery_fee_total"])
+        expense = _to_decimal(row["additional_fee_total"]) + _to_decimal(row["province_fee_total"])
+        trend_map[d]["created"] = row["created_count"]
+        trend_map[d]["shipment_fee"] = float(delivery)
+        trend_map[d]["expense"] = float(expense)
+        trend_map[d]["revenue"] = float(delivery - expense)
 
     done_pp_qs = (
         PPDeliveryItem.objects
         .select_related("batch", "order")
         .filter(
             ticked=True,
-            batch__assigned_at__date__gte=start_date,
-            batch__assigned_at__date__lte=end_date,
+            batch__assigned_at__gte=_date_bounds(start_date, end_date)[0], batch__assigned_at__lt=_date_bounds(start_date, end_date)[1],
             batch__assigned_at__isnull=False,
         )
         .order_by("batch__assigned_at", "id")
@@ -660,8 +669,7 @@ def _build_trend_30_days(end_date: date):
         ProvinceBatchItem.objects
         .select_related("batch")
         .filter(
-            batch__assigned_at__date__gte=start_date,
-            batch__assigned_at__date__lte=end_date,
+            batch__assigned_at__gte=_date_bounds(start_date, end_date)[0], batch__assigned_at__lt=_date_bounds(start_date, end_date)[1],
             batch__assigned_at__isnull=False,
             batch__status=ProvinceBatch.STATUS_DONE,
         )
@@ -697,8 +705,7 @@ def _build_shipper_summary(date_from: date, date_to: date):
         ClearPPCOD.objects
         .select_related("batch", "batch__shipper")
         .filter(
-            batch__assigned_at__date__gte=date_from,
-            batch__assigned_at__date__lte=date_to,
+            batch__assigned_at__gte=_date_bounds(date_from, date_to)[0], batch__assigned_at__lt=_date_bounds(date_from, date_to)[1],
             batch__assigned_at__isnull=False,
         )
         .order_by("batch__assigned_at", "id")
@@ -722,8 +729,7 @@ def _build_shipper_summary(date_from: date, date_to: date):
         .select_related("batch", "batch__shipper", "order")
         .filter(
             ticked=True,
-            batch__assigned_at__date__gte=date_from,
-            batch__assigned_at__date__lte=date_to,
+            batch__assigned_at__gte=_date_bounds(date_from, date_to)[0], batch__assigned_at__lt=_date_bounds(date_from, date_to)[1],
             batch__assigned_at__isnull=False,
         )
     )
@@ -769,8 +775,7 @@ def _build_province_send_report(date_from: date, date_to: date):
         ProvinceBatchItem.objects
         .select_related("batch", "batch__shipper", "order", "order__seller")
         .filter(
-            batch__assigned_at__date__gte=date_from,
-            batch__assigned_at__date__lte=date_to,
+            batch__assigned_at__gte=_date_bounds(date_from, date_to)[0], batch__assigned_at__lt=_date_bounds(date_from, date_to)[1],
             batch__assigned_at__isnull=False,
             batch__status__in=[
                 ProvinceBatch.STATUS_PENDING,
@@ -849,6 +854,94 @@ def _build_province_send_report(date_from: date, date_to: date):
     }
 
 
+
+def _carrier_type(name):
+    """COD VET and VET are one company; same for J&T."""
+    name = " ".join((name or "").upper().replace("&", " AND ").split())
+    if "VET" in name:
+        return "VET"
+    if "J&T" in name or "J AND T" in name or "JNT" in name or "J T" == name:
+        return "J&T"
+    return None
+
+
+def _estimated_carrier_fee_khr(carrier, *, via_cod_province=False, shipper_label=""):
+    """Estimated cost per dispatch, in KHR (not the seller's delivery fee).
+
+    Province Assign: VET 5,000; COD VET 8,000.
+    COD Province: VET or COD VET 8,000.
+    J&T (including COD J&T): 6,000 in either workflow.
+    """
+    if carrier == "J&T":
+        return 6000
+    if carrier == "VET":
+        return 8000 if via_cod_province or "COD" in (shipper_label or "").upper() else 5000
+    return 0
+
+
+def _build_carrier_30_days(end_date):
+    """Unique shipments; COD Province takes precedence over normal Province.
+
+    Never use the order's current shipper as proof of its historic dispatch.
+    The batch's assigned shipper and timestamp describe the shipment.
+    """
+    start_date = end_date - timedelta(days=29)
+    shipments = {}
+
+    normal = ProvinceBatchItem.objects.filter(
+        batch__status__in=[ProvinceBatch.STATUS_PENDING, ProvinceBatch.STATUS_DONE],
+        batch__assigned_at__gte=_date_bounds(start_date, end_date)[0], batch__assigned_at__lt=_date_bounds(start_date, end_date)[1],
+        batch__shipper__isnull=False,
+    ).select_related("batch__shipper", "order").order_by("id")
+    for item in normal.iterator(chunk_size=1000):
+        if _is_return_order(item.order):
+            continue
+        name = _carrier_type(item.batch.shipper.name)
+        if not name:
+            continue
+        day = timezone.localtime(item.batch.assigned_at).date()
+        cod_label = "COD" in (item.batch.shipper.name or "").upper()
+        fee = _estimated_carrier_fee_khr(name, shipper_label=item.batch.shipper.name)
+        old = shipments.get(item.order_id)
+        if old is None or (old[3] == 0 and cod_label):
+            shipments[item.order_id] = (day, name, fee, int(cod_label))
+
+    cod_shipments = ProvinceCODItem.objects.filter(
+        batch__status=ProvinceCODBatch.STATUS_SENT,
+        batch__shipper__isnull=False,
+    ).filter(
+        sent_at__gte=_date_bounds(start_date, end_date)[0], sent_at__lt=_date_bounds(start_date, end_date)[1]
+    ).select_related("batch__shipper", "order").order_by("id")
+    for item in cod_shipments.iterator(chunk_size=1000):
+        if _is_return_order(item.order):
+            continue
+        name = _carrier_type(item.batch.shipper.name)
+        if not name:
+            continue
+        dt = item.sent_at
+        if not dt:
+            continue
+        day = timezone.localtime(dt).date()
+        # Any COD Province shipment through VET always costs 8,000 riel,
+        # even when the shipper field is simply 'VET'.
+        shipments[item.order_id] = (
+            day, name, _estimated_carrier_fee_khr(name, via_cod_province=True), 2
+        )
+
+    days = _daterange(start_date, end_date)
+    summary = {carrier: {"name": carrier, "orders": 0, "fee_khr": 0} for carrier in ("VET", "J&T")}
+    daily = {d: {"date": d, "VET": 0, "J&T": 0, "vet_fee": 0, "jt_fee": 0, "vet_orders": 0, "jt_orders": 0} for d in days}
+    for day, name, fee, _source in shipments.values():
+        summary[name]["orders"] += 1
+        summary[name]["fee_khr"] += fee
+        daily[day][name] += 1
+        daily[day]["vet_orders" if name == "VET" else "jt_orders"] += 1
+        daily[day]["vet_fee" if name == "VET" else "jt_fee"] += fee
+    return {"summary": list(summary.values()), "daily": list(reversed(list(daily.values()))),
+            "total_orders": sum(r["orders"] for r in summary.values()),
+            "total_fee_khr": sum(r["fee_khr"] for r in summary.values())}
+
+
 def build_profit_dashboard(date_from: date, date_to: date):
     today_cards = _build_today_cards(date_to)
     trend_30_days = _build_trend_30_days(date_to)
@@ -858,6 +951,7 @@ def build_profit_dashboard(date_from: date, date_to: date):
     shipper_done_today_report = _build_shipper_done_today_report(date_from, date_to)
 
     return {
+        "carrier_fees": _build_carrier_30_days(date_to),
         "today_cards": today_cards,
         "trend_30_days": trend_30_days,
         "shipper_rows": shipper_rows,

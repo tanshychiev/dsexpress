@@ -1069,10 +1069,16 @@
                 <span>
                   {% if a.actor %}
                     {{ a.actor.get_full_name|default:a.actor.username }}
+                  {% elif a.is_reconstructed %}
+                    Creator not recorded
                   {% else %}
-                    System
+                    System / unknown user
                   {% endif %}
                 </span>
+                {% if a.is_reconstructed %}
+                  <span class="od-meta-sep">•</span>
+                  <span>Reconstructed from existing records</span>
+                {% endif %}
                 {% if a.shipper %}
                   <span class="od-meta-sep">•</span>
                   <span>Shipper: {{ a.shipper.name }}</span>

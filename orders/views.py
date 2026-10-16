@@ -8,6 +8,7 @@ from decimal import Decimal
 from urllib.parse import urlencode
 from django.utils.http import url_has_allowed_host_and_scheme
 import re
+from types import SimpleNamespace
 
 import qrcode
 from django.conf import settings
@@ -348,10 +349,13 @@ def _qs_orders_filtered(request: HttpRequest, require_search_click: bool = True)
             | Q(seller__name__icontains=q)
         )
 
-    if status_group == "DONE":
-        qs = qs.filter(status=Order.STATUS_DELIVERED)
-    elif status_group == "PENDING":
-        qs = qs.exclude(status=Order.STATUS_DELIVERED)
+    # Historical orders can use the legacy DONE value, while current orders
+    # use DELIVERED. Both mean completed for search and Excel export.
+    completed_statuses = (Order.STATUS_DELIVERED, "DONE")
+    if status_group.upper() == "DONE":
+        qs = qs.filter(status__in=completed_statuses)
+    elif status_group.upper() == "PENDING":
+        qs = qs.exclude(status__in=completed_statuses)
 
     return qs
 
@@ -1055,6 +1059,16 @@ def import_orders(request: HttpRequest):
                     except Exception:
                         pass
 
+                    add_order_activity(
+                        order=o, action=OrderActivity.ACTION_CREATE,
+                        user=request.user, new_status=o.status,
+                        note=f"Created via Excel import: {f.name} (batch #{batch.pk})",
+                    )
+                    add_audit_log(
+                        module=AuditLog.MODULE_ORDER, obj=o,
+                        action=AuditLog.ACTION_CREATE, user=request.user,
+                        note=f"Created via Excel import: {f.name} (batch #{batch.pk})",
+                    )
                     success_count += 1
 
                 add_audit_log(
@@ -2582,11 +2596,41 @@ def audit_log_list(request):
 def order_created(request: HttpRequest, pk: int):
     order = get_object_or_404(Order, pk=pk, is_deleted=False)
 
-    activities = order.activities.select_related("actor", "shipper").all().order_by("-id")
-    logs = AuditLog.objects.filter(
-        module=AuditLog.MODULE_ORDER,
-        object_id=order.id,
-    ).select_related("created_by").order_by("-id")[:50]
+    activities = list(order.activities.select_related("actor", "shipper").order_by("-created_at", "-id"))
+    logs = list(
+        AuditLog.objects.filter(module=AuditLog.MODULE_ORDER, object_id=order.id)
+        .select_related("created_by").order_by("-created_at", "-id")
+    )
+
+    # Historic imports recorded a batch audit but no per-order creation.
+    import_audit = None
+    if order.import_batch_id:
+        import_audit = (
+            AuditLog.objects.filter(
+                module=AuditLog.MODULE_IMPORT,
+                object_id=order.import_batch_id,
+                action=AuditLog.ACTION_IMPORT,
+            ).select_related("created_by").order_by("id").first()
+        )
+        if import_audit:
+            logs.append(import_audit)
+
+    if not any(a.action == OrderActivity.ACTION_CREATE for a in activities):
+        creator = import_audit.created_by if import_audit else None
+        if order.import_batch_id:
+            batch_name = order.import_batch.filename if order.import_batch else "Unknown file"
+            note = f"Created through Excel import: {batch_name}"
+            if not import_audit:
+                note += " (importer not recorded)"
+        else:
+            note = "Original creation event was not recorded"
+        activities.append(SimpleNamespace(
+            action=OrderActivity.ACTION_CREATE, actor=creator, shipper=None,
+            old_status="", new_status=Order.STATUS_CREATED, note=note,
+            created_at=order.created_at, is_reconstructed=True, id=0,
+        ))
+    activities.sort(key=lambda a: (a.created_at or order.created_at, a.id), reverse=True)
+    logs.sort(key=lambda log: (log.created_at, log.id), reverse=True)
 
     return render(
         request,

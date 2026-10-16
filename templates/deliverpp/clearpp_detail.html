@@ -552,7 +552,7 @@ DS00001236"></textarea>
     const au = toNum(aba_usd?.value);
     const ak = toNum(aba_khr?.value);
     const ex = toNum(expense?.value);
-    return (cu + au) + ((ck + ak) / rate) - ex;
+    return (cu + au) + ((ck + ak) / rate) + ex;
   }
 
   function paintDiff(diffKhr){
@@ -596,7 +596,16 @@ DS00001236"></textarea>
   }
 
   [cash_usd, cash_khr, aba_usd, aba_khr, expense].forEach(el=>{
-    if(el) el.addEventListener("input", refreshSummary);
+    if(!el) return;
+    // One click highlights 0 or the existing amount; typing replaces it immediately.
+    el.addEventListener("focus", () => el.select());
+    el.addEventListener("click", () => el.select());
+    // An empty field is treated as zero by toNum(), without manual deletion.
+    el.addEventListener("input", refreshSummary);
+    el.addEventListener("blur", () => {
+      if(el.value.trim() === "") el.value = "0";
+      refreshSummary();
+    });
   });
 
   document.querySelectorAll("tr[data-item-id]").forEach(tr=>{

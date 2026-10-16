@@ -879,13 +879,12 @@ def _estimated_carrier_fee_khr(carrier, *, via_cod_province=False, shipper_label
     return 0
 
 
-def _build_carrier_30_days(end_date):
+def _build_carrier_report(start_date, end_date):
     """Unique shipments; COD Province takes precedence over normal Province.
 
     Never use the order's current shipper as proof of its historic dispatch.
     The batch's assigned shipper and timestamp describe the shipment.
     """
-    start_date = end_date - timedelta(days=29)
     shipments = {}
 
     normal = ProvinceBatchItem.objects.filter(
@@ -942,11 +941,18 @@ def _build_carrier_30_days(end_date):
             "total_fee_khr": sum(r["fee_khr"] for r in summary.values())}
 
 
+def _build_carrier_30_days(end_date):
+    return _build_carrier_report(end_date - timedelta(days=29), end_date)
+
+
 def build_profit_dashboard(date_from: date, date_to: date):
     today_cards = _build_today_cards(date_to)
     trend_30_days = _build_trend_30_days(date_to)
     shipper_rows = _build_shipper_summary(date_from, date_to)
     province_send_report = _build_province_send_report(date_from, date_to)
+    # Cost estimate follows the selected report dates. Unlike the simple province
+    # counts, it also includes COD Province and deduplicates orders across both.
+    province_send_report["carrier_costs"] = _build_carrier_report(date_from, date_to)
     customer_send_report = _build_customer_send_report(date_from, date_to)
     shipper_done_today_report = _build_shipper_done_today_report(date_from, date_to)
 

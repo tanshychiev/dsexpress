@@ -453,11 +453,28 @@
         </div>
       </div>
 
-      <div class="province-total-card">
-        <span>Total sent to province</span>
-        <strong>{{ dashboard.province_send_report.total_send|default:0 }}</strong>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch">
+        <div class="province-total-card">
+          <span>Total sent to province</span>
+          <strong>{{ dashboard.province_send_report.total_send|default:0 }}</strong>
+        </div>
+        <div class="province-total-card" style="background:#ecfdf5;min-width:190px">
+          <span>Estimated VET + J&amp;T shipping cost (selected dates)</span>
+          <strong>{{ dashboard.province_send_report.carrier_costs.total_fee_khr|floatformat:0 }} ៛</strong>
+          <small>{{ dashboard.province_send_report.carrier_costs.total_orders }} unique carrier orders</small>
+        </div>
       </div>
     </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 18px">
+      {% for carrier in dashboard.province_send_report.carrier_costs.summary %}
+      <div class="summary-chip" style="flex:1;min-width:180px">
+        <span>{{ carrier.name }} (including COD) — {{ carrier.orders }} orders</span>
+        <strong>{{ carrier.fee_khr|floatformat:0 }} ៛</strong>
+      </div>
+      {% endfor %}
+    </div>
+    <p style="font-size:12px;opacity:.72;margin:-6px 0 16px">Estimated carrier cost, not COD collected. VET 5,000៛; COD VET and COD Province VET 8,000៛; all J&amp;T 6,000៛. An order in both province workflows counts once.</p>
 
     <div class="province-grid">
       <article class="inner-panel">
@@ -560,6 +577,30 @@
           </div>
         </div>
       </article>
+    </div>
+  </section>
+
+  <!-- 30-DAY CARRIER COSTS: unique orders across both province workflows -->
+  <section id="carrierFeesReport" class="dashboard-section">
+    <div class="section-heading"><div>
+      <div class="section-kicker">PROVINCE SHIPPING COST ESTIMATE</div>
+      <h2>VET &amp; J&amp;T — last 30 days</h2>
+      <p>Count each order once. COD Province overrides normal Province when both contain the same order. Values in KHR.</p>
+    </div></div>
+    <div class="report-card">
+      <div class="summary-chip-grid three-chips">
+        {% for c in dashboard.carrier_fees.summary %}
+        <div class="summary-chip"><span>{{ c.name }} — {{ c.orders }} orders</span><strong>{{ c.fee_khr|floatformat:0 }} KHR</strong></div>
+        {% endfor %}
+        <div class="summary-chip"><span>Combined: {{ dashboard.carrier_fees.total_orders }} orders</span><strong>{{ dashboard.carrier_fees.total_fee_khr|floatformat:0 }} KHR</strong></div>
+      </div>
+      <div class="table-shell" style="max-height:460px;overflow:auto;margin-top:18px">
+        <table style="width:100%;text-align:left"><thead><tr><th>Date</th><th>VET orders</th><th>VET fee KHR</th><th>J&amp;T orders</th><th>J&amp;T fee KHR</th></tr></thead>
+        <tbody>{% for d in dashboard.carrier_fees.daily %}
+          <tr><td>{{ d.date|date:"Y-m-d" }}</td><td>{{ d.vet_orders }}</td><td>{{ d.vet_fee }}</td><td>{{ d.jt_orders }}</td><td>{{ d.jt_fee }}</td></tr>
+        {% endfor %}</tbody></table>
+      </div>
+      <p style="font-size:12px;opacity:.7;margin-top:12px">Rates: VET 5,000; COD VET 8,000; J&amp;T and COD J&amp;T 6,000 KHR/order. Estimates only; excludes canceled batches.</p>
     </div>
   </section>
 

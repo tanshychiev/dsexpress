@@ -608,6 +608,59 @@
         font-size:15px;
       }
     }
+
+    /* Balanced stock card: readable product image and compact availability. */
+    .stock-card{
+      grid-template-columns:124px minmax(0,1fr);
+      min-height:184px;
+      align-items:stretch;
+    }
+    .photo-box{
+      padding:12px 0 12px 12px;
+      display:flex;
+      min-width:0;
+    }
+    .stock-photo,.no-photo{
+      width:112px;
+      height:160px;
+      border-radius:17px;
+      object-fit:cover;
+    }
+    .stock-body{
+      padding:12px 12px 11px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      min-width:0;
+    }
+    .stock-top{margin-bottom:10px;}
+    .stock-name{font-size:15px;line-height:1.2;-webkit-line-clamp:2;}
+    .stock-code{font-size:10px;margin-top:4px;}
+    .stock-numbers{gap:6px;}
+    .stock-number{padding:7px 4px 6px;border-radius:12px;}
+    .stock-number.available{
+      padding:8px 8px 7px;
+      border-radius:14px;
+      background:linear-gradient(120deg,#138a58,#19ad70);
+      box-shadow:0 4px 10px rgba(22,163,74,.13);
+    }
+    .stock-number.available::after{width:46px;height:46px;right:-18px;top:-18px;}
+    .stock-number.available strong{font-size:23px;margin-top:3px;}
+    .stock-number.available span{font-size:9px;}
+    .stock-number.available small{font-size:9px;margin-top:1px;}
+    .stock-number strong{font-size:14px;margin-top:3px;}
+    .stock-number span{font-size:8px;}
+    @media(max-width:360px){
+      .stock-card{grid-template-columns:108px minmax(0,1fr);min-height:174px;}
+      .photo-box{padding:10px 0 10px 10px;}
+      .stock-photo,.no-photo{width:98px;height:154px;border-radius:15px;}
+      .stock-body{padding:9px 9px 9px 8px;}
+      .stock-name{font-size:13px;}
+      .stock-top{margin-bottom:7px;}
+      .stock-number.available strong{font-size:22px;}
+      .stock-number strong{font-size:13px;}
+      .stock-number span{font-size:7px;}
+    }
   </style>
 </head>
 <body>

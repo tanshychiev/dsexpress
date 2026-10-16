@@ -62,5 +62,8 @@ def profit_dashboard(request):
             "date_from": date_from,
             "date_to": date_to,
             "dashboard": dashboard,
+            "carrier_from": carrier_from.isoformat(),
+            "carrier_to": carrier_to.isoformat(),
+            "carrier_date_error": carrier_date_error,
         },
     )

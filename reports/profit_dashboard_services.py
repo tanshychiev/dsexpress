@@ -928,9 +928,23 @@ def _build_carrier_report(start_date, end_date):
         )
 
     days = _daterange(start_date, end_date)
-    summary = {carrier: {"name": carrier, "orders": 0, "fee_khr": 0} for carrier in ("VET", "J&T")}
-    daily = {d: {"date": d, "VET": 0, "J&T": 0, "vet_fee": 0, "jt_fee": 0, "vet_orders": 0, "jt_orders": 0} for d in days}
-    for day, name, fee, _source in shipments.values():
+    summary = {carrier: {"name": carrier, "orders": 0, "fee_khr": 0,
+                         "cod_orders": 0, "cod_fee_khr": 0,
+                         "non_cod_orders": 0, "non_cod_fee_khr": 0}
+               for carrier in ("VET", "J&T")}
+    daily = {d: {"date": d, "VET": 0, "J&T": 0, "vet_fee": 0, "jt_fee": 0,
+                 "vet_orders": 0, "jt_orders": 0, "vet_cod_orders": 0,
+                 "vet_non_cod_orders": 0, "jt_cod_orders": 0, "jt_non_cod_orders": 0,
+                 "vet_cod_fee": 0, "vet_non_cod_fee": 0,
+                 "jt_cod_fee": 0, "jt_non_cod_fee": 0} for d in days}
+    for day, name, fee, source in shipments.values():
+        is_cod = bool(source)  # COD shipper label or COD Province workflow
+        kind = "cod" if is_cod else "non_cod"
+        prefix = "vet" if name == "VET" else "jt"
+        summary[name][f"{kind}_orders"] += 1
+        summary[name][f"{kind}_fee_khr"] += fee
+        daily[day][f"{prefix}_{kind}_orders"] += 1
+        daily[day][f"{prefix}_{kind}_fee"] += fee
         summary[name]["orders"] += 1
         summary[name]["fee_khr"] += fee
         daily[day][name] += 1
@@ -945,7 +959,7 @@ def _build_carrier_30_days(end_date):
     return _build_carrier_report(end_date - timedelta(days=29), end_date)
 
 
-def build_profit_dashboard(date_from: date, date_to: date):
+def build_profit_dashboard(date_from: date, date_to: date, carrier_date_from=None, carrier_date_to=None):
     today_cards = _build_today_cards(date_to)
     trend_30_days = _build_trend_30_days(date_to)
     shipper_rows = _build_shipper_summary(date_from, date_to)
@@ -957,7 +971,10 @@ def build_profit_dashboard(date_from: date, date_to: date):
     shipper_done_today_report = _build_shipper_done_today_report(date_from, date_to)
 
     return {
-        "carrier_fees": _build_carrier_30_days(date_to),
+        "carrier_fees": _build_carrier_report(
+            carrier_date_from or date_to - timedelta(days=29),
+            carrier_date_to or date_to,
+        ),
         "today_cards": today_cards,
         "trend_30_days": trend_30_days,
         "shipper_rows": shipper_rows,

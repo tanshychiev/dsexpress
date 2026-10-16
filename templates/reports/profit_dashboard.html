@@ -580,29 +580,69 @@
     </div>
   </section>
 
-  <!-- 30-DAY CARRIER COSTS: unique orders across both province workflows -->
+  <!-- CARRIER COSTS: selected date range, COD and non-COD breakdown -->
   <section id="carrierFeesReport" class="dashboard-section">
     <div class="section-heading"><div>
       <div class="section-kicker">PROVINCE SHIPPING COST ESTIMATE</div>
-      <h2>VET &amp; J&amp;T — last 30 days</h2>
-      <p>Count each order once. COD Province overrides normal Province when both contain the same order. Values in KHR.</p>
+      <h2>VET &amp; J&amp;T — shipping fee report</h2>
+      <p>Unique orders only. COD Province takes priority over Province Assign. All values in KHR.</p>
     </div></div>
     <div class="report-card">
+      <form id="carrierDateForm" method="get" action="#carrierFeesReport" style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:18px">
+        <input type="hidden" name="date_from" value="{{ date_from }}">
+        <input type="hidden" name="date_to" value="{{ date_to }}">
+        {% if searched %}<input type="hidden" name="search" value="1">{% endif %}
+        <label style="display:flex;flex-direction:column;gap:5px;font-weight:700;font-size:12px">From date
+          <input type="date" name="carrier_from" value="{{ carrier_from }}" required style="min-height:40px;padding:6px 10px;border:1px solid #ccd7d2;border-radius:10px">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:5px;font-weight:700;font-size:12px">To date
+          <input type="date" name="carrier_to" value="{{ carrier_to }}" required style="min-height:40px;padding:6px 10px;border:1px solid #ccd7d2;border-radius:10px">
+        </label>
+        <button type="submit" class="btn btn-primary" style="min-height:40px;padding:8px 16px;background:#0f875a;border:0;border-radius:10px;color:white;cursor:pointer">Calculate</button>
+      </form>
+      {% if carrier_date_error %}<p role="alert" style="color:#b42318">{{ carrier_date_error }}</p>{% endif %}
       <div class="summary-chip-grid three-chips">
         {% for c in dashboard.carrier_fees.summary %}
-        <div class="summary-chip"><span>{{ c.name }} — {{ c.orders }} orders</span><strong>{{ c.fee_khr|floatformat:0 }} KHR</strong></div>
+        <div class="summary-chip">
+          <span>{{ c.name }} — {{ c.orders }} total orders</span><strong>{{ c.fee_khr|floatformat:0 }} KHR</strong>
+          <div style="font-size:12px;margin-top:9px;line-height:1.9">
+            <div>COD: <b>{{ c.cod_orders }}</b> orders · <b>{{ c.cod_fee_khr|floatformat:0 }} KHR</b></div>
+            <div>Non-COD: <b>{{ c.non_cod_orders }}</b> orders · <b>{{ c.non_cod_fee_khr|floatformat:0 }} KHR</b></div>
+          </div>
+        </div>
         {% endfor %}
         <div class="summary-chip"><span>Combined: {{ dashboard.carrier_fees.total_orders }} orders</span><strong>{{ dashboard.carrier_fees.total_fee_khr|floatformat:0 }} KHR</strong></div>
       </div>
       <div class="table-shell" style="max-height:460px;overflow:auto;margin-top:18px">
-        <table style="width:100%;text-align:left"><thead><tr><th>Date</th><th>VET orders</th><th>VET fee KHR</th><th>J&amp;T orders</th><th>J&amp;T fee KHR</th></tr></thead>
-        <tbody>{% for d in dashboard.carrier_fees.daily %}
-          <tr><td>{{ d.date|date:"Y-m-d" }}</td><td>{{ d.vet_orders }}</td><td>{{ d.vet_fee }}</td><td>{{ d.jt_orders }}</td><td>{{ d.jt_fee }}</td></tr>
-        {% endfor %}</tbody></table>
+        <table style="width:100%;min-width:960px;text-align:left">
+          <thead><tr>
+            <th>Date</th><th>VET COD</th><th>VET Non-COD</th><th>VET Total</th><th>VET Fee (KHR)</th>
+            <th>J&amp;T COD</th><th>J&amp;T Non-COD</th><th>J&amp;T Total</th><th>J&amp;T Fee (KHR)</th>
+          </tr></thead>
+          <tbody>{% for d in dashboard.carrier_fees.daily %}
+          <tr>
+            <td>{{ d.date|date:"Y-m-d" }}</td>
+            <td>{{ d.vet_cod_orders }}</td><td>{{ d.vet_non_cod_orders }}</td><td>{{ d.vet_orders }}</td><td>{{ d.vet_fee }}</td>
+            <td>{{ d.jt_cod_orders }}</td><td>{{ d.jt_non_cod_orders }}</td><td>{{ d.jt_orders }}</td><td>{{ d.jt_fee }}</td>
+          </tr>
+          {% endfor %}</tbody>
+        </table>
       </div>
-      <p style="font-size:12px;opacity:.7;margin-top:12px">Rates: VET 5,000; COD VET 8,000; J&amp;T and COD J&amp;T 6,000 KHR/order. Estimates only; excludes canceled batches.</p>
+      <p style="font-size:12px;opacity:.7;margin-top:12px">Estimated rates: normal VET 5,000; COD VET and all COD Province VET 8,000; all J&amp;T 6,000 KHR/order. COD Province assignments count as COD. Excludes canceled batches.</p>
     </div>
   </section>
+  <script>
+  (function(){
+    var form=document.getElementById('carrierDateForm');
+    if(!form)return;
+    var fields=form.querySelectorAll('input[type="date"]');
+    fields.forEach(function(input){input.addEventListener('change',function(){
+      if(fields[0].value && fields[1].value && fields[0].value<=fields[1].value){
+        if(form.requestSubmit)form.requestSubmit(); else form.submit();
+      }
+    });});
+  })();
+  </script>
 
   <!-- TRENDS + SHIPPER SUMMARY -->
   <section id="trendReport" class="dashboard-section">
